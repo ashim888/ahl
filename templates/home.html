@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="bg-white border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 py-20 text-center">
+        <h1 class="text-4xl md:text-5xl font-serif font-bold text-gray-900">{{ JOURNAL_NAME }}</h1>
+        <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">{{ JOURNAL_TAGLINE }}</p>
+        <div class="mt-8 flex justify-center gap-4">
+            <a href="#" class="px-6 py-3 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
+                Read the Journal
+            </a>
+            <a href="#" class="px-6 py-3 rounded-md border border-gray-300 font-medium hover:bg-gray-50">
+                Submit a Manuscript
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-4 py-16">
+    <h2 class="text-2xl font-serif font-bold mb-6">Featured Articles</h2>
+    {% if featured_articles %}
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for article in featured_articles %}
+                <article class="border border-gray-200 rounded-lg p-5 bg-white">
+                    <span class="text-xs uppercase tracking-wide text-gray-500">
+                        {{ article.get_article_type_display }}
+                    </span>
+                    <h3 class="mt-2 font-semibold text-lg leading-snug">{{ article.title }}</h3>
+                    <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ article.abstract }}</p>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-gray-500">No published articles yet — check back soon.</p>
+    {% endif %}
+</section>
+
+<section class="max-w-6xl mx-auto px-4 py-16 border-t border-gray-200">
+    <h2 class="text-2xl font-serif font-bold mb-6">Latest News</h2>
+    {% if latest_news %}
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for article in latest_news %}
+                <article class="border border-gray-200 rounded-lg p-5 bg-white">
+                    <h3 class="font-semibold text-lg leading-snug">{{ article.title }}</h3>
+                    <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ article.abstract }}</p>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-gray-500">No news posted yet — check back soon.</p>
+    {% endif %}
+</section>
+
+{% endblock %}

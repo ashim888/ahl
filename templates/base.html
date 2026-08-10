@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
+    <meta name="description" content="{{ JOURNAL_TAGLINE }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50 text-gray-900">
+
+    <header class="bg-white border-b border-gray-200">
+        <nav class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="{% url 'articles:home' %}" class="text-xl font-serif font-bold text-gray-900">
+                {{ JOURNAL_NAME }}
+            </a>
+            <div class="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
+                <a href="{% url 'articles:home' %}" class="hover:text-gray-900">Home</a>
+                <a href="#" class="hover:text-gray-900">Articles</a>
+                <a href="#" class="hover:text-gray-900">Issues</a>
+                <a href="#" class="hover:text-gray-900">About</a>
+            </div>
+            <div class="flex items-center gap-3 text-sm font-medium">
+                <a href="#" class="text-gray-600 hover:text-gray-900">Login</a>
+                <a href="#" class="px-4 py-2 rounded-md bg-gray-900 text-white hover:bg-gray-700">
+                    Submit Manuscript
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-6xl mx-auto px-4 py-8 text-sm text-gray-500 flex flex-col md:flex-row justify-between gap-4">
+            <div>
+                <p class="font-semibold text-gray-700">{{ JOURNAL_NAME }}</p>
+                <p>{{ JOURNAL_TAGLINE }}</p>
+                <p>ISSN {{ JOURNAL_ISSN }} &middot; Published by {{ JOURNAL_PUBLISHER }}</p>
+            </div>
+            <div class="flex gap-6">
+                <a href="#" class="hover:text-gray-900">Editorial Board</a>
+                <a href="#" class="hover:text-gray-900">Policies</a>
+                <a href="#" class="hover:text-gray-900">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
