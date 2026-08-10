@@ -1,6 +1,9 @@
+import datetime
+
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
@@ -53,6 +56,8 @@ class User(AbstractUser):
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
 
+    REAPPLY_COOLDOWN_DAYS = 30
+
     username = None
     email = models.EmailField('email address', unique=True)
     first_name = models.CharField(max_length=150)
@@ -65,6 +70,11 @@ class User(AbstractUser):
     is_verified = models.BooleanField(default=False)
     verification_status = models.CharField(
         max_length=20, choices=VerificationStatus.choices, default=VerificationStatus.PENDING,
+    )
+    verification_status_changed_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Stamped automatically whenever verification_status changes (see signals.py). '
+                   'Used to enforce the 30-day reapply cooldown after rejection.',
     )
 
     orcid = models.CharField(
@@ -90,3 +100,15 @@ class User(AbstractUser):
 
     def __str__(self):
         return f'{self.get_full_name()} <{self.email}>'
+
+    @property
+    def reapply_available_at(self):
+        """When a rejected user becomes eligible to reapply, or None if not applicable."""
+        if self.verification_status != self.VerificationStatus.REJECTED or not self.verification_status_changed_at:
+            return None
+        return self.verification_status_changed_at + datetime.timedelta(days=self.REAPPLY_COOLDOWN_DAYS)
+
+    @property
+    def can_reapply(self):
+        available_at = self.reapply_available_at
+        return available_at is not None and timezone.now() >= available_at

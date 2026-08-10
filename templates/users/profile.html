@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Your profile — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-16">
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-serif font-bold">{{ profile_user.get_full_name }}</h1>
+        <a href="{% url 'users:profile_edit' %}" class="text-sm underline">Edit profile</a>
+    </div>
+    <p class="text-gray-600">{{ profile_user.email }}</p>
+
+    <dl class="mt-8 divide-y divide-gray-200 border-t border-b border-gray-200">
+        <div class="py-3 flex justify-between gap-4">
+            <dt class="text-sm text-gray-500">Role</dt>
+            <dd class="text-sm text-gray-900">{{ profile_user.get_role_display }}</dd>
+        </div>
+        <div class="py-3 flex justify-between gap-4">
+            <dt class="text-sm text-gray-500">Verification status</dt>
+            <dd class="text-sm text-gray-900">{{ profile_user.get_verification_status_display }}</dd>
+        </div>
+        <div class="py-3 flex justify-between gap-4">
+            <dt class="text-sm text-gray-500">Affiliation</dt>
+            <dd class="text-sm text-gray-900">{{ profile_user.affiliation|default:"—" }}</dd>
+        </div>
+        <div class="py-3 flex justify-between gap-4">
+            <dt class="text-sm text-gray-500">Department</dt>
+            <dd class="text-sm text-gray-900">{{ profile_user.department|default:"—" }}</dd>
+        </div>
+        <div class="py-3 flex justify-between gap-4">
+            <dt class="text-sm text-gray-500">ORCID</dt>
+            <dd class="text-sm text-gray-900">{{ profile_user.orcid|default:"—" }}</dd>
+        </div>
+        <div class="py-3 flex justify-between gap-4">
+            <dt class="text-sm text-gray-500">Research interests</dt>
+            <dd class="text-sm text-gray-900">{{ profile_user.research_interests|default:"—" }}</dd>
+        </div>
+    </dl>
+
+    {% if profile_user.bio %}
+        <div class="mt-8">
+            <h2 class="text-sm font-medium text-gray-500">Bio</h2>
+            <p class="mt-2 text-sm text-gray-900">{{ profile_user.bio }}</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

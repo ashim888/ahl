@@ -6,6 +6,22 @@
     <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
     <meta name="description" content="{{ JOURNAL_TAGLINE }}">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Baseline styling for form widgets rendered by Django's built-in
+           views (password reset, etc.) that aren't hand-styled per field. */
+        form input[type="text"], form input[type="email"], form input[type="password"],
+        form input[type="url"], form textarea, form select {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        form input:focus, form textarea:focus, form select:focus {
+            outline: 2px solid transparent;
+            box-shadow: 0 0 0 2px #111827;
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50 text-gray-900">
 
@@ -21,7 +37,18 @@
                 <a href="#" class="hover:text-gray-900">About</a>
             </div>
             <div class="flex items-center gap-3 text-sm font-medium">
-                <a href="#" class="text-gray-600 hover:text-gray-900">Login</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'users:profile' %}" class="text-gray-600 hover:text-gray-900">
+                        {{ user.first_name }}
+                    </a>
+                    <form method="post" action="{% url 'users:logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-600 hover:text-gray-900">Log out</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'users:login' %}" class="text-gray-600 hover:text-gray-900">Login</a>
+                    <a href="{% url 'users:register' %}" class="text-gray-600 hover:text-gray-900">Register</a>
+                {% endif %}
                 <a href="#" class="px-4 py-2 rounded-md bg-gray-900 text-white hover:bg-gray-700">
                     Submit Manuscript
                 </a>

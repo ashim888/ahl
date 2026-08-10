@@ -32,3 +32,22 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'first_name', 'last_name', 'password1', 'password2'),
         }),
     )
+
+    actions = ['approve_verification', 'reject_verification']
+
+    @admin.action(description='Approve verification (→ Verified Author)')
+    def approve_verification(self, request, queryset):
+        for user in queryset:
+            user.verification_status = User.VerificationStatus.APPROVED
+            user.is_verified = True
+            user.role = User.Role.VERIFIED_AUTHOR
+            user.save()
+        self.message_user(request, f'{queryset.count()} user(s) approved.')
+
+    @admin.action(description='Reject verification')
+    def reject_verification(self, request, queryset):
+        for user in queryset:
+            user.verification_status = User.VerificationStatus.REJECTED
+            user.is_verified = False
+            user.save()
+        self.message_user(request, f'{queryset.count()} user(s) rejected.')
