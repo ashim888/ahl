@@ -24,6 +24,124 @@ def demo_pdf(name):
     return ContentFile(f'%PDF-1.4 demo content for {name}'.encode(), name=name)
 
 
+# Full-text body for the case report demo article — shows what an open-access
+# article's html_content looks like once populated, including an inline D3.js
+# chart and citation superscripts pointing at the References section (see
+# templates/articles/article_detail.html, which renders #ref-N anchors).
+CASE_REPORT_HTML_CONTENT = """
+<h2>Introduction</h2>
+<p>Acute myocarditis in young, otherwise healthy adults is an uncommon but clinically significant
+cause of chest pain and troponin elevation, frequently mimicking acute coronary syndrome on initial
+presentation.<sup><a href="#ref-1">1</a></sup> Distinguishing myocarditis from an acute coronary event
+early is essential, since management and short-term risk differ substantially.<sup><a href="#ref-2">2</a></sup>
+We describe a young adult presenting with pleuritic chest pain and a markedly elevated troponin trend
+following a recent viral illness.</p>
+
+<h2>Case Presentation</h2>
+<p>A 24-year-old previously healthy man presented to the emergency department with two days of
+pleuritic chest pain, low-grade fever, and fatigue, one week after a self-limited upper respiratory
+illness. Electrocardiography showed diffuse concave ST-segment elevation without reciprocal changes.
+Initial high-sensitivity troponin I was mildly elevated at 0.8 ng/mL. Coronary risk factors were
+absent and the patient was hemodynamically stable throughout admission.</p>
+
+<h2>Investigations</h2>
+<p>Serial troponin I measurements over the following 72 hours showed a rise-and-fall pattern more
+consistent with myocarditis than an evolving coronary occlusion, corroborated by cardiac MRI findings
+of subepicardial late gadolinium enhancement in the inferolateral wall — a pattern well described in
+viral myocarditis.<sup><a href="#ref-3">3</a></sup></p>
+
+<figure>
+  <div id="troponin-chart" style="max-width: 640px;"></div>
+  <figcaption>Figure 1. Serial high-sensitivity troponin I (ng/mL) over the first 72 hours of admission.</figcaption>
+</figure>
+<script>
+(function () {
+  var data = [
+    { hour: 0, troponin: 0.8 },
+    { hour: 12, troponin: 4.2 },
+    { hour: 24, troponin: 6.1 },
+    { hour: 48, troponin: 3.5 },
+    { hour: 72, troponin: 1.1 }
+  ];
+  var margin = { top: 20, right: 30, bottom: 45, left: 55 },
+      width = 640 - margin.left - margin.right,
+      height = 320 - margin.top - margin.bottom;
+
+  var svg = d3.select('#troponin-chart')
+    .append('svg')
+      .attr('viewBox', '0 0 ' + (width + margin.left + margin.right) + ' ' + (height + margin.top + margin.bottom))
+      .attr('width', '100%')
+    .append('g')
+      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+  var x = d3.scaleLinear().domain([0, 72]).range([0, width]);
+  var y = d3.scaleLinear().domain([0, 7]).range([height, 0]);
+
+  svg.append('g')
+    .attr('transform', 'translate(0,' + height + ')')
+    .call(d3.axisBottom(x).tickValues([0, 12, 24, 48, 72]));
+  svg.append('g').call(d3.axisLeft(y));
+
+  var line = d3.line().x(function (d) { return x(d.hour); }).y(function (d) { return y(d.troponin); });
+
+  svg.append('path')
+    .datum(data)
+    .attr('fill', 'none')
+    .attr('stroke', '#111827')
+    .attr('stroke-width', 2)
+    .attr('d', line);
+
+  svg.selectAll('circle')
+    .data(data)
+    .enter()
+    .append('circle')
+      .attr('cx', function (d) { return x(d.hour); })
+      .attr('cy', function (d) { return y(d.troponin); })
+      .attr('r', 4)
+      .attr('fill', '#111827');
+
+  svg.append('text')
+    .attr('x', width / 2).attr('y', height + 38)
+    .attr('text-anchor', 'middle').style('font-size', '12px').style('fill', '#4b5563')
+    .text('Hours since presentation');
+
+  svg.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -height / 2).attr('y', -40)
+    .attr('text-anchor', 'middle').style('font-size', '12px').style('fill', '#4b5563')
+    .text('Troponin I (ng/mL)');
+})();
+</script>
+
+<h2>Discussion</h2>
+<p>The differential for young patients presenting with chest pain and troponin elevation includes
+acute coronary syndrome, pericarditis, and myocarditis.<sup><a href="#ref-4">4</a></sup> A preceding
+viral prodrome, diffuse (rather than territorial) ECG changes, and a troponin trajectory that peaks
+and resolves within days — rather than the more sustained elevation typical of infarction — favor
+myocarditis, as does subepicardial (rather than subendocardial) late gadolinium enhancement on
+MRI.<sup><a href="#ref-5">5</a></sup> Most cases in young, hemodynamically stable patients are
+self-limited and managed conservatively, though structured follow-up is warranted given a small
+but recognized risk of late ventricular dysfunction.<sup><a href="#ref-6">6</a></sup><sup><a href="#ref-7">7</a></sup></p>
+
+<h2>Conclusion</h2>
+<p>Myocarditis should remain a key differential in young adults presenting with chest pain and
+troponin elevation following a viral illness. Serial troponin trends and cardiac MRI are valuable
+in distinguishing it from acute coronary syndrome and guiding a conservative management
+approach.<sup><a href="#ref-8">8</a></sup></p>
+""".strip()
+
+CASE_REPORT_REFERENCES = """
+Caforio ALP, Pankuweit S, Arbustini E, et al. Current state of knowledge on aetiology, diagnosis, management, and therapy of myocarditis: a position statement of the European Society of Cardiology Working Group on Myocardial and Pericardial Diseases. Eur Heart J. 2013;34(33):2636-2648.
+Kociol RD, Cooper LT, Fang JC, et al. Recognition and initial management of fulminant myocarditis: a scientific statement from the American Heart Association. Circulation. 2020;141(6):e69-e92.
+Ferreira VM, Schulz-Menger J, Holmvang G, et al. Cardiovascular magnetic resonance in nonischemic myocardial inflammation: expert recommendations. J Am Coll Cardiol. 2018;72(24):3158-3176.
+Sharma A, Gurung R. Distinguishing acute coronary syndrome from myocarditis in young adults: a diagnostic approach. J Cardiol Nepal. 2024;12(3):145-152.
+Luetkens JA, Faron A, Isaak A, et al. Comparison of original and 2018 Lake Louise criteria for diagnosis of acute myocarditis. Radiol Cardiothorac Imaging. 2019;1(3):e190010.
+Ammirati E, Frigerio M, Adler ED, et al. Management of acute myocarditis and chronic inflammatory cardiomyopathy: an expert consensus document. Circ Heart Fail. 2020;13(11):e007405.
+Anzini M, Merlo M, Sabbadini G, et al. Long-term evolution and prognostic stratification of biopsy-proven active myocarditis. Circulation. 2013;128(22):2384-2394.
+Thapa B, Karki S. A case series of viral myocarditis mimicking acute coronary syndrome in a tertiary centre in Nepal. Ajna Health Lens. 2025;1(3):22-29.
+""".strip()
+
+
 class Command(BaseCommand):
     help = 'Seed realistic demo data (users, issues, articles, submissions, reviews, training courses) for local development.'
 
@@ -179,6 +297,7 @@ class Command(BaseCommand):
                  keywords='case report, cardiology, young adult',
                  article_type=Article.ArticleType.CASE_REPORT, status=Article.Status.PUBLISHED,
                  publication_date=datetime.date(2026, 4, 5), issue=issues[(1, 2)], volume='1', page_numbers='1-6',
+                 html_content=CASE_REPORT_HTML_CONTENT, references=CASE_REPORT_REFERENCES,
                  authors=[(karki, True)]),
             dict(slug='short-communication-child-nutrition-pilot',
                  title='Short Communication: Preliminary Findings from a Child Nutrition Pilot Program',

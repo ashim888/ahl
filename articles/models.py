@@ -65,7 +65,16 @@ class Article(models.Model):
 
     doi = models.CharField(max_length=100, unique=True, null=True, blank=True)
     pdf_file = models.FileField(upload_to='articles/%Y/%m/', null=True, blank=True)
-    html_content = models.TextField(null=True, blank=True)
+    html_content = models.TextField(
+        null=True, blank=True,
+        help_text='Full-text body HTML, rendered as-is (trusted — admin/editor-authored only, '
+                   'never end-user input). Shown only for open-access articles; subscription '
+                   'articles stay gated behind the Phase 6 paywall regardless of this field.',
+    )
+    references = models.TextField(
+        null=True, blank=True,
+        help_text='Bibliography, one formatted citation per line. Rendered as a numbered list.',
+    )
 
     authors = models.ManyToManyField(
         settings.AUTH_USER_MODEL, through='ArticleAuthor', related_name='authored_articles',

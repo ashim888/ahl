@@ -49,8 +49,9 @@ class ArticleListView(ListView):
 
 
 class ArticleDetailView(DetailView):
-    """Abstract and metadata are always public; full text gating is Phase 6
-    (ROADMAP.md "Key Decisions"), so no pdf/html full-text link is rendered yet.
+    """Abstract and metadata are always public. Full-text body (html_content) is
+    shown for open-access articles only — subscription articles stay gated behind
+    the Phase 6 paywall regardless of whether html_content is populated.
     """
 
     model = Article
@@ -63,6 +64,11 @@ class ArticleDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['article_authors'] = self.object.articleauthor_set.select_related('user').order_by('order')
+        context['show_full_text'] = self.object.access_type == Article.AccessType.OPEN_ACCESS
+        if self.object.references:
+            context['references_list'] = [
+                line.strip() for line in self.object.references.strip().splitlines() if line.strip()
+            ]
         return context
 
 

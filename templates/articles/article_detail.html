@@ -2,6 +2,14 @@
 
 {% block title %}{{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block extra_head %}
+    {% if show_full_text and article.html_content %}
+        {# D3 is only loaded on articles that actually have full-text body content,
+           since that's the only place a chart embedded in html_content could run. #}
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 py-16">
     <span class="text-xs uppercase tracking-wide text-gray-500">
@@ -36,13 +44,17 @@
     </div>
 
     <div class="mt-8">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Full Text</h2>
-        {% if article.access_type == 'open_access' %}
-            <p class="mt-3 text-sm text-gray-500">
-                Full-text access is coming in a later phase of this build (see ROADMAP.md Phase 6).
-                This article is marked Open Access.
-            </p>
+        {% if show_full_text %}
+            {% if article.html_content %}
+                <div class="prose-article leading-relaxed text-gray-800">
+                    {{ article.html_content|safe }}
+                </div>
+            {% else %}
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Full Text</h2>
+                <p class="mt-3 text-sm text-gray-500">Full text has not been added for this article yet.</p>
+            {% endif %}
         {% else %}
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Full Text</h2>
             <p class="mt-3 text-sm text-gray-500">
                 This article requires a subscription or APC payment for full-text access
                 — paywall logic lands in Phase 6.
@@ -50,7 +62,18 @@
         {% endif %}
     </div>
 
-    <div class="mt-8">
+    {% if references_list %}
+        <div class="mt-10 border-t border-gray-200 pt-6">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">References</h2>
+            <ol class="mt-3 space-y-2 text-sm text-gray-700 list-decimal list-inside">
+                {% for reference in references_list %}
+                    <li id="ref-{{ forloop.counter }}">{{ reference }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+    {% endif %}
+
+    <div class="mt-8 border-t border-gray-200 pt-6">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Cite this article</h2>
         <div class="mt-3 flex gap-3 text-sm">
             <a href="{% url 'articles:article_citation' article.slug 'bibtex' %}" class="underline">BibTeX</a>
