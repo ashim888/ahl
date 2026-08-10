@@ -7,7 +7,7 @@
         <h1 class="text-4xl md:text-5xl font-serif font-bold text-gray-900">{{ JOURNAL_NAME }}</h1>
         <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">{{ JOURNAL_TAGLINE }}</p>
         <div class="mt-8 flex justify-center gap-4">
-            <a href="#" class="px-6 py-3 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
+            <a href="{% url 'articles:article_list' %}" class="px-6 py-3 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
                 Read the Journal
             </a>
             <a href="#" class="px-6 py-3 rounded-md border border-gray-300 font-medium hover:bg-gray-50">
@@ -26,7 +26,9 @@
                     <span class="text-xs uppercase tracking-wide text-gray-500">
                         {{ article.get_article_type_display }}
                     </span>
-                    <h3 class="mt-2 font-semibold text-lg leading-snug">{{ article.title }}</h3>
+                    <h3 class="mt-2 font-semibold text-lg leading-snug">
+                        <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">{{ article.title }}</a>
+                    </h3>
                     <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ article.abstract }}</p>
                 </article>
             {% endfor %}
@@ -42,7 +44,9 @@
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for article in latest_news %}
                 <article class="border border-gray-200 rounded-lg p-5 bg-white">
-                    <h3 class="font-semibold text-lg leading-snug">{{ article.title }}</h3>
+                    <h3 class="font-semibold text-lg leading-snug">
+                        <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">{{ article.title }}</a>
+                    </h3>
                     <p class="mt-2 text-sm text-gray-600 line-clamp-3">{{ article.abstract }}</p>
                 </article>
             {% endfor %}

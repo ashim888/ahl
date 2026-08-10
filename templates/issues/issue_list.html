@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Issues — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-16">
+    <h1 class="text-3xl font-serif font-bold">Issues</h1>
+
+    <div class="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for issue in issues %}
+            <a href="{% url 'issues:issue_detail' issue.volume issue.number %}"
+               class="border border-gray-200 rounded-lg overflow-hidden bg-white hover:shadow-md transition-shadow">
+                {% if issue.cover_image %}
+                    <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" class="w-full h-40 object-cover">
+                {% else %}
+                    <div class="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+                        No cover image
+                    </div>
+                {% endif %}
+                <div class="p-4">
+                    <h2 class="font-semibold">{{ issue }}</h2>
+                    {% if issue.publication_date %}
+                        <p class="mt-1 text-sm text-gray-500">{{ issue.publication_date|date:"F Y" }}</p>
+                    {% endif %}
+                </div>
+            </a>
+        {% empty %}
+            <p class="text-gray-500">No issues published yet.</p>
+        {% endfor %}
+    </div>
+
+    {% include 'includes/pagination.html' %}
+</div>
+{% endblock %}

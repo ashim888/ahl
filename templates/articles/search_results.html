@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Search — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-16">
+    <h1 class="text-3xl font-serif font-bold">Search</h1>
+
+    <form method="get" class="mt-6 flex gap-3">
+        <input type="text" name="q" value="{{ query }}" placeholder="Title, abstract, keywords, or author"
+               class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+        <button type="submit" class="px-6 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+            Search
+        </button>
+    </form>
+
+    {% if query %}
+        <p class="mt-6 text-sm text-gray-500">
+            {{ page_obj.paginator.count|default:articles|length }} result(s) for "{{ query }}"
+        </p>
+    {% endif %}
+
+    <div class="mt-6 space-y-6">
+        {% for article in articles %}
+            <article class="border-b border-gray-200 pb-6">
+                <span class="text-xs uppercase tracking-wide text-gray-500">{{ article.get_article_type_display }}</span>
+                <h2 class="mt-1 text-xl font-serif font-semibold">
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">{{ article.title }}</a>
+                </h2>
+                <p class="mt-2 text-sm text-gray-600 line-clamp-2">{{ article.abstract }}</p>
+            </article>
+        {% empty %}
+            {% if query %}
+                <p class="text-gray-500">No articles matched your search.</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {% include 'includes/pagination.html' %}
+</div>
+{% endblock %}

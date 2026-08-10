@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-16">
+    <span class="text-xs uppercase tracking-wide text-gray-500">
+        {{ article.get_article_type_display }} &middot; {{ article.get_access_type_display }}
+    </span>
+    <h1 class="mt-2 text-3xl font-serif font-bold">{{ article.title }}</h1>
+
+    <p class="mt-3 text-sm text-gray-600">
+        {% for aa in article_authors %}
+            {{ aa.user.get_full_name }}{% if aa.is_corresponding %}<sup>*</sup>{% endif %}{% if not forloop.last %}, {% endif %}
+        {% empty %}
+            Editorial staff
+        {% endfor %}
+    </p>
+    <p class="mt-1 text-sm text-gray-500">
+        {% if article.publication_date %}Published {{ article.publication_date|date:"F j, Y" }}{% endif %}
+        {% if article.issue %}
+            &middot; <a href="{% url 'issues:issue_detail' article.issue.volume article.issue.number %}" class="underline">
+                Vol. {{ article.issue.volume }}, No. {{ article.issue.number }}
+            </a>
+        {% endif %}
+        {% if article.page_numbers %} &middot; pp. {{ article.page_numbers }}{% endif %}
+        {% if article.doi %} &middot; DOI: {{ article.doi }}{% endif %}
+    </p>
+
+    <div class="mt-8 border-t border-b border-gray-200 py-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Abstract</h2>
+        <p class="mt-3 text-gray-800 leading-relaxed">{{ article.abstract }}</p>
+        {% if article.keywords %}
+            <p class="mt-4 text-sm text-gray-500"><strong>Keywords:</strong> {{ article.keywords }}</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-8">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Full Text</h2>
+        {% if article.access_type == 'open_access' %}
+            <p class="mt-3 text-sm text-gray-500">
+                Full-text access is coming in a later phase of this build (see ROADMAP.md Phase 6).
+                This article is marked Open Access.
+            </p>
+        {% else %}
+            <p class="mt-3 text-sm text-gray-500">
+                This article requires a subscription or APC payment for full-text access
+                — paywall logic lands in Phase 6.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="mt-8">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Cite this article</h2>
+        <div class="mt-3 flex gap-3 text-sm">
+            <a href="{% url 'articles:article_citation' article.slug 'bibtex' %}" class="underline">BibTeX</a>
+            <a href="{% url 'articles:article_citation' article.slug 'ris' %}" class="underline">RIS</a>
+            <a href="{% url 'articles:article_citation' article.slug 'text' %}" class="underline">Plain text</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

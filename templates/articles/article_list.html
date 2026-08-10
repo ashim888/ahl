@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Articles — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-16">
+    <h1 class="text-3xl font-serif font-bold">Articles</h1>
+
+    <div class="mt-6 flex flex-wrap gap-2">
+        <a href="{% url 'articles:article_list' %}"
+           class="px-3 py-1.5 rounded-full text-sm border {% if not selected_type %}bg-gray-900 text-white border-gray-900{% else %}border-gray-300 text-gray-600 hover:bg-gray-100{% endif %}">
+            All
+        </a>
+        {% for value, label in article_types %}
+            <a href="?type={{ value }}"
+               class="px-3 py-1.5 rounded-full text-sm border {% if selected_type == value %}bg-gray-900 text-white border-gray-900{% else %}border-gray-300 text-gray-600 hover:bg-gray-100{% endif %}">
+                {{ label }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <div class="mt-8 space-y-6">
+        {% for article in articles %}
+            <article class="border-b border-gray-200 pb-6">
+                <span class="text-xs uppercase tracking-wide text-gray-500">
+                    {{ article.get_article_type_display }} &middot; {{ article.get_access_type_display }}
+                </span>
+                <h2 class="mt-1 text-xl font-serif font-semibold">
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">
+                        {{ article.title }}
+                    </a>
+                </h2>
+                <p class="mt-2 text-sm text-gray-600 line-clamp-2">{{ article.abstract }}</p>
+                <p class="mt-2 text-xs text-gray-500">
+                    {% if article.publication_date %}{{ article.publication_date|date:"F j, Y" }}{% endif %}
+                </p>
+            </article>
+        {% empty %}
+            <p class="text-gray-500">No articles published yet.</p>
+        {% endfor %}
+    </div>
+
+    {% include 'includes/pagination.html' %}
+</div>
+{% endblock %}

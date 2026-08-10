@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ issue }} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-16">
+    <div class="flex flex-col md:flex-row gap-8">
+        {% if issue.cover_image %}
+            <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" class="w-full md:w-48 rounded-lg object-cover">
+        {% endif %}
+        <div>
+            <h1 class="text-3xl font-serif font-bold">{{ issue }}</h1>
+            {% if issue.title %}<p class="mt-1 text-lg text-gray-600">{{ issue.title }}</p>{% endif %}
+            {% if issue.publication_date %}
+                <p class="mt-1 text-sm text-gray-500">{{ issue.publication_date|date:"F j, Y" }}</p>
+            {% endif %}
+            {% if issue.editorial_note %}
+                <p class="mt-4 text-gray-700 leading-relaxed">{{ issue.editorial_note }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-10">
+        <h2 class="text-xl font-serif font-bold mb-4">In this issue</h2>
+        <div class="space-y-4">
+            {% for article in issue_articles %}
+                <article class="border-b border-gray-200 pb-4">
+                    <span class="text-xs uppercase tracking-wide text-gray-500">
+                        {{ article.get_article_type_display }}
+                    </span>
+                    <h3 class="mt-1 font-semibold">
+                        <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">
+                            {{ article.title }}
+                        </a>
+                    </h3>
+                    {% if article.page_numbers %}<p class="text-sm text-gray-500">pp. {{ article.page_numbers }}</p>{% endif %}
+                </article>
+            {% empty %}
+                <p class="text-gray-500">No articles assigned to this issue yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

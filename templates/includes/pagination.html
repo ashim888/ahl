@@ -1,0 +1,19 @@
+{% if is_paginated %}
+<nav class="mt-10 flex items-center justify-between text-sm">
+    {% if page_obj.has_previous %}
+        <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+           class="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50">Previous</a>
+    {% else %}
+        <span></span>
+    {% endif %}
+
+    <span class="text-gray-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+        <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+           class="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50">Next</a>
+    {% else %}
+        <span></span>
+    {% endif %}
+</nav>
+{% endif %}
