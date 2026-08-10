@@ -1,9 +1,8 @@
 from django.contrib.auth.forms import UserCreationForm
 from django.forms import ModelForm
 
+from ajna_health_lens.forms import apply_tailwind_widgets
 from .models import User
-
-TAILWIND_INPUT = 'w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
 
 
 class RegistrationForm(UserCreationForm):
@@ -21,11 +20,7 @@ class RegistrationForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            if name == 'cv_file':
-                continue
-            css = TAILWIND_INPUT
-            field.widget.attrs['class'] = css
+        apply_tailwind_widgets(self)
 
 
 class ProfileUpdateForm(ModelForm):
@@ -43,7 +38,4 @@ class ProfileUpdateForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            if name == 'cv_file':
-                continue
-            field.widget.attrs['class'] = TAILWIND_INPUT
+        apply_tailwind_widgets(self)

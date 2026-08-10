@@ -8,6 +8,7 @@ urlpatterns = [
     path('', include('articles.urls')),
     path('', include('issues.urls')),
     path('', include('users.urls')),
+    path('', include('submissions.urls')),
 ]
 
 if settings.DEBUG:

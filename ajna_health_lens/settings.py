@@ -26,6 +26,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-only-change-me')
 DEBUG = env_bool('DEBUG', True)
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+if DEBUG:
+    # Django's test Client sends Host: testserver by default — allow it in
+    # dev/test only, never in production.
+    ALLOWED_HOSTS.append('testserver')
 
 
 # Application definition

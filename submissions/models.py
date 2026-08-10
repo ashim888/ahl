@@ -3,6 +3,8 @@ from django.db import models
 
 from articles.models import Article
 
+from .validators import manuscript_extension_validator, validate_manuscript_file_size
+
 
 class Submission(models.Model):
     """Working record for a manuscript from upload through editorial decision.
@@ -58,7 +60,11 @@ class ManuscriptFile(models.Model):
     submission = models.ForeignKey(
         Submission, on_delete=models.CASCADE, related_name='manuscript_files',
     )
-    file = models.FileField(upload_to='manuscripts/%Y/%m/')
+    file = models.FileField(
+        upload_to='manuscripts/%Y/%m/',
+        validators=[manuscript_extension_validator, validate_manuscript_file_size],
+        help_text='PDF, DOC, or DOCX, up to 50 MB.',
+    )
     file_type = models.CharField(max_length=10, choices=FileType.choices)
     version = models.IntegerField(default=1)
     uploaded_at = models.DateTimeField(auto_now_add=True)

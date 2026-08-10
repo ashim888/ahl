@@ -42,6 +42,11 @@
             </div>
             <div class="flex items-center gap-3 text-sm font-medium">
                 {% if user.is_authenticated %}
+                    {% if user.role != 'unverified' %}
+                        <a href="{% url 'submissions:author_dashboard' %}" class="text-gray-600 hover:text-gray-900">
+                            Dashboard
+                        </a>
+                    {% endif %}
                     <a href="{% url 'users:profile' %}" class="text-gray-600 hover:text-gray-900">
                         {{ user.first_name }}
                     </a>
@@ -53,7 +58,7 @@
                     <a href="{% url 'users:login' %}" class="text-gray-600 hover:text-gray-900">Login</a>
                     <a href="{% url 'users:register' %}" class="text-gray-600 hover:text-gray-900">Register</a>
                 {% endif %}
-                <a href="#" class="px-4 py-2 rounded-md bg-gray-900 text-white hover:bg-gray-700">
+                <a href="{% url 'submissions:submit_step1' %}" class="px-4 py-2 rounded-md bg-gray-900 text-white hover:bg-gray-700">
                     Submit Manuscript
                 </a>
             </div>

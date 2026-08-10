@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Your Submissions — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-16">
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-serif font-bold">Your Submissions</h1>
+        <a href="{% url 'submissions:submit_step1' %}"
+           class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+            Submit a manuscript
+        </a>
+    </div>
+
+    <div class="mt-8 space-y-4">
+        {% for submission in submissions %}
+            <div class="border border-gray-200 rounded-lg p-5 bg-white">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <span class="text-xs uppercase tracking-wide text-gray-500">
+                            {{ submission.get_status_display }}
+                            {% if submission.revision_round %} &middot; Revision {{ submission.revision_round }}{% endif %}
+                        </span>
+                        <h2 class="mt-1 font-semibold">{{ submission.title }}</h2>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Submitted {{ submission.submission_date|date:"F j, Y" }}
+                            {% if submission.editor_assigned %} &middot; Editor: {{ submission.editor_assigned.get_full_name }}{% endif %}
+                        </p>
+                        {% with latest_file=submission.manuscript_files.all|first %}
+                            <p class="text-sm text-gray-500">
+                                Latest file: {{ latest_file.file.name|default:"—" }}
+                                {% if latest_file %}(v{{ latest_file.version }}){% endif %}
+                            </p>
+                        {% endwith %}
+                    </div>
+                </div>
+
+                {% if submission.status == 'minor_revision' or submission.status == 'major_revision' %}
+                    <form method="post" action="{% url 'submissions:upload_revision' submission.pk %}"
+                          enctype="multipart/form-data" class="mt-4 flex items-end gap-3 border-t border-gray-100 pt-4">
+                        {% csrf_token %}
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Upload revised manuscript</label>
+                            {{ revision_form.file }}
+                        </div>
+                        <button type="submit" class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+                            Upload revision
+                        </button>
+                    </form>
+                {% endif %}
+
+                {% if submission.status == 'rejected' %}
+                    <div class="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-600 bg-gray-50 rounded-md p-3">
+                        Not the outcome you hoped for. Our training programs can help strengthen your next
+                        submission — <a href="#" class="underline">browse courses</a>.
+                    </div>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="text-gray-500">You haven't submitted any manuscripts yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
