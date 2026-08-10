@@ -37,17 +37,18 @@ class UserAdmin(BaseUserAdmin):
 
     @admin.action(description='Approve verification (→ Verified Author)')
     def approve_verification(self, request, queryset):
-        for user in queryset:
-            user.verification_status = User.VerificationStatus.APPROVED
-            user.is_verified = True
-            user.role = User.Role.VERIFIED_AUTHOR
-            user.save()
-        self.message_user(request, f'{queryset.count()} user(s) approved.')
+        applied = sum(user.approve_verification() for user in queryset)
+        skipped = queryset.count() - applied
+        message = f'{applied} user(s) approved.'
+        if skipped:
+            message += f' {skipped} skipped (role outside the verification queue — e.g. Editor/Admin).'
+        self.message_user(request, message)
 
     @admin.action(description='Reject verification')
     def reject_verification(self, request, queryset):
-        for user in queryset:
-            user.verification_status = User.VerificationStatus.REJECTED
-            user.is_verified = False
-            user.save()
-        self.message_user(request, f'{queryset.count()} user(s) rejected.')
+        applied = sum(user.reject_verification() for user in queryset)
+        skipped = queryset.count() - applied
+        message = f'{applied} user(s) rejected.'
+        if skipped:
+            message += f' {skipped} skipped (role outside the verification queue — e.g. Editor/Admin).'
+        self.message_user(request, message)

@@ -5,6 +5,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+from .validators import cv_extension_validator, validate_cv_file_size
+
 
 class UserManager(BaseUserManager):
     """Manager for the email-based custom User model."""
@@ -84,7 +86,11 @@ class User(AbstractUser):
     affiliation = models.CharField(max_length=255, null=True, blank=True)
     department = models.CharField(max_length=255, null=True, blank=True)
     bio = models.TextField(null=True, blank=True)
-    cv_file = models.FileField(upload_to='profiles/cvs/', null=True, blank=True)
+    cv_file = models.FileField(
+        upload_to='profiles/cvs/', null=True, blank=True,
+        validators=[cv_extension_validator, validate_cv_file_size],
+        help_text='PDF, DOC, or DOCX, up to 10 MB.',
+    )
     research_interests = models.TextField(null=True, blank=True)
     linkedin_url = models.URLField(null=True, blank=True)
     researchgate_url = models.URLField(null=True, blank=True)
@@ -112,3 +118,33 @@ class User(AbstractUser):
     def can_reapply(self):
         available_at = self.reapply_available_at
         return available_at is not None and timezone.now() >= available_at
+
+    # Roles governed by the self-registration verification queue. Reviewer/Editor/
+    # Editor-in-Chief/Admin are assigned manually (see ARCHITECTURE.md §6.1) and are
+    # deliberately out of scope for approve_verification/reject_verification below,
+    # so a bulk queue action can never downgrade an already-privileged account.
+    VERIFICATION_QUEUE_ROLES = (Role.UNVERIFIED, Role.VERIFIED_AUTHOR)
+
+    def approve_verification(self):
+        """Promote to Verified Author. No-op (returns False) for roles the
+        verification queue doesn't govern, e.g. Editor/EiC/Admin.
+        """
+        if self.role not in self.VERIFICATION_QUEUE_ROLES:
+            return False
+        self.verification_status = self.VerificationStatus.APPROVED
+        self.is_verified = True
+        self.role = self.Role.VERIFIED_AUTHOR
+        self.save()
+        return True
+
+    def reject_verification(self):
+        """Reject (or revoke) author verification, reverting role to unverified.
+        No-op (returns False) for roles the verification queue doesn't govern.
+        """
+        if self.role not in self.VERIFICATION_QUEUE_ROLES:
+            return False
+        self.verification_status = self.VerificationStatus.REJECTED
+        self.is_verified = False
+        self.role = self.Role.UNVERIFIED
+        self.save()
+        return True

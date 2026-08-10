@@ -13,5 +13,6 @@ class TrainingCourseAdmin(admin.ModelAdmin):
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
     list_display = ['user', 'course', 'status', 'payment_status', 'enrolled_at']
+    list_select_related = ['user', 'course']
     list_filter = ['status', 'payment_status']
     search_fields = ['user__email', 'course__title']

@@ -11,6 +11,7 @@ class ManuscriptFileInline(admin.TabularInline):
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
     list_display = ['title', 'status', 'submitter', 'editor_assigned', 'submission_date']
+    list_select_related = ['submitter', 'editor_assigned']
     list_filter = ['status', 'article_type']
     search_fields = ['title', 'abstract', 'keywords', 'submitter__email']
     inlines = [ManuscriptFileInline]

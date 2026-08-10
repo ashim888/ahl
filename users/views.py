@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, TemplateView, UpdateView
 from django.views.generic.detail import DetailView
 
+from .decorators import role_required
 from .forms import ProfileUpdateForm, RegistrationForm
 from .models import User
 
@@ -67,39 +68,38 @@ pending_verification_view = login_required(PendingVerificationView.as_view())
 def reapply_verification(request):
     user = request.user
     if request.method == 'POST' and user.can_reapply:
+        # Plain save() (no update_fields) so the pre_save signal's
+        # verification_status_changed_at stamp is actually persisted.
         user.verification_status = User.VerificationStatus.PENDING
-        user.save(update_fields=['verification_status'])
+        user.save()
         messages.success(request, 'Your verification request has been resubmitted.')
     return redirect('users:pending_verification')
 
 
-@login_required
+# Verifying users is an Editor-in-Chief/Admin capability (ARCHITECTURE.md §6.2) —
+# deliberately not "is_staff", since Editors also have is_staff=True but aren't
+# meant to approve/reject verifications themselves.
+@role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
 def verification_queue(request):
-    if not (request.user.is_staff or request.user.role in (User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)):
-        raise PermissionDenied
-
     pending_users = User.objects.filter(
         verification_status=User.VerificationStatus.PENDING,
     ).order_by('date_joined')
     return render(request, 'users/verification_queue.html', {'pending_users': pending_users})
 
 
-@login_required
+@role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
 def verification_decide(request, pk, decision):
-    if not (request.user.is_staff or request.user.role in (User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)):
-        raise PermissionDenied
     if decision not in ('approve', 'reject') or request.method != 'POST':
         raise PermissionDenied
 
     target = get_object_or_404(User, pk=pk)
-    if decision == 'approve':
-        target.verification_status = User.VerificationStatus.APPROVED
-        target.is_verified = True
-        target.role = User.Role.VERIFIED_AUTHOR
-        messages.success(request, f'{target.email} approved.')
+    applied = target.approve_verification() if decision == 'approve' else target.reject_verification()
+    if applied:
+        messages.success(request, f'{target.email} {decision}d.')
     else:
-        target.verification_status = User.VerificationStatus.REJECTED
-        target.is_verified = False
-        messages.success(request, f'{target.email} rejected.')
-    target.save()
+        messages.error(
+            request,
+            f'{target.email} has role "{target.get_role_display()}", which the verification '
+            'queue does not manage — no change made.',
+        )
     return redirect('users:verification_queue')

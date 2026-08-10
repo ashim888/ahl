@@ -6,5 +6,6 @@ from .models import Review
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ['submission', 'reviewer', 'status', 'due_date', 'recommendation']
+    list_select_related = ['submission', 'reviewer']
     list_filter = ['status', 'recommendation']
     search_fields = ['submission__title', 'reviewer__email']
