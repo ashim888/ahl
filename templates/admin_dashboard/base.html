@@ -77,14 +77,18 @@
                 </svg>
                 Editorial Board
             </a>
+            <a href="{% url 'training:manage_course_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_course' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5Zm0 0v6m-9-6v4a9 9 0 0 0 18 0v-4"/>
+                </svg>
+                Training Courses
+            </a>
 
             <div class="pt-4 mt-4 border-t border-gray-800">
                 <p class="px-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Coming later</p>
                 <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Public browsing exists; CRUD is still plain Django admin">
                     Issues
-                </span>
-                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Roadmap Phase 6">
-                    Training Catalog
                 </span>
                 <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Roadmap Phase 7">
                     Revenue

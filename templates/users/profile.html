@@ -43,5 +43,28 @@
             <p class="mt-2 text-sm text-gray-900">{{ profile_user.bio }}</p>
         </div>
     {% endif %}
+
+    <div class="mt-8">
+        <div class="flex items-center justify-between">
+            <h2 class="text-sm font-medium text-gray-500">Training Enrollments</h2>
+            <a href="{% url 'training:course_list' %}" class="text-xs underline text-gray-500">Browse courses</a>
+        </div>
+        {% if enrollments %}
+            <div class="mt-3 divide-y divide-gray-200 border-t border-b border-gray-200">
+                {% for enrollment in enrollments %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <a href="{% url 'training:course_detail' enrollment.course.pk %}" class="text-sm text-gray-900 hover:underline">
+                            {{ enrollment.course.title }}
+                        </a>
+                        <span class="text-sm text-gray-500">
+                            {{ enrollment.get_status_display }} &middot; {{ enrollment.get_payment_status_display }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="mt-2 text-sm text-gray-500">Not enrolled in any training programs yet.</p>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

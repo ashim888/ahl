@@ -55,6 +55,7 @@
                 <a href="{% url 'articles:home' %}" class="hover:text-gray-900">Home</a>
                 <a href="{% url 'articles:article_list' %}" class="hover:text-gray-900">Articles</a>
                 <a href="{% url 'issues:issue_list' %}" class="hover:text-gray-900">Issues</a>
+                <a href="{% url 'training:course_list' %}" class="hover:text-gray-900">Training</a>
                 <a href="{% url 'editorial_board:public_list' %}" class="hover:text-gray-900">About</a>
                 <form method="get" action="{% url 'articles:search' %}" class="flex">
                     <input type="text" name="q" placeholder="Search…" style="width: 10rem;"

@@ -1,0 +1,52 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Training Courses — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Training Courses{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">All courses regardless of active status.</p>
+    <a href="{% url 'training:manage_course_create' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+        + New Course
+    </a>
+</div>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3">Title</th>
+                <th class="px-4 py-3">Instructor</th>
+                <th class="px-4 py-3">Price</th>
+                <th class="px-4 py-3">Enrollments</th>
+                <th class="px-4 py-3">Active</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for course in courses %}
+                <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ course.title }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ course.instructor }}</td>
+                    <td class="px-4 py-3 text-gray-600">${{ course.price }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        <a href="{% url 'training:manage_course_enrollments' course.pk %}" class="underline">
+                            {{ course.enrollment_count }}{% if course.max_enrollments %} / {{ course.max_enrollments }}{% endif %}
+                        </a>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{% if course.is_active %}Yes{% else %}No{% endif %}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'training:manage_course_update' course.pk %}" class="underline mr-3">Edit</a>
+                        <a href="{% url 'training:manage_course_delete' course.pk %}" class="underline text-red-700">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No training courses yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}
