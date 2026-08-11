@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Editorial Dashboard — {{ JOURNAL_NAME }}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        form input[type="text"], form input[type="email"], form input[type="password"],
+        form input[type="url"], form input[type="date"], form input[type="number"],
+        form textarea, form select {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        form input:focus, form textarea:focus, form select:focus {
+            outline: 2px solid transparent;
+            box-shadow: 0 0 0 2px #111827;
+        }
+        .prose-article h2 { font-size: 1.25rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; font-family: ui-serif, Georgia, serif; }
+        .prose-article h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .prose-article p { margin-top: 1rem; }
+        .prose-article ul, .prose-article ol { margin-top: 1rem; padding-left: 1.5rem; }
+        .prose-article ul { list-style: disc; }
+        .prose-article ol { list-style: decimal; }
+        .prose-article li { margin-top: 0.25rem; }
+        .prose-article blockquote { border-left: 3px solid #d1d5db; padding-left: 1rem; margin: 1rem 0; color: #4b5563; font-style: italic; }
+        .prose-article table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.875rem; }
+        .prose-article th, .prose-article td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; }
+        .prose-article th { background: #f9fafb; font-weight: 600; }
+        .prose-article figure { margin: 1.5rem 0; }
+        .prose-article figcaption { margin-top: 0.5rem; font-size: 0.8rem; color: #6b7280; }
+        .prose-article sup { vertical-align: super; font-size: 0.7em; }
+        .prose-article a { text-decoration: underline; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-screen flex bg-gray-100 text-gray-900 overflow-hidden">
+
+    {% with view_name=request.resolver_match.view_name %}
+    <aside class="w-64 shrink-0 bg-gray-900 text-gray-300 flex flex-col h-screen">
+        <div class="h-16 flex items-center px-5 border-b border-gray-800 shrink-0">
+            <a href="{% url 'admin_custom:dashboard' %}" class="text-white font-serif font-bold text-base leading-tight">
+                {{ JOURNAL_NAME }}
+                <span class="block text-xs font-sans font-normal text-gray-400">Editorial Dashboard</span>
+            </a>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1 text-sm">
+            <a href="{% url 'admin_custom:dashboard' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-md {% if view_name == 'admin_custom:dashboard' %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"/>
+                </svg>
+                Dashboard
+            </a>
+            <a href="{% url 'articles:manage_article_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_article' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V7l-5-5H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Zm5-16v4a1 1 0 0 0 1 1h4"/>
+                </svg>
+                Articles
+            </a>
+            <a href="{% url 'users:verification_queue' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'verification' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4m5-3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4 8 4Z"/>
+                </svg>
+                Verification Queue
+            </a>
+
+            <div class="pt-4 mt-4 border-t border-gray-800">
+                <p class="px-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Coming later</p>
+                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Lands in Phase 5">
+                    Submissions Review
+                </span>
+                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Lands in Phase 3 admin polish">
+                    Issues
+                </span>
+                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Lands in Phase 6">
+                    Training &amp; Revenue
+                </span>
+            </div>
+        </nav>
+
+        <div class="border-t border-gray-800 p-4 text-xs shrink-0">
+            <p class="text-gray-300 font-medium">{{ user.get_full_name }}</p>
+            <p class="text-gray-500">{{ user.get_role_display }}</p>
+            <div class="mt-3 flex items-center justify-between">
+                <a href="{% url 'articles:home' %}" class="underline text-gray-400 hover:text-gray-200">← Site</a>
+                <form method="post" action="{% url 'users:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="underline text-gray-400 hover:text-gray-200">Log out</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+    {% endwith %}
+
+    <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center px-6 shrink-0">
+            <h1 class="text-lg font-semibold text-gray-900">{% block page_title %}Dashboard{% endblock %}</h1>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-6">
+            {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for message in messages %}
+                        <div class="rounded-md px-4 py-3 text-sm border
+                                    {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
+                                    {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+                                    {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,22 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Delete Article — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Delete Article{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <p class="text-gray-700">
+        This will permanently delete "<strong>{{ article.title }}</strong>" and its author associations.
+        This cannot be undone.
+    </p>
+
+    <form method="post" class="mt-8 flex gap-3">
+        {% csrf_token %}
+        <button type="submit" class="py-2.5 px-6 rounded-md bg-red-700 text-white font-medium hover:bg-red-800">
+            Delete permanently
+        </button>
+        <a href="{% url 'articles:manage_article_list' %}"
+           class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">Cancel</a>
+    </form>
+</div>
+{% endblock %}

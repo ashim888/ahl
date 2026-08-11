@@ -48,8 +48,8 @@ class Article(models.Model):
     keywords = models.CharField(max_length=500, null=True, blank=True)
     article_type = models.CharField(max_length=30, choices=ArticleType.choices)
     access_type = models.CharField(
-        max_length=20, choices=AccessType.choices,
-        help_text='Defaults from article_type on creation; editors may override.',
+        max_length=20, choices=AccessType.choices, blank=True,
+        help_text='Leave blank to default from article_type on creation; editors may override.',
     )
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.DRAFT)
 
@@ -91,9 +91,15 @@ class Article(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @classmethod
+    def resolve_access_type(cls, article_type, access_type):
+        """Shared by save() and the unsaved preview view (articles/views.py)
+        so both apply the exact same default-resolution rule.
+        """
+        return access_type or cls.ACCESS_TYPE_DEFAULTS.get(article_type, cls.AccessType.SUBSCRIPTION)
+
     def save(self, *args, **kwargs):
-        if not self.access_type:
-            self.access_type = self.ACCESS_TYPE_DEFAULTS.get(self.article_type, self.AccessType.SUBSCRIPTION)
+        self.access_type = self.resolve_access_type(self.article_type, self.access_type)
         super().save(*args, **kwargs)
 
     def __str__(self):

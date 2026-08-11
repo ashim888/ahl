@@ -1,51 +1,49 @@
-{% extends 'base.html' %}
+{% extends 'admin_dashboard/base.html' %}
 
 {% block title %}Verification queue — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Verification Queue{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 py-16">
-    <h1 class="text-3xl font-serif font-bold">Verification queue</h1>
-    <p class="mt-2 text-gray-600">{{ pending_users|length }} user(s) awaiting review.</p>
+<p class="text-sm text-gray-500">{{ pending_users|length }} user(s) awaiting review.</p>
 
-    <div class="mt-8 space-y-4">
-        {% for u in pending_users %}
-            <div class="border border-gray-200 rounded-lg p-5 bg-white">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <h2 class="font-semibold">{{ u.get_full_name }} &lt;{{ u.email }}&gt;</h2>
-                        <p class="text-sm text-gray-600 mt-1">
-                            {{ u.affiliation|default:"No affiliation given" }}
-                            {% if u.department %} — {{ u.department }}{% endif %}
-                        </p>
-                        <p class="text-sm text-gray-600">ORCID: {{ u.orcid|default:"—" }}</p>
-                        {% if u.linkedin_url %}<p class="text-sm text-gray-600">LinkedIn: {{ u.linkedin_url }}</p>{% endif %}
-                        {% if u.researchgate_url %}<p class="text-sm text-gray-600">ResearchGate: {{ u.researchgate_url }}</p>{% endif %}
-                        {% if u.publications %}
-                            <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">{{ u.publications }}</p>
-                        {% endif %}
-                        {% if u.cv_file %}
-                            <a href="{{ u.cv_file.url }}" class="text-sm underline mt-2 inline-block">View CV</a>
-                        {% endif %}
-                    </div>
-                    <div class="flex gap-2 shrink-0">
-                        <form method="post" action="{% url 'users:verification_decide' u.pk 'approve' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800">
-                                Approve
-                            </button>
-                        </form>
-                        <form method="post" action="{% url 'users:verification_decide' u.pk 'reject' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
-                                Reject
-                            </button>
-                        </form>
-                    </div>
+<div class="mt-6 space-y-4">
+    {% for u in pending_users %}
+        <div class="border border-gray-200 rounded-lg p-5 bg-white">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="font-semibold">{{ u.get_full_name }} &lt;{{ u.email }}&gt;</h2>
+                    <p class="text-sm text-gray-600 mt-1">
+                        {{ u.affiliation|default:"No affiliation given" }}
+                        {% if u.department %} — {{ u.department }}{% endif %}
+                    </p>
+                    <p class="text-sm text-gray-600">ORCID: {{ u.orcid|default:"—" }}</p>
+                    {% if u.linkedin_url %}<p class="text-sm text-gray-600">LinkedIn: {{ u.linkedin_url }}</p>{% endif %}
+                    {% if u.researchgate_url %}<p class="text-sm text-gray-600">ResearchGate: {{ u.researchgate_url }}</p>{% endif %}
+                    {% if u.publications %}
+                        <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">{{ u.publications }}</p>
+                    {% endif %}
+                    {% if u.cv_file %}
+                        <a href="{{ u.cv_file.url }}" class="text-sm underline mt-2 inline-block">View CV</a>
+                    {% endif %}
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <form method="post" action="{% url 'users:verification_decide' u.pk 'approve' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800">
+                            Approve
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'users:verification_decide' u.pk 'reject' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
+                            Reject
+                        </button>
+                    </form>
                 </div>
             </div>
-        {% empty %}
-            <p class="text-gray-500">No pending verifications.</p>
-        {% endfor %}
-    </div>
+        </div>
+    {% empty %}
+        <p class="text-gray-500">No pending verifications.</p>
+    {% endfor %}
 </div>
 {% endblock %}

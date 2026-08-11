@@ -1,9 +1,22 @@
+from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponse, Http404
-from django.shortcuts import get_object_or_404
-from django.views.generic import DetailView, ListView, TemplateView
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
+from users.decorators import role_required
+from users.models import User
+
+from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
+from .forms import ArticleForm
 from .models import Article
+
+# Article CRUD (manage/ views below) is an editorial capability — ARCHITECTURE.md
+# §6.2 grants "Access admin: Yes" to Editor/EiC/Admin only.
+EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
 
 
 class HomeView(TemplateView):
@@ -132,3 +145,135 @@ class SearchView(ListView):
         context = super().get_context_data(**kwargs)
         context['query'] = self.query
         return context
+
+
+# -- Editorial article management (CRUD, not public browsing) --------------
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class ArticleManageListView(ListView):
+    """All articles regardless of status, for editorial management —
+    distinct from ArticleListView above, which only shows published ones.
+    """
+
+    model = Article
+    template_name = 'articles/manage/article_list.html'
+    context_object_name = 'articles'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = Article.objects.select_related('issue').order_by('-updated_at')
+        status = self.request.GET.get('status')
+        article_type = self.request.GET.get('type')
+        if status:
+            queryset = queryset.filter(status=status)
+        if article_type:
+            queryset = queryset.filter(article_type=article_type)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['article_types'] = Article.ArticleType.choices
+        context['statuses'] = Article.Status.choices
+        context['selected_type'] = self.request.GET.get('type', '')
+        context['selected_status'] = self.request.GET.get('status', '')
+        return context
+
+
+class ArticleFormMixin:
+    """Shared context for create/update — the per-type content-template
+    picker rendered in articles/manage/article_form.html.
+    """
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['content_templates'] = {str(k): v for k, v in ARTICLE_TYPE_CONTENT_TEMPLATES.items()}
+        return context
+
+    def get_success_url(self):
+        return reverse('articles:manage_article_update', kwargs={'slug': self.object.slug})
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class ArticleCreateView(ArticleFormMixin, CreateView):
+    model = Article
+    form_class = ArticleForm
+    template_name = 'articles/manage/article_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_create'] = True
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{form.instance.title}" created.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class ArticleUpdateView(ArticleFormMixin, UpdateView):
+    model = Article
+    form_class = ArticleForm
+    template_name = 'articles/manage/article_form.html'
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_create'] = False
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{form.instance.title}" updated.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class ArticleDeleteView(DeleteView):
+    model = Article
+    template_name = 'articles/manage/article_confirm_delete.html'
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
+    success_url = reverse_lazy('articles:manage_article_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{self.object.title}" deleted.')
+        return super().form_valid(form)
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_preview(request):
+    """Render in-progress form data through the real article_detail.html
+    template — without saving anything — so an editor sees exactly what the
+    published page will look like, D3 charts and all.
+    """
+    # When previewing an edit, bind the form to its existing instance — otherwise
+    # the slug/DOI uniqueness validators reject the article's own current values
+    # as duplicates of themselves.
+    source_pk = request.POST.get('preview_source_pk')
+    source = Article.objects.filter(pk=source_pk).first() if source_pk else None
+
+    form = ArticleForm(request.POST, request.FILES, instance=source)
+    if not form.is_valid():
+        return render(request, 'articles/manage/article_preview_error.html', {'form': form}, status=400)
+
+    article = form.save(commit=False)
+    article.access_type = Article.resolve_access_type(article.article_type, article.access_type)
+
+    # Authors aren't editable from this form (see ArticleForm docstring) — for an
+    # existing article, pull its real authors so the preview byline is accurate.
+    article_authors = []
+    if source:
+        article_authors = list(source.articleauthor_set.select_related('user').order_by('order'))
+
+    context = {
+        'article': article,
+        'article_authors': article_authors,
+        'show_full_text': article.access_type == Article.AccessType.OPEN_ACCESS,
+        'preview_mode': True,
+    }
+    if article.references:
+        context['references_list'] = [
+            line.strip() for line in article.references.strip().splitlines() if line.strip()
+        ]
+    return render(request, 'articles/article_detail.html', context)

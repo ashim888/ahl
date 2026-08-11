@@ -9,6 +9,7 @@ urlpatterns = [
     path('', include('issues.urls')),
     path('', include('users.urls')),
     path('', include('submissions.urls')),
+    path('editorial/', include('admin_custom.urls')),
 ]
 
 if settings.DEBUG:
