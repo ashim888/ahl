@@ -30,6 +30,12 @@ OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_ED
 EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
 
 
+class ComingSoonView(TemplateView):
+    """Pre-launch placeholder at "/" — see the routing note in articles/urls.py."""
+
+    template_name = 'coming_soon.html'
+
+
 class HomeView(TemplateView):
     """Journal homepage: hero story, latest news, opinion, research
     highlights, special issues, and an editorial board preview.
