@@ -3,39 +3,40 @@
 {% block title %}Search — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-16">
-    <h1 class="text-3xl font-serif font-bold">Search</h1>
+<div class="max-w-3xl mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Search</h1>
 
-    <form method="get" class="mt-6 flex gap-3">
+    <form method="get" class="mt-6 flex border border-foreground">
         <input type="text" name="q" value="{{ query }}" placeholder="Title, abstract, keywords, or author"
-               class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
-        <button type="submit" class="px-6 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
-            Search
+               class="flex-1 bg-transparent px-4 py-3 text-sm outline-none font-mono-editorial !border-0">
+        <button type="submit" class="bg-foreground text-primary-foreground font-mono-editorial text-xs tracking-widest px-6">
+            SEARCH
         </button>
     </form>
 
     {% if query %}
-        <p class="mt-6 text-sm text-gray-500">
-            {{ page_obj.paginator.count|default:articles|length }} result(s) for "{{ query }}"
+        <p class="mt-6 font-mono-editorial text-xs text-muted-foreground tracking-widest">
+            {{ page_obj.paginator.count|default:articles|length }} RESULT(S) FOR "{{ query }}"
         </p>
     {% endif %}
 
-    <div class="mt-6 space-y-6">
+    <div class="mt-8 divide-y divide-border">
         {% for article in articles %}
-            <article class="border-b border-gray-200 pb-6">
-                <span class="text-xs uppercase tracking-wide text-gray-500">{{ article.get_article_type_display }}</span>
-                <h2 class="mt-1 text-xl font-serif font-semibold">
-                    <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">{{ article.title }}</a>
+            <article class="article-link py-6">
+                <span class="section-label text-muted-foreground">{{ article.get_article_type_display }}</span>
+                <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
+                    <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                 </h2>
-                <p class="mt-2 text-sm text-gray-600 line-clamp-2">{{ article.abstract }}</p>
+                <p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ article.abstract }}</p>
             </article>
         {% empty %}
             {% if query %}
-                <p class="text-gray-500">No articles matched your search.</p>
+                <p class="text-muted-foreground py-10">No articles matched your search.</p>
             {% endif %}
         {% endfor %}
     </div>
 
-    {% include 'includes/pagination.html' %}
+    {% include 'includes/pagination_editorial.html' %}
 </div>
 {% endblock %}

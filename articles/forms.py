@@ -18,7 +18,7 @@ class ArticleForm(forms.ModelForm):
             'title', 'slug', 'article_type', 'access_type', 'status',
             'abstract', 'keywords', 'issue', 'volume', 'page_numbers', 'doi',
             'submission_date', 'acceptance_date', 'publication_date',
-            'html_content', 'references', 'pdf_file',
+            'html_content', 'references', 'featured_image', 'pdf_file',
         ]
         widgets = {
             'submission_date': forms.DateInput(attrs={'type': 'date'}),
@@ -35,4 +35,4 @@ class ArticleForm(forms.ModelForm):
         # access_type is a plain CharField+choices (not a FK), so the blank
         # option's label is set by overriding choices, not via empty_label.
         self.fields['access_type'].choices = [('', 'Default from article type')] + list(Article.AccessType.choices)
-        apply_tailwind_widgets(self, skip=('cv_file', 'file', 'pdf_file'))
+        apply_tailwind_widgets(self, skip=('cv_file', 'file', 'pdf_file', 'featured_image'))

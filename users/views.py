@@ -8,6 +8,8 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, TemplateView, UpdateView
 from django.views.generic.detail import DetailView
 
+from training.models import Enrollment
+
 from .decorators import role_required
 from .forms import ProfileUpdateForm, RegistrationForm
 from .models import User
@@ -37,6 +39,13 @@ class ProfileView(DetailView):
 
     def get_object(self, queryset=None):
         return self.request.user
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['enrollments'] = Enrollment.objects.filter(
+            user=self.request.user,
+        ).select_related('course').order_by('-enrolled_at')
+        return context
 
 
 class ProfileUpdateView(UpdateView):

@@ -52,7 +52,7 @@
                 {% if submission.status == 'rejected' %}
                     <div class="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-600 bg-gray-50 rounded-md p-3">
                         Not the outcome you hoped for. Our training programs can help strengthen your next
-                        submission — <a href="#" class="underline">browse courses</a>.
+                        submission — <a href="{% url 'training:course_list' %}" class="underline">browse courses</a>.
                     </div>
                 {% endif %}
             </div>

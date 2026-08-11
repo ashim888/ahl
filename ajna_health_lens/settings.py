@@ -45,11 +45,12 @@ INSTALLED_APPS = [
     # Ajna Health Lens apps
     'users',
     'articles',
-    'submissions',
-    'peer_review',
+    'submissions',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
+    'peer_review',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
     'issues',
     'admin_custom',
     'training',
+    'editorial_board',
 ]
 
 MIDDLEWARE = [
@@ -174,6 +175,7 @@ JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Ajna Health Lens')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
 JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
 JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Ajna Health Lens Publishing')
+JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.example')
 
 
 # File upload limits (see ARCHITECTURE.md §7.1)
@@ -182,3 +184,4 @@ CV_MAX_UPLOAD_SIZE_MB = 10
 PROFILE_PHOTO_MAX_UPLOAD_SIZE_MB = 5
 ISSUE_COVER_MAX_UPLOAD_SIZE_MB = 10
 ARTICLE_PDF_MAX_UPLOAD_SIZE_MB = 100
+ARTICLE_IMAGE_MAX_UPLOAD_SIZE_MB = 10

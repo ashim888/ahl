@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.title }} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-14">
+    <span class="section-label text-accent">{{ course.duration }}</span>
+    <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">{{ course.title }}</h1>
+    <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">{{ course.instructor }}</p>
+    <p class="mt-4 font-display text-3xl font-bold">${{ course.price }}</p>
+
+    <div class="mt-8 border-t-2 border-foreground border-b border-border py-6">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">DESCRIPTION</p>
+        <p class="text-foreground leading-relaxed" style="font-family: Georgia, serif; line-height: 1.75;">{{ course.description }}</p>
+    </div>
+
+    {% if course.syllabus %}
+        <div class="mt-8">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">SYLLABUS</p>
+            <p class="text-foreground leading-relaxed whitespace-pre-line" style="font-family: Georgia, serif; line-height: 1.75;">{{ course.syllabus }}</p>
+        </div>
+    {% endif %}
+
+    <div class="mt-8 pt-6 border-t border-border">
+        {% if spots_left is not None %}
+            <p class="font-mono-editorial text-xs text-muted-foreground mb-3">
+                {% if spots_left > 0 %}{{ spots_left }} SPOT(S) LEFT OF {{ course.max_enrollments }}
+                {% else %}THIS COURSE IS FULL{% endif %}
+            </p>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+            {% if enrollment and enrollment.status != 'cancelled' %}
+                <div class="border border-foreground bg-secondary px-4 py-3">
+                    <p class="text-sm font-medium">
+                        You're enrolled ({{ enrollment.get_status_display }}, payment {{ enrollment.get_payment_status_display|lower }}).
+                    </p>
+                </div>
+            {% elif spots_left == 0 %}
+                <button disabled class="font-mono-editorial text-xs tracking-widest border border-border px-6 py-3 text-muted-foreground cursor-not-allowed">
+                    COURSE FULL
+                </button>
+            {% else %}
+                <form method="post" action="{% url 'training:enroll' course.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                        ENROLL
+                    </button>
+                </form>
+            {% endif %}
+        {% else %}
+            <a href="{% url 'users:login' %}?next={{ request.path }}"
+               class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                LOG IN TO ENROLL
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

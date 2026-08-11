@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from articles.models import Article, ArticleAuthor
+from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from peer_review.models import Review
 from submissions.models import ManuscriptFile, Submission
@@ -152,6 +153,7 @@ class Command(BaseCommand):
             articles = self.seed_articles(users, issues)
             self.seed_submissions(users, articles)
             self.seed_training()
+            self.seed_editorial_board()
 
         self.stdout.write(self.style.SUCCESS('\nDemo data seeded.'))
         self.stdout.write(f'All seeded users share the password: {DEMO_PASSWORD}')
@@ -455,3 +457,31 @@ class Command(BaseCommand):
             _, created = TrainingCourse.objects.get_or_create(title=spec['title'], defaults=spec)
             count += created
         self.stdout.write(f'  {count} training courses created.')
+
+    # -- Editorial board -------------------------------------------------
+
+    def seed_editorial_board(self):
+        self.stdout.write('Seeding editorial board...')
+        specs = [
+            dict(name='Dr. Sunita Rai', role_title='Editor-in-Chief',
+                 affiliation='Ajna Health Lens', order=0,
+                 bio='Sunita Rai leads the editorial team with a focus on rural health equity and '
+                     'evidence-based public health policy across Nepal.'),
+            dict(name='Dr. Rajesh Gurung', role_title='Editor',
+                 affiliation='B.P. Koirala Institute of Health Sciences', order=1,
+                 bio='Rajesh Gurung oversees manuscript screening and editorial decisions, with a '
+                     'research background in infectious disease epidemiology.'),
+            dict(name='Dr. Priya Koirala', role_title='Associate Editor, Public Health',
+                 affiliation='Kathmandu University', order=2,
+                 bio='Priya Koirala specializes in epidemiology and public health policy, and advises '
+                     'on the journal\'s research methodology standards.'),
+            dict(name='Dr. Kiran Basnet', role_title='Associate Editor, Clinical Medicine',
+                 affiliation='Patan Academy of Health Sciences', order=3,
+                 bio='Kiran Basnet brings clinical research experience in internal medicine to the '
+                     'editorial board\'s review of case reports and clinical studies.'),
+        ]
+        count = 0
+        for spec in specs:
+            _, created = EditorialBoardMember.objects.get_or_create(name=spec['name'], defaults=spec)
+            count += created
+        self.stdout.write(f'  {count} editorial board members created.')

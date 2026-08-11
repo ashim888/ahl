@@ -3,45 +3,74 @@
 {% block title %}Your profile — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-4 py-16">
-    <div class="flex items-center justify-between">
-        <h1 class="text-3xl font-serif font-bold">{{ profile_user.get_full_name }}</h1>
-        <a href="{% url 'users:profile_edit' %}" class="text-sm underline">Edit profile</a>
+<div class="max-w-2xl mx-auto px-6 py-14">
+    <div class="flex items-center justify-between pb-6 border-b-2 border-foreground">
+        <div>
+            <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{{ profile_user.get_full_name }}</h1>
+            <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{{ profile_user.email }}</p>
+        </div>
+        <a href="{% url 'users:profile_edit' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">
+            EDIT PROFILE
+        </a>
     </div>
-    <p class="text-gray-600">{{ profile_user.email }}</p>
 
-    <dl class="mt-8 divide-y divide-gray-200 border-t border-b border-gray-200">
-        <div class="py-3 flex justify-between gap-4">
-            <dt class="text-sm text-gray-500">Role</dt>
-            <dd class="text-sm text-gray-900">{{ profile_user.get_role_display }}</dd>
+    <div class="mt-2">
+        <div class="flex justify-between items-baseline py-3 border-b border-border">
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Role</span>
+            <span class="text-sm font-medium text-right">{{ profile_user.get_role_display }}</span>
         </div>
-        <div class="py-3 flex justify-between gap-4">
-            <dt class="text-sm text-gray-500">Verification status</dt>
-            <dd class="text-sm text-gray-900">{{ profile_user.get_verification_status_display }}</dd>
+        <div class="flex justify-between items-baseline py-3 border-b border-border">
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Verification status</span>
+            <span class="text-sm font-medium text-right">{{ profile_user.get_verification_status_display }}</span>
         </div>
-        <div class="py-3 flex justify-between gap-4">
-            <dt class="text-sm text-gray-500">Affiliation</dt>
-            <dd class="text-sm text-gray-900">{{ profile_user.affiliation|default:"—" }}</dd>
+        <div class="flex justify-between items-baseline py-3 border-b border-border">
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Affiliation</span>
+            <span class="text-sm font-medium text-right">{{ profile_user.affiliation|default:"—" }}</span>
         </div>
-        <div class="py-3 flex justify-between gap-4">
-            <dt class="text-sm text-gray-500">Department</dt>
-            <dd class="text-sm text-gray-900">{{ profile_user.department|default:"—" }}</dd>
+        <div class="flex justify-between items-baseline py-3 border-b border-border">
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Department</span>
+            <span class="text-sm font-medium text-right">{{ profile_user.department|default:"—" }}</span>
         </div>
-        <div class="py-3 flex justify-between gap-4">
-            <dt class="text-sm text-gray-500">ORCID</dt>
-            <dd class="text-sm text-gray-900">{{ profile_user.orcid|default:"—" }}</dd>
+        <div class="flex justify-between items-baseline py-3 border-b border-border">
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">ORCID</span>
+            <span class="text-sm font-medium text-right">{{ profile_user.orcid|default:"—" }}</span>
         </div>
-        <div class="py-3 flex justify-between gap-4">
-            <dt class="text-sm text-gray-500">Research interests</dt>
-            <dd class="text-sm text-gray-900">{{ profile_user.research_interests|default:"—" }}</dd>
+        <div class="flex justify-between items-baseline py-3 border-b border-border">
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Research interests</span>
+            <span class="text-sm font-medium text-right">{{ profile_user.research_interests|default:"—" }}</span>
         </div>
-    </dl>
+    </div>
 
     {% if profile_user.bio %}
         <div class="mt-8">
-            <h2 class="text-sm font-medium text-gray-500">Bio</h2>
-            <p class="mt-2 text-sm text-gray-900">{{ profile_user.bio }}</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">BIO</p>
+            <p class="text-sm text-foreground leading-relaxed">{{ profile_user.bio }}</p>
         </div>
     {% endif %}
+
+    <div class="mt-10">
+        <div class="flex items-center justify-between mb-4">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">TRAINING ENROLLMENTS</p>
+            <a href="{% url 'training:course_list' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
+                BROWSE COURSES →
+            </a>
+        </div>
+        {% if enrollments %}
+            <div class="divide-y divide-border border-t border-border">
+                {% for enrollment in enrollments %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <a href="{% url 'training:course_detail' enrollment.course.pk %}" class="text-sm font-medium hover:text-accent">
+                            {{ enrollment.course.title }}
+                        </a>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">
+                            {{ enrollment.get_status_display }} · {{ enrollment.get_payment_status_display }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-sm text-muted-foreground">Not enrolled in any training programs yet.</p>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}
