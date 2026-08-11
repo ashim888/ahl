@@ -22,6 +22,11 @@ urlpatterns = [
         views.verification_decide, name='verification_decide',
     ),
 
+    path('manage/authors/', views.AuthorManageListView.as_view(), name='manage_author_list'),
+    path('manage/authors/new/', views.AuthorCreateView.as_view(), name='manage_author_create'),
+    path('manage/authors/<int:pk>/edit/', views.AuthorUpdateView.as_view(), name='manage_author_update'),
+    path('manage/authors/<int:pk>/toggle-active/', views.author_toggle_active, name='manage_author_toggle_active'),
+
     path(
         'password-reset/',
         auth_views.PasswordResetView.as_view(template_name='users/password_reset_form.html'),

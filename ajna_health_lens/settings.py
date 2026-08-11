@@ -156,7 +156,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Auth redirects
 LOGIN_URL = 'users:login'
-LOGIN_REDIRECT_URL = '/'
+# '/' is the pre-launch "coming soon" placeholder (see articles/urls.py) — a
+# freshly logged-in user should land on the real homepage, not the splash.
+# Logging out, by contrast, correctly drops an anonymous visitor back there.
+LOGIN_REDIRECT_URL = 'articles:home'
 LOGOUT_REDIRECT_URL = '/'
 
 

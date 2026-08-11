@@ -20,6 +20,7 @@
                 <th class="px-4 py-3">Name</th>
                 <th class="px-4 py-3">Role</th>
                 <th class="px-4 py-3">Affiliation</th>
+                <th class="px-4 py-3">Linked account</th>
                 <th class="px-4 py-3">Active</th>
                 <th class="px-4 py-3"></th>
             </tr>
@@ -31,6 +32,7 @@
                     <td class="px-4 py-3 font-medium text-gray-900">{{ member.name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ member.role_title }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ member.affiliation|default:"—" }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ member.user.email|default:"—" }}</td>
                     <td class="px-4 py-3 text-gray-600">{% if member.is_active %}Yes{% else %}No{% endif %}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <a href="{% url 'editorial_board:manage_member_update' member.pk %}" class="underline mr-3">Edit</a>

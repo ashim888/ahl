@@ -1,0 +1,82 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Authors — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Authors{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">Unverified and verified-author accounts. Editor/EiC/Admin accounts are managed via Django admin.</p>
+    <a href="{% url 'users:manage_author_create' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+        + New Author
+    </a>
+</div>
+
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Role</label>
+        <select name="role" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All roles</option>
+            {% for value, label in role_choices %}
+                <option value="{{ value }}" {% if value == selected_role %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3"></th>
+                <th class="px-4 py-3">Name</th>
+                <th class="px-4 py-3">Email</th>
+                <th class="px-4 py-3">Role</th>
+                <th class="px-4 py-3">Affiliation</th>
+                <th class="px-4 py-3">Published</th>
+                <th class="px-4 py-3">Active</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for author in authors %}
+                <tr>
+                    <td class="px-4 py-3">
+                        {% if author.photo %}
+                            <img src="{{ author.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover">
+                        {% else %}
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-500">
+                                {{ author.first_name|first|upper }}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ author.get_full_name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ author.email }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ author.get_role_display }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ author.affiliation|default:"—" }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {% if author.published_article_count %}
+                            <a href="{% url 'articles:author_detail' author.pk %}" class="underline" target="_blank">{{ author.published_article_count }}</a>
+                        {% else %}0{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{% if author.is_active %}Yes{% else %}No{% endif %}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'users:manage_author_update' author.pk %}" class="underline mr-3">Edit</a>
+                        <form method="post" action="{% url 'users:manage_author_toggle_active' author.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="underline {% if author.is_active %}text-red-700{% else %}text-green-700{% endif %}">
+                                {% if author.is_active %}Deactivate{% else %}Reactivate{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">No authors yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}

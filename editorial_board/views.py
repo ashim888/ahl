@@ -104,7 +104,7 @@ class EditorialBoardPublicView(TemplateView):
         context = super().get_context_data(**kwargs)
         tab = self.request.GET.get('tab', 'about')
         context['active_tab'] = tab if tab in ABOUT_TABS else 'about'
-        context['members'] = EditorialBoardMember.objects.filter(is_active=True)
+        context['members'] = EditorialBoardMember.objects.filter(is_active=True).select_related('user')
         context['article_types'] = Article.ArticleType.choices
         context['policies'] = POLICIES
 

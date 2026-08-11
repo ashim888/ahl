@@ -28,5 +28,7 @@ class IssueDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['issue_articles'] = self.object.articles.filter(status=Article.Status.PUBLISHED)
+        context['issue_articles'] = self.object.articles.filter(
+            status=Article.Status.PUBLISHED,
+        ).prefetch_related('articleauthor_set__user')
         return context

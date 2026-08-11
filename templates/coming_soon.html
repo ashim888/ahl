@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ JOURNAL_NAME }} — Coming Soon</title>
+    <meta name="description" content="{{ JOURNAL_TAGLINE }}">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="{% static 'images/logo.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500&family=Space+Mono:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#fafaf8',
+                        foreground: '#111110',
+                        'muted-foreground': '#6b6860',
+                        accent: '#c0392b',
+                        border: '#d4d0cb',
+                    },
+                    fontFamily: {
+                        display: ['"Playfair Display"', 'Georgia', 'serif'],
+                        'mono-editorial': ['"Space Mono"', 'monospace'],
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #fafaf8; color: #111110; -webkit-font-smoothing: antialiased; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center bg-background text-foreground px-6">
+
+    <div class="flex flex-col items-center text-center max-w-lg">
+        <img src="{% static 'images/logo.png' %}" alt="" class="h-14 w-auto mb-4">
+        <h1 class="font-display text-3xl md:text-4xl font-black tracking-tight leading-none" style="letter-spacing: -0.02em;">
+            {{ JOURNAL_NAME|upper }}
+        </h1>
+        <p class="font-mono-editorial text-[0.65rem] tracking-[0.25em] text-muted-foreground mt-2">
+            {{ JOURNAL_TAGLINE|upper }}
+        </p>
+
+        <div class="w-10 border-t-2 border-accent my-8"></div>
+
+        <h2 class="font-display text-2xl font-bold italic mb-4">Coming soon.</h2>
+        <p class="text-sm text-muted-foreground leading-relaxed">
+            We're putting the finishing touches on {{ JOURNAL_NAME }} — curated health news,
+            commentary, and editorial coverage. Check back soon.
+        </p>
+
+        {% if JOURNAL_CONTACT_EMAIL %}
+            <a href="mailto:{{ JOURNAL_CONTACT_EMAIL }}"
+               class="inline-block mt-8 font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">
+                {{ JOURNAL_CONTACT_EMAIL }}
+            </a>
+        {% endif %}
+    </div>
+
+    <a href="{% url 'users:login' %}"
+       class="fixed bottom-6 right-6 font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent">
+        EDITORIAL LOGIN →
+    </a>
+
+</body>
+</html>

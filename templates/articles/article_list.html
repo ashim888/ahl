@@ -41,7 +41,11 @@
                     <p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ article.abstract }}</p>
                     <div class="flex items-center gap-2 mt-3">
                         {% with a=article.articleauthor_set.all|first %}
-                            <span class="text-xs text-muted-foreground font-medium">{% if a %}{{ a.user.get_full_name }}{% else %}Editorial staff{% endif %}</span>
+                            {% if a %}
+                                <a href="{% url 'articles:author_detail' a.user.pk %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.user.get_full_name }}</a>
+                            {% else %}
+                                <span class="text-xs text-muted-foreground font-medium">Editorial staff</span>
+                            {% endif %}
                         {% endwith %}
                         <span class="text-border text-xs">·</span>
                         <span class="font-mono-editorial text-xs text-muted-foreground">

@@ -30,6 +30,12 @@ OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_ED
 EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
 
 
+class ComingSoonView(TemplateView):
+    """Pre-launch placeholder at "/" — see the routing note in articles/urls.py."""
+
+    template_name = 'coming_soon.html'
+
+
 class HomeView(TemplateView):
     """Journal homepage: hero story, latest news, opinion, research
     highlights, special issues, and an editorial board preview.
@@ -126,6 +132,36 @@ class ArticleDetailView(DetailView):
         return context
 
 
+class AuthorDetailView(DetailView):
+    """Public byline page for a contributor. Deliberately not a general user
+    directory — the queryset only includes users with at least one published
+    byline OR an active editorial board listing linked to their account, so
+    unverified/no-byline accounts 404 here rather than exposing profile
+    fields (bio, affiliation) never meant to be public. The board-membership
+    branch matters for editors/EiC who are publicly featured on the board
+    page but may not have authored any articles themselves — that link is
+    only ever set by an editor (EDITORIAL_ROLES) editing the board member,
+    so it's already a deliberate, trusted editorial decision.
+    """
+
+    model = User
+    template_name = 'articles/author_detail.html'
+    context_object_name = 'author'
+
+    def get_queryset(self):
+        return User.objects.filter(
+            Q(authored_articles__status=Article.Status.PUBLISHED) | Q(board_memberships__is_active=True),
+        ).distinct()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['author_articles'] = self.object.authored_articles.filter(
+            status=Article.Status.PUBLISHED,
+        ).order_by('-publication_date')
+        context['board_membership'] = self.object.board_memberships.filter(is_active=True).first()
+        return context
+
+
 CITATION_FORMATS = ('bibtex', 'ris', 'text')
 
 
@@ -171,7 +207,9 @@ class SearchView(ListView):
 
     def get_queryset(self):
         self.query = self.request.GET.get('q', '').strip()
-        queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-publication_date')
+        queryset = Article.objects.filter(
+            status=Article.Status.PUBLISHED,
+        ).order_by('-publication_date').prefetch_related('articleauthor_set__user')
         if self.query:
             queryset = queryset.filter(
                 Q(title__icontains=self.query)

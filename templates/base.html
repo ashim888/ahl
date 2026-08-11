@@ -124,9 +124,13 @@
                     {% if user.is_authenticated %}
                         <div class="relative">
                             <button type="button" id="profile-menu-button" class="flex items-center gap-2 text-foreground hover:text-accent">
-                                <span class="w-8 h-8 rounded-full bg-foreground text-primary-foreground flex items-center justify-center text-xs font-semibold shrink-0 font-mono-editorial">
-                                    {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
-                                </span>
+                                {% if user.photo %}
+                                    <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0">
+                                {% else %}
+                                    <span class="w-8 h-8 rounded-full bg-foreground text-primary-foreground flex items-center justify-center text-xs font-semibold shrink-0 font-mono-editorial">
+                                        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                                    </span>
+                                {% endif %}
                                 <svg class="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
                                 </svg>

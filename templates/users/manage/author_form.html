@@ -1,0 +1,52 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{% if is_create %}New Author{% else %}Edit Author{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if is_create %}New Author{% else %}Edit Author{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    {% if not is_create %}
+        <p class="text-sm text-gray-500 mb-6">
+            Role: {{ object.get_role_display }} · Verification: {{ object.get_verification_status_display }}
+            — changed via the <a href="{% url 'users:verification_queue' %}" class="underline">verification queue</a>, not this form.
+        </p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="space-y-5">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <p class="text-sm text-red-600">{{ form.non_field_errors }}</p>
+        {% endif %}
+
+        {% if object.photo %}
+            <img src="{{ object.photo.url }}" alt="" class="w-16 h-16 rounded-full object-cover">
+        {% endif %}
+
+        {% for field in form %}
+            {% if field.name == 'is_active' %}
+                <div class="flex items-center gap-2">
+                    {{ field }}
+                    <label class="text-sm text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                </div>
+            {% else %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <div class="flex gap-3">
+            <button type="submit" class="py-2.5 px-6 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
+                {% if is_create %}Create author{% else %}Save changes{% endif %}
+            </button>
+            <a href="{% url 'users:manage_author_list' %}"
+               class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
