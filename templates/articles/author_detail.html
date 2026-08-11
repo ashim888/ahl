@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ author.get_full_name }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block extra_head %}
+<meta name="description" content="{{ author.get_full_name }}{% if author.affiliation %}, {{ author.affiliation }}{% endif %} — articles on {{ JOURNAL_NAME }}.">
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-14">
+    <div class="rule-editorial mb-8"></div>
+
+    <div class="flex items-start gap-5 pb-10 border-b border-border">
+        <div class="w-20 h-20 flex-shrink-0 flex items-center justify-center"
+             style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
+            <span class="font-display text-3xl font-bold text-white">{{ author.first_name|first|upper }}</span>
+        </div>
+        <div class="min-w-0">
+            <h1 class="font-display text-3xl font-bold leading-tight" style="letter-spacing: -0.02em;">
+                {{ author.get_full_name }}
+            </h1>
+            <p class="font-mono-editorial text-xs text-accent tracking-widest mt-2">{{ author.get_role_display|upper }}</p>
+            {% if author.affiliation %}
+                <p class="text-sm text-muted-foreground mt-1">
+                    {{ author.affiliation }}{% if author.department %}, {{ author.department }}{% endif %}
+                </p>
+            {% endif %}
+
+            <div class="flex flex-wrap gap-4 mt-4">
+                {% if author.orcid %}
+                    <a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener"
+                       class="font-mono-editorial text-xs border-b border-muted-foreground hover:border-accent hover:text-accent pb-0.5">
+                        ORCID: {{ author.orcid }}
+                    </a>
+                {% endif %}
+                {% if author.linkedin_url %}
+                    <a href="{{ author.linkedin_url }}" target="_blank" rel="noopener"
+                       class="font-mono-editorial text-xs border-b border-muted-foreground hover:border-accent hover:text-accent pb-0.5">
+                        LINKEDIN
+                    </a>
+                {% endif %}
+                {% if author.researchgate_url %}
+                    <a href="{{ author.researchgate_url }}" target="_blank" rel="noopener"
+                       class="font-mono-editorial text-xs border-b border-muted-foreground hover:border-accent hover:text-accent pb-0.5">
+                        RESEARCHGATE
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if author.bio %}
+        <div class="mt-8 max-w-3xl">
+            <p class="section-label text-muted-foreground mb-3">ABOUT</p>
+            <p class="text-sm leading-relaxed text-foreground">{{ author.bio }}</p>
+        </div>
+    {% endif %}
+
+    {% if author.research_interests %}
+        <div class="mt-8 max-w-3xl">
+            <p class="section-label text-muted-foreground mb-3">RESEARCH INTERESTS</p>
+            <p class="text-sm leading-relaxed text-muted-foreground">{{ author.research_interests }}</p>
+        </div>
+    {% endif %}
+
+    <div class="mt-14">
+        <p class="section-label text-muted-foreground mb-4 pb-4 border-b-2 border-foreground">
+            ARTICLES BY {{ author.get_full_name|upper }} ({{ author_articles.count }})
+        </p>
+
+        <div class="divide-y divide-border">
+            {% for article in author_articles %}
+                <article class="article-link py-6 flex gap-6">
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 hidden sm:block" style="width: 160px; height: 110px;">
+                        {% if article.featured_image %}
+                            <img src="{{ article.featured_image.url }}" alt="{{ article.title }}"
+                                 class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                        {% else %}
+                            <div class="w-full h-full bg-secondary"></div>
+                        {% endif %}
+                    </a>
+                    <div class="flex-1 min-w-0">
+                        <span class="section-label text-muted-foreground">
+                            {{ article.get_article_type_display }}
+                        </span>
+                        <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
+                            <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
+                        </h2>
+                        <p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ article.abstract }}</p>
+                        <div class="flex items-center gap-2 mt-3">
+                            <span class="font-mono-editorial text-xs text-muted-foreground">
+                                {% if article.publication_date %}{{ article.publication_date|date:"M j, Y" }}{% endif %}
+                            </span>
+                            <span class="text-border text-xs">·</span>
+                            <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.estimated_read_minutes }} min</span>
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="text-muted-foreground py-10">No published articles yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -126,6 +126,30 @@ class ArticleDetailView(DetailView):
         return context
 
 
+class AuthorDetailView(DetailView):
+    """Public byline page for a contributor. Deliberately not a general user
+    directory — the queryset only includes users with at least one published
+    byline, so unverified accounts and staff with no bylines 404 here rather
+    than exposing profile fields (bio, affiliation) never meant to be public.
+    """
+
+    model = User
+    template_name = 'articles/author_detail.html'
+    context_object_name = 'author'
+
+    def get_queryset(self):
+        return User.objects.filter(
+            authored_articles__status=Article.Status.PUBLISHED,
+        ).distinct()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['author_articles'] = self.object.authored_articles.filter(
+            status=Article.Status.PUBLISHED,
+        ).order_by('-publication_date')
+        return context
+
+
 CITATION_FORMATS = ('bibtex', 'ris', 'text')
 
 
