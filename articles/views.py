@@ -129,8 +129,13 @@ class ArticleDetailView(DetailView):
 class AuthorDetailView(DetailView):
     """Public byline page for a contributor. Deliberately not a general user
     directory — the queryset only includes users with at least one published
-    byline, so unverified accounts and staff with no bylines 404 here rather
-    than exposing profile fields (bio, affiliation) never meant to be public.
+    byline OR an active editorial board listing linked to their account, so
+    unverified/no-byline accounts 404 here rather than exposing profile
+    fields (bio, affiliation) never meant to be public. The board-membership
+    branch matters for editors/EiC who are publicly featured on the board
+    page but may not have authored any articles themselves — that link is
+    only ever set by an editor (EDITORIAL_ROLES) editing the board member,
+    so it's already a deliberate, trusted editorial decision.
     """
 
     model = User
@@ -139,7 +144,7 @@ class AuthorDetailView(DetailView):
 
     def get_queryset(self):
         return User.objects.filter(
-            authored_articles__status=Article.Status.PUBLISHED,
+            Q(authored_articles__status=Article.Status.PUBLISHED) | Q(board_memberships__is_active=True),
         ).distinct()
 
     def get_context_data(self, **kwargs):
