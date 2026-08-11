@@ -1,11 +1,15 @@
+from django.conf import settings
 from django.db import models
 
 from .validators import photo_extension_validator, validate_photo_size
 
 
 class EditorialBoardMember(models.Model):
-    """Public-facing board member bio. Deliberately independent of `User` —
-    board members are public content, not necessarily site accounts.
+    """Public-facing board member bio. Independent of `User` by default —
+    board members are public content, not necessarily site accounts — but
+    `user` optionally links a member to their actual account when the same
+    person also writes/edits content here, so the public site can cross-link
+    their board bio and their author byline page.
     """
 
     name = models.CharField(max_length=255)
@@ -24,6 +28,12 @@ class EditorialBoardMember(models.Model):
     is_active = models.BooleanField(
         default=True,
         help_text='Inactive members are hidden from the public page but not deleted.',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='board_memberships',
+        help_text="Optional — link to this person's site account if they also have one, "
+                  'to cross-link their board bio with their author byline page.',
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

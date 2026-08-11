@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
+from django.db.models import Count, Q
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
@@ -104,7 +105,16 @@ class EditorialBoardPublicView(TemplateView):
         context = super().get_context_data(**kwargs)
         tab = self.request.GET.get('tab', 'about')
         context['active_tab'] = tab if tab in ABOUT_TABS else 'about'
-        context['members'] = EditorialBoardMember.objects.filter(is_active=True)
+        # user_published_count drives whether a member's card links out to their
+        # author page — AuthorDetailView 404s for accounts with no published
+        # byline, so an unlinked/inactive/byline-less account must not show a link.
+        context['members'] = EditorialBoardMember.objects.filter(is_active=True).select_related('user').annotate(
+            user_published_count=Count(
+                'user__authored_articles',
+                filter=Q(user__authored_articles__status=Article.Status.PUBLISHED),
+                distinct=True,
+            ),
+        )
         context['article_types'] = Article.ArticleType.choices
         context['policies'] = POLICIES
 

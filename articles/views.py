@@ -147,6 +147,7 @@ class AuthorDetailView(DetailView):
         context['author_articles'] = self.object.authored_articles.filter(
             status=Article.Status.PUBLISHED,
         ).order_by('-publication_date')
+        context['board_membership'] = self.object.board_memberships.filter(is_active=True).first()
         return context
 
 
@@ -195,7 +196,9 @@ class SearchView(ListView):
 
     def get_queryset(self):
         self.query = self.request.GET.get('q', '').strip()
-        queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-publication_date')
+        queryset = Article.objects.filter(
+            status=Article.Status.PUBLISHED,
+        ).order_by('-publication_date').prefetch_related('articleauthor_set__user')
         if self.query:
             queryset = queryset.filter(
                 Q(title__icontains=self.query)

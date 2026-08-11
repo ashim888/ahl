@@ -28,6 +28,12 @@
                     {{ author.affiliation }}{% if author.department %}, {{ author.department }}{% endif %}
                 </p>
             {% endif %}
+            {% if board_membership %}
+                <a href="{% url 'editorial_board:public_list' %}?tab=board"
+                   class="inline-block mt-2 font-mono-editorial text-xs border-b border-accent text-accent pb-0.5">
+                    EDITORIAL BOARD — {{ board_membership.role_title|upper }} →
+                </a>
+            {% endif %}
 
             <div class="flex flex-wrap gap-4 mt-4">
                 {% if author.orcid %}
