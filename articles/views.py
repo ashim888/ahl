@@ -7,6 +7,8 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
+from editorial_board.models import EditorialBoardMember
+from issues.models import Issue
 from users.decorators import role_required
 from users.models import User
 
@@ -14,25 +16,55 @@ from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .forms import ArticleForm
 from .models import Article
 
+# Article types treated as "peer-reviewed research" for the homepage's
+# "From the Journal" section — everything except news/editorial/letters.
+RESEARCH_TYPES = [
+    Article.ArticleType.ORIGINAL_RESEARCH, Article.ArticleType.REVIEW_ARTICLE,
+    Article.ArticleType.CASE_REPORT, Article.ArticleType.METHODOLOGY_PAPER,
+    Article.ArticleType.SHORT_COMMUNICATION,
+]
+OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_EDITOR]
+
 # Article CRUD (manage/ views below) is an editorial capability — ARCHITECTURE.md
 # §6.2 grants "Access admin: Yes" to Editor/EiC/Admin only.
 EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
 
 
 class HomeView(TemplateView):
-    """Journal homepage: hero banner, featured articles, latest news."""
+    """Journal homepage: hero story, latest news, opinion, research
+    highlights, special issues, and an editorial board preview.
+    """
 
     template_name = 'home.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        published = Article.objects.filter(status=Article.Status.PUBLISHED)
-        context['featured_articles'] = published.exclude(
-            article_type=Article.ArticleType.NEWS_COMMENTARY,
-        ).order_by('-publication_date')[:5]
+        published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-publication_date')
+
+        hero_article = published.first()
+        context['hero_article'] = hero_article
+        exclude_pk = [hero_article.pk] if hero_article else []
+        if hero_article:
+            context['hero_authors'] = hero_article.articleauthor_set.select_related('user').order_by('order')
+
+        # prefetch_related so article.articleauthor_set.all/.first in the
+        # template read from cache instead of firing a query per article.
+        author_prefetch = 'articleauthor_set__user'
+
         context['latest_news'] = published.filter(
             article_type=Article.ArticleType.NEWS_COMMENTARY,
-        ).order_by('-publication_date')[:5]
+        ).exclude(pk__in=exclude_pk).prefetch_related(author_prefetch)[:3]
+
+        context['opinion_pieces'] = published.filter(
+            article_type__in=OPINION_TYPES,
+        ).exclude(pk__in=exclude_pk).prefetch_related(author_prefetch)[:3]
+
+        context['research_highlights'] = published.filter(
+            article_type__in=RESEARCH_TYPES,
+        ).exclude(pk__in=exclude_pk).select_related('issue').prefetch_related(author_prefetch)[:2]
+
+        context['special_issues'] = Issue.objects.all()[:3]
+        context['board_preview'] = EditorialBoardMember.objects.filter(is_active=True)[:6]
         return context
 
 
@@ -76,12 +108,19 @@ class ArticleDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['article_authors'] = self.object.articleauthor_set.select_related('user').order_by('order')
+        article_authors = list(self.object.articleauthor_set.select_related('user').order_by('order'))
+        context['article_authors'] = article_authors
+        context['featured_author'] = next(
+            (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
+        )
         context['show_full_text'] = self.object.access_type == Article.AccessType.OPEN_ACCESS
         if self.object.references:
             context['references_list'] = [
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
             ]
+        context['related_articles'] = Article.objects.filter(
+            status=Article.Status.PUBLISHED, article_type=self.object.article_type,
+        ).exclude(pk=self.object.pk).order_by('-publication_date')[:3]
         return context
 
 
@@ -269,8 +308,12 @@ def article_preview(request):
     context = {
         'article': article,
         'article_authors': article_authors,
+        'featured_author': next(
+            (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
+        ),
         'show_full_text': article.access_type == Article.AccessType.OPEN_ACCESS,
         'preview_mode': True,
+        'related_articles': [],
     }
     if article.references:
         context['references_list'] = [

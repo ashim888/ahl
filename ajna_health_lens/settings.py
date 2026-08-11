@@ -175,6 +175,7 @@ JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Ajna Health Lens')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
 JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
 JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Ajna Health Lens Publishing')
+JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.example')
 
 
 # File upload limits (see ARCHITECTURE.md §7.1)

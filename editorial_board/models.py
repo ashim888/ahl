@@ -28,3 +28,12 @@ class EditorialBoardMember(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.role_title})'
+
+    @property
+    def last_name_initial(self):
+        """Last word of `name`'s first letter, for the avatar badge — e.g.
+        "Dr. Sunita Rai" -> "R". A plain `|last` template filter would return
+        the last *character* of the string instead, which is wrong.
+        """
+        parts = self.name.split()
+        return parts[-1][0].upper() if parts else '?'

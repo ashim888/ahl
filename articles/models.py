@@ -65,6 +65,10 @@ class Article(models.Model):
 
     doi = models.CharField(max_length=100, unique=True, null=True, blank=True)
     pdf_file = models.FileField(upload_to='articles/%Y/%m/', null=True, blank=True)
+    featured_image = models.ImageField(
+        upload_to='articles/images/', null=True, blank=True,
+        help_text='Hero/thumbnail image shown on the homepage, listing cards, and related-article links.',
+    )
     html_content = models.TextField(
         null=True, blank=True,
         help_text='Full-text body HTML, rendered as-is (trusted — admin/editor-authored only, '
@@ -97,6 +101,16 @@ class Article(models.Model):
         so both apply the exact same default-resolution rule.
         """
         return access_type or cls.ACCESS_TYPE_DEFAULTS.get(article_type, cls.AccessType.SUBSCRIPTION)
+
+    @property
+    def estimated_read_minutes(self):
+        """Word count / 200wpm, based on whichever body text is actually
+        public (full text if open access, otherwise just the abstract).
+        """
+        text = self.abstract or ''
+        if self.access_type == self.AccessType.OPEN_ACCESS and self.html_content:
+            text += ' ' + self.html_content
+        return max(1, round(len(text.split()) / 200))
 
     def save(self, *args, **kwargs):
         self.access_type = self.resolve_access_type(self.article_type, self.access_type)
