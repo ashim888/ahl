@@ -1,9 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Editorial Dashboard — {{ JOURNAL_NAME }}{% endblock %}</title>
+    <link rel="icon" href="{% static 'images/logo.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         form input[type="text"], form input[type="email"], form input[type="password"],
@@ -41,10 +43,13 @@
 
     {% with view_name=request.resolver_match.view_name %}
     <aside class="w-64 shrink-0 bg-gray-900 text-gray-300 flex flex-col h-screen">
-        <div class="h-16 flex items-center px-5 border-b border-gray-800 shrink-0">
-            <a href="{% url 'admin_custom:dashboard' %}" class="text-white font-serif font-bold text-base leading-tight">
-                {{ JOURNAL_NAME }}
-                <span class="block text-xs font-sans font-normal text-gray-400">Editorial Dashboard</span>
+        <div class="h-16 flex items-center gap-2.5 px-5 border-b border-gray-800 shrink-0">
+            <a href="{% url 'admin_custom:dashboard' %}" class="flex items-center gap-2.5">
+                <img src="{% static 'images/logo.png' %}" alt="" class="h-7 w-auto shrink-0">
+                <span class="text-white font-serif font-bold text-base leading-tight">
+                    {{ JOURNAL_NAME }}
+                    <span class="block text-xs font-sans font-normal text-gray-400">Editorial Dashboard</span>
+                </span>
             </a>
         </div>
 

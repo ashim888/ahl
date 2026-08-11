@@ -3,40 +3,38 @@
 {% block title %}{{ issue }} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-16">
-    <div class="flex flex-col md:flex-row gap-8">
+<div class="max-w-4xl mx-auto px-6 py-14">
+    <div class="flex flex-col md:flex-row gap-8 pb-8 border-b-2 border-foreground">
         {% if issue.cover_image %}
-            <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" class="w-full md:w-48 rounded-lg object-cover">
+            <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" class="w-full md:w-56 object-cover" style="filter: grayscale(10%);">
         {% endif %}
         <div>
-            <h1 class="text-3xl font-serif font-bold">{{ issue }}</h1>
-            {% if issue.title %}<p class="mt-1 text-lg text-gray-600">{{ issue.title }}</p>{% endif %}
+            <p class="font-mono-editorial text-xs text-muted-foreground mb-2">Vol. {{ issue.volume }} · Issue {{ issue.number }}</p>
+            <h1 class="font-display text-3xl font-bold italic leading-tight" style="letter-spacing: -0.02em;">
+                {{ issue.title|default:"Untitled Issue" }}
+            </h1>
             {% if issue.publication_date %}
-                <p class="mt-1 text-sm text-gray-500">{{ issue.publication_date|date:"F j, Y" }}</p>
+                <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">{{ issue.publication_date|date:"F j, Y" }}</p>
             {% endif %}
             {% if issue.editorial_note %}
-                <p class="mt-4 text-gray-700 leading-relaxed">{{ issue.editorial_note }}</p>
+                <p class="mt-4 text-muted-foreground leading-relaxed" style="font-family: Georgia, serif; line-height: 1.75;">{{ issue.editorial_note }}</p>
             {% endif %}
         </div>
     </div>
 
     <div class="mt-10">
-        <h2 class="text-xl font-serif font-bold mb-4">In this issue</h2>
-        <div class="space-y-4">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-6">IN THIS ISSUE</p>
+        <div class="divide-y divide-border">
             {% for article in issue_articles %}
-                <article class="border-b border-gray-200 pb-4">
-                    <span class="text-xs uppercase tracking-wide text-gray-500">
-                        {{ article.get_article_type_display }}
-                    </span>
-                    <h3 class="mt-1 font-semibold">
-                        <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">
-                            {{ article.title }}
-                        </a>
+                <article class="article-link py-5">
+                    <span class="section-label text-muted-foreground">{{ article.get_article_type_display }}</span>
+                    <h3 class="font-display text-lg font-bold leading-snug mt-1 article-title" style="letter-spacing: -0.01em;">
+                        <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h3>
-                    {% if article.page_numbers %}<p class="text-sm text-gray-500">pp. {{ article.page_numbers }}</p>{% endif %}
+                    {% if article.page_numbers %}<p class="font-mono-editorial text-xs text-muted-foreground mt-1">pp. {{ article.page_numbers }}</p>{% endif %}
                 </article>
             {% empty %}
-                <p class="text-gray-500">No articles assigned to this issue yet.</p>
+                <p class="text-muted-foreground py-6">No articles assigned to this issue yet.</p>
             {% endfor %}
         </div>
     </div>

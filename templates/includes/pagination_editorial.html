@@ -1,0 +1,27 @@
+{% load query_tags %}
+{% if is_paginated %}
+{% querystring_without_page request.GET as qs %}
+<nav class="mt-10 pt-6 border-t border-border flex items-center justify-between">
+    {% if page_obj.has_previous %}
+        <a href="?{% if qs %}{{ qs }}&{% endif %}page={{ page_obj.previous_page_number }}"
+           class="font-mono-editorial text-xs tracking-widest border border-border px-4 py-2 hover:border-foreground">
+            ← PREVIOUS
+        </a>
+    {% else %}
+        <span></span>
+    {% endif %}
+
+    <span class="font-mono-editorial text-xs text-muted-foreground">
+        PAGE {{ page_obj.number }} OF {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% if page_obj.has_next %}
+        <a href="?{% if qs %}{{ qs }}&{% endif %}page={{ page_obj.next_page_number }}"
+           class="font-mono-editorial text-xs tracking-widest border border-border px-4 py-2 hover:border-foreground">
+            NEXT →
+        </a>
+    {% else %}
+        <span></span>
+    {% endif %}
+</nav>
+{% endif %}

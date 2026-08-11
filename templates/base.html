@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
     <meta name="description" content="{{ JOURNAL_TAGLINE }}">
+    <link rel="icon" href="{% static 'images/logo.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -109,7 +111,8 @@
                                class="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0 !w-auto">
                     </form>
                 </div>
-                <a href="{% url 'articles:home' %}" class="text-center">
+                <a href="{% url 'articles:home' %}" class="flex flex-col items-center text-center">
+                    <img src="{% static 'images/logo.png' %}" alt="" class="h-10 w-auto mb-1">
                     <h1 class="font-display text-3xl font-black tracking-tight leading-none" style="letter-spacing: -0.02em;">
                         {{ JOURNAL_NAME|upper }}
                     </h1>
@@ -162,7 +165,7 @@
                 </div>
             </div>
 
-            <nav class="flex items-center gap-0 overflow-x-auto">
+            <nav class="flex items-center justify-between gap-0 overflow-x-auto">
                 <a href="{% url 'articles:home' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     HOME

@@ -3,18 +3,18 @@
 {% block title %}Verification status — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto px-4 py-20 text-center">
+<div class="max-w-xl mx-auto px-6 py-24 text-center">
     {% with status=user.verification_status %}
         {% if status == 'pending' %}
-            <h1 class="text-2xl font-serif font-bold">Your account is pending verification</h1>
-            <p class="mt-4 text-gray-600">
-                An editor reviews your affiliation, ORCID, and publication history before
-                you can submit manuscripts. This usually takes under 48 hours.
-                You can still browse open-access content in the meantime.
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">Your account is pending verification</h1>
+            <p class="mt-4 text-muted-foreground leading-relaxed">
+                An editor reviews your affiliation, ORCID, and publication history before your profile
+                is verified. This usually takes under 48 hours. You can still browse open-access
+                content in the meantime.
             </p>
         {% elif status == 'rejected' %}
-            <h1 class="text-2xl font-serif font-bold">Verification was not approved</h1>
-            <p class="mt-4 text-gray-600">
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">Verification was not approved</h1>
+            <p class="mt-4 text-muted-foreground leading-relaxed">
                 Your last verification request wasn't approved. You can update your
                 profile and reapply
                 {% if user.can_reapply %}
@@ -26,18 +26,18 @@
             {% if user.can_reapply %}
                 <form method="post" action="{% url 'users:reapply_verification' %}" class="mt-6">
                     {% csrf_token %}
-                    <button type="submit" class="py-2.5 px-6 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
-                        Reapply for verification
+                    <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                        REAPPLY FOR VERIFICATION
                     </button>
                 </form>
             {% endif %}
-            <a href="{% url 'users:profile_edit' %}" class="mt-4 inline-block text-sm underline">
+            <a href="{% url 'users:profile_edit' %}" class="mt-4 inline-block font-mono-editorial text-xs text-muted-foreground hover:text-accent">
                 Update your profile first
             </a>
         {% else %}
-            <h1 class="text-2xl font-serif font-bold">You're verified</h1>
-            <p class="mt-4 text-gray-600">
-                <a href="{% url 'users:profile' %}" class="underline">Go to your profile</a>.
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">You're verified</h1>
+            <p class="mt-4 text-muted-foreground">
+                <a href="{% url 'users:profile' %}" class="underline hover:text-accent">Go to your profile</a>.
             </p>
         {% endif %}
     {% endwith %}

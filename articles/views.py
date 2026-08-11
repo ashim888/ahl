@@ -80,7 +80,9 @@ class ArticleListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-publication_date')
+        queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
+            '-publication_date',
+        ).prefetch_related('articleauthor_set__user')
         article_type = self.request.GET.get('type')
         if article_type:
             queryset = queryset.filter(article_type=article_type)

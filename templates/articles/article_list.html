@@ -3,43 +3,60 @@
 {% block title %}Articles — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-16">
-    <h1 class="text-3xl font-serif font-bold">Articles</h1>
+<div class="max-w-5xl mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Articles</h1>
 
     <div class="mt-6 flex flex-wrap gap-2">
         <a href="{% url 'articles:article_list' %}"
-           class="px-3 py-1.5 rounded-full text-sm border {% if not selected_type %}bg-gray-900 text-white border-gray-900{% else %}border-gray-300 text-gray-600 hover:bg-gray-100{% endif %}">
-            All
+           class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if not selected_type %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">
+            ALL
         </a>
         {% for value, label in article_types %}
             <a href="?type={{ value }}"
-               class="px-3 py-1.5 rounded-full text-sm border {% if selected_type == value %}bg-gray-900 text-white border-gray-900{% else %}border-gray-300 text-gray-600 hover:bg-gray-100{% endif %}">
-                {{ label }}
+               class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if value == selected_type %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">
+                {{ label|upper }}
             </a>
         {% endfor %}
     </div>
 
-    <div class="mt-8 space-y-6">
+    <div class="mt-10 divide-y divide-border">
         {% for article in articles %}
-            <article class="border-b border-gray-200 pb-6">
-                <span class="text-xs uppercase tracking-wide text-gray-500">
-                    {{ article.get_article_type_display }} &middot; {{ article.get_access_type_display }}
-                </span>
-                <h2 class="mt-1 text-xl font-serif font-semibold">
-                    <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline">
-                        {{ article.title }}
-                    </a>
-                </h2>
-                <p class="mt-2 text-sm text-gray-600 line-clamp-2">{{ article.abstract }}</p>
-                <p class="mt-2 text-xs text-gray-500">
-                    {% if article.publication_date %}{{ article.publication_date|date:"F j, Y" }}{% endif %}
-                </p>
+            <article class="article-link py-6 flex gap-6">
+                <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 hidden sm:block" style="width: 160px; height: 110px;">
+                    {% if article.featured_image %}
+                        <img src="{{ article.featured_image.url }}" alt="{{ article.title }}"
+                             class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                    {% else %}
+                        <div class="w-full h-full bg-secondary"></div>
+                    {% endif %}
+                </a>
+                <div class="flex-1 min-w-0">
+                    <span class="section-label text-muted-foreground">
+                        {{ article.get_article_type_display }} · {{ article.get_access_type_display }}
+                    </span>
+                    <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
+                        <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
+                    </h2>
+                    <p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ article.abstract }}</p>
+                    <div class="flex items-center gap-2 mt-3">
+                        {% with a=article.articleauthor_set.all|first %}
+                            <span class="text-xs text-muted-foreground font-medium">{% if a %}{{ a.user.get_full_name }}{% else %}Editorial staff{% endif %}</span>
+                        {% endwith %}
+                        <span class="text-border text-xs">·</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">
+                            {% if article.publication_date %}{{ article.publication_date|date:"M j, Y" }}{% endif %}
+                        </span>
+                        <span class="text-border text-xs">·</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.estimated_read_minutes }} min</span>
+                    </div>
+                </div>
             </article>
         {% empty %}
-            <p class="text-gray-500">No articles published yet.</p>
+            <p class="text-muted-foreground py-10">No articles published yet.</p>
         {% endfor %}
     </div>
 
-    {% include 'includes/pagination.html' %}
+    {% include 'includes/pagination_editorial.html' %}
 </div>
 {% endblock %}

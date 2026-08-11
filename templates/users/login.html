@@ -3,38 +3,36 @@
 {% block title %}Log in — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto px-4 py-16">
-    <h1 class="text-3xl font-serif font-bold">Log in</h1>
+<div class="max-w-md mx-auto px-6 py-20">
+    <div class="rule-editorial mb-6"></div>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Log in</h1>
 
     <form method="post" class="mt-8 space-y-5">
         {% csrf_token %}
         {% if form.non_field_errors %}
-            <p class="text-sm text-red-600">{{ form.non_field_errors }}</p>
+            <p class="text-sm text-accent">{{ form.non_field_errors }}</p>
         {% endif %}
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.username.id_for_label }}">
-                Email
+            <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ form.username.id_for_label }}">
+                EMAIL
             </label>
             <input type="email" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}"
-                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                    autofocus required>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.password.id_for_label }}">
-                Password
+            <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ form.password.id_for_label }}">
+                PASSWORD
             </label>
-            <input type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}"
-                   class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                   required>
+            <input type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" required>
         </div>
-        <button type="submit" class="w-full py-2.5 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
-            Log in
+        <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent transition-colors">
+            LOG IN
         </button>
     </form>
 
-    <div class="mt-6 flex justify-between text-sm text-gray-600">
-        <a href="{% url 'users:password_reset' %}" class="underline">Forgot password?</a>
-        <a href="{% url 'users:register' %}" class="underline">Create an account</a>
+    <div class="mt-6 flex justify-between font-mono-editorial text-xs text-muted-foreground">
+        <a href="{% url 'users:password_reset' %}" class="hover:text-accent">Forgot password?</a>
+        <a href="{% url 'users:register' %}" class="hover:text-accent">Create an account</a>
     </div>
 </div>
 {% endblock %}
