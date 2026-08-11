@@ -45,11 +45,12 @@ INSTALLED_APPS = [
     # Ajna Health Lens apps
     'users',
     'articles',
-    'submissions',
-    'peer_review',
+    'submissions',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
+    'peer_review',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
     'issues',
     'admin_custom',
     'training',
+    'editorial_board',
 ]
 
 MIDDLEWARE = [

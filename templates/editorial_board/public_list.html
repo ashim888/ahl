@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Editorial Board — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-16">
+    <h1 class="text-3xl font-serif font-bold">Editorial Board</h1>
+    <p class="mt-2 text-gray-600">The team behind {{ JOURNAL_NAME }}.</p>
+
+    <div class="mt-10 grid md:grid-cols-2 gap-8">
+        {% for member in members %}
+            <div class="flex gap-4">
+                {% if member.photo %}
+                    <img src="{{ member.photo.url }}" alt="{{ member.name }}"
+                         class="w-20 h-20 rounded-full object-cover shrink-0">
+                {% else %}
+                    <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xl font-semibold shrink-0">
+                        {{ member.name|first|upper }}
+                    </div>
+                {% endif %}
+                <div>
+                    <h2 class="font-semibold text-gray-900">{{ member.name }}</h2>
+                    <p class="text-sm text-gray-600">{{ member.role_title }}</p>
+                    {% if member.affiliation %}<p class="text-sm text-gray-500">{{ member.affiliation }}</p>{% endif %}
+                    {% if member.bio %}<p class="mt-2 text-sm text-gray-700 leading-relaxed">{{ member.bio }}</p>{% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-gray-500">Editorial board information coming soon.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
