@@ -5,7 +5,10 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
-from .validators import cv_extension_validator, validate_cv_file_size
+from .validators import (
+    cv_extension_validator, photo_extension_validator,
+    validate_cv_file_size, validate_photo_size,
+)
 
 
 class UserManager(BaseUserManager):
@@ -86,6 +89,11 @@ class User(AbstractUser):
     affiliation = models.CharField(max_length=255, null=True, blank=True)
     department = models.CharField(max_length=255, null=True, blank=True)
     bio = models.TextField(null=True, blank=True)
+    photo = models.ImageField(
+        upload_to='profiles/photos/', null=True, blank=True,
+        validators=[photo_extension_validator, validate_photo_size],
+        help_text='JPG or PNG, up to 5 MB.',
+    )
     cv_file = models.FileField(
         upload_to='profiles/cvs/', null=True, blank=True,
         validators=[cv_extension_validator, validate_cv_file_size],

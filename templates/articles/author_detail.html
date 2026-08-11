@@ -10,10 +10,14 @@
     <div class="rule-editorial mb-8"></div>
 
     <div class="flex items-start gap-5 pb-10 border-b border-border">
-        <div class="w-20 h-20 flex-shrink-0 flex items-center justify-center"
-             style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
-            <span class="font-display text-3xl font-bold text-white">{{ author.first_name|first|upper }}</span>
-        </div>
+        {% if author.photo %}
+            <img src="{{ author.photo.url }}" alt="{{ author.get_full_name }}" class="w-20 h-20 flex-shrink-0 object-cover rounded-full">
+        {% else %}
+            <div class="w-20 h-20 flex-shrink-0 flex items-center justify-center rounded-full"
+                 style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
+                <span class="font-display text-3xl font-bold text-white">{{ author.first_name|first|upper }}</span>
+            </div>
+        {% endif %}
         <div class="min-w-0">
             <h1 class="font-display text-3xl font-bold leading-tight" style="letter-spacing: -0.02em;">
                 {{ author.get_full_name }}

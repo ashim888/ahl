@@ -75,6 +75,13 @@
                 </svg>
                 Verification Queue
             </a>
+            <a href="{% url 'users:manage_author_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_author' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
+                </svg>
+                Authors
+            </a>
             <a href="{% url 'editorial_board:manage_member_list' %}"
                class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_member' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

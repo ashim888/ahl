@@ -74,12 +74,16 @@
             </p>
 
             <div class="flex items-start gap-4 py-6 border-t-2 border-foreground border-b border-border mb-10">
-                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center"
-                     style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
-                    <span class="font-display text-lg font-bold text-white">
-                        {% if featured_author %}{{ featured_author.user.first_name|first|upper }}{% else %}{{ JOURNAL_NAME|first }}{% endif %}
-                    </span>
-                </div>
+                {% if featured_author.user.photo %}
+                    <img src="{{ featured_author.user.photo.url }}" alt="" class="w-12 h-12 flex-shrink-0 object-cover">
+                {% else %}
+                    <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center"
+                         style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
+                        <span class="font-display text-lg font-bold text-white">
+                            {% if featured_author %}{{ featured_author.user.first_name|first|upper }}{% else %}{{ JOURNAL_NAME|first }}{% endif %}
+                        </span>
+                    </div>
+                {% endif %}
                 <div class="flex-1 min-w-0">
                     <p class="font-semibold text-sm">
                         {% for aa in article_authors %}{% if not preview_mode %}<a href="{% url 'articles:author_detail' aa.user.pk %}" class="hover:text-accent">{{ aa.user.get_full_name }}</a>{% else %}{{ aa.user.get_full_name }}{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}Editorial staff{% endfor %}
@@ -161,10 +165,14 @@
                     <div class="border-t-2 border-foreground pt-6 mb-8">
                         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-4">ABOUT THE AUTHOR</p>
                         <div class="flex items-start gap-3 mb-4">
-                            <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center"
-                                 style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
-                                <span class="font-display text-xl font-bold text-white">{{ featured_author.user.first_name|first|upper }}</span>
-                            </div>
+                            {% if featured_author.user.photo %}
+                                <img src="{{ featured_author.user.photo.url }}" alt="" class="w-14 h-14 flex-shrink-0 object-cover">
+                            {% else %}
+                                <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center"
+                                     style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
+                                    <span class="font-display text-xl font-bold text-white">{{ featured_author.user.first_name|first|upper }}</span>
+                                </div>
+                            {% endif %}
                             <div>
                                 {% if not preview_mode %}
                                     <a href="{% url 'articles:author_detail' featured_author.user.pk %}" class="font-semibold text-sm hover:text-accent">{{ featured_author.user.get_full_name }}</a>
