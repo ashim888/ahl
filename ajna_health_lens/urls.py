@@ -12,7 +12,11 @@ urlpatterns = [
     path('', include('editorial_board.urls')),
     path('', include('training.urls')),
     path('editorial/', include('admin_custom.urls')),
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
 
+# Django serves /media/ itself only in DEBUG — Django's own docs call this
+# "wildly inefficient and probably insecure" outside development. In
+# production, nginx (or Apache) serves /media/ directly from MEDIA_ROOT
+# instead — see the nginx location block in ARCHITECTURE.md §9.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

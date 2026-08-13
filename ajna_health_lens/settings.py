@@ -144,9 +144,18 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files (user uploads: manuscripts, CVs, article PDFs, covers)
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Media files (user uploads: manuscripts, CVs, article PDFs, covers).
+# In production, Django itself does NOT serve these (see the DEBUG check in
+# ajna_health_lens/urls.py) — the web server (nginx/Apache) serves /media/
+# directly from MEDIA_ROOT. Both are env-overridable so a deployment can
+# point them at wherever media actually lives on that host, and MEDIA_URL
+# can become a full CDN domain later (e.g. https://cdn.example.com/media/)
+# without any code change — see ARCHITECTURE.md §9 for the nginx config.
+# `or` (not a .get default) so an empty value in .env — e.g. an unedited
+# MEDIA_ROOT= left over from .env.example — falls back too, instead of
+# resolving to '' (MEDIA_ROOT='' would silently mean "the cwd").
+MEDIA_URL = os.environ.get('MEDIA_URL') or '/media/'
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT') or BASE_DIR / 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
