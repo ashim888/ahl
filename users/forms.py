@@ -64,10 +64,6 @@ class AuthorManageForm(ModelForm):
         model = User
         fields = AUTHOR_PROFILE_FIELDS
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        apply_tailwind_widgets(self, skip=('cv_file', 'file', 'photo', 'is_active'))
-
 
 class AuthorCreateForm(UserCreationForm):
     """Editorial creation of a new author account (e.g. a contributor who
@@ -82,7 +78,6 @@ class AuthorCreateForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        apply_tailwind_widgets(self, skip=('cv_file', 'file', 'photo', 'is_active'))
         self.fields['is_active'].initial = True
 
     def save(self, commit=True):

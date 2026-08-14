@@ -4,72 +4,152 @@
 {% block page_title %}{% if is_create %}New Article{% else %}Edit Article{% endif %}{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl">
+<div class="max-w-2xl mx-auto">
     {% if not is_create %}
-        <p class="text-sm text-gray-500">
+        <p class="text-sm text-gray-500 mb-4">
             Authors are managed via the
             <a href="/admin/articles/article/{{ form.instance.pk }}/change/" class="underline">Django admin</a>
             (ordering and corresponding-author flag aren't editable here).
         </p>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5" id="article-form">
-        {% csrf_token %}
-        <input type="hidden" name="preview_source_pk" value="{{ form.instance.pk|default:'' }}">
-        {% if form.non_field_errors %}
-            <p class="text-sm text-red-600">{{ form.non_field_errors }}</p>
-        {% endif %}
-
-        {% for field in form %}
-            {% if field.name == 'html_content' %}
-                <div class="flex items-center justify-between">
-                    <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">
-                        {{ field.label }}
-                    </label>
-                    <button type="button" id="insert-template-btn"
-                            class="text-xs px-3 py-1.5 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                        Insert template
-                    </button>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post" enctype="multipart/form-data" id="article-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="preview_source_pk" value="{{ form.instance.pk|default:'' }}">
+            {% if form.non_field_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                    {{ form.non_field_errors }}
                 </div>
-                {{ field }}
-                {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
-            {% else %}
+            {% endif %}
+
+            <div class="flex gap-1 p-1 bg-gray-100 rounded-xl mb-8" role="tablist">
+                <button type="button" data-tab="content" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Content</button>
+                <button type="button" data-tab="publishing" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Publishing</button>
+                <button type="button" data-tab="media" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Media</button>
+            </div>
+
+            <div data-panel="content" class="space-y-5"
+                 {% if form.title.errors or form.slug.errors or form.article_type.errors or form.abstract.errors or form.keywords.errors or form.html_content.errors or form.references.errors %}data-has-error="true"{% endif %}>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.title %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.article_type %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.abstract %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.keywords %}
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">
-                        {{ field.label }}
-                    </label>
-                    {% if field.name == 'pdf_file' and form.instance.pdf_file %}
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-sm font-medium text-gray-700" for="{{ form.html_content.id_for_label }}">
+                            {{ form.html_content.label }}
+                        </label>
+                        <button type="button" id="insert-template-btn"
+                                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Insert template
+                        </button>
+                    </div>
+                    {{ form.html_content }}
+                    {% if form.html_content.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.html_content.help_text }}</p>{% endif %}
+                    {% for error in form.html_content.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.references %}
+            </div>
+
+            <div data-panel="publishing" class="space-y-5 hidden"
+                 {% if form.status.errors or form.access_type.errors or form.issue.errors or form.volume.errors or form.page_numbers.errors or form.doi.errors or form.submission_date.errors or form.acceptance_date.errors or form.publication_date.errors %}data-has-error="true"{% endif %}>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.status %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.volume %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.page_numbers %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.doi %}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.submission_date %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.acceptance_date %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.publication_date %}
+                </div>
+            </div>
+
+            <div data-panel="media" class="space-y-6 hidden"
+                 {% if form.featured_image.errors or form.pdf_file.errors %}data-has-error="true"{% endif %}>
+                <div>
+                    <label for="{{ form.featured_image.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.featured_image.label }}</label>
+                    {% if form.instance.featured_image %}
+                        <img src="{{ form.instance.featured_image.url }}" alt="" class="mb-2.5 h-20 w-auto rounded-xl border border-gray-100">
+                    {% endif %}
+                    {{ form.featured_image }}
+                    {% if form.featured_image.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.featured_image.help_text }}</p>{% endif %}
+                    {% for error in form.featured_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.pdf_file.label }}</label>
+                    {% if form.instance.pdf_file %}
                         <p class="mb-1.5 text-xs text-gray-600">
                             Current: <a href="{{ form.instance.pdf_file.url }}" target="_blank" rel="noopener" class="underline">{{ form.instance.pdf_file.name }}</a>
                         </p>
-                    {% elif field.name == 'featured_image' and form.instance.featured_image %}
-                        <img src="{{ form.instance.featured_image.url }}" alt="" class="mb-1.5 h-16 w-auto rounded-md border border-gray-200">
                     {% endif %}
-                    {{ field }}
-                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    {{ form.pdf_file }}
+                    {% if form.pdf_file.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.pdf_file.help_text }}</p>{% endif %}
+                    {% for error in form.pdf_file.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
-            {% endif %}
-        {% endfor %}
+            </div>
 
-        <div class="flex gap-3">
-            <button type="submit" class="py-2.5 px-6 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
-                {% if is_create %}Create article{% else %}Save changes{% endif %}
-            </button>
-            <button type="button" id="preview-btn"
-                    class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">
-                Preview
-            </button>
-            <a href="{% url 'articles:manage_article_list' %}"
-               class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">Cancel</a>
-        </div>
-    </form>
+            <div class="mt-8 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
+                <button type="submit"
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    {% if is_create %}Create article{% else %}Save changes{% endif %}
+                </button>
+                <button type="button" id="preview-btn"
+                        class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Preview
+                </button>
+                <a href="{% url 'articles:manage_article_list' %}"
+                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
 
 {{ content_templates|json_script:"content-templates-data" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('article-form');
+
+    // -- Tabs: all fields stay in the DOM (just hidden), so no data is lost
+    // between tabs and the existing preview/submit logic below is unaffected.
+    var tabButtons = form.querySelectorAll('.tab-btn');
+    var panels = form.querySelectorAll('[data-panel]');
+
+    function activateTab(name) {
+        tabButtons.forEach(function (btn) {
+            var active = btn.dataset.tab === name;
+            btn.classList.toggle('bg-white', active);
+            btn.classList.toggle('shadow-sm', active);
+            btn.classList.toggle('text-gray-900', active);
+            btn.classList.toggle('text-gray-500', !active);
+        });
+        panels.forEach(function (panel) {
+            panel.classList.toggle('hidden', panel.dataset.panel !== name);
+        });
+    }
+
+    tabButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () { activateTab(btn.dataset.tab); });
+    });
+
+    // Land on whichever tab has a validation error from the last submit,
+    // since `novalidate` means the browser won't jump there on its own.
+    var errorPanel = form.querySelector('[data-panel][data-has-error="true"]');
+    activateTab(errorPanel ? errorPanel.dataset.panel : 'content');
+
     var templates = JSON.parse(document.getElementById('content-templates-data').textContent);
     var typeField = document.getElementById('id_article_type');
     var contentField = document.getElementById('id_html_content');
@@ -105,7 +185,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Preview: submit the same form data to the preview endpoint in a new tab,
     // then restore the form's normal action/target so "Save" still works here.
     var previewBtn = document.getElementById('preview-btn');
-    var form = document.getElementById('article-form');
     previewBtn.addEventListener('click', function () {
         var originalAction = form.action;
         var originalTarget = form.target;

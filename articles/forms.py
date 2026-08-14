@@ -1,7 +1,5 @@
 from django import forms
 
-from ajna_health_lens.forms import apply_tailwind_widgets
-
 from .models import Article
 
 
@@ -35,4 +33,3 @@ class ArticleForm(forms.ModelForm):
         # access_type is a plain CharField+choices (not a FK), so the blank
         # option's label is set by overriding choices, not via empty_label.
         self.fields['access_type'].choices = [('', 'Default from article type')] + list(Article.AccessType.choices)
-        apply_tailwind_widgets(self, skip=('cv_file', 'file', 'pdf_file', 'featured_image'))

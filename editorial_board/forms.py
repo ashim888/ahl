@@ -1,6 +1,5 @@
 from django import forms
 
-from ajna_health_lens.forms import apply_tailwind_widgets
 from users.models import User
 
 from .models import EditorialBoardMember
@@ -24,4 +23,3 @@ class EditorialBoardMemberForm(forms.ModelForm):
         self.fields['user'].queryset = User.objects.order_by('first_name', 'last_name')
         self.fields['user'].required = False
         self.fields['user'].empty_label = '— No linked account —'
-        apply_tailwind_widgets(self, skip=('cv_file', 'file', 'photo', 'is_active'))
