@@ -39,6 +39,13 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">
                         {{ field.label }}
                     </label>
+                    {% if field.name == 'pdf_file' and form.instance.pdf_file %}
+                        <p class="mb-1.5 text-xs text-gray-600">
+                            Current: <a href="{{ form.instance.pdf_file.url }}" target="_blank" rel="noopener" class="underline">{{ form.instance.pdf_file.name }}</a>
+                        </p>
+                    {% elif field.name == 'featured_image' and form.instance.featured_image %}
+                        <img src="{{ form.instance.featured_image.url }}" alt="" class="mb-1.5 h-16 w-auto rounded-md border border-gray-200">
+                    {% endif %}
                     {{ field }}
                     {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
                     {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
