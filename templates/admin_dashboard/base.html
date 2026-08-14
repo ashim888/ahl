@@ -1,4 +1,4 @@
-{% load static %}
+{% load static admin_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,7 +13,7 @@
         form textarea, form select {
             width: 100%;
             border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
+            border-radius: 0.5rem;
             padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
         }
@@ -39,91 +39,135 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="h-screen flex bg-gray-100 text-gray-900 overflow-hidden">
+<body class="h-screen bg-gray-100 text-gray-900 overflow-hidden">
 
     {% with view_name=request.resolver_match.view_name %}
     <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
 
+    <div class="h-screen lg:p-3 flex">
+    <div class="flex w-full min-w-0 bg-white lg:rounded-2xl lg:shadow-sm lg:border lg:border-gray-200 overflow-hidden">
+
     <aside id="sidebar"
-           class="fixed inset-y-0 left-0 z-40 w-64 shrink-0 bg-gray-900 text-gray-300 flex flex-col h-screen -translate-x-full transition-transform duration-200 lg:static lg:translate-x-0">
-        <div class="flex items-center justify-between gap-2 px-5 py-4 border-b border-gray-800 shrink-0">
-            <a href="{% url 'admin_custom:dashboard' %}" class="flex flex-col items-center text-center flex-1">
-                <img src="{% static 'images/logo.png' %}" alt="" class="h-8 w-auto mb-1">
-                <span class="text-white font-serif font-bold text-sm leading-tight">
-                    {{ JOURNAL_NAME }}
+           class="fixed inset-y-0 left-0 z-40 w-72 shrink-0 bg-white text-gray-700 flex flex-col h-screen border-r border-gray-200 -translate-x-full transition-transform duration-200 lg:static lg:translate-x-0">
+        <div class="flex items-center gap-2.5 px-5 py-4 shrink-0">
+            <a href="{% url 'admin_custom:dashboard' %}" class="flex items-center gap-2.5 flex-1 min-w-0">
+                <img src="{% static 'images/logo.png' %}" alt="" class="h-9 w-9 rounded-lg object-cover shrink-0 bg-gray-100">
+                <span class="min-w-0">
+                    <span class="block text-sm font-semibold text-gray-900 truncate">{{ JOURNAL_NAME }}</span>
+                    <span class="block text-xs text-gray-500 truncate">Editorial Admin</span>
                 </span>
-                <span class="text-xs font-sans font-normal text-gray-400">Editorial Dashboard</span>
             </a>
-            <button type="button" id="sidebar-close" aria-label="Close menu" class="lg:hidden p-1 text-gray-400 hover:text-white shrink-0">
+            <svg class="w-4 h-4 text-gray-400 shrink-0 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8 9 4-4 4 4m0 6-4 4-4-4"/>
+            </svg>
+            <button type="button" id="sidebar-close" aria-label="Close menu" class="lg:hidden p-1 text-gray-400 hover:text-gray-900 shrink-0">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
                 </svg>
             </button>
         </div>
 
-        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1 text-sm">
+        <div class="px-5 pb-3 shrink-0">
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-400">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
+                </svg>
+                <span class="text-sm">Search</span>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-1 text-sm">
+            <p class="px-3 pt-1 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400">Manage</p>
             <a href="{% url 'admin_custom:dashboard' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if view_name == 'admin_custom:dashboard' %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if view_name == 'admin_custom:dashboard' %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"/>
                 </svg>
                 Dashboard
             </a>
             <a href="{% url 'articles:manage_article_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_article' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_article' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V7l-5-5H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Zm5-16v4a1 1 0 0 0 1 1h4"/>
                 </svg>
                 Articles
             </a>
             <a href="{% url 'users:verification_queue' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'verification' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'verification' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4m5-3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4 8 4Z"/>
                 </svg>
                 Verification Queue
             </a>
             <a href="{% url 'users:manage_author_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_author' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_author' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
                 </svg>
                 Authors
             </a>
             <a href="{% url 'editorial_board:manage_member_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_member' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_member' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87m5-4.13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6 4a4 4 0 0 0-3-3.87M4 20v-2a4 4 0 0 1 5.5-3.7"/>
                 </svg>
                 Editorial Board
             </a>
             <a href="{% url 'training:manage_course_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_course' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_course' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5Zm0 0v6m-9-6v4a9 9 0 0 0 18 0v-4"/>
                 </svg>
                 Training Courses
             </a>
 
-            <div class="pt-4 mt-4 border-t border-gray-800">
-                <p class="px-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Coming later</p>
-                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Public browsing exists; CRUD is still plain Django admin">
+            <div class="pt-4 mt-2 border-t border-gray-100">
+                <p class="px-3 pt-3 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400">Coming later</p>
+                <span class="flex items-center gap-3 px-3 py-2 text-gray-300 cursor-not-allowed" title="Public browsing exists; CRUD is still plain Django admin">
                     Issues
                 </span>
-                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Roadmap Phase 7">
+                <span class="flex items-center gap-3 px-3 py-2 text-gray-300 cursor-not-allowed" title="Roadmap Phase 7">
                     Revenue
                 </span>
             </div>
+
+            {% recent_draft_articles as draft_articles %}
+            {% if draft_articles %}
+                <div class="pt-4 mt-2 border-t border-gray-100">
+                    <div class="flex items-center justify-between px-3 pt-3 pb-2">
+                        <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400">Draft articles</p>
+                        <a href="{% url 'articles:manage_article_list' %}?status=draft" class="text-[0.65rem] font-medium text-gray-400 hover:text-gray-900">View all</a>
+                    </div>
+                    {% for draft in draft_articles %}
+                        <a href="{% url 'articles:manage_article_update' draft.slug %}"
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-900">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                            <span class="truncate text-xs">{{ draft.title }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </nav>
 
-        <div class="border-t border-gray-800 p-4 text-xs shrink-0">
-            <p class="text-gray-300 font-medium">{{ user.get_full_name }}</p>
-            <p class="text-gray-500">{{ user.get_role_display }}</p>
-            <div class="mt-3 flex items-center justify-between">
-                <a href="{% url 'articles:home' %}" class="underline text-gray-400 hover:text-gray-200">← Site</a>
+        <div class="border-t border-gray-100 p-4 text-xs shrink-0">
+            <div class="flex items-center gap-2.5 mb-3">
+                {% if user.photo %}
+                    <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0">
+                {% else %}
+                    <span class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                    </span>
+                {% endif %}
+                <span class="min-w-0">
+                    <span class="block text-gray-900 font-medium truncate">{{ user.get_full_name }}</span>
+                    <span class="block text-gray-400 truncate">{{ user.get_role_display }}</span>
+                </span>
+            </div>
+            <div class="flex items-center justify-between">
+                <a href="{% url 'articles:home' %}" class="text-gray-400 hover:text-gray-900">← Site</a>
                 <form method="post" action="{% url 'users:logout' %}">
                     {% csrf_token %}
-                    <button type="submit" class="underline text-gray-400 hover:text-gray-200">Log out</button>
+                    <button type="submit" class="text-gray-400 hover:text-gray-900">Log out</button>
                 </form>
             </div>
         </div>
@@ -131,20 +175,25 @@
     {% endwith %}
 
     <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center gap-3 px-4 sm:px-6 shrink-0">
-            <button type="button" id="sidebar-toggle" aria-label="Menu" class="lg:hidden -ml-2 p-2 text-gray-600">
+        <div class="lg:hidden h-14 border-b border-gray-100 flex items-center gap-3 px-4 shrink-0">
+            <button type="button" id="sidebar-toggle" aria-label="Menu" class="-ml-2 p-2 text-gray-600">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
-            <h1 class="text-lg font-semibold text-gray-900 truncate">{% block page_title %}Dashboard{% endblock %}</h1>
-        </header>
+            <span class="text-sm font-semibold text-gray-900 truncate">{{ JOURNAL_NAME }}</span>
+        </div>
 
-        <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <div class="flex items-center justify-between gap-4 mb-6">
+                <h1 class="text-2xl font-bold text-gray-900 truncate">{% block page_title %}Dashboard{% endblock %}</h1>
+                {% block page_actions %}{% endblock %}
+            </div>
+
             {% if messages %}
                 <div class="mb-6 space-y-2">
                     {% for message in messages %}
-                        <div class="rounded-md px-4 py-3 text-sm border
+                        <div class="rounded-lg px-4 py-3 text-sm border
                                     {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
                                     {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
                                     {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
@@ -155,6 +204,9 @@
             {% endif %}
             {% block content %}{% endblock %}
         </main>
+    </div>
+
+    </div>
     </div>
 
     <script>
