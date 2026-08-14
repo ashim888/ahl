@@ -1,6 +1,6 @@
 import datetime
 
-from django.db.models import Count
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
@@ -29,7 +29,9 @@ class DashboardHomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        today = timezone.now().date()
+        # localdate(), not now().date() — TIME_ZONE is Asia/Kathmandu (UTC+5:45),
+        # so a plain UTC "now" can already be tomorrow in local time near midnight.
+        today = timezone.localdate()
 
         # -- KPI row -----------------------------------------------------
         article_status_counts = dict(
@@ -69,7 +71,15 @@ class DashboardHomeView(TemplateView):
         days = [today - datetime.timedelta(days=i) for i in range(6, -1, -1)]
         daily_stats = []
         for day in days:
-            created = Article.objects.filter(created_at__date=day).count()
+            # Explicit local-midnight-to-local-midnight range instead of a
+            # `created_at__date=day` lookup — the latter needs MySQL's
+            # CONVERT_TZ() to resolve the named TIME_ZONE, which silently
+            # returns NULL (matching nothing, ever) unless the server's
+            # mysql.time_zone_name tables have been loaded via
+            # mysql_tzinfo_to_sql. A plain datetime range doesn't need that.
+            day_start = timezone.make_aware(datetime.datetime.combine(day, datetime.time.min))
+            day_end = day_start + datetime.timedelta(days=1)
+            created = Article.objects.filter(created_at__gte=day_start, created_at__lt=day_end).count()
             published = Article.objects.filter(publication_date=day).count()
             daily_stats.append({'label': day.strftime('%b %-d'), 'created': created, 'published': published})
         max_daily = max([max(d['created'], d['published']) for d in daily_stats] + [1])
@@ -140,5 +150,41 @@ class DashboardHomeView(TemplateView):
         context['enrollment_total'] = enrollment_total
 
         context['recent_articles'] = Article.objects.select_related('issue').order_by('-updated_at')[:5]
+
+        return context
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class RevenueView(TemplateView):
+    """Read-only revenue summary from Training's Enrollment.payment_status —
+    the only real payment data this platform has. Deliberately not a
+    Stripe/subscription billing page — that's ROADMAP.md Phase 7, a separate,
+    much larger undertaking than surfacing data that already exists.
+    """
+
+    template_name = 'admin_custom/revenue.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        def total_for(payment_status):
+            return Enrollment.objects.filter(
+                payment_status=payment_status,
+            ).aggregate(total=Sum('course__price'))['total'] or 0
+
+        context['collected_total'] = total_for(Enrollment.PaymentStatus.PAID)
+        context['pending_total'] = total_for(Enrollment.PaymentStatus.PENDING)
+        context['refunded_total'] = total_for(Enrollment.PaymentStatus.REFUNDED)
+        context['enrollment_total'] = Enrollment.objects.count()
+
+        courses = TrainingCourse.objects.annotate(
+            paid_count=Count('enrollments', filter=Q(enrollments__payment_status=Enrollment.PaymentStatus.PAID)),
+            pending_count=Count('enrollments', filter=Q(enrollments__payment_status=Enrollment.PaymentStatus.PENDING)),
+            refunded_count=Count('enrollments', filter=Q(enrollments__payment_status=Enrollment.PaymentStatus.REFUNDED)),
+            total_enrollments=Count('enrollments'),
+        ).order_by('-total_enrollments')
+        for course in courses:
+            course.collected = course.paid_count * course.price
+        context['courses'] = courses
 
         return context

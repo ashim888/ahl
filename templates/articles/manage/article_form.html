@@ -4,7 +4,7 @@
 {% block page_title %}{% if is_create %}New Article{% else %}Edit Article{% endif %}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div class="">
     {% if not is_create %}
         <p class="text-sm text-gray-500 mb-4">
             Authors are managed via the
@@ -63,6 +63,7 @@
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.status %}
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
                 </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.volume %}

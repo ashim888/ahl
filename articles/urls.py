@@ -25,4 +25,5 @@ urlpatterns = [
     path('manage/articles/preview/', views.article_preview, name='manage_article_preview'),
     path('manage/articles/<slug:slug>/edit/', views.ArticleUpdateView.as_view(), name='manage_article_update'),
     path('manage/articles/<slug:slug>/delete/', views.ArticleDeleteView.as_view(), name='manage_article_delete'),
+    path('manage/articles/<slug:slug>/quick-publish/', views.article_quick_publish, name='manage_article_quick_publish'),
 ]

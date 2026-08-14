@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponse, Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
@@ -45,7 +45,11 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-publication_date')
+        # -created_at as a tiebreaker: articles that share a publication_date
+        # (or have none) still sort newest-first instead of by arbitrary DB order.
+        published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
+            '-is_pinned', '-publication_date', '-created_at',
+        )
 
         hero_article = published.first()
         context['hero_article'] = hero_article
@@ -87,7 +91,7 @@ class ArticleListView(ListView):
 
     def get_queryset(self):
         queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
-            '-publication_date',
+            '-is_pinned', '-publication_date', '-created_at',
         ).prefetch_related('articleauthor_set__user')
         article_type = self.request.GET.get('type')
         if article_type:
@@ -128,7 +132,7 @@ class ArticleDetailView(DetailView):
             ]
         context['related_articles'] = Article.objects.filter(
             status=Article.Status.PUBLISHED, article_type=self.object.article_type,
-        ).exclude(pk=self.object.pk).order_by('-publication_date')[:3]
+        ).exclude(pk=self.object.pk).order_by('-publication_date', '-created_at')[:3]
         return context
 
 
@@ -157,7 +161,7 @@ class AuthorDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['author_articles'] = self.object.authored_articles.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-publication_date')
+        ).order_by('-publication_date', '-created_at')
         context['board_membership'] = self.object.board_memberships.filter(is_active=True).first()
         return context
 
@@ -209,7 +213,7 @@ class SearchView(ListView):
         self.query = self.request.GET.get('q', '').strip()
         queryset = Article.objects.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-publication_date').prefetch_related('articleauthor_set__user')
+        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__user')
         if self.query:
             queryset = queryset.filter(
                 Q(title__icontains=self.query)
@@ -256,6 +260,25 @@ class ArticleManageListView(ListView):
         context['selected_type'] = self.request.GET.get('type', '')
         context['selected_status'] = self.request.GET.get('status', '')
         return context
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_quick_publish(request, slug):
+    """One-click publish/unpublish from the manage list — a concrete action
+    for "how do I actually publish this", instead of only a status dropdown
+    buried in the edit form's Publishing tab. Publishing stamps
+    publication_date via Article.save(), same as saving the full edit form.
+    """
+    article = get_object_or_404(Article, slug=slug)
+    if article.status == Article.Status.PUBLISHED:
+        article.status = Article.Status.DRAFT
+        messages.success(request, f'"{article.title}" moved back to draft.')
+    else:
+        article.status = Article.Status.PUBLISHED
+        messages.success(request, f'"{article.title}" published.')
+    article.save()
+    return redirect('articles:manage_article_list')
 
 
 class ArticleFormMixin:

@@ -1,0 +1,72 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Revenue — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Revenue{% endblock %}
+
+{% block content %}
+
+<p class="text-sm text-gray-500 -mt-4 mb-6">
+    Training course payments only — this platform has no subscription/APC billing yet (Roadmap Phase 7).
+    Figures reflect <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">Enrollment.payment_status</code>, not a real payment gateway.
+</p>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Collected</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">${{ collected_total }}</p>
+        <p class="mt-2 text-xs text-gray-400">Paid enrollments</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Pending</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">${{ pending_total }}</p>
+        <p class="mt-2 text-xs text-gray-400">Awaiting payment</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Refunded</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">${{ refunded_total }}</p>
+        <p class="mt-2 text-xs text-gray-400">Returned to enrollees</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Total Enrollments</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ enrollment_total }}</p>
+        <p class="mt-2 text-xs text-gray-400">Across all courses</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">By Course</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-100">
+                <tr>
+                    <th class="py-2.5 pr-4">Course</th>
+                    <th class="py-2.5 pr-4">Price</th>
+                    <th class="py-2.5 pr-4">Enrollments</th>
+                    <th class="py-2.5 pr-4">Paid</th>
+                    <th class="py-2.5 pr-4">Pending</th>
+                    <th class="py-2.5 pr-4">Refunded</th>
+                    <th class="py-2.5">Collected</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for course in courses %}
+                    <tr>
+                        <td class="py-3 pr-4 font-medium text-gray-900">
+                            <a href="{% url 'training:manage_course_enrollments' course.pk %}" class="hover:underline">{{ course.title }}</a>
+                        </td>
+                        <td class="py-3 pr-4 text-gray-600">${{ course.price }}</td>
+                        <td class="py-3 pr-4 text-gray-600">{{ course.total_enrollments }}</td>
+                        <td class="py-3 pr-4 text-gray-600">{{ course.paid_count }}</td>
+                        <td class="py-3 pr-4 text-gray-600">{{ course.pending_count }}</td>
+                        <td class="py-3 pr-4 text-gray-600">{{ course.refunded_count }}</td>
+                        <td class="py-3 font-semibold text-gray-900">${{ course.collected }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="py-6 text-center text-gray-400">No courses yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

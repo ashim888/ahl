@@ -147,16 +147,20 @@
                 </svg>
                 Training Courses
             </a>
-
-            <div class="pt-4 mt-2 border-t border-gray-100">
-                <p class="px-3 pt-3 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400">Coming later</p>
-                <span class="flex items-center gap-3 px-3 py-2 text-gray-300 cursor-not-allowed" title="Public browsing exists; CRUD is still plain Django admin">
-                    Issues
-                </span>
-                <span class="flex items-center gap-3 px-3 py-2 text-gray-300 cursor-not-allowed" title="Roadmap Phase 7">
-                    Revenue
-                </span>
-            </div>
+            <a href="{% url 'issues:manage_issue_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_issue' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/>
+                </svg>
+                Issues
+            </a>
+            <a href="{% url 'admin_custom:revenue' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if view_name == 'admin_custom:revenue' %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                Revenue
+            </a>
 
             {% recent_draft_articles as draft_articles %}
             {% if draft_articles %}

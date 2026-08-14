@@ -51,7 +51,10 @@
             <tbody class="divide-y divide-gray-200 bg-white">
                 {% for article in articles %}
                     <tr>
-                        <td class="px-4 py-3 font-medium text-gray-900">{{ article.title }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-900">
+                            {% if article.is_pinned %}<span class="mr-1" title="Pinned to top">📌</span>{% endif %}
+                            {{ article.title }}
+                        </td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_article_type_display }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_access_type_display }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_status_display }}</td>
@@ -59,6 +62,12 @@
                         <td class="px-4 py-3 text-gray-500">{{ article.updated_at|date:"M j, Y" }}</td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             <a href="{% url 'articles:manage_article_update' article.slug %}" class="underline mr-3">Edit</a>
+                            <form method="post" action="{% url 'articles:manage_article_quick_publish' article.slug %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="underline mr-3 {% if article.status == 'published' %}text-amber-700{% else %}text-green-700{% endif %}">
+                                    {% if article.status == 'published' %}Unpublish{% else %}Publish{% endif %}
+                                </button>
+                            </form>
                             <a href="{% url 'articles:manage_article_delete' article.slug %}" class="underline text-red-700">Delete</a>
                         </td>
                     </tr>

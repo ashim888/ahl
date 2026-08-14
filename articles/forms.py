@@ -13,7 +13,7 @@ class ArticleForm(forms.ModelForm):
     class Meta:
         model = Article
         fields = [
-            'title', 'slug', 'article_type', 'access_type', 'status',
+            'title', 'slug', 'article_type', 'access_type', 'status', 'is_pinned',
             'abstract', 'keywords', 'issue', 'volume', 'page_numbers', 'doi',
             'submission_date', 'acceptance_date', 'publication_date',
             'html_content', 'references', 'featured_image', 'pdf_file',

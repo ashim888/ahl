@@ -33,6 +33,7 @@
                 </a>
                 <div class="flex-1 min-w-0">
                     <span class="section-label text-muted-foreground">
+                        {% if article.is_pinned %}<span class="text-accent">PINNED ·</span> {% endif %}
                         {{ article.get_article_type_display }} · {{ article.get_access_type_display }}
                     </span>
                     <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">

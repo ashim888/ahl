@@ -1,0 +1,48 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Issues — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Issues{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">All issues regardless of publish status. Assign articles to an issue via the <a href="/admin/articles/article/" class="underline">Django admin</a>.</p>
+    <a href="{% url 'issues:manage_issue_create' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+        + New Issue
+    </a>
+</div>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3">Issue</th>
+                <th class="px-4 py-3">Title</th>
+                <th class="px-4 py-3">Articles</th>
+                <th class="px-4 py-3">Publication Date</th>
+                <th class="px-4 py-3">Published</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for issue in issues %}
+                <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">Vol. {{ issue.volume }}, No. {{ issue.number }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ issue.title|default:"—" }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ issue.articles.count }}</td>
+                    <td class="px-4 py-3 text-gray-500">{{ issue.publication_date|date:"M j, Y"|default:"—" }}</td>
+                    <td class="px-4 py-3 text-gray-600">{% if issue.is_published %}Yes{% else %}No{% endif %}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'issues:manage_issue_update' issue.pk %}" class="underline mr-3">Edit</a>
+                        <a href="{% url 'issues:manage_issue_delete' issue.pk %}" class="underline text-red-700">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No issues yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}
