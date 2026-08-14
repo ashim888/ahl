@@ -1,19 +1,22 @@
 from django import forms
+from django.forms import inlineformset_factory
 
-from .models import Article
+from users.models import User
+
+from .models import Article, ArticleAuthor
 
 
 class ArticleForm(forms.ModelForm):
-    """Front-end editorial CRUD form. Authors (the Article<->User through model,
-    with ordering/corresponding-author flags) are deliberately still managed via
-    the Django admin's inline — a plain multi-select here can't represent that
-    ordering cleanly, so this form sticks to the article's own fields.
+    """Front-end editorial CRUD form. Authors (the Article<->User through
+    model, with ordering/corresponding-author flags) are edited separately
+    via ArticleAuthorFormSet below (see manage_article_authors) — a plain
+    multi-select here can't represent that ordering cleanly, so this form
+    sticks to the article's own fields.
 
     No `status` field on purpose — status is set procedurally by
     ArticleFormMixin.form_valid() based on which submit button (Save as
     Draft / Save & Publish) was pressed, not a dropdown that could disagree
-    with it. Archiving an article stays a Django-admin-only action, same as
-    author ordering — see the note in article_form.html.
+    with it. Archiving an article stays a Django-admin-only action.
     """
 
     class Meta:
@@ -51,3 +54,21 @@ class LenientArticleForm(ArticleForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.required = False
+
+
+class ArticleAuthorForm(forms.ModelForm):
+    class Meta:
+        model = ArticleAuthor
+        fields = ['user', 'order', 'is_corresponding']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'].queryset = User.objects.order_by('first_name', 'last_name')
+
+
+# Byline editor for an article — mirrors what the Django admin's
+# ArticleAuthorInline already did (order, is_corresponding, add/remove),
+# just as a standalone page instead of buried in /admin/.
+ArticleAuthorFormSet = inlineformset_factory(
+    Article, ArticleAuthor, form=ArticleAuthorForm, extra=2, can_delete=True,
+)

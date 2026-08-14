@@ -5,7 +5,12 @@
 
 {% block content %}
 <div class="flex items-center justify-between">
-    <p class="text-sm text-gray-500">Unverified and verified-author accounts. Editor/EiC/Admin accounts are managed via Django admin.</p>
+    <p class="text-sm text-gray-500">
+        Unverified and verified-author accounts.
+        {% if user.role == 'editor_in_chief' or user.role == 'admin' %}
+            Editor/EiC/Admin accounts are managed under <a href="{% url 'users:manage_staff_list' %}" class="underline">Staff</a>.
+        {% endif %}
+    </p>
     <a href="{% url 'users:manage_author_create' %}"
        class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
         + New Author

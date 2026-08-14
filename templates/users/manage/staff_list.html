@@ -1,0 +1,83 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Staff — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Staff{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+        Editor, Editor-in-Chief, and Admin accounts.
+        {% if user.role != 'admin' %}Only an Admin can grant the Admin role.{% endif %}
+    </p>
+    <a href="{% url 'users:manage_staff_create' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+        + New Staff Account
+    </a>
+</div>
+
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Role</label>
+        <select name="role" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All roles</option>
+            {% for value, label in role_choices %}
+                <option value="{{ value }}" {% if value == selected_role %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3"></th>
+                <th class="px-4 py-3">Name</th>
+                <th class="px-4 py-3">Email</th>
+                <th class="px-4 py-3">Role</th>
+                <th class="px-4 py-3">Active</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for member in staff %}
+                <tr>
+                    <td class="px-4 py-3">
+                        {% if member.photo %}
+                            <img src="{{ member.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover">
+                        {% else %}
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-500">
+                                {{ member.first_name|first|upper }}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 font-medium text-gray-900">
+                        {{ member.get_full_name }}
+                        {% if member.pk == user.pk %}<span class="text-xs text-gray-400">(you)</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{{ member.email }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ member.get_role_display }}</td>
+                    <td class="px-4 py-3 text-gray-600">{% if member.is_active %}Yes{% else %}No{% endif %}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'users:manage_staff_update' member.pk %}" class="underline mr-3">Edit</a>
+                        {% if member.pk != user.pk %}
+                            <form method="post" action="{% url 'users:manage_staff_toggle_active' member.pk %}" class="inline"
+                                  onsubmit="return confirm('{% if member.is_active %}Deactivate {{ member.get_full_name|escapejs }}? They won\'t be able to log in.{% else %}Reactivate {{ member.get_full_name|escapejs }}?{% endif %}');">
+                                {% csrf_token %}
+                                <button type="submit" class="underline {% if member.is_active %}text-red-700{% else %}text-green-700{% endif %}">
+                                    {% if member.is_active %}Deactivate{% else %}Reactivate{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No staff accounts yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}

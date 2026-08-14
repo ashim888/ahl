@@ -88,3 +88,60 @@ class AuthorCreateForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+# Editorial staff accounts (Editor / Editor-in-Chief / Admin) — deliberately a
+# smaller field set than AUTHOR_PROFILE_FIELDS: staff don't need the
+# academic-author fields (ORCID, affiliation, CV, publications, etc.), just
+# who they are and what they're allowed to do.
+STAFF_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+STAFF_FIELDS = ['first_name', 'last_name', 'email', 'photo', 'role', 'is_active']
+
+
+class StaffFormMixin:
+    """Shared role-choice guardrail: an Editor-in-Chief managing this screen
+    can grant Editor/EiC but not Admin — only an existing Admin can mint a
+    new one. Requires the requesting user passed in as `acting_user`.
+    """
+
+    def __init__(self, *args, acting_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [(v, l) for v, l in User.Role.choices if v in STAFF_ROLES]
+        current_role = getattr(self.instance, 'role', None)
+        # An EiC can't promote someone TO Admin, but editing an existing
+        # Admin's other fields shouldn't force-demote them just because the
+        # choice list wouldn't otherwise include their current role.
+        if acting_user and acting_user.role != User.Role.ADMIN and current_role != User.Role.ADMIN:
+            choices = [(v, l) for v, l in choices if v != User.Role.ADMIN]
+        self.fields['role'].choices = choices
+
+
+class StaffManageForm(StaffFormMixin, ModelForm):
+    class Meta:
+        model = User
+        fields = STAFF_FIELDS
+
+
+class StaffCreateForm(StaffFormMixin, UserCreationForm):
+    """Editorial creation of a new staff account. Unlike author creation,
+    there's no verification-queue bypass to document — staff accounts were
+    never subject to it (VERIFICATION_QUEUE_ROLES doesn't include them) —
+    but is_verified/verification_status are set to keep them consistent
+    with what an approved account looks like everywhere else.
+    """
+
+    class Meta:
+        model = User
+        fields = STAFF_FIELDS
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['is_active'].initial = True
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_verified = True
+        user.verification_status = User.VerificationStatus.APPROVED
+        if commit:
+            user.save()
+        return user

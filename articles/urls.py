@@ -25,6 +25,7 @@ urlpatterns = [
     path('manage/articles/preview/', views.article_preview, name='manage_article_preview'),
     path('manage/articles/autosave/', views.article_autosave, name='manage_article_autosave'),
     path('manage/articles/<slug:slug>/edit/', views.ArticleUpdateView.as_view(), name='manage_article_update'),
+    path('manage/articles/<slug:slug>/authors/', views.article_manage_authors, name='manage_article_authors'),
     path('manage/articles/<slug:slug>/delete/', views.ArticleDeleteView.as_view(), name='manage_article_delete'),
     path('manage/articles/<slug:slug>/quick-publish/', views.article_quick_publish, name='manage_article_quick_publish'),
 ]

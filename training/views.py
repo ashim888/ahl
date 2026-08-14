@@ -144,4 +144,24 @@ def course_enrollments(request, pk):
     enrollments = course.enrollments.select_related('user').order_by('-enrolled_at')
     return render(request, 'training/manage/course_enrollments.html', {
         'course': course, 'enrollments': enrollments,
+        'status_choices': Enrollment.Status.choices,
+        'payment_status_choices': Enrollment.PaymentStatus.choices,
     })
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def enrollment_update(request, pk):
+    """Quick inline edit from the enrollments list — status/payment_status
+    only (matches Django admin's EnrollmentAdmin, minus the bulk actions).
+    """
+    enrollment = get_object_or_404(Enrollment, pk=pk)
+    status = request.POST.get('status')
+    payment_status = request.POST.get('payment_status')
+    if status in Enrollment.Status.values:
+        enrollment.status = status
+    if payment_status in Enrollment.PaymentStatus.values:
+        enrollment.payment_status = payment_status
+    enrollment.save(update_fields=['status', 'payment_status'])
+    messages.success(request, f'Enrollment for {enrollment.user.email} updated.')
+    return redirect('training:manage_course_enrollments', pk=enrollment.course_id)

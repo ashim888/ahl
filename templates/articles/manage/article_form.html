@@ -7,10 +7,9 @@
 <div class="">
     {% if not is_create %}
         <p class="text-sm text-gray-500 mb-4">
-            Authors are managed via the
-            <a href="/admin/articles/article/{{ form.instance.pk }}/change/" class="underline">Django admin</a>
-            (ordering and corresponding-author flag aren't editable here). Archiving an article is also
-            a Django admin action — from here you can only save it as a draft or publish it.
+            <a href="{% url 'articles:manage_article_authors' form.instance.slug %}" class="underline font-medium text-gray-700">Manage authors →</a>
+            — order and the corresponding-author flag live on that page, not here.
+            Archiving an article is still a Django admin action — from here you can only save it as a draft or publish it.
         </p>
     {% endif %}
 

@@ -1,0 +1,70 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Authors — {{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Authors{% endblock %}
+{% block page_actions %}
+<a href="{% url 'articles:manage_article_update' article.slug %}" class="text-sm text-gray-500 hover:text-gray-900">← Back to article</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <p class="text-sm text-gray-500 mb-6">
+        Byline for "<strong class="text-gray-700">{{ article.title }}</strong>" — order controls display order in the
+        byline; the corresponding author is highlighted on the article page.
+    </p>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post">
+            {% csrf_token %}
+            {{ formset.management_form }}
+            {% if formset.non_form_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                    {{ formset.non_form_errors }}
+                </div>
+            {% endif %}
+
+            <div class="space-y-5">
+                {% for form in formset %}
+                    <div class="grid grid-cols-12 gap-3 items-start pb-5 {% if not forloop.last %}border-b border-gray-100{% endif %}">
+                        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                        <div class="col-span-6">
+                            {% if forloop.first %}<label class="block text-xs font-medium text-gray-500 mb-1.5">Author</label>{% endif %}
+                            {{ form.user }}
+                            {% for error in form.user.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                        </div>
+                        <div class="col-span-2">
+                            {% if forloop.first %}<label class="block text-xs font-medium text-gray-500 mb-1.5">Order</label>{% endif %}
+                            {{ form.order }}
+                        </div>
+                        <div class="col-span-3 flex items-center h-full {% if forloop.first %}pt-6{% endif %}">
+                            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                                {{ form.is_corresponding }}
+                                Corresponding
+                            </label>
+                        </div>
+                        <div class="col-span-1 flex items-center h-full {% if forloop.first %}pt-6{% endif %}">
+                            {% if form.instance.pk %}
+                                <label class="flex items-center gap-1 text-xs text-red-600 cursor-pointer select-none" title="Remove">
+                                    {{ form.DELETE }}
+                                    ✕
+                                </label>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+                <button type="submit"
+                        class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    Save authors
+                </button>
+                <a href="{% url 'articles:manage_article_update' article.slug %}"
+                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

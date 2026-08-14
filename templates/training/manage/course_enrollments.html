@@ -22,8 +22,26 @@
                     <td class="px-4 py-3 font-medium text-gray-900">
                         {{ enrollment.user.get_full_name }} &lt;{{ enrollment.user.email }}&gt;
                     </td>
-                    <td class="px-4 py-3 text-gray-600">{{ enrollment.get_status_display }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ enrollment.get_payment_status_display }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        <form method="post" action="{% url 'training:manage_enrollment_update' enrollment.pk %}">
+                            {% csrf_token %}
+                            <select name="status" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-2 py-1 text-xs">
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if value == enrollment.status %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">
+                        <form method="post" action="{% url 'training:manage_enrollment_update' enrollment.pk %}">
+                            {% csrf_token %}
+                            <select name="payment_status" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-2 py-1 text-xs">
+                                {% for value, label in payment_status_choices %}
+                                    <option value="{{ value }}" {% if value == enrollment.payment_status %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
                     <td class="px-4 py-3 text-gray-500">{{ enrollment.enrolled_at|date:"M j, Y" }}</td>
                 </tr>
             {% empty %}

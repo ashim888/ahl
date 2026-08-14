@@ -15,7 +15,7 @@ from users.decorators import role_required
 from users.models import User
 
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
-from .forms import ArticleForm, LenientArticleForm
+from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
 from .models import Article
 
 # Article types treated as "peer-reviewed research" for the homepage's
@@ -399,6 +399,24 @@ class ArticleUpdateView(ArticleFormMixin, UpdateView):
             suffix = ''
         messages.success(self.request, f'"{form.instance.title}" updated{suffix}.')
         return super().form_valid(form)
+
+
+@role_required(*EDITORIAL_ROLES)
+def article_manage_authors(request, slug):
+    """Byline editor — add/remove authors, set ordering and the
+    corresponding-author flag. Replaces the Django admin's
+    ArticleAuthorInline so this never has to be done in /admin/.
+    """
+    article = get_object_or_404(Article, slug=slug)
+    if request.method == 'POST':
+        formset = ArticleAuthorFormSet(request.POST, instance=article)
+        if formset.is_valid():
+            formset.save()
+            messages.success(request, 'Authors updated.')
+            return redirect('articles:manage_article_authors', slug=article.slug)
+    else:
+        formset = ArticleAuthorFormSet(instance=article)
+    return render(request, 'articles/manage/article_authors.html', {'article': article, 'formset': formset})
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')

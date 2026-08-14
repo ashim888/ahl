@@ -14,11 +14,18 @@ from articles.models import Article
 from training.models import Enrollment
 
 from .decorators import role_required
-from .forms import AuthorCreateForm, AuthorManageForm, ProfileUpdateForm, RegistrationForm
+from .forms import (
+    AuthorCreateForm, AuthorManageForm, ProfileUpdateForm, RegistrationForm,
+    STAFF_ROLES, StaffCreateForm, StaffManageForm,
+)
 from .models import User
 
 # Matches EDITORIAL_ROLES in articles/views.py, admin_custom/views.py, editorial_board/views.py, training/views.py.
 EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+
+# Granting Editor/EiC/Admin is more sensitive than the Authors screen above —
+# scoped to EiC/Admin only, not plain Editors.
+STAFF_MANAGE_ROLES = (User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
 
 
 class RegisterView(CreateView):
@@ -100,6 +107,16 @@ def verification_queue(request):
         verification_status=User.VerificationStatus.PENDING,
     ).order_by('date_joined')
     return render(request, 'users/verification_queue.html', {'pending_users': pending_users})
+
+
+@role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+def verification_detail(request, pk):
+    """Full profile for one pending registration — the list view only shows
+    a summary card, with no way to see bio/research_interests or anything
+    else not already crammed into that card.
+    """
+    target = get_object_or_404(User, pk=pk, verification_status=User.VerificationStatus.PENDING)
+    return render(request, 'users/verification_detail.html', {'target': target})
 
 
 @role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
@@ -206,3 +223,89 @@ def author_toggle_active(request, pk):
     author.save(update_fields=['is_active'])
     messages.success(request, f'{author.email} {"reactivated" if author.is_active else "deactivated"}.')
     return redirect('users:manage_author_list')
+
+
+# -- Staff account management (Editor / Editor-in-Chief / Admin) -----------
+# Editor-in-Chief and Admin only — granting editorial roles is more sensitive
+# than the Authors screen above. See StaffFormMixin for the additional
+# guardrail: an EiC can grant Editor/EiC but never mint a new Admin.
+
+@method_decorator(role_required(*STAFF_MANAGE_ROLES), name='dispatch')
+class StaffManageListView(ListView):
+    model = User
+    template_name = 'users/manage/staff_list.html'
+    context_object_name = 'staff'
+    paginate_by = 30
+
+    def get_queryset(self):
+        queryset = User.objects.filter(role__in=STAFF_ROLES).order_by('role', 'first_name')
+        role = self.request.GET.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['role_choices'] = [(v, l) for v, l in User.Role.choices if v in STAFF_ROLES]
+        context['selected_role'] = self.request.GET.get('role', '')
+        return context
+
+
+class StaffFormViewMixin:
+    def get_success_url(self):
+        return reverse('users:manage_staff_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['acting_user'] = self.request.user
+        return kwargs
+
+
+@method_decorator(role_required(*STAFF_MANAGE_ROLES), name='dispatch')
+class StaffCreateView(StaffFormViewMixin, CreateView):
+    model = User
+    form_class = StaffCreateForm
+    template_name = 'users/manage/staff_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_create'] = True
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{form.instance.get_full_name()}" added as {form.instance.get_role_display()}.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*STAFF_MANAGE_ROLES), name='dispatch')
+class StaffUpdateView(StaffFormViewMixin, UpdateView):
+    form_class = StaffManageForm
+    template_name = 'users/manage/staff_form.html'
+
+    def get_queryset(self):
+        return User.objects.filter(role__in=STAFF_ROLES)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_create'] = False
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{form.instance.get_full_name()}" updated.')
+        return super().form_valid(form)
+
+
+@role_required(*STAFF_MANAGE_ROLES)
+def staff_toggle_active(request, pk):
+    """Reversible deactivate/reactivate, same pattern as author_toggle_active
+    above — never hard-deletes the account."""
+    if request.method != 'POST':
+        raise PermissionDenied
+    staff = get_object_or_404(User, pk=pk, role__in=STAFF_ROLES)
+    if staff.pk == request.user.pk:
+        messages.error(request, "You can't deactivate your own account.")
+        return redirect('users:manage_staff_list')
+    staff.is_active = not staff.is_active
+    staff.save(update_fields=['is_active'])
+    messages.success(request, f'{staff.email} {"reactivated" if staff.is_active else "deactivated"}.')
+    return redirect('users:manage_staff_list')
