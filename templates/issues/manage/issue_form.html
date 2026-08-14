@@ -4,7 +4,7 @@
 {% block page_title %}{% if is_create %}New Issue{% else %}Edit Issue{% endif %}{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto">
+<div class="">
     {% if not is_create %}
         <p class="text-sm text-gray-500 mb-4">
             Assign articles to this issue via the <a href="/admin/articles/article/" class="underline">Django admin</a> (set an article's "Issue" field there).
@@ -21,11 +21,8 @@
             {% endif %}
 
             <div class="space-y-5">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.volume %}
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.number %}
-                </div>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.title %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
 
                 <div>
                     <label for="{{ form.cover_image.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.cover_image.label }}</label>

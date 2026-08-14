@@ -70,16 +70,11 @@ class Article(models.Model):
         help_text='Source submission this article was promoted from, if any.',
     )
 
-    submission_date = models.DateField(null=True, blank=True)
-    acceptance_date = models.DateField(
-        null=True, blank=True,
-        help_text='Recorded manually from OJS, if applicable — this platform has no OJS integration.',
-    )
-    publication_date = models.DateField(
-        null=True, blank=True,
-        help_text='Auto-set to today when status is changed to Published, unless you set it yourself '
-                   '(e.g. to backdate an article or schedule a specific date).',
-    )
+    # Fully automatic, not editor-facing: created_at (below) already records
+    # when the article was created, and publication_date is stamped by
+    # save() the moment status becomes Published (see below) — no manual
+    # submission/acceptance dates to track without an OJS integration.
+    publication_date = models.DateField(null=True, blank=True)
 
     doi = models.CharField(max_length=100, unique=True, null=True, blank=True)
     pdf_file = models.FileField(
@@ -109,6 +104,7 @@ class Article(models.Model):
     )
     issue = models.ForeignKey(
         'issues.Issue', on_delete=models.SET_NULL, null=True, blank=True, related_name='articles',
+        help_text='Optional story trail / issue this article belongs to.',
     )
 
     volume = models.CharField(max_length=10, null=True, blank=True)
@@ -138,11 +134,9 @@ class Article(models.Model):
 
     def save(self, *args, **kwargs):
         self.access_type = self.resolve_access_type(self.article_type, self.access_type)
-        # The only "publish" workflow this platform has — there's no separate
-        # acceptance step to automate (OJS handles peer review/acceptance
-        # externally and isn't integrated here; acceptance_date is manually
-        # recorded from what OJS reports). Doesn't override an editor's
-        # explicit date, e.g. backdating or embargo-scheduling an article.
+        # publication_date is entirely automatic — stamped the moment status
+        # becomes Published, never editor-facing. Doesn't re-stamp on a later
+        # save (e.g. an edit to an already-published article).
         if self.status == self.Status.PUBLISHED and not self.publication_date:
             self.publication_date = timezone.localdate()
         super().save(*args, **kwargs)

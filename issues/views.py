@@ -31,9 +31,7 @@ class IssueDetailView(DetailView):
     context_object_name = 'issue'
 
     def get_object(self, queryset=None):
-        return get_object_or_404(
-            Issue, volume=self.kwargs['volume'], number=self.kwargs['number'], is_published=True,
-        )
+        return get_object_or_404(Issue, slug=self.kwargs['slug'], is_published=True)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -55,7 +53,7 @@ class IssueManageListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return Issue.objects.order_by('-volume', '-number')
+        return Issue.objects.order_by('-created_at')
 
 
 class IssueFormMixin:

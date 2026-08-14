@@ -108,9 +108,9 @@ class EditorialBoardPublicView(TemplateView):
         context['article_types'] = Article.ArticleType.choices
         context['policies'] = POLICIES
 
-        latest_issue = Issue.objects.filter(is_published=True).order_by('-publication_date').first()
+        latest_issue = Issue.objects.filter(is_published=True).order_by('-created_at').first()
         context['publication_facts'] = [
-            ('Current volume', f'Vol. {latest_issue.volume}, Issue {latest_issue.number}' if latest_issue else 'Not yet published'),
+            ('Latest issue', latest_issue.title if latest_issue else 'Not yet published'),
             ('ISSN', settings.JOURNAL_ISSN),
             ('Publisher', settings.JOURNAL_PUBLISHER),
             ('Peer review', 'Conducted externally via OJS'),

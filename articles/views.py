@@ -1,9 +1,11 @@
 from django.contrib import messages
+from django.db import IntegrityError
 from django.db.models import Q
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
@@ -13,7 +15,7 @@ from users.decorators import role_required
 from users.models import User
 
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
-from .forms import ArticleForm
+from .forms import ArticleForm, LenientArticleForm
 from .models import Article
 
 # Article types treated as "peer-reviewed research" for the homepage's
@@ -281,9 +283,63 @@ def article_quick_publish(request, slug):
     return redirect('articles:manage_article_list')
 
 
+def _unique_article_slug(article, base):
+    """Append -2, -3, ... to `base` until it doesn't collide with another article."""
+    base = base or 'untitled-draft'
+    slug = base
+    n = 2
+    while Article.objects.exclude(pk=article.pk).filter(slug=slug).exists():
+        slug = f'{base}-{n}'
+        n += 1
+    return slug
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_autosave(request):
+    """Fires on each "Next"/"Back" tab click in the New/Edit Article wizard —
+    saves whatever's been filled in so far, using LenientArticleForm
+    (nothing required, so a half-finished Content tab doesn't block moving
+    to Publishing/Media). For a brand-new article this defaults status to
+    Draft; for an article that already exists, status is left exactly as it
+    was — autosaving edits to an already-published article must not
+    silently unpublish it. Never *sets* Published — that only ever happens
+    via the explicit Save & Publish button.
+    """
+    pk = request.POST.get('article_pk')
+    instance = get_object_or_404(Article, pk=pk) if pk else None
+
+    form = LenientArticleForm(request.POST, request.FILES, instance=instance)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+
+    article = form.save(commit=False)
+    if instance is None:
+        article.status = Article.Status.DRAFT
+    if not article.slug:
+        article.slug = _unique_article_slug(article, slugify(article.title))
+
+    try:
+        article.save()
+    except IntegrityError:
+        return JsonResponse(
+            {'ok': False, 'errors': {'__all__': ['Could not save — check the slug and DOI are unique.']}}, status=400,
+        )
+
+    return JsonResponse({
+        'ok': True, 'article_pk': article.pk, 'slug': article.slug,
+        'edit_url': reverse('articles:manage_article_update', kwargs={'slug': article.slug}),
+    })
+
+
 class ArticleFormMixin:
     """Shared context for create/update — the per-type content-template
-    picker rendered in articles/manage/article_form.html.
+    picker rendered in articles/manage/article_form.html — plus the
+    Save as Draft / Save & Publish action handling. There's no manual
+    status dropdown in this form on purpose: status is decided entirely by
+    which of those two buttons was pressed (name="action", value="draft"
+    or "publish"), so there's no separate control that could disagree with
+    the button the editor actually clicked.
     """
 
     def get_context_data(self, **kwargs):
@@ -293,6 +349,14 @@ class ArticleFormMixin:
 
     def get_success_url(self):
         return reverse('articles:manage_article_update', kwargs={'slug': self.object.slug})
+
+    def form_valid(self, form):
+        action = self.request.POST.get('action')
+        if action == 'publish':
+            form.instance.status = Article.Status.PUBLISHED
+        elif action == 'draft':
+            form.instance.status = Article.Status.DRAFT
+        return super().form_valid(form)
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -307,7 +371,8 @@ class ArticleCreateView(ArticleFormMixin, CreateView):
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, f'"{form.instance.title}" created.')
+        published = self.request.POST.get('action') == 'publish'
+        messages.success(self.request, f'"{form.instance.title}" created{" and published" if published else " as a draft"}.')
         return super().form_valid(form)
 
 
@@ -325,7 +390,14 @@ class ArticleUpdateView(ArticleFormMixin, UpdateView):
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, f'"{form.instance.title}" updated.')
+        action = self.request.POST.get('action')
+        if action == 'publish':
+            suffix = ' and published'
+        elif action == 'draft':
+            suffix = ' and moved back to draft'
+        else:
+            suffix = ''
+        messages.success(self.request, f'"{form.instance.title}" updated{suffix}.')
         return super().form_valid(form)
 
 

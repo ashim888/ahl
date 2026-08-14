@@ -91,7 +91,7 @@
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <span class="font-mono-editorial text-xs tracking-widest opacity-80">
                 {% if latest_issue %}
-                    VOL. {{ latest_issue.volume }} · ISSUE {{ latest_issue.number }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}
+                    LATEST ISSUE: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}
                 {% else %}
                     {{ JOURNAL_TAGLINE|upper }}
                 {% endif %}
@@ -298,7 +298,7 @@
                     &copy; {% now "Y" %} {{ JOURNAL_NAME }}. All rights reserved.
                 </p>
                 <p class="font-mono-editorial text-xs opacity-30">
-                    ISSN {{ JOURNAL_ISSN }}{% if latest_issue %} · VOL. {{ latest_issue.volume }} · ISSUE {{ latest_issue.number }}{% endif %}
+                    ISSN {{ JOURNAL_ISSN }}
                 </p>
             </div>
         </div>

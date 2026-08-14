@@ -245,19 +245,19 @@ class Command(BaseCommand):
     def seed_issues(self):
         self.stdout.write('Seeding issues...')
         specs = [
-            dict(volume=1, number=1, title='Inaugural Issue', is_published=True,
+            dict(slug='inaugural-issue', title='Inaugural Issue', is_published=True,
                  publication_date=datetime.date(2026, 1, 15),
                  editorial_note='Welcome to the first issue of Ajna Health Lens.'),
-            dict(volume=1, number=2, title='Maternal & Child Health', is_published=True,
+            dict(slug='maternal-child-health', title='Maternal & Child Health', is_published=True,
                  publication_date=datetime.date(2026, 4, 1),
                  editorial_note='This issue focuses on maternal and child health outcomes across Nepal.'),
-            dict(volume=2, number=1, title='In Production', is_published=False,
+            dict(slug='in-production', title='In Production', is_published=False,
                  editorial_note='Not yet published — used to verify unpublished issues stay hidden.'),
         ]
         issues = {}
         for spec in specs:
-            issue, _ = Issue.objects.get_or_create(volume=spec['volume'], number=spec['number'], defaults=spec)
-            issues[(issue.volume, issue.number)] = issue
+            issue, _ = Issue.objects.get_or_create(slug=spec['slug'], defaults=spec)
+            issues[issue.slug] = issue
         self.stdout.write(f'  {len(issues)} issues ready.')
         return issues
 
@@ -274,7 +274,7 @@ class Command(BaseCommand):
                           'health posts in Nepal between 2020 and 2025, identifying key gaps in antenatal care access.',
                  keywords='maternal health, Nepal, rural healthcare, antenatal care',
                  article_type=Article.ArticleType.ORIGINAL_RESEARCH, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 1, 20), issue=issues[(1, 1)], volume='1', page_numbers='1-14',
+                 publication_date=datetime.date(2026, 1, 20), issue=issues['inaugural-issue'], volume='1', page_numbers='1-14',
                  doi='10.5555/ahl.2026.0001', authors=[(sharma, True), (thapa, False)]),
             dict(slug='systematic-review-tb-screening-methods',
                  title='A Systematic Review of Community-Based Tuberculosis Screening Methods',
@@ -282,7 +282,7 @@ class Command(BaseCommand):
                           'South Asia, comparing sensitivity, cost, and scalability.',
                  keywords='tuberculosis, screening, systematic review, South Asia',
                  article_type=Article.ArticleType.REVIEW_ARTICLE, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 1, 25), issue=issues[(1, 1)], volume='1', page_numbers='15-32',
+                 publication_date=datetime.date(2026, 1, 25), issue=issues['inaugural-issue'], volume='1', page_numbers='15-32',
                  doi='10.5555/ahl.2026.0002', authors=[(thapa, True)]),
             dict(slug='letter-response-antenatal-care-study',
                  title='Letter: A Response to the Antenatal Care Access Study',
@@ -290,7 +290,7 @@ class Command(BaseCommand):
                           'care access literature.',
                  keywords='letter, antenatal care, methodology',
                  article_type=Article.ArticleType.LETTER_TO_EDITOR, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 2, 1), issue=issues[(1, 1)], volume='1', page_numbers='33-34',
+                 publication_date=datetime.date(2026, 2, 1), issue=issues['inaugural-issue'], volume='1', page_numbers='33-34',
                  authors=[(karki, True)]),
             dict(slug='case-report-rare-cardiac-presentation',
                  title='A Rare Cardiac Presentation in a Young Adult: A Case Report',
@@ -298,7 +298,7 @@ class Command(BaseCommand):
                           'workup and management.',
                  keywords='case report, cardiology, young adult',
                  article_type=Article.ArticleType.CASE_REPORT, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 4, 5), issue=issues[(1, 2)], volume='1', page_numbers='1-6',
+                 publication_date=datetime.date(2026, 4, 5), issue=issues['maternal-child-health'], volume='1', page_numbers='1-6',
                  html_content=CASE_REPORT_HTML_CONTENT, references=CASE_REPORT_REFERENCES,
                  authors=[(karki, True)]),
             dict(slug='short-communication-child-nutrition-pilot',
@@ -306,7 +306,7 @@ class Command(BaseCommand):
                  abstract='Preliminary data from a six-month child nutrition pilot program in three rural districts.',
                  keywords='child nutrition, pilot program, preliminary findings',
                  article_type=Article.ArticleType.SHORT_COMMUNICATION, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 4, 10), issue=issues[(1, 2)], volume='1', page_numbers='7-10',
+                 publication_date=datetime.date(2026, 4, 10), issue=issues['maternal-child-health'], volume='1', page_numbers='7-10',
                  authors=[(sharma, True)]),
             dict(slug='editorial-strengthening-rural-health-systems',
                  title='Editorial: Strengthening Rural Health Systems Through Local Research',

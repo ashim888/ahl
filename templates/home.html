@@ -168,7 +168,7 @@
                     <a href="{% url 'articles:article_detail' article.slug %}" class="block">
                         <div class="flex items-center justify-between mb-3">
                             <span class="font-mono-editorial text-xs text-accent">
-                                {% if article.issue %}Vol. {{ article.issue.volume }} · No. {{ article.issue.number }}{% else %}Online first{% endif %}
+                                {% if article.issue %}{{ article.issue.title }}{% else %}Online first{% endif %}
                             </span>
                             <span class="font-mono-editorial text-xs text-muted-foreground">{{ JOURNAL_NAME }}</span>
                         </div>
@@ -209,11 +209,10 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-0">
             {% for issue in special_issues %}
                 {% if issue.is_published %}
-                    <a href="{% url 'issues:issue_detail' issue.volume issue.number %}"
+                    <a href="{% url 'issues:issue_detail' issue.slug %}"
                        class="relative p-8 border border-border bg-card hover:border-foreground transition-colors">
-                        <p class="font-mono-editorial text-xs mb-4 text-muted-foreground">Vol. {{ issue.volume }} · Issue {{ issue.number }}</p>
                         <h4 class="font-display text-2xl font-bold italic leading-tight mb-3" style="letter-spacing: -0.01em;">
-                            {{ issue.title|default:"Untitled Issue" }}
+                            {{ issue.title }}
                         </h4>
                         <p class="text-sm leading-relaxed mb-6 text-muted-foreground line-clamp-3">{{ issue.editorial_note }}</p>
                         <div class="rule-thin mb-4"></div>
@@ -230,9 +229,8 @@
                             <span class="font-mono-editorial text-xs text-white tracking-widest">FORTHCOMING</span>
                         </div>
                         <div class="mt-6">
-                            <p class="font-mono-editorial text-xs mb-4 opacity-60">Vol. {{ issue.volume }} · Issue {{ issue.number }}</p>
                             <h4 class="font-display text-2xl font-bold italic leading-tight mb-3" style="letter-spacing: -0.01em;">
-                                {{ issue.title|default:"Forthcoming Issue" }}
+                                {{ issue.title }}
                             </h4>
                             <p class="text-sm leading-relaxed mb-6 opacity-70 line-clamp-3">{{ issue.editorial_note }}</p>
                             <div class="rule-thin mb-4" style="border-color: rgba(255,255,255,0.2);"></div>

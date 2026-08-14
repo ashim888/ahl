@@ -59,9 +59,9 @@
                 <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
                 {% if article.issue %}
                     <span class="text-border">·</span>
-                    <span class="font-mono-editorial text-xs text-muted-foreground">
-                        Vol. {{ article.issue.volume }} · Issue {{ article.issue.number }}
-                    </span>
+                    <a href="{% url 'issues:issue_detail' article.issue.slug %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
+                        {{ article.issue.title }}
+                    </a>
                 {% endif %}
             </div>
 

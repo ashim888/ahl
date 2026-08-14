@@ -62,7 +62,8 @@
                         <td class="px-4 py-3 text-gray-500">{{ article.updated_at|date:"M j, Y" }}</td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             <a href="{% url 'articles:manage_article_update' article.slug %}" class="underline mr-3">Edit</a>
-                            <form method="post" action="{% url 'articles:manage_article_quick_publish' article.slug %}" class="inline">
+                            <form method="post" action="{% url 'articles:manage_article_quick_publish' article.slug %}" class="inline"
+                                  onsubmit="return confirm('{% if article.status == 'published' %}Unpublish “{{ article.title|escapejs }}”? It will no longer be visible on the public site.{% else %}Publish “{{ article.title|escapejs }}” now? It will immediately become visible on the public site.{% endif %}');">
                                 {% csrf_token %}
                                 <button type="submit" class="underline mr-3 {% if article.status == 'published' %}text-amber-700{% else %}text-green-700{% endif %}">
                                     {% if article.status == 'published' %}Unpublish{% else %}Publish{% endif %}
