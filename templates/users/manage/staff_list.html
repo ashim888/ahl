@@ -7,7 +7,7 @@
 <div class="flex items-center justify-between">
     <p class="text-sm text-gray-500">
         Editor, Editor-in-Chief, and Admin accounts.
-        {% if user.role != 'admin' %}Only an Admin can grant the Admin role.{% endif %}
+        {% if not user.is_admin %}Only an Admin can grant the Admin role.{% endif %}
     </p>
     <a href="{% url 'users:manage_staff_create' %}"
        class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">

@@ -37,6 +37,13 @@ urlpatterns = [
     # The actual permission-setting screen — see ChangeRoleForm's docstring
     # for why this exists separately from the Authors/Staff screens above.
     path('manage/users/<int:pk>/change-role/', views.change_role, name='change_role'),
+    path('manage/users/<int:pk>/groups/', views.manage_user_groups, name='manage_user_groups'),
+
+    # Django Group/Permission config (Admin only) — see GroupForm's docstring.
+    path('manage/groups/', views.GroupManageListView.as_view(), name='manage_group_list'),
+    path('manage/groups/new/', views.GroupCreateView.as_view(), name='manage_group_create'),
+    path('manage/groups/<int:pk>/edit/', views.GroupUpdateView.as_view(), name='manage_group_update'),
+    path('manage/groups/<int:pk>/delete/', views.GroupDeleteView.as_view(), name='manage_group_delete'),
 
     path(
         'password-reset/',

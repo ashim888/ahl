@@ -1,13 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
-from django.views.generic import CreateView, ListView, TemplateView, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 from django.views.generic.detail import DetailView
 
 from articles.models import Article
@@ -15,8 +16,8 @@ from training.models import Enrollment
 
 from .decorators import role_required
 from .forms import (
-    AuthorCreateForm, AuthorManageForm, ChangeRoleForm, ProfileUpdateForm, RegistrationForm,
-    STAFF_ROLES, StaffCreateForm, StaffManageForm,
+    AuthorCreateForm, AuthorManageForm, ChangeRoleForm, GroupForm, ProfileUpdateForm,
+    RegistrationForm, STAFF_ROLES, StaffCreateForm, StaffManageForm, UserGroupsForm,
 )
 from .models import User
 
@@ -25,6 +26,8 @@ from .models import User
 # Authors screen above — scoped to EiC/Admin only, not plain Editors.
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 STAFF_MANAGE_ROLES = User.SENIOR_STAFF_ROLES
+# Raw Django Group/Permission config is more sensitive still — Admin only.
+GROUP_MANAGE_ROLES = (User.Role.ADMIN,)
 
 
 class RegisterView(CreateView):
@@ -370,3 +373,83 @@ class PermissionsListView(ListView):
         context['role_choices'] = User.Role.choices
         context['selected_role'] = self.request.GET.get('role', '')
         return context
+
+
+# -- Django Group/Permission management (Admin only) ------------------------
+# See the note on GroupForm — this manages what a group *would* grant, ahead
+# of anything in the app checking has_perm()/group membership yet.
+
+@method_decorator(role_required(*GROUP_MANAGE_ROLES), name='dispatch')
+class GroupManageListView(ListView):
+    model = Group
+    template_name = 'users/manage/group_list.html'
+    context_object_name = 'groups'
+    paginate_by = 30
+
+    def get_queryset(self):
+        return Group.objects.annotate(
+            member_count=Count('user', distinct=True),
+            permission_count=Count('permissions', distinct=True),
+        ).order_by('name')
+
+
+class GroupFormMixin:
+    def get_success_url(self):
+        return reverse('users:manage_group_list')
+
+
+@method_decorator(role_required(*GROUP_MANAGE_ROLES), name='dispatch')
+class GroupCreateView(GroupFormMixin, CreateView):
+    model = Group
+    form_class = GroupForm
+    template_name = 'users/manage/group_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_create'] = True
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Group "{form.instance.name}" created.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*GROUP_MANAGE_ROLES), name='dispatch')
+class GroupUpdateView(GroupFormMixin, UpdateView):
+    model = Group
+    form_class = GroupForm
+    template_name = 'users/manage/group_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_create'] = False
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Group "{form.instance.name}" updated.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*GROUP_MANAGE_ROLES), name='dispatch')
+class GroupDeleteView(DeleteView):
+    model = Group
+    template_name = 'users/manage/group_confirm_delete.html'
+    success_url = reverse_lazy('users:manage_group_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Group "{self.object.name}" deleted.')
+        return super().form_valid(form)
+
+
+@role_required(*GROUP_MANAGE_ROLES)
+def manage_user_groups(request, pk):
+    target = get_object_or_404(User, pk=pk)
+    if request.method == 'POST':
+        form = UserGroupsForm(request.POST)
+        if form.is_valid():
+            target.groups.set(form.cleaned_data['groups'])
+            messages.success(request, f"{target.get_full_name()}'s groups updated.")
+            return redirect('users:manage_permissions_list')
+    else:
+        form = UserGroupsForm(initial={'groups': target.groups.all()})
+    return render(request, 'users/manage/user_groups.html', {'form': form, 'target': target})

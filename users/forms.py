@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import Group, Permission
 from django.forms import ModelForm
 
 from ajna_health_lens.forms import apply_tailwind_widgets
@@ -167,3 +168,48 @@ class ChangeRoleForm(forms.Form):
         if acting_user and acting_user.role != User.Role.ADMIN:
             choices = [(v, l) for v, l in choices if v != User.Role.ADMIN]
         self.fields['role'].choices = choices
+
+
+# -- Django Group/Permission management -------------------------------------
+# The custom-admin equivalent of /admin/auth/group/ — nothing in this
+# codebase checks group membership or has_perm() yet (every view still
+# gates on User.role via role_required), so this is management-only for now:
+# it lets an Admin define what a group *would* grant, ahead of anything in
+# the app actually consulting it. See ARCHITECTURE.md §6.2.
+
+class GroupForm(ModelForm):
+    class Meta:
+        model = Group
+        fields = ['name', 'permissions']
+        widgets = {
+            'permissions': forms.CheckboxSelectMultiple,
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['permissions'].queryset = Permission.objects.select_related(
+            'content_type',
+        ).order_by('content_type__app_label', 'content_type__model', 'codename')
+
+    def permissions_by_app(self):
+        """Grouped for the template — a flat checkbox list of 100+
+        permissions would be unusable."""
+        if self.is_bound:
+            # Re-rendering after a validation error — reflect what was just
+            # submitted, not the (possibly different) saved state.
+            selected_ids = {int(v) for v in self.data.getlist(self.add_prefix('permissions'))}
+        elif self.instance.pk:
+            selected_ids = set(self.instance.permissions.values_list('pk', flat=True))
+        else:
+            selected_ids = set()
+        groups = {}
+        for perm in self.fields['permissions'].queryset:
+            groups.setdefault(perm.content_type.app_label, []).append((perm, perm.pk in selected_ids))
+        return sorted(groups.items())
+
+
+class UserGroupsForm(forms.Form):
+    groups = forms.ModelMultipleChoiceField(
+        queryset=Group.objects.order_by('name'), required=False, widget=forms.CheckboxSelectMultiple,
+        label='Groups',
+    )

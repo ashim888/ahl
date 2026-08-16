@@ -56,7 +56,10 @@
                     <td class="px-4 py-3 text-gray-600">{% if account.is_active %}Yes{% else %}No{% endif %}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         {% if account.pk != user.pk %}
-                            <a href="{% url 'users:change_role' account.pk %}" class="underline">Change Role</a>
+                            <a href="{% url 'users:change_role' account.pk %}" class="underline mr-3">Change Role</a>
+                        {% endif %}
+                        {% if user.is_admin %}
+                            <a href="{% url 'users:manage_user_groups' account.pk %}" class="underline">Groups</a>
                         {% endif %}
                     </td>
                 </tr>

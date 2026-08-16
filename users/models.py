@@ -159,6 +159,14 @@ class User(AbstractUser):
         """
         return self.is_superuser or self.role in self.SENIOR_STAFF_ROLES
 
+    @property
+    def is_admin(self):
+        """Admin only — raw Django Group/Permission management (see
+        users/views.py GroupManageListView) is more sensitive than granting
+        a role, so it's narrower than is_senior_staff.
+        """
+        return self.is_superuser or self.role == self.Role.ADMIN
+
     def approve_verification(self):
         """Promote to Verified Author. No-op (returns False) for roles the
         verification queue doesn't govern, e.g. Editor/EiC/Admin.
