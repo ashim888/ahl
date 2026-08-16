@@ -4,7 +4,7 @@
 {% block page_title %}{% if is_create %}New Board Member{% else %}Edit Board Member{% endif %}{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto">
+<div class="">
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}

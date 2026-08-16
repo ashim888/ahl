@@ -28,8 +28,9 @@ RESEARCH_TYPES = [
 OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_EDITOR]
 
 # Article CRUD (manage/ views below) is an editorial capability — ARCHITECTURE.md
-# §6.2 grants "Access admin: Yes" to Editor/EiC/Admin only.
-EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# §6.3 grants "Access admin: Yes" to Editor/EiC/Admin only. Single source of
+# truth is User.EDITORIAL_ROLES (see users/models.py) — not redefined here.
+EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 
 class ComingSoonView(TemplateView):

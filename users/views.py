@@ -15,17 +15,16 @@ from training.models import Enrollment
 
 from .decorators import role_required
 from .forms import (
-    AuthorCreateForm, AuthorManageForm, ProfileUpdateForm, RegistrationForm,
+    AuthorCreateForm, AuthorManageForm, ChangeRoleForm, ProfileUpdateForm, RegistrationForm,
     STAFF_ROLES, StaffCreateForm, StaffManageForm,
 )
 from .models import User
 
-# Matches EDITORIAL_ROLES in articles/views.py, admin_custom/views.py, editorial_board/views.py, training/views.py.
-EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
-
-# Granting Editor/EiC/Admin is more sensitive than the Authors screen above —
-# scoped to EiC/Admin only, not plain Editors.
-STAFF_MANAGE_ROLES = (User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# Single source of truth for both is User.EDITORIAL_ROLES / User.SENIOR_STAFF_ROLES
+# (see users/models.py). Granting Editor/EiC/Admin is more sensitive than the
+# Authors screen above — scoped to EiC/Admin only, not plain Editors.
+EDITORIAL_ROLES = User.EDITORIAL_ROLES
+STAFF_MANAGE_ROLES = User.SENIOR_STAFF_ROLES
 
 
 class RegisterView(CreateView):
@@ -98,7 +97,7 @@ def reapply_verification(request):
     return redirect('users:pending_verification')
 
 
-# Verifying users is an Editor-in-Chief/Admin capability (ARCHITECTURE.md §6.2) —
+# Verifying users is an Editor-in-Chief/Admin capability (ARCHITECTURE.md §6.3) —
 # deliberately not "is_staff", since Editors also have is_staff=True but aren't
 # meant to approve/reject verifications themselves.
 @role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
@@ -309,3 +308,65 @@ def staff_toggle_active(request, pk):
     staff.save(update_fields=['is_active'])
     messages.success(request, f'{staff.email} {"reactivated" if staff.is_active else "deactivated"}.')
     return redirect('users:manage_staff_list')
+
+
+@role_required(*STAFF_MANAGE_ROLES)
+def change_role(request, pk):
+    """The actual "set permissions" screen — moves a user to any Role,
+    regardless of their current tier. Authors and Staff each only manage
+    accounts already within their own tier (see ChangeRoleForm's docstring),
+    so this is the one place that can promote a Verified Author to Editor,
+    demote an Editor back down, etc.
+    """
+    target = get_object_or_404(User, pk=pk)
+    if target.pk == request.user.pk:
+        messages.error(request, "You can't change your own role — ask another Editor-in-Chief or Admin.")
+        return redirect('users:manage_staff_list')
+
+    if request.method == 'POST':
+        form = ChangeRoleForm(request.POST, acting_user=request.user)
+        if form.is_valid():
+            new_role = form.cleaned_data['role']
+            target.role = new_role
+            # Any role above Unverified is, by definition, an approved
+            # account — keep verification fields consistent with that
+            # rather than leaving a stale pending/rejected state behind.
+            if new_role == User.Role.UNVERIFIED:
+                target.is_verified = False
+                target.verification_status = User.VerificationStatus.PENDING
+            else:
+                target.is_verified = True
+                target.verification_status = User.VerificationStatus.APPROVED
+            target.save()
+            messages.success(request, f'{target.get_full_name()} is now {target.get_role_display()}.')
+            return redirect('users:manage_staff_list' if new_role in STAFF_ROLES else 'users:manage_author_list')
+    else:
+        form = ChangeRoleForm(initial={'role': target.role}, acting_user=request.user)
+
+    return render(request, 'users/manage/change_role.html', {'form': form, 'target': target})
+
+
+@method_decorator(role_required(*STAFF_MANAGE_ROLES), name='dispatch')
+class PermissionsListView(ListView):
+    """Every account, one role column, one Change Role action — the direct
+    answer to "where do I set permissions", instead of having to already
+    know whether someone's in the Authors or Staff tier first.
+    """
+
+    model = User
+    template_name = 'users/manage/permissions_list.html'
+    context_object_name = 'accounts'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = User.objects.order_by('role', 'first_name')
+        role = self.request.GET.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['role_choices'] = User.Role.choices
+        context['selected_role'] = self.request.GET.get('role', '')
+        return context

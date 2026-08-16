@@ -10,7 +10,8 @@ from training.models import Enrollment, TrainingCourse
 from users.decorators import role_required
 from users.models import User
 
-EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
+EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 # Palette for the "Articles by Type" donut — chosen for contrast against
 # white cards and against each other; order doesn't matter, slices are

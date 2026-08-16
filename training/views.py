@@ -13,8 +13,8 @@ from users.models import User
 from .forms import TrainingCourseForm
 from .models import Enrollment, TrainingCourse
 
-# Matches EDITORIAL_ROLES in articles/views.py, admin_custom/views.py, editorial_board/views.py.
-EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
+EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 
 class CourseListView(ListView):

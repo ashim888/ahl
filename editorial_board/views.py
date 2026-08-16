@@ -12,9 +12,8 @@ from users.models import User
 from .forms import EditorialBoardMemberForm
 from .models import EditorialBoardMember
 
-# Matches EDITORIAL_ROLES in articles/views.py and admin_custom/views.py —
-# editorial board management is an Editor/EiC/Admin capability.
-EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
+EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 ABOUT_TABS = ('about', 'board', 'policies')
 

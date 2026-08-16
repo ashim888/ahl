@@ -4,7 +4,7 @@
 {% block page_title %}{% if is_create %}New Author{% else %}Edit Author{% endif %}{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto">
+<div class="">
     {% if not is_create %}
         <p class="text-sm text-gray-500 mb-4">
             Role: <span class="font-medium text-gray-700">{{ object.get_role_display }}</span> ·

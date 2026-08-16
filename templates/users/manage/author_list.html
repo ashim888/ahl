@@ -7,7 +7,7 @@
 <div class="flex items-center justify-between">
     <p class="text-sm text-gray-500">
         Unverified and verified-author accounts.
-        {% if user.role == 'editor_in_chief' or user.role == 'admin' %}
+        {% if user.is_senior_staff %}
             Editor/EiC/Admin accounts are managed under <a href="{% url 'users:manage_staff_list' %}" class="underline">Staff</a>.
         {% endif %}
     </p>
@@ -68,6 +68,9 @@
                     <td class="px-4 py-3 text-gray-600">{% if author.is_active %}Yes{% else %}No{% endif %}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <a href="{% url 'users:manage_author_update' author.pk %}" class="underline mr-3">Edit</a>
+                        {% if user.is_senior_staff %}
+                            <a href="{% url 'users:change_role' author.pk %}" class="underline mr-3">Change Role</a>
+                        {% endif %}
                         <form method="post" action="{% url 'users:manage_author_toggle_active' author.pk %}" class="inline">
                             {% csrf_token %}
                             <button type="submit" class="underline {% if author.is_active %}text-red-700{% else %}text-green-700{% endif %}">

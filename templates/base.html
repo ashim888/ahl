@@ -155,7 +155,7 @@
                                     <p class="font-medium text-sm truncate">{{ user.get_full_name }}</p>
                                     <p class="font-mono-editorial text-xs text-muted-foreground">{{ user.get_role_display }}</p>
                                 </div>
-                                {% if user.role == 'editor' or user.role == 'editor_in_chief' or user.role == 'admin' %}
+                                {% if user.is_editorial_staff %}
                                     <a href="{% url 'admin_custom:dashboard' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
                                         Dashboard
                                     </a>
@@ -232,7 +232,7 @@
                 {% if user.is_authenticated %}
                     <p class="font-medium text-sm">{{ user.get_full_name }}</p>
                     <p class="font-mono-editorial text-xs text-muted-foreground mb-3">{{ user.get_role_display }}</p>
-                    {% if user.role == 'editor' or user.role == 'editor_in_chief' or user.role == 'admin' %}
+                    {% if user.is_editorial_staff %}
                         <a href="{% url 'admin_custom:dashboard' %}" class="block py-2 text-sm">Dashboard</a>
                     {% endif %}
                     <a href="{% url 'users:profile' %}" class="block py-2 text-sm">Profile</a>

@@ -62,6 +62,7 @@
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <a href="{% url 'users:manage_staff_update' member.pk %}" class="underline mr-3">Edit</a>
                         {% if member.pk != user.pk %}
+                            <a href="{% url 'users:change_role' member.pk %}" class="underline mr-3">Change Role</a>
                             <form method="post" action="{% url 'users:manage_staff_toggle_active' member.pk %}" class="inline"
                                   onsubmit="return confirm('{% if member.is_active %}Deactivate {{ member.get_full_name|escapejs }}? They won\'t be able to log in.{% else %}Reactivate {{ member.get_full_name|escapejs }}?{% endif %}');">
                                 {% csrf_token %}

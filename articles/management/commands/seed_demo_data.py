@@ -15,7 +15,7 @@ from training.models import TrainingCourse
 from users.models import User
 
 # Model apps an Editor needs view/add/change access to in /admin/ — matches
-# ARCHITECTURE.md §6.2 (Editor: assign reviewers, make decisions; not verify users).
+# ARCHITECTURE.md §6.3 (Editor: assign reviewers, make decisions; not verify users).
 EDITOR_PERMISSION_APPS = ['submissions', 'peer_review', 'articles', 'issues', 'training']
 
 DEMO_PASSWORD = 'DemoPass123!'
@@ -230,7 +230,7 @@ class Command(BaseCommand):
         for email in ('eic@ajnahealthlens.example', 'editor.gurung@ajnahealthlens.example'):
             users[email].groups.add(editors_group)
 
-        # User verification is EiC/Admin-only (ARCHITECTURE.md §6.2) — granted
+        # User verification is EiC/Admin-only (ARCHITECTURE.md §6.3) — granted
         # directly to the EiC, not via the shared Editorial Staff group, so
         # Editor accounts don't pick it up too.
         eic = users['eic@ajnahealthlens.example']

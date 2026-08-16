@@ -94,7 +94,10 @@ class AuthorCreateForm(UserCreationForm):
 # smaller field set than AUTHOR_PROFILE_FIELDS: staff don't need the
 # academic-author fields (ORCID, affiliation, CV, publications, etc.), just
 # who they are and what they're allowed to do.
-STAFF_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# Same composition as User.EDITORIAL_ROLES (see users/models.py) — kept as a
+# separate name here since this one means "assignable via this form", while
+# EDITORIAL_ROLES means "can access editorial views"; they happen to match.
+STAFF_ROLES = User.EDITORIAL_ROLES
 STAFF_FIELDS = ['first_name', 'last_name', 'email', 'photo', 'role', 'is_active']
 
 
@@ -145,3 +148,22 @@ class StaffCreateForm(StaffFormMixin, UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class ChangeRoleForm(forms.Form):
+    """The actual "set permissions" control — every other screen only
+    manages a user within its own tier (Authors can't promote out of
+    unverified/verified_author; Staff can only edit existing Editor/EiC/Admin
+    accounts). This is the one place that can move a user across the whole
+    Role enum, from any starting role to any other. EiC/Admin only, same
+    Admin-grant guardrail as StaffFormMixin — an EiC still can't hand out Admin.
+    """
+
+    role = forms.ChoiceField(choices=User.Role.choices, label='Role')
+
+    def __init__(self, *args, acting_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = list(User.Role.choices)
+        if acting_user and acting_user.role != User.Role.ADMIN:
+            choices = [(v, l) for v, l in choices if v != User.Role.ADMIN]
+        self.fields['role'].choices = choices

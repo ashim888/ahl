@@ -33,6 +33,11 @@ urlpatterns = [
     path('manage/staff/<int:pk>/edit/', views.StaffUpdateView.as_view(), name='manage_staff_update'),
     path('manage/staff/<int:pk>/toggle-active/', views.staff_toggle_active, name='manage_staff_toggle_active'),
 
+    path('manage/permissions/', views.PermissionsListView.as_view(), name='manage_permissions_list'),
+    # The actual permission-setting screen — see ChangeRoleForm's docstring
+    # for why this exists separately from the Authors/Staff screens above.
+    path('manage/users/<int:pk>/change-role/', views.change_role, name='change_role'),
+
     path(
         'password-reset/',
         auth_views.PasswordResetView.as_view(template_name='users/password_reset_form.html'),
