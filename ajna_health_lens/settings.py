@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'admin_custom',
     'training',
     'editorial_board',
+    'billing',
 ]
 
 MIDDLEWARE = [

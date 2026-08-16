@@ -1,0 +1,58 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Billing — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Billing{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+        Subscription plans readers can be granted.
+        {% if user.is_senior_staff %}
+            No self-serve checkout yet — grant access manually from
+            <a href="{% url 'billing:manage_subscription_list' %}" class="underline">Subscriptions</a> or
+            <a href="{% url 'billing:manage_purchase_list' %}" class="underline">Purchases</a>.
+        {% endif %}
+    </p>
+    <a href="{% url 'billing:manage_plan_create' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
+        + New Plan
+    </a>
+</div>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3">Name</th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3">Price</th>
+                <th class="px-4 py-3">Duration</th>
+                <th class="px-4 py-3">Active</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for plan in plans %}
+                <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ plan.name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ plan.get_plan_type_display }}</td>
+                    <td class="px-4 py-3 text-gray-600">₹{{ plan.price }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ plan.duration_days }} days</td>
+                    <td class="px-4 py-3 text-gray-600">{% if plan.is_active %}Yes{% else %}No{% endif %}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'billing:manage_plan_update' plan.pk %}" class="underline mr-3">Edit</a>
+                        <form method="post" action="{% url 'billing:manage_plan_toggle_active' plan.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="underline text-gray-700">
+                                {% if plan.is_active %}Deactivate{% else %}Activate{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No plans yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

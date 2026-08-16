@@ -25,7 +25,7 @@ class ArticleForm(forms.ModelForm):
         # made" and publication_date is stamped automatically by Article.save()
         # the moment status becomes Published (see articles/models.py).
         fields = [
-            'title', 'slug', 'article_type', 'access_type', 'is_pinned',
+            'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned',
             'abstract', 'keywords', 'issue', 'volume', 'page_numbers', 'doi',
             'html_content', 'references', 'featured_image', 'pdf_file',
         ]
@@ -35,12 +35,11 @@ class ArticleForm(forms.ModelForm):
             'references': forms.Textarea(attrs={'rows': 6}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['access_type'].required = False
-        # access_type is a plain CharField+choices (not a FK), so the blank
-        # option's label is set by overriding choices, not via empty_label.
-        self.fields['access_type'].choices = [('', 'Default from article type')] + list(Article.AccessType.choices)
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('access_type') == Article.AccessType.PAY_PER_ARTICLE and not cleaned_data.get('price'):
+            self.add_error('price', 'Set a price for pay-per-article articles.')
+        return cleaned_data
 
 
 class LenientArticleForm(ArticleForm):
@@ -54,6 +53,12 @@ class LenientArticleForm(ArticleForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.required = False
+
+    def clean(self):
+        # Skip ArticleForm.clean()'s price-required-for-pay-per-article check —
+        # autosave fires on every tab click and must never block on an
+        # incomplete draft (that enforcement belongs to the real submit only).
+        return forms.ModelForm.clean(self)
 
 
 class ArticleAuthorForm(forms.ModelForm):

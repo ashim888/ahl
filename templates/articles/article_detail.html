@@ -122,10 +122,24 @@
                 {% endif %}
             {% else %}
                 <div class="border border-border p-6 bg-secondary">
-                    <p class="section-label text-accent mb-2">Subscription Required</p>
-                    <p class="text-sm text-muted-foreground leading-relaxed">
-                        This article requires a subscription or APC payment for full-text access —
-                        paywall logic lands in a later phase of this build.
+                    {% if article.access_type == 'pay_per_article' %}
+                        <p class="section-label text-accent mb-2">Special Article</p>
+                        <p class="text-sm text-muted-foreground leading-relaxed">
+                            This is a one-time-purchase special article — ₹{{ article.price }} for full access,
+                            or read it free with an active subscription.
+                        </p>
+                    {% else %}
+                        <p class="section-label text-accent mb-2">Subscription Required</p>
+                        <p class="text-sm text-muted-foreground leading-relaxed">
+                            This article requires an active subscription for full-text access.
+                        </p>
+                    {% endif %}
+                    <p class="text-sm text-muted-foreground leading-relaxed mt-2">
+                        {% if not user.is_authenticated %}
+                            <a href="{% url 'users:login' %}?next={{ request.path }}" class="underline">Log in</a>
+                            to an existing subscription, or contact us to subscribe —
+                        {% endif %}
+                        self-serve checkout isn't live yet.
                     </p>
                 </div>
             {% endif %}

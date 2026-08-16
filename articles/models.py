@@ -27,35 +27,31 @@ class Article(models.Model):
         LETTER_TO_EDITOR = 'letter_to_editor', 'Letter to Editor'
 
     class AccessType(models.TextChoices):
-        OPEN_ACCESS = 'open_access', 'Open Access'
+        OPEN_ACCESS = 'open_access', 'Free'
         SUBSCRIPTION = 'subscription', 'Subscription'
+        PAY_PER_ARTICLE = 'pay_per_article', 'Pay-per-article (special)'
 
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         PUBLISHED = 'published', 'Published'
         ARCHIVED = 'archived', 'Archived'
 
-    # Default access model per article type (editor can override afterward —
-    # e.g. an author pays the APC to make a normally-subscription article OA).
-    ACCESS_TYPE_DEFAULTS = {
-        ArticleType.ORIGINAL_RESEARCH: AccessType.SUBSCRIPTION,
-        ArticleType.REVIEW_ARTICLE: AccessType.SUBSCRIPTION,
-        ArticleType.METHODOLOGY_PAPER: AccessType.SUBSCRIPTION,
-        ArticleType.CASE_REPORT: AccessType.OPEN_ACCESS,
-        ArticleType.SHORT_COMMUNICATION: AccessType.OPEN_ACCESS,
-        ArticleType.EDITORIAL: AccessType.OPEN_ACCESS,
-        ArticleType.NEWS_COMMENTARY: AccessType.OPEN_ACCESS,
-        ArticleType.LETTER_TO_EDITOR: AccessType.OPEN_ACCESS,
-    }
-
     title = models.CharField(max_length=500)
     slug = models.SlugField(max_length=500, unique=True)
     abstract = models.TextField()
     keywords = models.CharField(max_length=500, null=True, blank=True)
     article_type = models.CharField(max_length=30, choices=ArticleType.choices)
+    # A per-article editorial/business call, independent of article_type —
+    # see ROADMAP.md Phase 7 "Business model (revised — three access tiers)".
+    # No longer derived from article_type (that was a leftover academic-journal
+    # assumption — a news article's monetization tier isn't implied by its category).
     access_type = models.CharField(
-        max_length=20, choices=AccessType.choices, blank=True,
-        help_text='Leave blank to default from article_type on creation; editors may override.',
+        max_length=20, choices=AccessType.choices, default=AccessType.OPEN_ACCESS,
+        help_text='Free, subscriber-only, or a one-time-purchase "special" article.',
+    )
+    price = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='One-time price, required only when access type is Pay-per-article.',
     )
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.DRAFT)
     is_pinned = models.BooleanField(
@@ -115,17 +111,12 @@ class Article(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @classmethod
-    def resolve_access_type(cls, article_type, access_type):
-        """Shared by save() and the unsaved preview view (articles/views.py)
-        so both apply the exact same default-resolution rule.
-        """
-        return access_type or cls.ACCESS_TYPE_DEFAULTS.get(article_type, cls.AccessType.SUBSCRIPTION)
-
     @property
     def estimated_read_minutes(self):
-        """Word count / 200wpm, based on whichever body text is actually
-        public (full text if open access, otherwise just the abstract).
+        """Word count / 200wpm. Only counts html_content for open-access
+        articles — a rough public-facing estimate, not viewer-aware (the
+        actual paywall gate for subscription/pay-per-article tiers lives in
+        billing.access.article_is_accessible, not here).
         """
         text = self.abstract or ''
         if self.access_type == self.AccessType.OPEN_ACCESS and self.html_content:
@@ -133,7 +124,6 @@ class Article(models.Model):
         return max(1, round(len(text.split()) / 200))
 
     def save(self, *args, **kwargs):
-        self.access_type = self.resolve_access_type(self.article_type, self.access_type)
         # publication_date is entirely automatic — stamped the moment status
         # becomes Published, never editor-facing. Doesn't re-stamp on a later
         # save (e.g. an edit to an already-published article).

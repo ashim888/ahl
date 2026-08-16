@@ -60,8 +60,11 @@
             </div>
 
             <div data-panel="publishing" class="space-y-5 hidden"
-                 {% if form.access_type.errors or form.issue.errors or form.volume.errors or form.page_numbers.errors or form.doi.errors %}data-has-error="true"{% endif %}>
+                 {% if form.access_type.errors or form.price.errors or form.issue.errors or form.volume.errors or form.page_numbers.errors or form.doi.errors %}data-has-error="true"{% endif %}>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
+                <div id="price-field" class="hidden">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.price %}
+                </div>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
@@ -259,6 +262,17 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     render();
+
+    // Price only matters (and is only required) for the pay-per-article tier.
+    var accessTypeField = document.getElementById('id_access_type');
+    var priceField = document.getElementById('price-field');
+    function updatePriceVisibility() {
+        priceField.classList.toggle('hidden', accessTypeField.value !== 'pay_per_article');
+    }
+    if (accessTypeField && priceField) {
+        accessTypeField.addEventListener('change', updatePriceVisibility);
+        updatePriceVisibility();
+    }
 
     // Land on whichever tab has a validation error from the last submit,
     // since `novalidate` means the browser won't jump there on its own.

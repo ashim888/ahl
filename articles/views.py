@@ -9,6 +9,7 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
+from billing.access import article_is_accessible
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from users.decorators import role_required
@@ -109,9 +110,10 @@ class ArticleListView(ListView):
 
 
 class ArticleDetailView(DetailView):
-    """Abstract and metadata are always public. Full-text body (html_content) is
-    shown for open-access articles only — subscription articles stay gated behind
-    the Phase 6 paywall regardless of whether html_content is populated.
+    """Abstract and metadata are always public. Full-text body (html_content)
+    is gated by the real paywall — billing.access.article_is_accessible — which
+    checks access_type against the viewer's active subscription/purchase, not
+    just the tier the article is set to.
     """
 
     model = Article
@@ -128,7 +130,7 @@ class ArticleDetailView(DetailView):
         context['featured_author'] = next(
             (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
         )
-        context['show_full_text'] = self.object.access_type == Article.AccessType.OPEN_ACCESS
+        context['show_full_text'] = article_is_accessible(self.request.user, self.object)
         if self.object.references:
             context['references_list'] = [
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
@@ -451,7 +453,6 @@ def article_preview(request):
         return render(request, 'articles/manage/article_preview_error.html', {'form': form}, status=400)
 
     article = form.save(commit=False)
-    article.access_type = Article.resolve_access_type(article.article_type, article.access_type)
 
     # Authors aren't editable from this form (see ArticleForm docstring) — for an
     # existing article, pull its real authors so the preview byline is accurate.
@@ -465,7 +466,9 @@ def article_preview(request):
         'featured_author': next(
             (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
         ),
-        'show_full_text': article.access_type == Article.AccessType.OPEN_ACCESS,
+        # Previewing is already gated to editorial staff (role_required above),
+        # so the preview always shows full text regardless of access_type.
+        'show_full_text': True,
         'preview_mode': True,
         'related_articles': [],
     }

@@ -11,6 +11,7 @@ urlpatterns = [
     path('', include('submissions.urls')),
     path('', include('editorial_board.urls')),
     path('', include('training.urls')),
+    path('', include('billing.urls')),
     path('editorial/', include('admin_custom.urls')),
 ]
 
