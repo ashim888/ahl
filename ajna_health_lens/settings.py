@@ -31,6 +31,11 @@ if DEBUG:
     # dev/test only, never in production.
     ALLOWED_HOSTS.append('testserver')
 
+# Used to build absolute links (confirm/unsubscribe) inside emails sent from
+# a background task (newsletter/tasks.py), where there's no request to pull
+# a domain from. No trailing slash.
+SITE_BASE_URL = os.environ.get('SITE_BASE_URL', 'http://localhost:8000')
+
 
 # Application definition
 
@@ -41,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_q',
 
     # Ajna Health Lens apps
     'users',
@@ -52,6 +58,7 @@ INSTALLED_APPS = [
     'training',
     'editorial_board',
     'billing',
+    'newsletter',
 ]
 
 MIDDLEWARE = [
@@ -198,3 +205,18 @@ PROFILE_PHOTO_MAX_UPLOAD_SIZE_MB = 5
 ISSUE_COVER_MAX_UPLOAD_SIZE_MB = 10
 ARTICLE_PDF_MAX_UPLOAD_SIZE_MB = 100
 ARTICLE_IMAGE_MAX_UPLOAD_SIZE_MB = 10
+
+
+# Async task queue (Django-Q2) — used for bulk newsletter sends so a
+# "compose & send" submit doesn't block the request while it emails every
+# subscriber. ORM broker: no Redis/RabbitMQ to deploy, just a DB table,
+# which fits this project's MySQL-only footprint. Run a worker with
+# `python manage.py qcluster` (see ARCHITECTURE.md §9 for the deployment note).
+Q_CLUSTER = {
+    'name': 'ajna_health_lens',
+    'orm': 'default',
+    'workers': 2,
+    'timeout': 90,
+    'retry': 120,
+    'sync': env_bool('Q_CLUSTER_SYNC', False),
+}

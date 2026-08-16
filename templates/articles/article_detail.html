@@ -134,13 +134,25 @@
                             This article requires an active subscription for full-text access.
                         </p>
                     {% endif %}
-                    <p class="text-sm text-muted-foreground leading-relaxed mt-2">
-                        {% if not user.is_authenticated %}
+                    {% if user.is_authenticated %}
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            {% if article.access_type == 'pay_per_article' %}
+                                <a href="{% url 'billing:purchase_checkout' article.slug %}"
+                                   class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors">
+                                    BUY FOR ₹{{ article.price }}
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'billing:plan_browse' %}"
+                               class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-5 py-2.5 hover:border-accent hover:text-accent transition-colors">
+                                SUBSCRIBE
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-sm text-muted-foreground leading-relaxed mt-2">
                             <a href="{% url 'users:login' %}?next={{ request.path }}" class="underline">Log in</a>
-                            to an existing subscription, or contact us to subscribe —
-                        {% endif %}
-                        self-serve checkout isn't live yet.
-                    </p>
+                            to subscribe or purchase this article.
+                        </p>
+                    {% endif %}
                 </div>
             {% endif %}
 

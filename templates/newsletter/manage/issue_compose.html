@@ -1,15 +1,15 @@
 {% extends 'admin_dashboard/base.html' %}
 
-{% block title %}Record Purchase — {{ JOURNAL_NAME }}{% endblock %}
-{% block page_title %}Record Purchase{% endblock %}
+{% block title %}Compose Newsletter — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Compose &amp; Send{% endblock %}
 
 {% block content %}
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
     <p class="text-sm text-gray-500 mb-6">
-        Use this to record a pay-per-article purchase collected outside the self-serve checkout
-        (bank transfer, invoice, etc.). Only articles set to the Pay-per-article tier are listed.
+        Sends immediately to all {{ confirmed_subscriber_count }} confirmed subscriber{{ confirmed_subscriber_count|pluralize }}
+        via a background worker — this page won't wait for every email to go out.
     </p>
-    <form method="post">
+    <form method="post" onsubmit="return confirm('Send this issue to {{ confirmed_subscriber_count }} subscriber{{ confirmed_subscriber_count|pluralize }} now?');">
         {% csrf_token %}
         {% if form.non_field_errors %}
             <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
@@ -18,17 +18,16 @@
         {% endif %}
 
         <div class="space-y-5">
-            {% include 'admin_dashboard/includes/form_field.html' with field=form.user %}
-            {% include 'admin_dashboard/includes/form_field.html' with field=form.article %}
-            {% include 'admin_dashboard/includes/form_field.html' with field=form.amount %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.subject %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.body_html %}
         </div>
 
         <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
             <button type="submit"
                     class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
-                Record purchase
+                Send now
             </button>
-            <a href="{% url 'billing:manage_purchase_list' %}"
+            <a href="{% url 'newsletter:manage_issue_list' %}"
                class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancel
             </a>

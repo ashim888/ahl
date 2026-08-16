@@ -37,6 +37,10 @@ class Enrollment(models.Model):
     payment_status = models.CharField(
         max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING,
     )
+    # TODO: Integrate Stripe — populated by billing.gateway once a real
+    # processor is wired in; stub checkout (training/views.py) fills this
+    # with a `stub-...` reference today (see billing/gateway.py).
+    payment_reference = models.CharField(max_length=255, blank=True)
 
     class Meta:
         unique_together = ('user', 'course')

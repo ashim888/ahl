@@ -6,9 +6,11 @@
 {% block content %}
 <div class="flex items-center justify-between">
     <p class="text-sm text-gray-500">
-        Subscription plans readers can be granted.
+        Subscription plans readers can browse and subscribe to at
+        <a href="{% url 'billing:plan_browse' %}" class="underline">/subscribe/</a> (checkout runs in test mode —
+        see billing/gateway.py).
         {% if user.is_senior_staff %}
-            No self-serve checkout yet — grant access manually from
+            You can also grant/revoke access manually from
             <a href="{% url 'billing:manage_subscription_list' %}" class="underline">Subscriptions</a> or
             <a href="{% url 'billing:manage_purchase_list' %}" class="underline">Purchases</a>.
         {% endif %}

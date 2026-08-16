@@ -5,6 +5,11 @@ from . import views
 app_name = 'billing'
 
 urlpatterns = [
+    # Public — self-serve browsing & checkout (StubGateway for now, see billing/gateway.py)
+    path('subscribe/', views.PlanBrowseView.as_view(), name='plan_browse'),
+    path('subscribe/<int:pk>/checkout/', views.subscribe_checkout, name='subscribe_checkout'),
+    path('articles/<slug:slug>/purchase/', views.purchase_checkout, name='purchase_checkout'),
+
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
     path('manage/billing/plans/', views.PlanListView.as_view(), name='manage_plan_list'),
     path('manage/billing/plans/new/', views.PlanCreateView.as_view(), name='manage_plan_create'),

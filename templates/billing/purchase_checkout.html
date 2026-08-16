@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout — {{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Checkout</h1>
+
+    <div class="mt-8 border border-border bg-card p-6">
+        <span class="section-label text-accent">Special Article</span>
+        <h2 class="font-display text-xl font-bold mt-2">{{ article.title }}</h2>
+        <div class="rule-thin mt-5 mb-4"></div>
+        <div class="flex items-baseline justify-between">
+            <span class="font-mono-editorial text-xs text-muted-foreground">One-time purchase</span>
+            <span class="font-display text-2xl font-bold">₹{{ article.price }}</span>
+        </div>
+    </div>
+
+    <p class="mt-4 text-xs text-muted-foreground leading-relaxed">
+        Payment processing isn't live yet — confirming below unlocks this article immediately at no charge
+        while checkout is in test mode. Already subscribed? <a href="{% url 'users:login' %}?next={{ request.path }}" class="underline">Log in</a> for free access instead.
+    </p>
+
+    <form method="post" class="mt-6">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+            CONFIRM &amp; UNLOCK ARTICLE
+        </button>
+    </form>
+    <a href="{% url 'articles:article_detail' article.slug %}" class="block mt-4 text-center text-sm text-muted-foreground hover:text-accent">
+        ← Back to article
+    </a>
+</div>
+{% endblock %}

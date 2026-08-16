@@ -7,7 +7,7 @@ app_name = 'training'
 urlpatterns = [
     path('training/', views.CourseListView.as_view(), name='course_list'),
     path('training/<int:pk>/', views.CourseDetailView.as_view(), name='course_detail'),
-    path('training/<int:pk>/enroll/', views.enroll, name='enroll'),
+    path('training/<int:pk>/checkout/', views.course_checkout, name='course_checkout'),
 
     # Editorial CRUD — Editor/EiC/Admin only (see EDITORIAL_ROLES in views.py)
     path('manage/training/', views.CourseManageListView.as_view(), name='manage_course_list'),

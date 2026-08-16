@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout — {{ course.title }} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Checkout</h1>
+
+    <div class="mt-8 border border-border bg-card p-6">
+        <span class="section-label text-accent">{{ course.duration }}</span>
+        <h2 class="font-display text-xl font-bold mt-2">{{ course.title }}</h2>
+        <p class="mt-1 font-mono-editorial text-xs text-muted-foreground">{{ course.instructor }}</p>
+        <div class="rule-thin mt-5 mb-4"></div>
+        <div class="flex items-baseline justify-between">
+            <span class="font-mono-editorial text-xs text-muted-foreground">One-time enrollment</span>
+            <span class="font-display text-2xl font-bold">${{ course.price }}</span>
+        </div>
+    </div>
+
+    <p class="mt-4 text-xs text-muted-foreground leading-relaxed">
+        Payment processing isn't live yet — confirming below enrolls you immediately at no charge
+        while checkout is in test mode.
+    </p>
+
+    <form method="post" class="mt-6">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+            CONFIRM &amp; ENROLL
+        </button>
+    </form>
+    <a href="{% url 'training:course_detail' course.pk %}" class="block mt-4 text-center text-sm text-muted-foreground hover:text-accent">
+        ← Back to course
+    </a>
+</div>
+{% endblock %}

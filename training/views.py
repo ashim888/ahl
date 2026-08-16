@@ -7,6 +7,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from billing.gateway import get_gateway
 from users.decorators import role_required
 from users.models import User
 
@@ -50,8 +51,10 @@ class CourseDetailView(DetailView):
 
 
 @login_required
-@require_POST
-def enroll(request, pk):
+def course_checkout(request, pk):
+    """Self-serve enroll-and-pay. No real gateway is wired in yet
+    (billing.gateway.StubGateway always succeeds) — see ROADMAP.md Phase 7.
+    """
     course = get_object_or_404(TrainingCourse, pk=pk, is_active=True)
     existing = Enrollment.objects.filter(user=request.user, course=course).first()
 
@@ -65,14 +68,24 @@ def enroll(request, pk):
             messages.error(request, 'This course is full.')
             return redirect('training:course_detail', pk=pk)
 
-    if existing:
-        existing.status = Enrollment.Status.ACTIVE
-        existing.save()
-    else:
-        Enrollment.objects.create(user=request.user, course=course)
+    if request.method == 'POST':
+        result = get_gateway().charge(request.user, course.price, f'Training — {course.title}')
+        if result.success:
+            if existing:
+                existing.status = Enrollment.Status.ACTIVE
+                existing.payment_status = Enrollment.PaymentStatus.PAID
+                existing.payment_reference = result.reference
+                existing.save(update_fields=['status', 'payment_status', 'payment_reference'])
+            else:
+                Enrollment.objects.create(
+                    user=request.user, course=course,
+                    payment_status=Enrollment.PaymentStatus.PAID, payment_reference=result.reference,
+                )
+            messages.success(request, f'Enrolled in "{course.title}".')
+            return redirect('training:course_detail', pk=pk)
+        messages.error(request, result.error or 'Payment failed — please try again.')
 
-    messages.success(request, f'Enrolled in "{course.title}". Payment is tracked as pending until Phase 7\'s payment integration lands.')
-    return redirect('training:course_detail', pk=pk)
+    return render(request, 'training/course_checkout.html', {'course': course})
 
 
 # -- Editorial course management (CRUD, not public browsing) ---------------

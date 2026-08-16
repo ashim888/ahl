@@ -6,8 +6,9 @@
 {% block content %}
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
     <p class="text-sm text-gray-500 mb-6">
-        No self-serve checkout yet — this grants access directly (comp account, institutional deal, manual payment).
-        The subscription window starts today and runs for the plan's duration.
+        For comp accounts, institutional deals, or payment collected outside the self-serve checkout at
+        <a href="{% url 'billing:plan_browse' %}" class="underline">/subscribe/</a>. The subscription window
+        starts today and runs for the plan's duration.
     </p>
     <form method="post">
         {% csrf_token %}

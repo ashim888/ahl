@@ -1,12 +1,10 @@
-import datetime
-
 from django import forms
-from django.utils import timezone
 
 from articles.models import Article
 from users.models import User
 
 from .models import ArticlePurchase, SubscriptionPlan, UserSubscription
+from .services import start_subscription
 
 
 class SubscriptionPlanForm(forms.ModelForm):
@@ -34,14 +32,11 @@ class GrantSubscriptionForm(forms.ModelForm):
         self.fields['plan'].queryset = SubscriptionPlan.objects.filter(is_active=True)
 
     def save(self, commit=True):
-        subscription = super().save(commit=False)
-        today = timezone.localdate()
-        subscription.start_date = today
-        subscription.end_date = today + datetime.timedelta(days=subscription.plan.duration_days)
-        subscription.status = UserSubscription.Status.ACTIVE
-        if commit:
-            subscription.save()
-        return subscription
+        # commit is always effectively True here — start_subscription() always
+        # creates the row — but the ModelForm.save(commit=...) signature is
+        # kept so this drops in anywhere a ModelForm is expected.
+        cleaned = self.cleaned_data
+        return start_subscription(cleaned['user'], cleaned['plan'])
 
 
 class GrantPurchaseForm(forms.ModelForm):

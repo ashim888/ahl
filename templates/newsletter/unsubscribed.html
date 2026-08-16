@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Unsubscribed — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-6 py-20 text-center">
+    <p class="section-label text-accent mb-3">Newsletter</p>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">You're unsubscribed</h1>
+    <p class="mt-4 text-muted-foreground leading-relaxed">
+        {{ subscriber.email }} will no longer receive our newsletter. Changed your mind? You can sign up again anytime.
+    </p>
+    <a href="{% url 'articles:home' %}" class="inline-block mt-8 font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">
+        BACK TO HOME →
+    </a>
+</div>
+{% endblock %}

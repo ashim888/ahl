@@ -161,3 +161,56 @@ class GrantSubscriptionViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertFalse(UserSubscription.objects.filter(user=self.reader).exists())
+
+
+class SelfServeCheckoutTests(TestCase):
+    """Public checkout — no gateway is wired in yet (StubGateway always
+    succeeds, see billing/gateway.py), but the flow itself is real and
+    self-serve: a reader completes it without any editorial action.
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='checkout@example.com', password='pw', first_name='C', last_name='O',
+        )
+        self.plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30,
+        )
+
+    def test_plan_browse_is_public(self):
+        response = self.client.get(reverse('billing:plan_browse'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.plan.name)
+
+    def test_subscribe_checkout_requires_login(self):
+        response = self.client.get(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_subscribe_checkout_creates_active_subscription(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 302)
+        subscription = UserSubscription.objects.get(user=self.reader, plan=self.plan)
+        self.assertTrue(subscription.is_currently_active)
+        self.assertTrue(subscription.payment_reference.startswith('stub-'))
+
+    def test_already_subscribed_reader_is_not_double_charged(self):
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=self.plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(UserSubscription.objects.filter(user=self.reader).count(), 1)
+
+    def test_purchase_checkout_creates_purchase_and_unlocks_article(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=3)
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('billing:purchase_checkout', args=[article.slug]))
+        self.assertEqual(response.status_code, 302)
+        purchase = ArticlePurchase.objects.get(user=self.reader, article=article)
+        self.assertTrue(purchase.payment_reference.startswith('stub-'))
+        self.assertTrue(article_is_accessible(self.reader, article))

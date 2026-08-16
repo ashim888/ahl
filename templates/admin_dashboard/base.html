@@ -186,6 +186,13 @@
                 </svg>
                 Billing
             </a>
+            <a href="{% url 'newsletter:manage_issue_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'newsletter:manage' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16H4V4Zm0 0 8 8 8-8"/>
+                </svg>
+                Newsletter
+            </a>
             <a href="{% url 'admin_custom:revenue' %}"
                class="flex items-center gap-3 px-3 py-2 rounded-lg {% if view_name == 'admin_custom:revenue' %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

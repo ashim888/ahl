@@ -6,6 +6,8 @@ from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
 from articles.models import Article
+from billing.models import UserSubscription
+from newsletter.models import Subscriber
 from training.models import Enrollment, TrainingCourse
 from users.decorators import role_required
 from users.models import User
@@ -67,6 +69,11 @@ class DashboardHomeView(TemplateView):
         )
         context['active_enrollments'] = enrollment_counts.get(Enrollment.Status.ACTIVE, 0)
         context['active_course_count'] = TrainingCourse.objects.filter(is_active=True).count()
+
+        context['active_subscriptions'] = UserSubscription.objects.filter(
+            status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
+        ).count()
+        context['newsletter_subscribers'] = Subscriber.objects.filter(status=Subscriber.Status.CONFIRMED).count()
 
         # -- "Articles Created vs Published" bar chart, last 7 days -------
         days = [today - datetime.timedelta(days=i) for i in range(6, -1, -1)]

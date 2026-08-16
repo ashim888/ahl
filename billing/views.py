@@ -1,21 +1,88 @@
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView, UpdateView
 
+from articles.models import Article
 from users.decorators import role_required
 from users.models import User
 
+from .access import user_has_active_subscription, user_has_purchased_article
 from .forms import GrantPurchaseForm, GrantSubscriptionForm, SubscriptionPlanForm
+from .gateway import get_gateway
 from .models import ArticlePurchase, SubscriptionPlan, UserSubscription
+from .services import record_purchase, start_subscription
 
 # Plans are visible/editable to any editorial staff, same as Article CRUD.
 # Granting/revoking actual paid access is a bigger deal — restricted to
 # senior staff (EiC/Admin), the same boundary StaffManage uses.
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 SENIOR_STAFF_ROLES = User.SENIOR_STAFF_ROLES
+
+
+# -- Public — plan browsing & self-serve checkout ---------------------------
+# No real payment gateway is wired in yet (billing/gateway.py — StubGateway
+# always succeeds). These are real, self-serve flows a reader can complete
+# without editorial help; only the actual money-movement step is stubbed.
+
+class PlanBrowseView(ListView):
+    model = SubscriptionPlan
+    template_name = 'billing/plan_browse.html'
+    context_object_name = 'plans'
+
+    def get_queryset(self):
+        return SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['already_subscribed'] = (
+            self.request.user.is_authenticated and user_has_active_subscription(self.request.user)
+        )
+        return context
+
+
+@login_required
+def subscribe_checkout(request, pk):
+    plan = get_object_or_404(SubscriptionPlan, pk=pk, is_active=True)
+
+    if user_has_active_subscription(request.user):
+        messages.info(request, "You already have an active subscription.")
+        return redirect('billing:plan_browse')
+
+    if request.method == 'POST':
+        result = get_gateway().charge(
+            request.user, plan.price, f'Subscription — {plan.name}',
+        )
+        if result.success:
+            start_subscription(request.user, plan, payment_reference=result.reference)
+            messages.success(request, f'Subscribed to "{plan.name}". Enjoy full access.')
+            return redirect('users:profile')
+        messages.error(request, result.error or 'Payment failed — please try again.')
+
+    return render(request, 'billing/subscribe_checkout.html', {'plan': plan})
+
+
+@login_required
+def purchase_checkout(request, slug):
+    article = get_object_or_404(
+        Article, slug=slug, status=Article.Status.PUBLISHED, access_type=Article.AccessType.PAY_PER_ARTICLE,
+    )
+
+    if user_has_active_subscription(request.user) or user_has_purchased_article(request.user, article):
+        return redirect('articles:article_detail', slug=article.slug)
+
+    if request.method == 'POST':
+        result = get_gateway().charge(request.user, article.price, f'Article — {article.title}')
+        if result.success:
+            record_purchase(request.user, article, article.price, payment_reference=result.reference)
+            messages.success(request, f'Purchased "{article.title}".')
+            return redirect('articles:article_detail', slug=article.slug)
+        messages.error(request, result.error or 'Payment failed — please try again.')
+
+    return render(request, 'billing/purchase_checkout.html', {'article': article})
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -77,8 +144,8 @@ def plan_toggle_active(request, pk):
 
 @method_decorator(role_required(*SENIOR_STAFF_ROLES), name='dispatch')
 class SubscriptionListView(ListView):
-    """Every grant, active or not — the record of who currently has (or
-    had) subscriber access, since there's no self-serve checkout yet.
+    """Every grant, active or not — self-serve checkout (subscribe_checkout,
+    above) creates rows here too, alongside manually-granted ones.
     """
 
     model = UserSubscription
@@ -98,11 +165,15 @@ class SubscriptionGrantView(CreateView):
     success_url = reverse_lazy('billing:manage_subscription_list')
 
     def form_valid(self, form):
+        # form.save() (GrantSubscriptionForm.save) returns the real created
+        # row via billing.services.start_subscription — end_date isn't a form
+        # field, so form.instance never has it; self.object (set by
+        # super().form_valid()) is the actual saved subscription.
         response = super().form_valid(form)
         messages.success(
             self.request,
-            f'Granted "{form.instance.plan.name}" to {form.instance.user.email}, '
-            f'active through {form.instance.end_date}.',
+            f'Granted "{self.object.plan.name}" to {self.object.user.email}, '
+            f'active through {self.object.end_date}.',
         )
         return response
 
