@@ -1,5 +1,6 @@
 asgiref==3.12.1
 Django==5.2.17
+django-debug-toolbar==7.1.1
 django-picklefield==3.4.0
 django-q2==1.11.0
 mysqlclient==2.2.8

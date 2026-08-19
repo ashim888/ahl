@@ -71,6 +71,15 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Django Debug Toolbar — dev-only, entirely gated behind DEBUG so it's never
+# installed/active in production regardless of what's in INSTALLED_APPS
+# above. Needs INTERNAL_IPS to actually render (see below).
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
+    # As early as possible, but after SecurityMiddleware per the toolbar's docs.
+    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    INTERNAL_IPS = [h.strip() for h in os.environ.get('INTERNAL_IPS', '127.0.0.1,::1').split(',') if h.strip()]
+
 ROOT_URLCONF = 'ajna_health_lens.urls'
 
 TEMPLATES = [
