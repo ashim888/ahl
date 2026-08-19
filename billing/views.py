@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
-from django.views.generic import CreateView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from articles.models import Article
 from users.decorators import role_required
@@ -28,19 +28,69 @@ SENIOR_STAFF_ROLES = User.SENIOR_STAFF_ROLES
 # always succeeds). These are real, self-serve flows a reader can complete
 # without editorial help; only the actual money-movement step is stubbed.
 
+def build_comparison_matrix(plans):
+    """One row per PlanFeature referenced by any of `plans`, each row's
+    `included` list aligned index-for-index with `plans` — used by both the
+    pricing page and a single plan's detail page so the two never show
+    inconsistent feature sets. `plans` must have `.features` prefetched.
+    """
+    feature_ids_seen = []
+    features_by_id = {}
+    for plan in plans:
+        for feature in plan.features.all():
+            if feature.id not in features_by_id:
+                features_by_id[feature.id] = feature
+                feature_ids_seen.append(feature.id)
+    ordered_features = sorted(features_by_id.values(), key=lambda f: (f.order, f.id))
+
+    matrix = []
+    for feature in ordered_features:
+        included = [feature.id in {f.id for f in plan.features.all()} for plan in plans]
+        matrix.append({'feature': feature, 'included': included})
+    return matrix
+
+
 class PlanBrowseView(ListView):
     model = SubscriptionPlan
     template_name = 'billing/plan_browse.html'
     context_object_name = 'plans'
 
     def get_queryset(self):
-        return SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+        return SubscriptionPlan.objects.filter(is_active=True).order_by('price').prefetch_related('features')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['already_subscribed'] = (
             self.request.user.is_authenticated and user_has_active_subscription(self.request.user)
         )
+        context['comparison_matrix'] = build_comparison_matrix(context['plans'])
+        return context
+
+
+class PlanDetailView(DetailView):
+    """The "why this plan" page — full feature checklist for this plan plus
+    a comparison table against every other active plan, before a reader
+    commits to checkout.
+    """
+
+    model = SubscriptionPlan
+    template_name = 'billing/plan_detail.html'
+    context_object_name = 'plan'
+
+    def get_queryset(self):
+        return SubscriptionPlan.objects.filter(is_active=True).prefetch_related('features')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['plan_features'] = self.object.features.order_by('order', 'id')
+        context['already_subscribed'] = (
+            self.request.user.is_authenticated and user_has_active_subscription(self.request.user)
+        )
+        all_plans = list(
+            SubscriptionPlan.objects.filter(is_active=True).order_by('price').prefetch_related('features'),
+        )
+        context['plans'] = all_plans
+        context['comparison_matrix'] = build_comparison_matrix(all_plans)
         return context
 
 

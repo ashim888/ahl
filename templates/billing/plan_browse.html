@@ -14,25 +14,58 @@
         </div>
     {% endif %}
 
-    <div class="mt-10 grid md:grid-cols-3 gap-6">
+    <div class="mt-10 grid md:grid-cols-3 gap-6 items-stretch">
         {% for plan in plans %}
-            <div class="border border-border bg-card p-6 flex flex-col">
+            <div class="border {% if plan.is_featured %}border-2 border-accent{% else %}border-border{% endif %} bg-card p-6 flex flex-col relative">
+                {% if plan.is_featured %}
+                    <p class="font-mono-editorial text-[0.65rem] text-accent tracking-widest mb-2">MOST POPULAR</p>
+                {% endif %}
                 <span class="section-label text-accent">{{ plan.get_plan_type_display }}</span>
                 <h2 class="font-display text-lg font-bold leading-snug mt-2" style="letter-spacing: -0.01em;">{{ plan.name }}</h2>
-                <p class="mt-3 text-sm text-muted-foreground leading-relaxed flex-1">{{ plan.description }}</p>
+                <p class="mt-3 text-sm text-muted-foreground leading-relaxed">{{ plan.description }}</p>
+
                 <div class="rule-thin mt-4 mb-3"></div>
                 <p class="font-display text-2xl font-bold">₹{{ plan.price }}</p>
-                <p class="font-mono-editorial text-xs text-muted-foreground mb-4">{{ plan.duration_days }} days</p>
-                {% if not already_subscribed %}
-                    <a href="{% url 'billing:subscribe_checkout' plan.pk %}"
-                       class="inline-block text-center font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
-                        SUBSCRIBE
+                <p class="font-mono-editorial text-xs text-muted-foreground mb-4">every {{ plan.duration_days }} days</p>
+
+                <ul class="space-y-2 mb-5 flex-1">
+                    {% for feature in plan.features.all|slice:":4" %}
+                        <li class="flex items-start gap-2 text-xs text-muted-foreground">
+                            <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/>
+                            </svg>
+                            {{ feature.label }}
+                        </li>
+                    {% endfor %}
+                    {% if plan.features.all|length > 4 %}
+                        <li class="text-xs text-muted-foreground pl-5">+ {{ plan.features.all|length|add:"-4" }} more</li>
+                    {% endif %}
+                </ul>
+
+                <div class="flex gap-2">
+                    <a href="{% url 'billing:plan_detail' plan.pk %}"
+                       class="flex-1 inline-block text-center font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-3 hover:border-accent hover:text-accent transition-colors">
+                        DETAILS
                     </a>
-                {% endif %}
+                    {% if not already_subscribed %}
+                        <a href="{% url 'billing:subscribe_checkout' plan.pk %}"
+                           class="flex-1 inline-block text-center font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 py-3 hover:bg-accent transition-colors">
+                            SUBSCRIBE
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         {% empty %}
             <p class="text-muted-foreground">No plans available right now — check back soon.</p>
         {% endfor %}
     </div>
+
+    {% if plans|length > 1 %}
+        <div class="mt-16 pt-10 border-t-2 border-foreground">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">COMPARE PLANS</p>
+            <h2 class="font-display text-2xl font-bold mb-8" style="letter-spacing: -0.02em;">Full feature comparison</h2>
+            {% include 'billing/includes/comparison_table.html' with plans=plans comparison_matrix=comparison_matrix %}
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

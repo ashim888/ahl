@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from articles.models import Article, ArticleAuthor
+from billing.models import PlanFeature, SubscriptionPlan
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from peer_review.models import Review
@@ -144,7 +145,8 @@ Thapa B, Karki S. A case series of viral myocarditis mimicking acute coronary sy
 
 
 class Command(BaseCommand):
-    help = 'Seed realistic demo data (users, issues, articles, submissions, reviews, training courses) for local development.'
+    help = ('Seed realistic demo data (users, issues, articles, submissions, reviews, training courses, '
+            'subscription plans) for local development.')
 
     def handle(self, *args, **options):
         with transaction.atomic():
@@ -154,6 +156,7 @@ class Command(BaseCommand):
             self.seed_submissions(users, articles)
             self.seed_training()
             self.seed_editorial_board()
+            self.seed_subscription_plans()
 
         self.stdout.write(self.style.SUCCESS('\nDemo data seeded.'))
         self.stdout.write(f'All seeded users share the password: {DEMO_PASSWORD}')
@@ -485,3 +488,57 @@ class Command(BaseCommand):
             _, created = EditorialBoardMember.objects.get_or_create(name=spec['name'], defaults=spec)
             count += created
         self.stdout.write(f'  {count} editorial board members created.')
+
+    # -- Subscription plans -----------------------------------------------
+
+    def seed_subscription_plans(self):
+        self.stdout.write('Seeding subscription plans...')
+
+        # Ordered master feature list — every plan opts into a prefix of this
+        # list, so higher tiers strictly include everything lower tiers get,
+        # plus more (the standard SaaS pricing-table shape).
+        feature_labels = [
+            'Full access to subscriber-only articles',
+            'Free access to special (pay-per-article) content',
+            'Ad-free reading',
+            'Weekly newsletter digest',
+            'Downloadable PDF archive',
+            'Priority customer support',
+            'Early access to new platform features',
+            'Multi-user access (up to 50 reader seats)',
+            'Organization-wide IP-based access',
+            'Usage analytics dashboard for admins',
+            'Dedicated account manager',
+            'Custom invoicing',
+        ]
+        features = {}
+        for order, label in enumerate(feature_labels):
+            feature, _ = PlanFeature.objects.get_or_create(label=label, defaults={'order': order})
+            features[label] = feature
+
+        specs = [
+            dict(name='Reader Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+                 price=499, duration_days=30,
+                 description='Full digital access to Ajna Health Lens, billed monthly. Cancel anytime.',
+                 feature_count=4),
+            dict(name='Reader Annual', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL,
+                 price=4999, duration_days=365, is_featured=True,
+                 description='Our best value for individual readers — pay for 10 months, read for 12, '
+                              'plus priority support and early access to new features.',
+                 feature_count=7),
+            dict(name='Institutional', plan_type=SubscriptionPlan.PlanType.INSTITUTIONAL,
+                 price=49999, duration_days=365,
+                 description='Campus- or organization-wide access for universities, hospitals, and '
+                              'research institutions, with usage reporting and a dedicated account manager.',
+                 feature_count=len(feature_labels)),
+        ]
+
+        count = 0
+        for spec in specs:
+            feature_count = spec.pop('feature_count')
+            plan, created = SubscriptionPlan.objects.get_or_create(name=spec['name'], defaults=spec)
+            if created:
+                count += 1
+            plan.features.set([features[label] for label in feature_labels[:feature_count]])
+
+        self.stdout.write(f'  {count} subscription plans created.')

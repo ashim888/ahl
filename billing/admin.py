@@ -1,13 +1,20 @@
 from django.contrib import admin
 
-from .models import ArticlePurchase, SubscriptionPlan, UserSubscription
+from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
+
+
+@admin.register(PlanFeature)
+class PlanFeatureAdmin(admin.ModelAdmin):
+    list_display = ['label', 'order']
+    ordering = ['order', 'id']
 
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ['name', 'plan_type', 'price', 'duration_days', 'is_active']
+    list_display = ['name', 'plan_type', 'price', 'duration_days', 'is_featured', 'is_active']
     list_filter = ['plan_type', 'is_active']
     search_fields = ['name']
+    filter_horizontal = ['features']
 
 
 @admin.register(UserSubscription)

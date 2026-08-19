@@ -3,10 +3,27 @@ from django.db import models
 from django.utils import timezone
 
 
+class PlanFeature(models.Model):
+    """One row in the plan-comparison table (e.g. "Ad-free reading"). A
+    global, ordered list — plans opt in via SubscriptionPlan.features below,
+    so every plan's detail page and the browse page's comparison table
+    render the exact same row order with a ✓/— per plan.
+    """
+
+    label = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.label
+
+
 class SubscriptionPlan(models.Model):
-    """A recurring plan a reader can be subscribed to. Checkout doesn't exist
-    yet (see ROADMAP.md Phase 7) — for now these are created by editorial
-    staff and granted to readers manually via UserSubscription below.
+    """A recurring plan a reader can be subscribed to. Self-serve checkout
+    exists (billing/gateway.py — StubGateway, no real processor yet); these
+    can also be granted manually via UserSubscription below.
     """
 
     class PlanType(models.TextChoices):
@@ -21,6 +38,13 @@ class SubscriptionPlan(models.Model):
         help_text='Length of access granted per billing cycle, e.g. 30 for monthly or 365 for annual.',
     )
     description = models.TextField(blank=True)
+    features = models.ManyToManyField(
+        PlanFeature, blank=True, related_name='plans',
+        help_text='What a subscriber on this plan gets — shown on the plan detail page and the pricing comparison table.',
+    )
+    is_featured = models.BooleanField(
+        default=False, help_text='Highlight as "Most Popular" on the pricing page.',
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

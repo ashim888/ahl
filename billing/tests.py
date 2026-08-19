@@ -8,7 +8,8 @@ from articles.models import Article
 from users.models import User
 
 from .access import article_is_accessible
-from .models import ArticlePurchase, SubscriptionPlan, UserSubscription
+from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
+from .views import build_comparison_matrix
 
 
 def make_article(access_type, price=None, status=Article.Status.PUBLISHED):
@@ -214,3 +215,49 @@ class SelfServeCheckoutTests(TestCase):
         purchase = ArticlePurchase.objects.get(user=self.reader, article=article)
         self.assertTrue(purchase.payment_reference.startswith('stub-'))
         self.assertTrue(article_is_accessible(self.reader, article))
+
+
+class PlanDetailAndComparisonTests(TestCase):
+    def setUp(self):
+        f1 = PlanFeature.objects.create(label='Full access to subscriber-only articles', order=0)
+        f2 = PlanFeature.objects.create(label='Priority support', order=1)
+        f3 = PlanFeature.objects.create(label='Dedicated account manager', order=2)
+        self.basic = SubscriptionPlan.objects.create(
+            name='Basic', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=100, duration_days=30,
+        )
+        self.basic.features.set([f1])
+        self.premium = SubscriptionPlan.objects.create(
+            name='Premium', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL, price=1000, duration_days=365,
+            is_featured=True,
+        )
+        self.premium.features.set([f1, f2])
+        self.enterprise = SubscriptionPlan.objects.create(
+            name='Enterprise', plan_type=SubscriptionPlan.PlanType.INSTITUTIONAL, price=5000, duration_days=365,
+        )
+        self.enterprise.features.set([f1, f2, f3])
+
+    def test_comparison_matrix_shape_and_ordering(self):
+        plans = [self.basic, self.premium, self.enterprise]
+        matrix = build_comparison_matrix(plans)
+        self.assertEqual([row['feature'].label for row in matrix], [
+            'Full access to subscriber-only articles', 'Priority support', 'Dedicated account manager',
+        ])
+        # Basic has only the first feature; Enterprise has all three.
+        self.assertEqual([row['included'][0] for row in matrix], [True, False, False])
+        self.assertEqual([row['included'][2] for row in matrix], [True, True, True])
+
+    def test_plan_detail_page_renders_its_own_features_and_comparison_table(self):
+        response = self.client.get(reverse('billing:plan_detail', args=[self.premium.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Premium')
+        self.assertContains(response, 'Priority support')
+        self.assertContains(response, 'MOST POPULAR')
+        # Comparison table includes the other plans too.
+        self.assertContains(response, 'Basic')
+        self.assertContains(response, 'Enterprise')
+
+    def test_inactive_plan_detail_page_404s(self):
+        self.basic.is_active = False
+        self.basic.save(update_fields=['is_active'])
+        response = self.client.get(reverse('billing:plan_detail', args=[self.basic.pk]))
+        self.assertEqual(response.status_code, 404)

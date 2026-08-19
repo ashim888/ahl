@@ -10,9 +10,10 @@ from .services import start_subscription
 class SubscriptionPlanForm(forms.ModelForm):
     class Meta:
         model = SubscriptionPlan
-        fields = ['name', 'plan_type', 'price', 'duration_days', 'description', 'is_active']
+        fields = ['name', 'plan_type', 'price', 'duration_days', 'description', 'features', 'is_featured', 'is_active']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
+            'features': forms.CheckboxSelectMultiple,
         }
 
 

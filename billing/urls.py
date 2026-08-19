@@ -7,6 +7,7 @@ app_name = 'billing'
 urlpatterns = [
     # Public — self-serve browsing & checkout (StubGateway for now, see billing/gateway.py)
     path('subscribe/', views.PlanBrowseView.as_view(), name='plan_browse'),
+    path('subscribe/<int:pk>/', views.PlanDetailView.as_view(), name='plan_detail'),
     path('subscribe/<int:pk>/checkout/', views.subscribe_checkout, name='subscribe_checkout'),
     path('articles/<slug:slug>/purchase/', views.purchase_checkout, name='purchase_checkout'),
 
