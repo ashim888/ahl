@@ -60,11 +60,12 @@
             </div>
 
             <div data-panel="publishing" class="space-y-5 hidden"
-                 {% if form.access_type.errors or form.price.errors or form.issue.errors or form.volume.errors or form.page_numbers.errors or form.doi.errors %}data-has-error="true"{% endif %}>
+                 {% if form.access_type.errors or form.price.errors or form.homepage_section.errors or form.issue.errors or form.volume.errors or form.page_numbers.errors or form.doi.errors %}data-has-error="true"{% endif %}>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
                 <div id="price-field" class="hidden">
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.price %}
                 </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.homepage_section %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}

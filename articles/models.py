@@ -36,6 +36,12 @@ class Article(models.Model):
         PUBLISHED = 'published', 'Published'
         ARCHIVED = 'archived', 'Archived'
 
+    class HomepageSection(models.TextChoices):
+        HERO = 'hero', 'Hero (top story)'
+        LATEST_NEWS = 'latest_news', 'Latest News'
+        OPINION = 'opinion', 'Opinion & Editorial'
+        RESEARCH = 'research', 'Research Highlights'
+
     title = models.CharField(max_length=500)
     slug = models.SlugField(max_length=500, unique=True)
     abstract = models.TextField()
@@ -58,6 +64,12 @@ class Article(models.Model):
         default=False,
         help_text='Pin to the top of listings and the homepage, ahead of publication date. '
                    'If more than one article is pinned, the most recently published pinned one leads.',
+    )
+    homepage_section = models.CharField(
+        max_length=20, choices=HomepageSection.choices, blank=True,
+        help_text='Feature this article in a specific homepage section, regardless of its article '
+                   'type. Leave blank to let that section auto-fill from recent articles of the '
+                   'matching type instead — see articles/views.py HomeView.',
     )
 
     submission = models.OneToOneField(

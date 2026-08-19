@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Q, prefetch_related_objects
 from django.http import HttpResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -43,6 +43,16 @@ class ComingSoonView(TemplateView):
 class HomeView(TemplateView):
     """Journal homepage: hero story, latest news, opinion, research
     highlights, special issues, and an editorial board preview.
+
+    Each section is editor-curated first: Article.homepage_section lets an
+    editor explicitly place a specific article in the Hero / Latest News /
+    Opinion & Editorial / Research Highlights slot, regardless of its
+    article_type (see /manage/articles/, Publishing tab). Any slots an
+    editor hasn't explicitly filled auto-fill from recent published articles
+    of the matching type — the previous, fully-automatic behavior — so a
+    section is never empty just because nothing's been curated yet. An
+    article picked for one section (explicit or auto-filled) never repeats
+    in a later one.
     """
 
     template_name = 'home.html'
@@ -54,28 +64,48 @@ class HomeView(TemplateView):
         published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
             '-is_pinned', '-publication_date', '-created_at',
         )
+        used_pks = set()
 
-        hero_article = published.first()
+        def pick(section, limit, type_filter=None):
+            picks = list(published.filter(homepage_section=section).exclude(pk__in=used_pks)[:limit])
+            used_pks.update(a.pk for a in picks)
+            if len(picks) < limit:
+                # Autofill only draws from articles with no explicit
+                # homepage_section — one earmarked for a *different* section
+                # (not yet processed or not chosen for it) must never get
+                # swept up as filler here instead, even by Hero's fallback,
+                # which has no type_filter and would otherwise happily grab
+                # anything recent.
+                remaining = published.filter(homepage_section='').exclude(pk__in=used_pks)
+                if type_filter is not None:
+                    remaining = remaining.filter(type_filter)
+                autofill = list(remaining[:limit - len(picks)])
+                picks += autofill
+                used_pks.update(a.pk for a in autofill)
+            return picks
+
+        HomepageSection = Article.HomepageSection
+
+        hero_picks = pick(HomepageSection.HERO, 1)
+        hero_article = hero_picks[0] if hero_picks else None
         context['hero_article'] = hero_article
-        exclude_pk = [hero_article.pk] if hero_article else []
         if hero_article:
             context['hero_authors'] = hero_article.articleauthor_set.select_related('user').order_by('order')
 
-        # prefetch_related so article.articleauthor_set.all/.first in the
-        # template read from cache instead of firing a query per article.
-        author_prefetch = 'articleauthor_set__user'
+        latest_news = pick(HomepageSection.LATEST_NEWS, 3, Q(article_type=Article.ArticleType.NEWS_COMMENTARY))
+        opinion_pieces = pick(HomepageSection.OPINION, 3, Q(article_type__in=OPINION_TYPES))
+        research_highlights = pick(HomepageSection.RESEARCH, 2, Q(article_type__in=RESEARCH_TYPES))
 
-        context['latest_news'] = published.filter(
-            article_type=Article.ArticleType.NEWS_COMMENTARY,
-        ).exclude(pk__in=exclude_pk).prefetch_related(author_prefetch)[:3]
+        # Sections are built as plain lists (picks + autofill concatenated),
+        # not querysets, so prefetching happens post-hoc via
+        # prefetch_related_objects instead of queryset.prefetch_related().
+        prefetch_related_objects(latest_news, 'articleauthor_set__user')
+        prefetch_related_objects(opinion_pieces, 'articleauthor_set__user')
+        prefetch_related_objects(research_highlights, 'articleauthor_set__user', 'issue')
 
-        context['opinion_pieces'] = published.filter(
-            article_type__in=OPINION_TYPES,
-        ).exclude(pk__in=exclude_pk).prefetch_related(author_prefetch)[:3]
-
-        context['research_highlights'] = published.filter(
-            article_type__in=RESEARCH_TYPES,
-        ).exclude(pk__in=exclude_pk).select_related('issue').prefetch_related(author_prefetch)[:2]
+        context['latest_news'] = latest_news
+        context['opinion_pieces'] = opinion_pieces
+        context['research_highlights'] = research_highlights
 
         context['special_issues'] = Issue.objects.all()[:3]
         context['board_preview'] = EditorialBoardMember.objects.filter(is_active=True)[:6]
@@ -252,18 +282,23 @@ class ArticleManageListView(ListView):
         queryset = Article.objects.select_related('issue').order_by('-updated_at')
         status = self.request.GET.get('status')
         article_type = self.request.GET.get('type')
+        homepage_section = self.request.GET.get('homepage_section')
         if status:
             queryset = queryset.filter(status=status)
         if article_type:
             queryset = queryset.filter(article_type=article_type)
+        if homepage_section:
+            queryset = queryset.filter(homepage_section=homepage_section)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['article_types'] = Article.ArticleType.choices
         context['statuses'] = Article.Status.choices
+        context['homepage_sections'] = Article.HomepageSection.choices
         context['selected_type'] = self.request.GET.get('type', '')
         context['selected_status'] = self.request.GET.get('status', '')
+        context['selected_homepage_section'] = self.request.GET.get('homepage_section', '')
         return context
 
 

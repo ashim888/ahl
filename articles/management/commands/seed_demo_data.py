@@ -278,7 +278,11 @@ class Command(BaseCommand):
                  keywords='maternal health, Nepal, rural healthcare, antenatal care',
                  article_type=Article.ArticleType.ORIGINAL_RESEARCH, status=Article.Status.PUBLISHED,
                  publication_date=datetime.date(2026, 1, 20), issue=issues['inaugural-issue'], volume='1', page_numbers='1-14',
-                 doi='10.5555/ahl.2026.0001', authors=[(sharma, True), (thapa, False)]),
+                 doi='10.5555/ahl.2026.0001', authors=[(sharma, True), (thapa, False)],
+                 # Editorially chosen as the lead story even though it isn't the
+                 # most recently published article — demonstrates that
+                 # homepage_section overrides the "most recent" hero default.
+                 homepage_section=Article.HomepageSection.HERO),
             dict(slug='systematic-review-tb-screening-methods',
                  title='A Systematic Review of Community-Based Tuberculosis Screening Methods',
                  abstract='We systematically review community-based TB screening approaches used across '
@@ -286,7 +290,8 @@ class Command(BaseCommand):
                  keywords='tuberculosis, screening, systematic review, South Asia',
                  article_type=Article.ArticleType.REVIEW_ARTICLE, status=Article.Status.PUBLISHED,
                  publication_date=datetime.date(2026, 1, 25), issue=issues['inaugural-issue'], volume='1', page_numbers='15-32',
-                 doi='10.5555/ahl.2026.0002', authors=[(thapa, True)]),
+                 doi='10.5555/ahl.2026.0002', authors=[(thapa, True)],
+                 homepage_section=Article.HomepageSection.RESEARCH),
             dict(slug='letter-response-antenatal-care-study',
                  title='Letter: A Response to the Antenatal Care Access Study',
                  abstract='A brief response raising methodological questions about sampling in the antenatal '
@@ -303,7 +308,7 @@ class Command(BaseCommand):
                  article_type=Article.ArticleType.CASE_REPORT, status=Article.Status.PUBLISHED,
                  publication_date=datetime.date(2026, 4, 5), issue=issues['maternal-child-health'], volume='1', page_numbers='1-6',
                  html_content=CASE_REPORT_HTML_CONTENT, references=CASE_REPORT_REFERENCES,
-                 authors=[(karki, True)]),
+                 authors=[(karki, True)], homepage_section=Article.HomepageSection.RESEARCH),
             dict(slug='short-communication-child-nutrition-pilot',
                  title='Short Communication: Preliminary Findings from a Child Nutrition Pilot Program',
                  abstract='Preliminary data from a six-month child nutrition pilot program in three rural districts.',
@@ -317,7 +322,8 @@ class Command(BaseCommand):
                           'systems in Nepal.',
                  keywords='editorial, health systems, rural health',
                  article_type=Article.ArticleType.EDITORIAL, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 5, 1), authors=[(users['eic@ajnahealthlens.example'], True)]),
+                 publication_date=datetime.date(2026, 5, 1), authors=[(users['eic@ajnahealthlens.example'], True)],
+                 homepage_section=Article.HomepageSection.OPINION),
             dict(slug='news-tb-screening-guidelines-update',
                  title='Nepal Issues New Tuberculosis Screening Guidelines',
                  abstract='The Ministry of Health has released updated TB screening guidelines for community '
@@ -342,6 +348,7 @@ class Command(BaseCommand):
         articles = {}
         for spec in specs:
             authors = spec.pop('authors')
+            homepage_section = spec.pop('homepage_section', '')
             article, created = Article.objects.get_or_create(slug=spec['slug'], defaults=spec)
             if created:
                 for order, (author, is_corresponding) in enumerate(authors):
@@ -349,6 +356,14 @@ class Command(BaseCommand):
                         article=article, user=author,
                         defaults=dict(order=order, is_corresponding=is_corresponding),
                     )
+            # Re-applied even on an already-seeded DB (unlike the rest of
+            # `spec`, which only takes on a fresh create) — homepage curation
+            # is the whole point of this seed step, so a re-run should always
+            # leave the homepage looking right rather than silently no-op'ing
+            # on rows created before this field existed.
+            if article.homepage_section != homepage_section:
+                article.homepage_section = homepage_section
+                article.save(update_fields=['homepage_section'])
             articles[article.slug] = article
         self.stdout.write(f'  {len(articles)} articles ready.')
         return articles

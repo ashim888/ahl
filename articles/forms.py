@@ -25,7 +25,7 @@ class ArticleForm(forms.ModelForm):
         # made" and publication_date is stamped automatically by Article.save()
         # the moment status becomes Published (see articles/models.py).
         fields = [
-            'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned',
+            'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned', 'homepage_section',
             'abstract', 'keywords', 'issue', 'volume', 'page_numbers', 'doi',
             'html_content', 'references', 'featured_image', 'pdf_file',
         ]
@@ -34,6 +34,10 @@ class ArticleForm(forms.ModelForm):
             'html_content': forms.Textarea(attrs={'rows': 16, 'class': 'font-mono text-xs'}),
             'references': forms.Textarea(attrs={'rows': 6}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['homepage_section'].choices = [('', "Auto (don't feature)")] + list(Article.HomepageSection.choices)
 
     def clean(self):
         cleaned_data = super().clean()
