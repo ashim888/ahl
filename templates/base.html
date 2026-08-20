@@ -5,8 +5,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
-    <meta name="description" content="{{ JOURNAL_TAGLINE }}">
+    <meta name="description" content="{{ meta_description|default:JOURNAL_TAGLINE }}">
+    <link rel="canonical" href="{{ canonical_url|default:request.build_absolute_uri }}">
     <link rel="icon" href="{% static 'images/logo.png' %}">
+    <link rel="alternate" type="application/rss+xml" title="{{ JOURNAL_NAME }} — Latest Articles" href="{% url 'articles:latest_feed' %}">
+
+    {# Open Graph / Twitter Card — sitewide defaults; ArticleDetailView overrides meta_title/meta_description/meta_image_url/og_type so shared article links render a real preview instead of a bare URL. #}
+    <meta property="og:site_name" content="{{ JOURNAL_NAME }}">
+    <meta property="og:type" content="{{ og_type|default:'website' }}">
+    <meta property="og:title" content="{{ meta_title|default:JOURNAL_NAME }}">
+    <meta property="og:description" content="{{ meta_description|default:JOURNAL_TAGLINE }}">
+    <meta property="og:url" content="{{ canonical_url|default:request.build_absolute_uri }}">
+    <meta property="og:image" content="{{ meta_image_url|default:default_og_image_url }}">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ meta_title|default:JOURNAL_NAME }}">
+    <meta name="twitter:description" content="{{ meta_description|default:JOURNAL_TAGLINE }}">
+    <meta name="twitter:image" content="{{ meta_image_url|default:default_og_image_url }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">

@@ -92,3 +92,190 @@ class HomeViewSectionCurationTests(TestCase):
         )
         response = self.client.get(reverse('articles:home'))
         self.assertIsNone(response.context['hero_article'])
+
+
+class SEOMetaTagsTests(TestCase):
+    """Article pages carry real Open Graph/Twitter Card metadata and
+    schema.org NewsArticle structured data — templates/base.html's sitewide
+    defaults, overridden per-article by ArticleDetailView.
+    """
+
+    def test_article_page_has_og_and_twitter_tags(self):
+        article = make_article('meta-tagged-article', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        content = response.content.decode()
+        self.assertIn(f'content="{article.title}"', content)  # og:title / twitter:title
+        self.assertIn('property="og:type" content="article"', content)
+        self.assertIn('name="twitter:card" content="summary_large_image"', content)
+
+    def test_article_page_has_news_article_structured_data(self):
+        article = make_article('structured-data-article', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'application/ld+json')
+        self.assertContains(response, '"@type": "NewsArticle"')
+        self.assertContains(response, article.title)
+
+    def test_non_article_page_falls_back_to_sitewide_defaults(self):
+        response = self.client.get(reverse('articles:home'))
+        content = response.content.decode()
+        self.assertIn('property="og:type" content="website"', content)
+
+
+class FeedSitemapRobotsTests(TestCase):
+    def test_rss_feed_lists_published_articles_only(self):
+        published = make_article('feed-published', Article.ArticleType.NEWS_COMMENTARY)
+        draft = make_article('feed-draft', Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT)
+        response = self.client.get(reverse('articles:latest_feed'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn(published.title, content)
+        self.assertNotIn(draft.title, content)
+
+    def test_atom_feed_renders(self):
+        response = self.client.get(reverse('articles:latest_feed_atom'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('application/atom+xml', response['Content-Type'])
+
+    def test_sitemap_lists_published_articles_only(self):
+        published = make_article('sitemap-published', Article.ArticleType.NEWS_COMMENTARY)
+        draft = make_article('sitemap-draft', Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT)
+        response = self.client.get(reverse('sitemap'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn(published.slug, content)
+        self.assertNotIn(draft.slug, content)
+
+    def test_robots_txt_disallows_manage_and_points_to_sitemap(self):
+        response = self.client.get(reverse('robots_txt'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('Disallow: /manage/', content)
+        self.assertIn('Sitemap:', content)
+        self.assertIn('/sitemap.xml', content)
+
+
+class EngagementCounterTests(TestCase):
+    """citation_count/download_count were migrated fields that nothing ever
+    incremented (August 2026 gap audit) — these confirm the real code paths
+    that now update them.
+    """
+
+    def test_citation_export_increments_citation_count(self):
+        article = make_article('cited-article', Article.ArticleType.ORIGINAL_RESEARCH)
+        self.assertEqual(article.citation_count, 0)
+        self.client.get(reverse('articles:article_citation', args=[article.slug, 'bibtex']))
+        self.client.get(reverse('articles:article_citation', args=[article.slug, 'ris']))
+        article.refresh_from_db()
+        self.assertEqual(article.citation_count, 2)
+
+    def test_pdf_download_increments_download_count_and_redirects(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        article = make_article('downloadable-article', Article.ArticleType.NEWS_COMMENTARY)
+        article.pdf_file = SimpleUploadedFile('test.pdf', b'%PDF-1.4 fake', content_type='application/pdf')
+        article.save()
+        self.assertEqual(article.download_count, 0)
+
+        response = self.client.get(reverse('articles:article_download', args=[article.slug]))
+        self.assertEqual(response.status_code, 302)
+        article.refresh_from_db()
+        self.assertEqual(article.download_count, 1)
+
+    def test_download_blocked_by_paywall_does_not_increment(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        article = make_article('gated-downloadable', Article.ArticleType.ORIGINAL_RESEARCH)
+        article.access_type = Article.AccessType.SUBSCRIPTION
+        article.pdf_file = SimpleUploadedFile('test.pdf', b'%PDF-1.4 fake', content_type='application/pdf')
+        article.save()
+
+        response = self.client.get(reverse('articles:article_download', args=[article.slug]))
+        self.assertEqual(response.status_code, 404)
+        article.refresh_from_db()
+        self.assertEqual(article.download_count, 0)
+
+
+class KeywordBrowsingTests(TestCase):
+    def test_keyword_pill_links_to_filtered_list(self):
+        article = Article.objects.create(
+            title='Tagged Article', slug='tagged-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+            keywords='tuberculosis, screening',
+        )
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, '?keyword=tuberculosis')
+
+    def test_article_list_filters_by_keyword(self):
+        matching = Article.objects.create(
+            title='TB Article', slug='tb-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+            keywords='tuberculosis, screening',
+        )
+        other = Article.objects.create(
+            title='Unrelated Article', slug='unrelated-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+            keywords='maternal health',
+        )
+        response = self.client.get(reverse('articles:article_list'), {'keyword': 'tuberculosis'})
+        articles = list(response.context['articles'])
+        self.assertIn(matching, articles)
+        self.assertNotIn(other, articles)
+        self.assertEqual(response.context['selected_keyword'], 'tuberculosis')
+
+
+class SearchRelevanceAndRateLimitTests(TestCase):
+    def test_title_match_ranks_above_abstract_only_match(self):
+        title_match = Article.objects.create(
+            title='Tuberculosis Screening Update', slug='title-match', abstract='General health news.',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        abstract_only_match = Article.objects.create(
+            title='Health Policy Roundup', slug='abstract-match',
+            abstract='Includes a note on tuberculosis screening programs.',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        response = self.client.get(reverse('articles:search'), {'q': 'tuberculosis'})
+        results = list(response.context['articles'])
+        self.assertEqual(results.index(title_match), 0)
+        self.assertLess(results.index(title_match), results.index(abstract_only_match))
+
+    def test_excessive_search_requests_are_rate_limited(self):
+        # No password hashing involved (unlike login/register — see
+        # users/tests.py) so a 30-request burst is fast enough that the
+        # django_ratelimit fixed-window boundary risk is negligible here.
+        from django.core.cache import cache
+        cache.clear()
+        for _ in range(30):
+            self.client.get(reverse('articles:search'), {'q': 'health'})
+        response = self.client.get(reverse('articles:search'), {'q': 'health'})
+        self.assertEqual(response.status_code, 403)
+
+
+class HomepageCachingTests(TestCase):
+    def test_homepage_sections_are_cached_and_invalidated_on_save(self):
+        from django.core.cache import cache
+        from articles.models import HOME_SECTIONS_CACHE_KEY
+
+        cache.clear()
+        self.client.get(reverse('articles:home'))
+        self.assertIsNotNone(cache.get(HOME_SECTIONS_CACHE_KEY))
+
+        article = make_article('cache-bust-article', Article.ArticleType.NEWS_COMMENTARY)
+        article.save()
+        self.assertIsNone(cache.get(HOME_SECTIONS_CACHE_KEY))
+
+
+class HomepageNewsletterCTATests(TestCase):
+    def test_anonymous_visitor_sees_cta(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'FREE NEWSLETTER')
+
+    def test_confirmed_subscriber_does_not_see_cta(self):
+        from newsletter.models import Subscriber
+        from users.models import User
+
+        reader = User.objects.create_user(email='cta-reader@example.com', password='pw', first_name='C', last_name='R')
+        Subscriber.objects.create(user=reader, email=reader.email, status=Subscriber.Status.CONFIRMED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotContains(response, 'FREE NEWSLETTER')

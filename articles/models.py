@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
 
@@ -6,6 +7,11 @@ from .validators import (
     article_image_extension_validator, article_pdf_extension_validator,
     validate_article_pdf_size, validate_featured_image_size,
 )
+
+# Shared with articles/views.py HomeView, which caches under this key —
+# defined here (not there) so Article.save() can invalidate it without
+# models.py importing from views.py.
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v1'
 
 
 class Article(models.Model):
@@ -142,6 +148,13 @@ class Article(models.Model):
         if self.status == self.Status.PUBLISHED and not self.publication_date:
             self.publication_date = timezone.localdate()
         super().save(*args, **kwargs)
+        # Cheap and unconditional rather than trying to detect exactly which
+        # field changes matter (status, homepage_section, is_pinned, or just
+        # an edit to an already-featured article's title/image) — a save is
+        # rare enough that clearing on every one isn't worth the complexity
+        # of tracking which changes actually affect the homepage. See
+        # articles/views.py HomeView.CACHE_KEY.
+        cache.delete(HOME_SECTIONS_CACHE_KEY)
 
     def __str__(self):
         return self.title

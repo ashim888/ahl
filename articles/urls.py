@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from .feeds import LatestArticlesAtomFeed, LatestArticlesFeed
 
 app_name = 'articles'
 
@@ -12,12 +13,15 @@ urlpatterns = [
     path('index/', views.HomeView.as_view(), name='home'),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
     path('search/', views.SearchView.as_view(), name='search'),
+    path('feed/', LatestArticlesFeed(), name='latest_feed'),
+    path('feed/atom/', LatestArticlesAtomFeed(), name='latest_feed_atom'),
     path('articles/<slug:slug>/', views.ArticleDetailView.as_view(), name='article_detail'),
     path('authors/<int:pk>/', views.AuthorDetailView.as_view(), name='author_detail'),
     path(
         'articles/<slug:slug>/cite/<str:citation_format>/',
         views.article_citation, name='article_citation',
     ),
+    path('articles/<slug:slug>/download/', views.article_download, name='article_download'),
 
     # Editorial CRUD — Editor/EiC/Admin only (see EDITORIAL_ROLES in views.py)
     path('manage/articles/', views.ArticleManageListView.as_view(), name='manage_article_list'),

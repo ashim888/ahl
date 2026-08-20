@@ -1,23 +1,29 @@
+from django.conf import settings
 from django.contrib import messages
+from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Q, prefetch_related_objects
+from django.db.models import Case, F, IntegerField, Q, When, prefetch_related_objects
 from django.http import HttpResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.templatetags.static import static
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
+from django_ratelimit.decorators import ratelimit
 
 from billing.access import article_is_accessible
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
+from newsletter.models import Subscriber
 from users.decorators import role_required
 from users.models import User
 
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
-from .models import Article
+from .models import HOME_SECTIONS_CACHE_KEY, Article
+from .seo import news_article_structured_data
 
 # Article types treated as "peer-reviewed research" for the homepage's
 # "From the Journal" section — everything except news/editorial/letters.
@@ -57,8 +63,19 @@ class HomeView(TemplateView):
 
     template_name = 'home.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    # Short TTL — cheap insurance against a publish/unpublish looking stale
+    # for more than a few minutes, while still saving the ~8 queries below
+    # on every anonymous homepage hit. Bumped whenever the section-building
+    # logic changes shape, so a deploy doesn't unpickle a stale-shaped dict.
+    CACHE_KEY = HOME_SECTIONS_CACHE_KEY
+    CACHE_TTL = 300
+
+    def _build_sections(self):
+        """Every homepage section — identical for every visitor (no
+        per-user data), so this whole dict is cache-safe and cached as one
+        unit. get_context_data adds the one visitor-specific bit
+        (already_subscribed_to_newsletter) after reading this from cache.
+        """
         # -created_at as a tiebreaker: articles that share a publication_date
         # (or have none) still sort newest-first instead of by arbitrary DB order.
         published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
@@ -85,12 +102,14 @@ class HomeView(TemplateView):
             return picks
 
         HomepageSection = Article.HomepageSection
+        sections = {}
 
         hero_picks = pick(HomepageSection.HERO, 1)
         hero_article = hero_picks[0] if hero_picks else None
-        context['hero_article'] = hero_article
-        if hero_article:
-            context['hero_authors'] = hero_article.articleauthor_set.select_related('user').order_by('order')
+        sections['hero_article'] = hero_article
+        sections['hero_authors'] = (
+            list(hero_article.articleauthor_set.select_related('user').order_by('order')) if hero_article else []
+        )
 
         latest_news = pick(HomepageSection.LATEST_NEWS, 3, Q(article_type=Article.ArticleType.NEWS_COMMENTARY))
         opinion_pieces = pick(HomepageSection.OPINION, 3, Q(article_type__in=OPINION_TYPES))
@@ -103,19 +122,42 @@ class HomeView(TemplateView):
         prefetch_related_objects(opinion_pieces, 'articleauthor_set__user')
         prefetch_related_objects(research_highlights, 'articleauthor_set__user', 'issue')
 
-        context['latest_news'] = latest_news
-        context['opinion_pieces'] = opinion_pieces
-        context['research_highlights'] = research_highlights
+        sections['latest_news'] = latest_news
+        sections['opinion_pieces'] = opinion_pieces
+        sections['research_highlights'] = research_highlights
 
-        context['special_issues'] = Issue.objects.all()[:3]
-        context['board_preview'] = EditorialBoardMember.objects.filter(is_active=True)[:6]
+        sections['special_issues'] = list(Issue.objects.all()[:3])
+        sections['board_preview'] = list(EditorialBoardMember.objects.filter(is_active=True)[:6])
+        return sections
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        sections = cache.get(self.CACHE_KEY)
+        if sections is None:
+            sections = self._build_sections()
+            cache.set(self.CACHE_KEY, sections, self.CACHE_TTL)
+        context.update(sections)
+
+        # Hides the homepage newsletter CTA (templates/home.html) for a
+        # logged-in reader who's already confirmed — no point nagging them.
+        # Always shown to anonymous visitors, who might not have an account.
+        # Deliberately computed fresh every request, outside the cached
+        # dict above — this is the one piece of the homepage that varies
+        # by visitor and must never be cached.
+        if self.request.user.is_authenticated:
+            context['already_subscribed_to_newsletter'] = Subscriber.objects.filter(
+                user=self.request.user, status=Subscriber.Status.CONFIRMED,
+            ).exists()
         return context
 
 
 class ArticleListView(ListView):
     """All published articles, paginated by 10, optionally filtered by
     ?type=<article_type> (this also serves as the "News" section — pass
-    type=news_commentary — per ROADMAP.md Phase 3 rather than a separate view).
+    type=news_commentary — per ROADMAP.md Phase 3 rather than a separate view)
+    and/or ?keyword=<value> (Article.keywords is a flat comma-separated
+    CharField, not a real tag model — see the split_comma template filter —
+    so this is an icontains match against it, not an exact-tag lookup).
     """
 
     model = Article
@@ -130,12 +172,16 @@ class ArticleListView(ListView):
         article_type = self.request.GET.get('type')
         if article_type:
             queryset = queryset.filter(article_type=article_type)
+        keyword = self.request.GET.get('keyword')
+        if keyword:
+            queryset = queryset.filter(keywords__icontains=keyword)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['article_types'] = Article.ArticleType.choices
         context['selected_type'] = self.request.GET.get('type', '')
+        context['selected_keyword'] = self.request.GET.get('keyword', '')
         return context
 
 
@@ -168,6 +214,24 @@ class ArticleDetailView(DetailView):
         context['related_articles'] = Article.objects.filter(
             status=Article.Status.PUBLISHED, article_type=self.object.article_type,
         ).exclude(pk=self.object.pk).order_by('-publication_date', '-created_at')[:3]
+
+        # Social-share preview (Open Graph/Twitter Card, templates/base.html)
+        # and search-engine structured data — the article page is the one
+        # place on the site actually shared/linked out, so it's the one that
+        # gets real per-page metadata rather than the sitewide default.
+        context['meta_title'] = self.object.title
+        context['meta_description'] = (self.object.abstract or '')[:200]
+        context['og_type'] = 'article'
+        context['canonical_url'] = self.request.build_absolute_uri(self.request.path)
+        image_url = None
+        if self.object.featured_image:
+            image_url = self.request.build_absolute_uri(self.object.featured_image.url)
+        context['meta_image_url'] = image_url
+        context['structured_data_json'] = news_article_structured_data(
+            self.object, journal_name=settings.JOURNAL_NAME, canonical_url=context['canonical_url'],
+            image_url=image_url, publisher_logo_url=self.request.build_absolute_uri(static('images/logo.png')),
+            authors=article_authors,
+        )
         return context
 
 
@@ -233,11 +297,31 @@ def article_citation(request, slug, citation_format):
         content = f'{", ".join(authors)} ({year}). {article.title}. Ajna Health Lens.\n'
         content_type = 'text/plain'
 
+    # citation_count was a migrated-but-never-incremented field (August 2026
+    # gap audit) — an F() update avoids a read-modify-write race between
+    # concurrent citation requests for the same article.
+    Article.objects.filter(pk=article.pk).update(citation_count=F('citation_count') + 1)
+
     response = HttpResponse(content, content_type=content_type)
     response['Content-Disposition'] = f'attachment; filename="{article.slug}.{citation_format}"'
     return response
 
 
+def article_download(request, slug):
+    """Counts a PDF download, then redirects to the real file — the PDF
+    itself is served directly (by Django in dev, nginx in production per
+    ARCHITECTURE.md §9.2), so this small indirection is the only hook point
+    for download_count (previously migrated but never incremented — August
+    2026 gap audit). Same paywall gate as the article page itself.
+    """
+    article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
+    if not article.pdf_file or not article_is_accessible(request.user, article):
+        raise Http404
+    Article.objects.filter(pk=article.pk).update(download_count=F('download_count') + 1)
+    return redirect(article.pdf_file.url)
+
+
+@method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True), name='dispatch')
 class SearchView(ListView):
     model = Article
     template_name = 'articles/search_results.html'
@@ -248,7 +332,7 @@ class SearchView(ListView):
         self.query = self.request.GET.get('q', '').strip()
         queryset = Article.objects.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__user')
+        ).prefetch_related('articleauthor_set__user')
         if self.query:
             queryset = queryset.filter(
                 Q(title__icontains=self.query)
@@ -257,6 +341,14 @@ class SearchView(ListView):
                 | Q(authors__first_name__icontains=self.query)
                 | Q(authors__last_name__icontains=self.query)
             ).distinct()
+            # Lightweight relevance signal — a title match ranks ahead of an
+            # abstract/keyword/author-only match, no full-text index needed.
+            # See ROADMAP.md Phase 9 for the (still-open) real-index gap.
+            queryset = queryset.annotate(
+                relevance=Case(When(title__icontains=self.query, then=0), default=1, output_field=IntegerField()),
+            ).order_by('relevance', '-publication_date', '-created_at')
+        else:
+            queryset = queryset.order_by('-publication_date', '-created_at')
         return queryset
 
     def get_context_data(self, **kwargs):

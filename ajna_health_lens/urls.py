@@ -1,7 +1,11 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
+
+from articles.sitemaps import sitemaps
+from ajna_health_lens.views import robots_txt
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -14,6 +18,8 @@ urlpatterns = [
     path('', include('billing.urls')),
     path('', include('newsletter.urls')),
     path('editorial/', include('admin_custom.urls')),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
+    path('robots.txt', robots_txt, name='robots_txt'),
 ]
 
 # Django serves /media/ itself only in DEBUG — Django's own docs call this

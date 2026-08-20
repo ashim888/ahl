@@ -193,6 +193,31 @@
 </section>
 {% endif %}
 
+{% if not user.is_authenticated or not already_subscribed_to_newsletter %}
+<section class="border-t-2 border-foreground bg-foreground text-primary-foreground">
+    <div class="max-w-7xl mx-auto px-6 py-14 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="text-center md:text-left">
+            <p class="font-mono-editorial text-xs tracking-widest opacity-50 mb-2">FREE NEWSLETTER</p>
+            <h3 class="font-display text-2xl md:text-3xl font-bold" style="letter-spacing: -0.02em;">
+                Get our best health journalism in your inbox.
+            </h3>
+            <p class="mt-2 text-sm opacity-70">No spam. Unsubscribe anytime.</p>
+        </div>
+        <form method="post" action="{% url 'newsletter:subscribe' %}" class="flex gap-2 w-full md:w-auto flex-shrink-0">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
+            <input type="email" name="email" required placeholder="you@example.com"
+                   class="flex-1 md:w-72 px-4 py-3 text-sm bg-white/10 border border-white/20 text-primary-foreground placeholder-white/40 focus:outline-none focus:border-white/50">
+            <button type="submit"
+                    class="font-mono-editorial text-xs tracking-widest bg-primary-foreground text-foreground px-6 py-3 hover:opacity-80 transition-opacity whitespace-nowrap">
+                SUBSCRIBE
+            </button>
+        </form>
+    </div>
+</section>
+{% endif %}
+
 {% if special_issues %}
 <section class="border-t-2 border-foreground">
     <div class="max-w-7xl mx-auto px-6 py-10">

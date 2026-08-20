@@ -10,6 +10,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 from django.views.generic.detail import DetailView
+from django_ratelimit.decorators import ratelimit
 
 from articles.models import Article
 from training.models import Enrollment
@@ -30,7 +31,13 @@ STAFF_MANAGE_ROLES = User.SENIOR_STAFF_ROLES
 GROUP_MANAGE_ROLES = (User.Role.ADMIN,)
 
 
+@method_decorator(ratelimit(key='ip', rate='10/h', method='POST', block=True), name='dispatch')
 class RegisterView(CreateView):
+    """Rate-limited by IP on POST only — viewing the form (GET) is unlimited,
+    only repeated submit attempts count (bot/abuse mitigation, no CAPTCHA
+    exists on this form yet — see ROADMAP.md Phase 9).
+    """
+
     model = User
     form_class = RegistrationForm
     template_name = 'users/register.html'
@@ -42,7 +49,12 @@ class RegisterView(CreateView):
         return response
 
 
+@method_decorator(ratelimit(key='ip', rate='15/m', method='POST', block=True), name='dispatch')
 class EmailLoginView(LoginView):
+    """Rate-limited by IP on POST only — basic brute-force mitigation. No
+    account-level lockout (django-axes) exists yet — see ROADMAP.md Phase 9.
+    """
+
     template_name = 'users/login.html'
     redirect_authenticated_user = True
 

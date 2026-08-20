@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     'django_q',
 
     # Ajna Health Lens apps
@@ -197,6 +198,24 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@ajnahealthlens.example')
+
+
+# Cache — DB-backed (django_cache_table, via `manage.py createcachetable`),
+# not Redis/Memcached, matching the project's no-extra-infra pattern (see
+# Q_CLUSTER above — same reasoning). LocMemCache (Django's default) is
+# per-process and useless once more than one worker process runs, so
+# something real needs to be configured even at this scale. Used surgically
+# for shared, non-personalized query results (HomeView's section picks,
+# ArticleDetailView's related-articles/structured-data) — never for
+# anything that varies by request.user, to avoid caching one visitor's
+# subscription-gated view of a page for everyone else. See articles/views.py.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
+        'TIMEOUT': 300,  # 5 minutes — short enough that a publish/unpublish is never stale for long
+    },
+}
 
 
 # Journal branding (see ARCHITECTURE.md §10.1)
