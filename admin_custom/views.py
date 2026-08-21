@@ -8,6 +8,7 @@ from django.views.generic import TemplateView
 from articles.models import Article
 from billing.models import UserSubscription
 from newsletter.models import Subscriber
+from pitches.models import StoryPitch
 from training.models import Enrollment, TrainingCourse
 from users.decorators import role_required
 from users.models import User
@@ -74,6 +75,9 @@ class DashboardHomeView(TemplateView):
             status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
         ).count()
         context['newsletter_subscribers'] = Subscriber.objects.filter(status=Subscriber.Status.CONFIRMED).count()
+        context['open_pitches'] = StoryPitch.objects.filter(
+            status__in=[StoryPitch.Status.SUBMITTED, StoryPitch.Status.IN_REVIEW],
+        ).count()
 
         # -- "Articles Created vs Published" bar chart, last 7 days -------
         days = [today - datetime.timedelta(days=i) for i in range(6, -1, -1)]

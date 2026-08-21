@@ -1,0 +1,48 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Pitch Queue — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Pitch Queue{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+        {{ pitches|length }} pitch(es){% if not selected_status %} awaiting a decision{% endif %} from verified authors.
+    </p>
+    <form method="get" class="flex items-end gap-2">
+        <select name="status" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">Open (submitted / in review)</option>
+            {% for value, label in statuses %}
+                <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="mt-6 space-y-4">
+    {% for pitch in pitches %}
+        <div class="border border-gray-200 rounded-lg p-5 bg-white">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div class="min-w-0">
+                    <a href="{% url 'pitches:manage_pitch_detail' pitch.pk %}" class="font-semibold hover:underline">
+                        {{ pitch.title }}
+                    </a>
+                    <p class="text-sm text-gray-600 mt-1">{{ pitch.summary|truncatewords:30 }}</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        {{ pitch.submitter.get_full_name }} &lt;{{ pitch.submitter.email }}&gt; · Submitted {{ pitch.created_at|date:"M j, Y" }}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{{ pitch.get_status_display }}</span>
+                    <a href="{% url 'pitches:manage_pitch_detail' pitch.pk %}" class="text-sm font-medium text-gray-500 hover:text-gray-900 underline">
+                        Review →
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <p class="text-gray-500">Nothing here right now.</p>
+    {% endfor %}
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}

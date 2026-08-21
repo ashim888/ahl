@@ -37,6 +37,25 @@ if DEBUG:
 SITE_BASE_URL = os.environ.get('SITE_BASE_URL', 'http://localhost:8000')
 
 
+# Production security hardening — every setting here defaults to a no-op in
+# dev (DEBUG=True) so nothing changes locally; each only takes its real
+# value once DEBUG=False in an actual deployment. These are exactly the
+# gaps `manage.py check --deploy` flags (W004/W008/W012/W016) when absent.
+# Individually env-overridable in case a specific deployment terminates TLS
+# somewhere in front of Django (a load balancer, etc.) and needs different values.
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', not DEBUG)
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', not DEBUG)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
+SECURE_CONTENT_TYPE_NOSNIFF = env_bool('SECURE_CONTENT_TYPE_NOSNIFF', True)
+# HSTS is the one setting here that's actively harmful to turn on
+# accidentally in dev/staging (browsers cache it stubbornly), hence 0 unless
+# DEBUG=False — a deployment should raise this once HTTPS is confirmed working.
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0' if DEBUG else str(60 * 60 * 24 * 365)))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', not DEBUG)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', not DEBUG)
+X_FRAME_OPTIONS = os.environ.get('X_FRAME_OPTIONS', 'DENY')
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -61,6 +80,7 @@ INSTALLED_APPS = [
     'billing',
     'newsletter',
     'ads',
+    'pitches',
 ]
 
 MIDDLEWARE = [
@@ -161,7 +181,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Env-overridable, same `or` reasoning as MEDIA_ROOT below — a deployment
+# can point collectstatic wherever it actually needs to serve static files
+# from (ARCHITECTURE.md §9 documents this as configurable; it needs to
+# actually be configurable for that to be true).
+STATIC_ROOT = Path(os.environ.get('STATIC_ROOT') or BASE_DIR / 'staticfiles')
 
 # Media files (user uploads: manuscripts, CVs, article PDFs, covers).
 # In production, Django itself does NOT serve these (see the DEBUG check in

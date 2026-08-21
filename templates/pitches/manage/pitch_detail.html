@@ -1,0 +1,81 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{{ pitch.title }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Review Pitch{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <div class="flex items-center justify-between mb-1">
+            <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{{ pitch.get_status_display }}</span>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900 mt-3">{{ pitch.title }}</h1>
+        <p class="text-sm text-gray-500 mt-1">
+            {{ pitch.submitter.get_full_name }} &lt;{{ pitch.submitter.email }}&gt; · Submitted {{ pitch.created_at|date:"M j, Y" }}
+        </p>
+
+        <div class="mt-6">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Pitch</p>
+            <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ pitch.summary }}</p>
+        </div>
+
+        {% if pitch.body %}
+            <div class="mt-6">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Draft Text</p>
+                <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ pitch.body }}</p>
+            </div>
+        {% endif %}
+
+        {% if pitch.article %}
+            <div class="mt-6 rounded-xl bg-green-50 border border-green-100 px-4 py-3 text-sm text-green-800">
+                Promoted to an article — <a href="{% url 'articles:manage_article_update' pitch.article.slug %}" class="underline">edit it here</a>.
+            </div>
+        {% endif %}
+
+        <form method="post" class="mt-8 pt-6 border-t border-gray-100">
+            {% csrf_token %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.editor_feedback %}
+            <button type="submit"
+                    class="mt-4 inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                Save feedback
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-fit">
+        <p class="text-sm font-semibold text-gray-900 mb-4">Decision</p>
+        <div class="space-y-3">
+            {% if pitch.status == 'submitted' %}
+                <form method="post" action="{% url 'pitches:manage_pitch_decide' pitch.pk 'start_review' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full py-2.5 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+                        Mark In Review
+                    </button>
+                </form>
+            {% endif %}
+            {% if pitch.status == 'submitted' or pitch.status == 'in_review' %}
+                <form method="post" action="{% url 'pitches:manage_pitch_decide' pitch.pk 'accept' %}"
+                      onsubmit="return confirm('Accept “{{ pitch.title|escapejs }}”? This creates a draft article.');">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full py-2.5 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800">
+                        Accept &amp; Create Draft Article
+                    </button>
+                </form>
+                <form method="post" action="{% url 'pitches:manage_pitch_decide' pitch.pk 'reject' %}"
+                      onsubmit="return confirm('Reject “{{ pitch.title|escapejs }}”?');">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full py-2.5 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
+                        Reject
+                    </button>
+                </form>
+            {% endif %}
+            {% if pitch.status != 'submitted' and pitch.status != 'in_review' %}
+                <p class="text-sm text-gray-500">This pitch has already been decided.</p>
+            {% endif %}
+        </div>
+        <a href="{% url 'pitches:manage_pitch_queue' %}" class="block mt-6 text-sm text-gray-500 hover:text-gray-900 underline">
+            ← Back to queue
+        </a>
+    </div>
+</div>
+{% endblock %}

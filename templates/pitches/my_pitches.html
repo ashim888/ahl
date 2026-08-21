@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}My Pitches — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    <div class="flex items-center justify-between">
+        <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">My Pitches</h1>
+        <a href="{% url 'pitches:pitch_create' %}"
+           class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors">
+            + NEW PITCH
+        </a>
+    </div>
+
+    <div class="mt-10 divide-y divide-border">
+        {% for pitch in pitches %}
+            <div class="py-6">
+                <div class="flex items-center justify-between gap-4">
+                    <h2 class="font-display text-xl font-bold leading-snug" style="letter-spacing: -0.01em;">{{ pitch.title }}</h2>
+                    <span class="font-mono-editorial text-xs tracking-widest border border-border px-2.5 py-1 shrink-0">
+                        {{ pitch.get_status_display|upper }}
+                    </span>
+                </div>
+                <p class="mt-2 text-sm text-muted-foreground leading-relaxed">{{ pitch.summary|truncatewords:40 }}</p>
+                {% if pitch.editor_feedback %}
+                    <div class="mt-3 border-l-2 border-accent pl-3">
+                        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-1">EDITOR'S NOTE</p>
+                        <p class="text-sm text-muted-foreground">{{ pitch.editor_feedback }}</p>
+                    </div>
+                {% endif %}
+                {% if pitch.article %}
+                    <p class="mt-3 text-xs text-muted-foreground">
+                        {% if pitch.article.status == 'published' %}
+                            <a href="{% url 'articles:article_detail' pitch.article.slug %}" class="underline hover:text-accent">Read the published article →</a>
+                        {% else %}
+                            Turned into a draft article — our editors are finishing it up.
+                        {% endif %}
+                    </p>
+                {% endif %}
+                <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">Submitted {{ pitch.created_at|date:"M j, Y" }}</p>
+            </div>
+        {% empty %}
+            <p class="text-muted-foreground py-10">
+                No pitches yet — <a href="{% url 'pitches:pitch_create' %}" class="underline hover:text-accent">submit your first one</a>.
+            </p>
+        {% endfor %}
+    </div>
+
+    {% include 'includes/pagination.html' %}
+</div>
+{% endblock %}
