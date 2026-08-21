@@ -1,19 +1,24 @@
+import datetime
+
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Case, F, IntegerField, Q, When, prefetch_related_objects
+from django.db.models import Case, Count, F, IntegerField, Q, When, prefetch_related_objects
 from django.http import HttpResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django_ratelimit.decorators import ratelimit
 
-from billing.access import article_is_accessible
+from ads.models import AdSlot
+from ads.services import get_ad_for_zone, record_impression
+from billing.access import article_is_accessible, user_has_active_subscription
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from newsletter.models import Subscriber
@@ -22,7 +27,7 @@ from users.models import User
 
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
-from .models import HOME_SECTIONS_CACHE_KEY, Article
+from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView
 from .seo import news_article_structured_data
 
 # Article types treated as "peer-reviewed research" for the homepage's
@@ -38,6 +43,48 @@ OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_ED
 # §6.3 grants "Access admin: Yes" to Editor/EiC/Admin only. Single source of
 # truth is User.EDITORIAL_ROLES (see users/models.py) — not redefined here.
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
+
+
+VIEW_DEDUP_WINDOW_MINUTES = 30
+
+
+def _record_article_view(request, article):
+    """Powers the homepage's Trending section (HomeView._build_sections) —
+    skips editorial staff (so QA/editing an article doesn't inflate its own
+    numbers) and de-duplicates repeat views from the same session within a
+    short window (a page refresh isn't a new "view"). Falls back to always
+    recording if no session key is available, rather than risking
+    conflating two different sessionless visitors under the same empty key.
+    """
+    if request.user.is_authenticated and request.user.is_editorial_staff:
+        return
+    if not request.session.session_key:
+        request.session.save()
+    session_key = request.session.session_key
+    if not session_key:
+        ArticleView.objects.create(article=article)
+        return
+    cutoff = timezone.now() - datetime.timedelta(minutes=VIEW_DEDUP_WINDOW_MINUTES)
+    recent_duplicate = ArticleView.objects.filter(
+        article=article, session_key=session_key, viewed_at__gte=cutoff,
+    ).exists()
+    if not recent_duplicate:
+        ArticleView.objects.create(article=article, session_key=session_key)
+
+
+def _ad_for_request(request, zone):
+    """None for a reader with an active subscription — "ad-free reading" is
+    a promised subscriber perk (billing app, August 2026) — otherwise picks
+    and records one impression for `zone`. Deliberately never cached
+    (subscription status is per-request, and an impression must be counted
+    on every real view, not once per cache TTL).
+    """
+    if request.user.is_authenticated and user_has_active_subscription(request.user):
+        return None
+    ad = get_ad_for_zone(zone)
+    if ad:
+        record_impression(ad)
+    return ad
 
 
 class ComingSoonView(TemplateView):
@@ -128,6 +175,27 @@ class HomeView(TemplateView):
 
         sections['special_issues'] = list(Issue.objects.all()[:3])
         sections['board_preview'] = list(EditorialBoardMember.objects.filter(is_active=True)[:6])
+
+        # Trending — the one section that's purely algorithm-driven, not
+        # editor-curated (no HomepageSection value for it) and not subject
+        # to the used_pks dedup above; it's fine for a trending piece to
+        # also appear in a curated section. Ranked by ArticleView rows from
+        # the last 7 days, not an all-time count, so this actually reflects
+        # what's hot *now* — see ArticleView in models.py and where these
+        # rows get recorded, ArticleDetailView below.
+        trending_cutoff = timezone.now() - datetime.timedelta(days=7)
+        trending_counts = (
+            ArticleView.objects.filter(viewed_at__gte=trending_cutoff, article__status=Article.Status.PUBLISHED)
+            .values('article').annotate(view_count=Count('id')).order_by('-view_count')[:5]
+        )
+        view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
+        trending_articles = list(
+            Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__user'),
+        )
+        trending_articles.sort(key=lambda article: -view_counts_by_pk[article.pk])
+        for article in trending_articles:
+            article.week_view_count = view_counts_by_pk[article.pk]
+        sections['trending_articles'] = trending_articles
         return sections
 
     def get_context_data(self, **kwargs):
@@ -148,6 +216,8 @@ class HomeView(TemplateView):
             context['already_subscribed_to_newsletter'] = Subscriber.objects.filter(
                 user=self.request.user, status=Subscriber.Status.CONFIRMED,
             ).exists()
+
+        context['homepage_ad'] = _ad_for_request(self.request, AdSlot.Zone.HOMEPAGE)
         return context
 
 
@@ -201,6 +271,9 @@ class ArticleDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        _record_article_view(self.request, self.object)
+        context['sidebar_ad'] = _ad_for_request(self.request, AdSlot.Zone.ARTICLE_SIDEBAR)
+
         article_authors = list(self.object.articleauthor_set.select_related('user').order_by('order'))
         context['article_authors'] = article_authors
         context['featured_author'] = next(

@@ -253,6 +253,12 @@
                         </a>
                     </div>
                 {% endif %}
+
+                {% if sidebar_ad %}
+                    <div class="mb-8">
+                        {% include 'ads/includes/ad_slot.html' with ad=sidebar_ad %}
+                    </div>
+                {% endif %}
             </div>
         </aside>
     </div>

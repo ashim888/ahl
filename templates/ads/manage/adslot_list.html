@@ -1,0 +1,62 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Ads — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Ads{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+        House/direct-sold ads — arranged and priced by you, not an ad network. Never shown to a reader
+        with an active subscription (ad-free reading is a subscriber perk).
+    </p>
+    <a href="{% url 'ads:manage_adslot_create' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
+        + New Ad
+    </a>
+</div>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3">Sponsor</th>
+                <th class="px-4 py-3">Zone</th>
+                <th class="px-4 py-3">Runs</th>
+                <th class="px-4 py-3">Impressions</th>
+                <th class="px-4 py-3">Clicks</th>
+                <th class="px-4 py-3">Active</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for ad in ad_slots %}
+                <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ ad.sponsor_name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ ad.get_zone_display }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {{ ad.start_date }}{% if ad.end_date %} – {{ ad.end_date }}{% else %} – ongoing{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{{ ad.impression_count }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ ad.click_count }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {% if ad.is_currently_active %}<span class="text-green-700">Yes</span>{% elif ad.is_active %}Scheduled{% else %}No{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'ads:manage_adslot_update' ad.pk %}" class="underline mr-3">Edit</a>
+                        <form method="post" action="{% url 'ads:manage_adslot_toggle_active' ad.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="underline text-gray-700">
+                                {% if ad.is_active %}Deactivate{% else %}Activate{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">No ads yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}

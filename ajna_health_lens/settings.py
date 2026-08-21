@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'editorial_board',
     'billing',
     'newsletter',
+    'ads',
 ]
 
 MIDDLEWARE = [
@@ -233,6 +234,7 @@ PROFILE_PHOTO_MAX_UPLOAD_SIZE_MB = 5
 ISSUE_COVER_MAX_UPLOAD_SIZE_MB = 10
 ARTICLE_PDF_MAX_UPLOAD_SIZE_MB = 100
 ARTICLE_IMAGE_MAX_UPLOAD_SIZE_MB = 10
+AD_IMAGE_MAX_UPLOAD_SIZE_MB = 5
 
 
 # Async task queue (Django-Q2) — used for bulk newsletter sends so a

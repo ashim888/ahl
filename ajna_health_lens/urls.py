@@ -17,6 +17,7 @@ urlpatterns = [
     path('', include('training.urls')),
     path('', include('billing.urls')),
     path('', include('newsletter.urls')),
+    path('', include('ads.urls')),
     path('editorial/', include('admin_custom.urls')),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
     path('robots.txt', robots_txt, name='robots_txt'),

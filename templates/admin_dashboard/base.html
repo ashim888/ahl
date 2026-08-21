@@ -193,6 +193,13 @@
                 </svg>
                 Newsletter
             </a>
+            <a href="{% url 'ads:manage_adslot_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'ads:manage' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h18v18H3V3Zm4 4h10v6H7V7Zm0 8h6v3H7v-3Z"/>
+                </svg>
+                Ads
+            </a>
             <a href="{% url 'admin_custom:revenue' %}"
                class="flex items-center gap-3 px-3 py-2 rounded-lg {% if view_name == 'admin_custom:revenue' %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

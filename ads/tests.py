@@ -1,0 +1,105 @@
+import datetime
+import io
+
+from django.core.files.base import ContentFile
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+from PIL import Image
+
+from users.models import User
+
+from .models import AdSlot
+from .services import get_ad_for_zone, record_click, record_impression
+
+
+def demo_image(name='ad.jpg'):
+    buffer = io.BytesIO()
+    Image.new('RGB', (10, 10)).save(buffer, format='JPEG')
+    return ContentFile(buffer.getvalue(), name=name)
+
+
+def make_ad(zone=AdSlot.Zone.HOMEPAGE, is_active=True, start_date=None, end_date=None, sponsor_name='Test Sponsor'):
+    return AdSlot.objects.create(
+        sponsor_name=sponsor_name, zone=zone, image=demo_image(), link_url='https://example.com/sponsor',
+        is_active=is_active, start_date=start_date or timezone.localdate(), end_date=end_date,
+    )
+
+
+class AdSelectionTests(TestCase):
+    def test_active_ad_in_zone_is_selected(self):
+        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE)
+        self.assertEqual(get_ad_for_zone(AdSlot.Zone.HOMEPAGE), ad)
+
+    def test_wrong_zone_is_not_selected(self):
+        make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR)
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE))
+
+    def test_inactive_ad_is_not_selected(self):
+        make_ad(zone=AdSlot.Zone.HOMEPAGE, is_active=False)
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE))
+
+    def test_not_yet_started_ad_is_not_selected(self):
+        make_ad(zone=AdSlot.Zone.HOMEPAGE, start_date=timezone.localdate() + datetime.timedelta(days=1))
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE))
+
+    def test_expired_ad_is_not_selected(self):
+        make_ad(
+            zone=AdSlot.Zone.HOMEPAGE,
+            start_date=timezone.localdate() - datetime.timedelta(days=10),
+            end_date=timezone.localdate() - datetime.timedelta(days=1),
+        )
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE))
+
+    def test_ad_with_no_end_date_runs_indefinitely(self):
+        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE, end_date=None)
+        self.assertEqual(get_ad_for_zone(AdSlot.Zone.HOMEPAGE), ad)
+
+
+class ImpressionAndClickTrackingTests(TestCase):
+    def test_record_impression_increments(self):
+        ad = make_ad()
+        record_impression(ad)
+        record_impression(ad)
+        ad.refresh_from_db()
+        self.assertEqual(ad.impression_count, 2)
+
+    def test_record_click_increments(self):
+        ad = make_ad()
+        record_click(ad)
+        ad.refresh_from_db()
+        self.assertEqual(ad.click_count, 1)
+
+    def test_click_view_redirects_and_counts(self):
+        ad = make_ad()
+        response = self.client.get(reverse('ads:click', args=[ad.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, ad.link_url)
+        ad.refresh_from_db()
+        self.assertEqual(ad.click_count, 1)
+
+
+class AdSlotManageTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='ad-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='ad-reader@example.com', password='pw', first_name='R', last_name='D')
+
+    def test_editorial_staff_can_list_ads(self):
+        make_ad()
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_reader_cannot_access_ad_management(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_toggle_active(self):
+        ad = make_ad(is_active=True)
+        self.client.force_login(self.editor)
+        self.client.post(reverse('ads:manage_adslot_toggle_active', args=[ad.pk]))
+        ad.refresh_from_db()
+        self.assertFalse(ad.is_active)

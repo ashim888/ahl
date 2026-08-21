@@ -6,7 +6,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from articles.models import Article, ArticleAuthor
+from ads.models import AdSlot
+from articles.models import Article, ArticleAuthor, ArticleView
 from billing.models import PlanFeature, SubscriptionPlan
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
@@ -24,6 +25,21 @@ DEMO_PASSWORD = 'DemoPass123!'
 
 def demo_pdf(name):
     return ContentFile(f'%PDF-1.4 demo content for {name}'.encode(), name=name)
+
+
+def demo_jpeg(name, size=(600, 200), color=(210, 210, 200)):
+    """A real, validly-encoded JPEG (via Pillow, already a project
+    dependency) — not just renamed text bytes, since it needs to actually
+    render as an <img> in the demo (ad banners, etc.), not just pass an
+    extension check.
+    """
+    import io
+
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new('RGB', size, color=color).save(buffer, format='JPEG')
+    return ContentFile(buffer.getvalue(), name=name)
 
 
 # Full-text body for the case report demo article — shows what an open-access
@@ -157,6 +173,8 @@ class Command(BaseCommand):
             self.seed_training()
             self.seed_editorial_board()
             self.seed_subscription_plans()
+            self.seed_ads()
+            self.seed_article_views(articles)
 
         self.stdout.write(self.style.SUCCESS('\nDemo data seeded.'))
         self.stdout.write(f'All seeded users share the password: {DEMO_PASSWORD}')
@@ -557,3 +575,51 @@ class Command(BaseCommand):
             plan.features.set([features[label] for label in feature_labels[:feature_count]])
 
         self.stdout.write(f'  {count} subscription plans created.')
+
+    # -- Ads --------------------------------------------------------------
+
+    def seed_ads(self):
+        self.stdout.write('Seeding ads...')
+        specs = [
+            dict(sponsor_name='Himalayan Diagnostics Lab', zone=AdSlot.Zone.HOMEPAGE,
+                 link_url='https://example.com/himalayan-diagnostics'),
+            dict(sponsor_name='Kathmandu Medical Conference 2026', zone=AdSlot.Zone.ARTICLE_SIDEBAR,
+                 link_url='https://example.com/kmc-2026'),
+        ]
+        count = 0
+        for spec in specs:
+            ad, created = AdSlot.objects.get_or_create(
+                sponsor_name=spec['sponsor_name'], defaults={
+                    **spec, 'image': demo_jpeg(f"{spec['zone']}.jpg"),
+                },
+            )
+            count += created
+        self.stdout.write(f'  {count} ads created.')
+
+    # -- Article page views (for the homepage's Trending section) ---------
+
+    def seed_article_views(self, articles):
+        self.stdout.write('Seeding article page views...')
+        # A handful of published articles get simulated recent traffic so
+        # the homepage's Trending This Week section (purely data-driven,
+        # not editor-curated — see HomeView) has something to show out of
+        # the box instead of sitting empty until real readers show up.
+        trending_slugs = [
+            'maternal-health-outcomes-rural-nepal',
+            'news-tb-screening-guidelines-update',
+            'case-report-rare-cardiac-presentation',
+        ]
+        view_counts = [12, 8, 5]
+        count = 0
+        for slug, views in zip(trending_slugs, view_counts):
+            article = articles.get(slug)
+            if not article:
+                continue
+            existing = ArticleView.objects.filter(article=article).count()
+            for i in range(max(views - existing, 0)):
+                # session_key is max_length=40 — a short synthetic key,
+                # unique per (article, i), is enough to avoid the live
+                # dedup window ever colliding across these seeded rows.
+                ArticleView.objects.create(article=article, session_key=f'seed-{article.pk}-{i}')
+                count += 1
+        self.stdout.write(f'  {count} article views created.')

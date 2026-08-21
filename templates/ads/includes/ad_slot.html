@@ -1,0 +1,15 @@
+{% comment %}
+Renders a single house ad. Usage:
+    {% include 'ads/includes/ad_slot.html' with ad=homepage_ad %}
+`ad` may be None (no active sponsor for the zone, or the viewer has an
+active subscription — see articles/views.py:_ad_for_request) — renders
+nothing in that case.
+{% endcomment %}
+{% if ad %}
+    <div class="border border-border bg-secondary">
+        <p class="font-mono-editorial text-[0.6rem] text-muted-foreground tracking-widest px-3 pt-2">SPONSORED</p>
+        <a href="{% url 'ads:click' ad.pk %}" target="_blank" rel="sponsored noopener" class="block p-3 pt-1">
+            <img src="{{ ad.image.url }}" alt="{{ ad.sponsor_name }}" class="w-full h-auto">
+        </a>
+    </div>
+{% endif %}

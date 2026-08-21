@@ -2,6 +2,7 @@ import datetime
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import Article
 
@@ -279,3 +280,127 @@ class HomepageNewsletterCTATests(TestCase):
         self.client.force_login(reader)
         response = self.client.get(reverse('articles:home'))
         self.assertNotContains(response, 'FREE NEWSLETTER')
+
+
+class ArticleViewTrackingTests(TestCase):
+    """First-party page-view tracking (August 2026 decision — no third-party
+    analytics vendor). ArticleView rows power the homepage's Trending
+    section; see articles/views.py:_record_article_view.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_viewing_an_article_records_a_view(self):
+        article = make_article('viewed-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.assertEqual(article.page_views.count(), 0)
+        self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertEqual(article.page_views.count(), 1)
+
+    def test_repeat_view_in_same_session_is_deduplicated(self):
+        article = make_article('deduped-article', Article.ArticleType.NEWS_COMMENTARY)
+        for _ in range(3):
+            self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertEqual(article.page_views.count(), 1)
+
+    def test_editorial_staff_views_are_not_recorded(self):
+        from users.models import User
+
+        editor = User.objects.create_user(
+            email='view-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        article = make_article('staff-viewed-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.client.force_login(editor)
+        self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertEqual(article.page_views.count(), 0)
+
+
+class TrendingSectionTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_articles_ranked_by_recent_view_count(self):
+        from articles.models import ArticleView
+
+        popular = make_article('popular-article', Article.ArticleType.NEWS_COMMENTARY)
+        unpopular = make_article('unpopular-article', Article.ArticleType.NEWS_COMMENTARY)
+        for i in range(5):
+            ArticleView.objects.create(article=popular, session_key=f's{i}')
+        ArticleView.objects.create(article=unpopular, session_key='s0')
+
+        response = self.client.get(reverse('articles:home'))
+        trending = list(response.context['trending_articles'])
+        self.assertEqual(trending[0], popular)
+        self.assertIn(unpopular, trending)
+
+    def test_views_older_than_a_week_are_excluded(self):
+        import datetime
+
+        from articles.models import ArticleView
+
+        article = make_article('stale-trending-article', Article.ArticleType.NEWS_COMMENTARY)
+        old_view = ArticleView.objects.create(article=article, session_key='old')
+        ArticleView.objects.filter(pk=old_view.pk).update(
+            viewed_at=timezone.now() - datetime.timedelta(days=10),
+        )
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotIn(article, response.context['trending_articles'])
+
+    def test_unpublished_articles_never_trend(self):
+        from articles.models import ArticleView
+
+        draft = make_article('draft-trending-article', Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT)
+        ArticleView.objects.create(article=draft, session_key='s0')
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotIn(draft, response.context['trending_articles'])
+
+
+class AdFreeSubscriberPerkTests(TestCase):
+    """"Ad-free reading" is a promised subscriber perk (billing app) —
+    articles/views.py:_ad_for_request is the one place that enforces it.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+        import io
+
+        from django.core.files.base import ContentFile
+        from PIL import Image
+
+        from ads.models import AdSlot
+
+        buffer = io.BytesIO()
+        Image.new('RGB', (10, 10)).save(buffer, format='JPEG')
+        self.ad = AdSlot.objects.create(
+            sponsor_name='Test Sponsor', zone=AdSlot.Zone.HOMEPAGE,
+            image=ContentFile(buffer.getvalue(), name='ad.jpg'), link_url='https://example.com',
+        )
+
+    def test_anonymous_visitor_sees_ad(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertEqual(response.context['homepage_ad'], self.ad)
+
+    def test_active_subscriber_does_not_see_ad(self):
+        from users.models import User
+        from billing.models import SubscriptionPlan, UserSubscription
+
+        reader = User.objects.create_user(email='ad-free-reader@example.com', password='pw', first_name='A', last_name='F')
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:home'))
+        self.assertIsNone(response.context['homepage_ad'])
+
+    def test_impression_is_recorded_when_ad_shown(self):
+        self.client.get(reverse('articles:home'))
+        self.ad.refresh_from_db()
+        self.assertEqual(self.ad.impression_count, 1)

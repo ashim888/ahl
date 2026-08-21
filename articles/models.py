@@ -11,7 +11,7 @@ from .validators import (
 # Shared with articles/views.py HomeView, which caches under this key —
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
-HOME_SECTIONS_CACHE_KEY = 'home:sections:v1'
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v2'
 
 
 class Article(models.Model):
@@ -172,3 +172,26 @@ class ArticleAuthor(models.Model):
 
     def __str__(self):
         return f'{self.user} on {self.article}'
+
+
+class ArticleView(models.Model):
+    """One page-view event — first-party, no third-party analytics vendor
+    (August 2026 decision: buildable without an external account, unlike
+    GA/Plausible/PostHog). Timestamped events, not just a running total on
+    Article, so a real "trending this week" is possible, not just an
+    all-time counter. See HomeView._build_sections (articles/views.py) for
+    the trending query and ArticleDetailView for where these get recorded.
+    """
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='page_views')
+    session_key = models.CharField(
+        max_length=40, blank=True,
+        help_text='Django session key, used only to de-duplicate repeat views within a short window — no IP/fingerprinting.',
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['article', 'viewed_at'])]
+
+    def __str__(self):
+        return f'View of {self.article} at {self.viewed_at}'
