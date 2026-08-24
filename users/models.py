@@ -133,6 +133,40 @@ class User(AbstractUser):
     # so a bulk queue action can never downgrade an already-privileged account.
     VERIFICATION_QUEUE_ROLES = (Role.UNVERIFIED, Role.VERIFIED_AUTHOR)
 
+    # -- Centralized RBAC role groups ------------------------------------
+    # Single source of truth for "who can do X" — every view.py's
+    # role_required(...) call and every template's role check should
+    # reference these (via the is_editorial_staff/is_senior_staff properties
+    # below for templates), not redefine the tuple locally. Before this,
+    # EDITORIAL_ROLES was independently copy-pasted in six different
+    # views.py files and role checks were inline `user.role == 'x' or
+    # user.role == 'y'` chains in templates — both were free to drift out
+    # of sync with each other. See ARCHITECTURE.md §6.2.
+    EDITORIAL_ROLES = (Role.EDITOR, Role.EDITOR_IN_CHIEF, Role.ADMIN)
+    SENIOR_STAFF_ROLES = (Role.EDITOR_IN_CHIEF, Role.ADMIN)
+
+    @property
+    def is_editorial_staff(self):
+        """Editor, Editor-in-Chief, or Admin — the general "can use the
+        editorial dashboard" boundary. Matches role_required(*User.EDITORIAL_ROLES).
+        """
+        return self.is_superuser or self.role in self.EDITORIAL_ROLES
+
+    @property
+    def is_senior_staff(self):
+        """Editor-in-Chief or Admin — verification decisions, staff-account
+        management. Matches role_required(*User.SENIOR_STAFF_ROLES).
+        """
+        return self.is_superuser or self.role in self.SENIOR_STAFF_ROLES
+
+    @property
+    def is_admin(self):
+        """Admin only — raw Django Group/Permission management (see
+        users/views.py GroupManageListView) is more sensitive than granting
+        a role, so it's narrower than is_senior_staff.
+        """
+        return self.is_superuser or self.role == self.Role.ADMIN
+
     def approve_verification(self):
         """Promote to Verified Author. No-op (returns False) for roles the
         verification queue doesn't govern, e.g. Editor/EiC/Admin.

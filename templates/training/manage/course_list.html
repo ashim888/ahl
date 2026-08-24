@@ -12,10 +12,23 @@
     </a>
 </div>
 
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Active</label>
+        <select name="active" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All</option>
+            <option value="yes" {% if selected_active == 'yes' %}selected{% endif %}>Active</option>
+            <option value="no" {% if selected_active == 'no' %}selected{% endif %}>Inactive</option>
+        </select>
+    </div>
+</form>
+
 <div class="mt-6 overflow-x-auto">
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
             <tr>
+                <th class="px-4 py-3">#</th>
                 <th class="px-4 py-3">Title</th>
                 <th class="px-4 py-3">Instructor</th>
                 <th class="px-4 py-3">Price</th>
@@ -27,6 +40,7 @@
         <tbody class="divide-y divide-gray-200 bg-white">
             {% for course in courses %}
                 <tr>
+                    <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
                     <td class="px-4 py-3 font-medium text-gray-900">{{ course.title }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ course.instructor }}</td>
                     <td class="px-4 py-3 text-gray-600">${{ course.price }}</td>
@@ -37,12 +51,16 @@
                     </td>
                     <td class="px-4 py-3 text-gray-600">{% if course.is_active %}Yes{% else %}No{% endif %}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
-                        <a href="{% url 'training:manage_course_update' course.pk %}" class="underline mr-3">Edit</a>
-                        <a href="{% url 'training:manage_course_delete' course.pk %}" class="underline text-red-700">Delete</a>
+                        <a href="{% url 'training:manage_course_update' course.pk %}" class="icon-action-btn" title="Edit" aria-label="Edit">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5m-1.5-9.5a2.121 2.121 0 0 1 3 3L12 17l-4 1 1-4 9.5-9.5Z"/></svg>
+                        </a>
+                        <a href="{% url 'training:manage_course_delete' course.pk %}" class="icon-action-btn icon-action-danger" title="Delete" aria-label="Delete">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m2 0v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7h12ZM10 11v6M14 11v6"/></svg>
+                        </a>
                     </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No training courses yet.</td></tr>
+                <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">No training courses yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

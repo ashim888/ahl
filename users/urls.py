@@ -17,6 +17,7 @@ urlpatterns = [
     path('pending-verification/reapply/', views.reapply_verification, name='reapply_verification'),
 
     path('verification-queue/', views.verification_queue, name='verification_queue'),
+    path('verification-queue/<int:pk>/', views.verification_detail, name='verification_detail'),
     path(
         'verification-queue/<int:pk>/<str:decision>/',
         views.verification_decide, name='verification_decide',
@@ -26,6 +27,23 @@ urlpatterns = [
     path('manage/authors/new/', views.AuthorCreateView.as_view(), name='manage_author_create'),
     path('manage/authors/<int:pk>/edit/', views.AuthorUpdateView.as_view(), name='manage_author_update'),
     path('manage/authors/<int:pk>/toggle-active/', views.author_toggle_active, name='manage_author_toggle_active'),
+
+    path('manage/staff/', views.StaffManageListView.as_view(), name='manage_staff_list'),
+    path('manage/staff/new/', views.StaffCreateView.as_view(), name='manage_staff_create'),
+    path('manage/staff/<int:pk>/edit/', views.StaffUpdateView.as_view(), name='manage_staff_update'),
+    path('manage/staff/<int:pk>/toggle-active/', views.staff_toggle_active, name='manage_staff_toggle_active'),
+
+    path('manage/permissions/', views.PermissionsListView.as_view(), name='manage_permissions_list'),
+    # The actual permission-setting screen — see ChangeRoleForm's docstring
+    # for why this exists separately from the Authors/Staff screens above.
+    path('manage/users/<int:pk>/change-role/', views.change_role, name='change_role'),
+    path('manage/users/<int:pk>/groups/', views.manage_user_groups, name='manage_user_groups'),
+
+    # Django Group/Permission config (Admin only) — see GroupForm's docstring.
+    path('manage/groups/', views.GroupManageListView.as_view(), name='manage_group_list'),
+    path('manage/groups/new/', views.GroupCreateView.as_view(), name='manage_group_create'),
+    path('manage/groups/<int:pk>/edit/', views.GroupUpdateView.as_view(), name='manage_group_update'),
+    path('manage/groups/<int:pk>/delete/', views.GroupDeleteView.as_view(), name='manage_group_delete'),
 
     path(
         'password-reset/',

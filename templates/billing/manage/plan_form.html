@@ -1,0 +1,58 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{% if is_create %}New Plan{% else %}Edit Plan{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if is_create %}New Plan{% else %}Edit Plan{% endif %}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="space-y-5">
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.name %}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.plan_type %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.price %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.duration_days %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.description %}
+
+            <div>
+                <p class="block text-sm font-medium text-gray-700 mb-2">Features shown on the plan detail page</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 border border-gray-200 rounded-lg p-4">
+                    {% for checkbox in form.features %}
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                            {{ checkbox.tag }}
+                            {{ checkbox.choice_label }}
+                        </label>
+                    {% empty %}
+                        <p class="text-sm text-gray-400">No features defined yet — add some via /admin/billing/planfeature/.</p>
+                    {% endfor %}
+                </div>
+                {% for error in form.features.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div class="flex items-center gap-8">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.is_featured %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.is_active %}
+            </div>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+            <button type="submit"
+                    class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                {% if is_create %}Create plan{% else %}Save changes{% endif %}
+            </button>
+            <a href="{% url 'billing:manage_plan_list' %}"
+               class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

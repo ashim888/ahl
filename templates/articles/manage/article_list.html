@@ -33,16 +33,28 @@
                 {% endfor %}
             </select>
         </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Homepage section</label>
+            <select name="homepage_section" onchange="this.form.submit()"
+                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                <option value="">All (featured or not)</option>
+                {% for value, label in homepage_sections %}
+                    <option value="{{ value }}" {% if value == selected_homepage_section %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
     </form>
 
     <div class="mt-6 overflow-x-auto">
         <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
             <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                 <tr>
+                    <th class="px-4 py-3">#</th>
                     <th class="px-4 py-3">Title</th>
                     <th class="px-4 py-3">Type</th>
                     <th class="px-4 py-3">Access</th>
                     <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Homepage</th>
                     <th class="px-4 py-3">Issue</th>
                     <th class="px-4 py-3">Updated</th>
                     <th class="px-4 py-3"></th>
@@ -51,19 +63,53 @@
             <tbody class="divide-y divide-gray-200 bg-white">
                 {% for article in articles %}
                     <tr>
-                        <td class="px-4 py-3 font-medium text-gray-900">{{ article.title }}</td>
+                        <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-900">
+                            {% if article.is_pinned %}<span class="mr-1" title="Pinned to top">📌</span>{% endif %}
+                            {{ article.title }}
+                        </td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_article_type_display }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_access_type_display }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_status_display }}</td>
+                        <td class="px-4 py-3 text-gray-600">
+                            {% if article.homepage_section %}
+                                <span class="inline-block px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">
+                                    {{ article.get_homepage_section_display }}
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3 text-gray-600">{{ article.issue|default:"—" }}</td>
                         <td class="px-4 py-3 text-gray-500">{{ article.updated_at|date:"M j, Y" }}</td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <a href="{% url 'articles:manage_article_update' article.slug %}" class="underline mr-3">Edit</a>
-                            <a href="{% url 'articles:manage_article_delete' article.slug %}" class="underline text-red-700">Delete</a>
+                            <a href="{% url 'articles:manage_article_update' article.slug %}" class="icon-action-btn" title="Edit" aria-label="Edit">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5m-1.5-9.5a2.121 2.121 0 0 1 3 3L12 17l-4 1 1-4 9.5-9.5Z"/></svg>
+                            </a>
+                            <a href="{% url 'articles:manage_article_authors' article.slug %}" class="icon-action-btn" title="Authors" aria-label="Authors">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/></svg>
+                            </a>
+                            <form method="post" action="{% url 'articles:manage_article_quick_publish' article.slug %}" class="inline"
+                                  onsubmit="return confirm('{% if article.status == 'published' %}Unpublish “{{ article.title|escapejs }}”? It will no longer be visible on the public site.{% else %}Publish “{{ article.title|escapejs }}” now? It will immediately become visible on the public site.{% endif %}');">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="icon-action-btn {% if article.status == 'published' %}icon-action-danger{% else %}icon-action-success{% endif %}"
+                                        title="{% if article.status == 'published' %}Unpublish{% else %}Publish{% endif %}"
+                                        aria-label="{% if article.status == 'published' %}Unpublish{% else %}Publish{% endif %}">
+                                    {% if article.status == 'published' %}
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a10.94 10.94 0 0 0 5.39-1.61M1 1l22 22"/></svg>
+                                    {% else %}
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    {% endif %}
+                                </button>
+                            </form>
+                            <a href="{% url 'articles:manage_article_delete' article.slug %}" class="icon-action-btn icon-action-danger" title="Delete" aria-label="Delete">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m2 0v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7h12ZM10 11v6M14 11v6"/></svg>
+                            </a>
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">No articles yet.</td></tr>
+                    <tr><td colspan="9" class="px-4 py-6 text-center text-gray-500">No articles yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -1,0 +1,23 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Delete Issue — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Delete Issue{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <p class="text-gray-700">
+        Delete "<strong>{{ issue }}</strong>"? This does not delete its {{ issue.articles.count }} assigned article(s) —
+        they keep their own record but lose their issue assignment. This cannot be undone.
+        If you just want to hide the issue, edit it and uncheck "Published" instead.
+    </p>
+
+    <form method="post" class="mt-8 flex gap-3">
+        {% csrf_token %}
+        <button type="submit" class="py-2.5 px-6 rounded-md bg-red-700 text-white font-medium hover:bg-red-800">
+            Delete permanently
+        </button>
+        <a href="{% url 'issues:manage_issue_list' %}"
+           class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">Cancel</a>
+    </form>
+</div>
+{% endblock %}

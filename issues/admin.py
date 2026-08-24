@@ -18,6 +18,7 @@ class ArticleInline(admin.TabularInline):
 
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
-    list_display = ['__str__', 'volume', 'number', 'publication_date', 'is_published']
+    list_display = ['title', 'slug', 'publication_date', 'is_published']
     list_filter = ['is_published']
+    prepopulated_fields = {'slug': ('title',)}
     inlines = [ArticleInline]

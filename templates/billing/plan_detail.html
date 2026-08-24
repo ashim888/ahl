@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ plan.name }} — Subscribe — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    <a href="{% url 'billing:plan_browse' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">← All plans</a>
+
+    <div class="mt-6 grid md:grid-cols-5 gap-10">
+        <div class="md:col-span-3">
+            {% if plan.is_featured %}
+                <p class="font-mono-editorial text-xs text-accent tracking-widest mb-2">MOST POPULAR</p>
+            {% endif %}
+            <span class="section-label text-accent">{{ plan.get_plan_type_display }}</span>
+            <h1 class="font-display text-3xl md:text-4xl font-bold mt-2 leading-tight" style="letter-spacing: -0.02em;">{{ plan.name }}</h1>
+
+            {% if plan.description %}
+                <p class="mt-4 text-muted-foreground leading-relaxed" style="font-family: Georgia, serif; line-height: 1.75;">
+                    {{ plan.description }}
+                </p>
+            {% endif %}
+
+            <div class="mt-10">
+                <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-4">WHAT'S INCLUDED</p>
+                <ul class="space-y-3">
+                    {% for feature in plan_features %}
+                        <li class="flex items-start gap-3">
+                            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/>
+                            </svg>
+                            <span class="text-sm text-foreground leading-relaxed">{{ feature.label }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="text-sm text-muted-foreground">Full details coming soon.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="md:col-span-2">
+            <div class="border border-border bg-card p-6 sticky top-24">
+                <div class="flex items-baseline gap-1">
+                    <span class="font-display text-4xl font-bold">₹{{ plan.price }}</span>
+                </div>
+                <p class="font-mono-editorial text-xs text-muted-foreground mt-1">
+                    billed every {{ plan.duration_days }} days
+                </p>
+                <div class="rule-thin my-5"></div>
+
+                {% if already_subscribed %}
+                    <div class="border border-foreground bg-secondary px-4 py-3 mb-4">
+                        <p class="text-sm font-medium">You already have an active subscription.</p>
+                    </div>
+                    <a href="{% url 'users:profile' %}"
+                       class="block text-center font-mono-editorial text-xs tracking-widest border border-foreground px-6 py-3 hover:border-accent hover:text-accent transition-colors">
+                        VIEW MY SUBSCRIPTION
+                    </a>
+                {% else %}
+                    <a href="{% url 'billing:subscribe_checkout' plan.pk %}"
+                       class="block text-center font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                        SUBSCRIBE NOW
+                    </a>
+                    <p class="text-xs text-muted-foreground leading-relaxed mt-4">
+                        Payment processing isn't live yet — checkout runs in test mode and activates access immediately.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if plans|length > 1 %}
+        <div class="mt-16 pt-10 border-t-2 border-foreground">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">COMPARE PLANS</p>
+            <h2 class="font-display text-2xl font-bold mb-8" style="letter-spacing: -0.02em;">See how {{ plan.name }} compares</h2>
+            {% include 'billing/includes/comparison_table.html' with plans=plans comparison_matrix=comparison_matrix %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

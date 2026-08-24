@@ -1,0 +1,57 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{% if is_create %}New Group{% else %}Edit Group{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if is_create %}New Group{% else %}Edit Group{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mx-auto">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.name %}
+            {% for error in form.permissions.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+
+            <div class="mt-6">
+                <p class="block text-sm font-medium text-gray-700 mb-3">Permissions</p>
+                <div class="space-y-2">
+                    {% for app_label, perms in form.permissions_by_app %}
+                        <details class="border border-gray-200 rounded-lg">
+                            <summary class="cursor-pointer px-4 py-2.5 text-sm font-medium text-gray-700 select-none hover:bg-gray-50">
+                                {{ app_label }}
+                                <span class="text-xs text-gray-400 font-normal">
+                                    ({{ perms|length }} permission{{ perms|length|pluralize }})
+                                </span>
+                            </summary>
+                            <div class="px-4 py-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {% for perm, checked in perms %}
+                                    <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                                        <input type="checkbox" name="permissions" value="{{ perm.pk }}" {% if checked %}checked{% endif %}>
+                                        {{ perm.name }}
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+                <button type="submit"
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    {% if is_create %}Create group{% else %}Save changes{% endif %}
+                </button>
+                <a href="{% url 'users:manage_group_list' %}"
+                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

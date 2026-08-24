@@ -1,0 +1,58 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{% if is_create %}New Staff Account{% else %}Edit Staff Account{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if is_create %}New Staff Account{% else %}Edit Staff Account{% endif %}{% endblock %}
+
+{% block content %}
+<div class="">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="space-y-5">
+                <div>
+                    <label for="{{ form.photo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.photo.label }}</label>
+                    {% if object.photo %}
+                        <img src="{{ object.photo.url }}" alt="" class="w-16 h-16 rounded-full object-cover mb-2.5">
+                    {% endif %}
+                    {{ form.photo }}
+                    {% if form.photo.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.photo.help_text }}</p>{% endif %}
+                    {% for error in form.photo.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.first_name %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.last_name %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.email %}
+
+                {% if is_create %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.password1 %}
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.password2 %}
+                    </div>
+                {% endif %}
+
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.role %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.is_active %}
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+                <button type="submit"
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    {% if is_create %}Create staff account{% else %}Save changes{% endif %}
+                </button>
+                <a href="{% url 'users:manage_staff_list' %}"
+                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

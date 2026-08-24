@@ -1,0 +1,59 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Groups — {{ target.get_full_name }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Assign Groups{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        {% if target.photo %}
+            <img src="{{ target.photo.url }}" alt="" class="w-12 h-12 rounded-full object-cover">
+        {% else %}
+            <span class="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-semibold">
+                {{ target.first_name|first|upper }}{{ target.last_name|first|upper }}
+            </span>
+        {% endif %}
+        <div>
+            <p class="font-semibold text-gray-900">{{ target.get_full_name }}</p>
+            <p class="text-sm text-gray-500">{{ target.email }} · {{ target.get_role_display }}</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% if form.groups.field.queryset %}
+                <div class="space-y-2">
+                    {% for checkbox in form.groups %}
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                            {{ checkbox.tag }}
+                            {{ checkbox.choice_label }}
+                        </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-sm text-gray-500">
+                    No groups exist yet — <a href="{% url 'users:manage_group_create' %}" class="underline">create one</a> first.
+                </p>
+            {% endif %}
+
+            <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+                <button type="submit"
+                        class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    Save groups
+                </button>
+                <a href="{% url 'users:manage_permissions_list' %}"
+                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

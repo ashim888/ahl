@@ -4,36 +4,35 @@
 {% block page_title %}Verification Queue{% endblock %}
 
 {% block content %}
-<p class="text-sm text-gray-500">{{ pending_users|length }} user(s) awaiting review.</p>
+<p class="text-sm text-gray-500">{{ pending_users|length }} user(s) awaiting review — registered readers requesting Verified Author access.</p>
 
 <div class="mt-6 space-y-4">
     {% for u in pending_users %}
         <div class="border border-gray-200 rounded-lg p-5 bg-white">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <h2 class="font-semibold">{{ u.get_full_name }} &lt;{{ u.email }}&gt;</h2>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div class="min-w-0">
+                    <a href="{% url 'users:verification_detail' u.pk %}" class="font-semibold hover:underline">
+                        {{ u.get_full_name }} &lt;{{ u.email }}&gt;
+                    </a>
                     <p class="text-sm text-gray-600 mt-1">
                         {{ u.affiliation|default:"No affiliation given" }}
                         {% if u.department %} — {{ u.department }}{% endif %}
                     </p>
-                    <p class="text-sm text-gray-600">ORCID: {{ u.orcid|default:"—" }}</p>
-                    {% if u.linkedin_url %}<p class="text-sm text-gray-600">LinkedIn: {{ u.linkedin_url }}</p>{% endif %}
-                    {% if u.researchgate_url %}<p class="text-sm text-gray-600">ResearchGate: {{ u.researchgate_url }}</p>{% endif %}
-                    {% if u.publications %}
-                        <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">{{ u.publications }}</p>
-                    {% endif %}
-                    {% if u.cv_file %}
-                        <a href="{{ u.cv_file.url }}" class="text-sm underline mt-2 inline-block">View CV</a>
-                    {% endif %}
+                    <p class="text-xs text-gray-400 mt-1">Registered {{ u.date_joined|date:"M j, Y" }}</p>
+                    <a href="{% url 'users:verification_detail' u.pk %}" class="text-xs font-medium text-gray-500 hover:text-gray-900 underline mt-2 inline-block">
+                        View full details →
+                    </a>
                 </div>
                 <div class="flex gap-2 shrink-0">
-                    <form method="post" action="{% url 'users:verification_decide' u.pk 'approve' %}">
+                    <form method="post" action="{% url 'users:verification_decide' u.pk 'approve' %}"
+                          onsubmit="return confirm('Approve {{ u.get_full_name|escapejs }}? They\'ll become a Verified Author.');">
                         {% csrf_token %}
                         <button type="submit" class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800">
                             Approve
                         </button>
                     </form>
-                    <form method="post" action="{% url 'users:verification_decide' u.pk 'reject' %}">
+                    <form method="post" action="{% url 'users:verification_decide' u.pk 'reject' %}"
+                          onsubmit="return confirm('Reject {{ u.get_full_name|escapejs }}? They can reapply after 30 days.');">
                         {% csrf_token %}
                         <button type="submit" class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
                             Reject

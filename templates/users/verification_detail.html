@@ -1,0 +1,85 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{{ target.get_full_name }} — Verification — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Review Registration{% endblock %}
+{% block page_actions %}
+<a href="{% url 'users:verification_queue' %}" class="text-sm text-gray-500 hover:text-gray-900">← Back to queue</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <div class="flex items-start gap-4 pb-6 border-b border-gray-100">
+            {% if target.photo %}
+                <img src="{{ target.photo.url }}" alt="" class="w-16 h-16 rounded-full object-cover shrink-0">
+            {% else %}
+                <span class="w-16 h-16 rounded-full bg-gray-900 text-white flex items-center justify-center text-xl font-semibold shrink-0">
+                    {{ target.first_name|first|upper }}{{ target.last_name|first|upper }}
+                </span>
+            {% endif %}
+            <div class="min-w-0">
+                <h2 class="text-lg font-semibold text-gray-900">{{ target.get_full_name }}</h2>
+                <p class="text-sm text-gray-500">{{ target.email }}</p>
+                <p class="text-xs text-gray-400 mt-1">Registered {{ target.date_joined|date:"M j, Y" }} · Requesting: {{ target.get_role_display }}</p>
+            </div>
+        </div>
+
+        <dl class="mt-6 space-y-4 text-sm">
+            <div class="grid grid-cols-3 gap-4">
+                <dt class="text-gray-500">Affiliation</dt>
+                <dd class="col-span-2 text-gray-900">{{ target.affiliation|default:"—" }}{% if target.department %}, {{ target.department }}{% endif %}</dd>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+                <dt class="text-gray-500">ORCID</dt>
+                <dd class="col-span-2 text-gray-900">
+                    {% if target.orcid %}<a href="https://orcid.org/{{ target.orcid }}" target="_blank" rel="noopener" class="underline">{{ target.orcid }}</a>{% else %}—{% endif %}
+                </dd>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+                <dt class="text-gray-500">Links</dt>
+                <dd class="col-span-2 text-gray-900 space-x-3">
+                    {% if target.linkedin_url %}<a href="{{ target.linkedin_url }}" target="_blank" rel="noopener" class="underline">LinkedIn</a>{% endif %}
+                    {% if target.researchgate_url %}<a href="{{ target.researchgate_url }}" target="_blank" rel="noopener" class="underline">ResearchGate</a>{% endif %}
+                    {% if target.cv_file %}<a href="{{ target.cv_file.url }}" target="_blank" rel="noopener" class="underline">CV</a>{% endif %}
+                    {% if not target.linkedin_url and not target.researchgate_url and not target.cv_file %}—{% endif %}
+                </dd>
+            </div>
+            {% if target.bio %}
+                <div class="grid grid-cols-3 gap-4">
+                    <dt class="text-gray-500">Bio</dt>
+                    <dd class="col-span-2 text-gray-900 whitespace-pre-line">{{ target.bio }}</dd>
+                </div>
+            {% endif %}
+            {% if target.research_interests %}
+                <div class="grid grid-cols-3 gap-4">
+                    <dt class="text-gray-500">Research interests</dt>
+                    <dd class="col-span-2 text-gray-900 whitespace-pre-line">{{ target.research_interests }}</dd>
+                </div>
+            {% endif %}
+            {% if target.publications %}
+                <div class="grid grid-cols-3 gap-4">
+                    <dt class="text-gray-500">Publications</dt>
+                    <dd class="col-span-2 text-gray-900 whitespace-pre-line">{{ target.publications }}</dd>
+                </div>
+            {% endif %}
+        </dl>
+
+        <div class="mt-8 pt-6 border-t border-gray-100 flex gap-3">
+            <form method="post" action="{% url 'users:verification_decide' target.pk 'approve' %}"
+                  onsubmit="return confirm('Approve {{ target.get_full_name|escapejs }}? They\'ll become a Verified Author.');">
+                {% csrf_token %}
+                <button type="submit" class="py-2.5 px-6 rounded-xl bg-green-700 text-white text-sm font-medium hover:bg-green-800">
+                    Approve
+                </button>
+            </form>
+            <form method="post" action="{% url 'users:verification_decide' target.pk 'reject' %}"
+                  onsubmit="return confirm('Reject {{ target.get_full_name|escapejs }}? They can reapply after 30 days.');">
+                {% csrf_token %}
+                <button type="submit" class="py-2.5 px-6 rounded-xl bg-red-700 text-white text-sm font-medium hover:bg-red-800">
+                    Reject
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

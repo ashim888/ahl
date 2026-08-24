@@ -2,67 +2,288 @@
 
 {% block title %}{% if is_create %}New Article{% else %}Edit Article{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}{% if is_create %}New Article{% else %}Edit Article{% endif %}{% endblock %}
+{% block extra_head %}{{ form.media }}{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl">
+<div class="">
     {% if not is_create %}
-        <p class="text-sm text-gray-500">
-            Authors are managed via the
-            <a href="/admin/articles/article/{{ form.instance.pk }}/change/" class="underline">Django admin</a>
-            (ordering and corresponding-author flag aren't editable here).
+        <p class="text-sm text-gray-500 mb-4">
+            <a href="{% url 'articles:manage_article_authors' form.instance.slug %}" class="underline font-medium text-gray-700">Manage authors →</a>
+            — order and the corresponding-author flag live on that page, not here.
+            Archiving an article is still a Django admin action — from here you can only save it as a draft or publish it.
         </p>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5" id="article-form">
-        {% csrf_token %}
-        <input type="hidden" name="preview_source_pk" value="{{ form.instance.pk|default:'' }}">
-        {% if form.non_field_errors %}
-            <p class="text-sm text-red-600">{{ form.non_field_errors }}</p>
-        {% endif %}
-
-        {% for field in form %}
-            {% if field.name == 'html_content' %}
-                <div class="flex items-center justify-between">
-                    <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">
-                        {{ field.label }}
-                    </label>
-                    <button type="button" id="insert-template-btn"
-                            class="text-xs px-3 py-1.5 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                        Insert template
-                    </button>
-                </div>
-                {{ field }}
-                {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
-            {% else %}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">
-                        {{ field.label }}
-                    </label>
-                    {{ field }}
-                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post" enctype="multipart/form-data" id="article-form" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="preview_source_pk" id="preview-source-pk" value="{{ form.instance.pk|default:'' }}">
+            <input type="hidden" name="article_pk" id="article-pk" value="{{ form.instance.pk|default:'' }}">
+            <input type="hidden" id="edit-url" value="">
+            {% if form.non_field_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                    {{ form.non_field_errors }}
                 </div>
             {% endif %}
-        {% endfor %}
 
-        <div class="flex gap-3">
-            <button type="submit" class="py-2.5 px-6 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
-                {% if is_create %}Create article{% else %}Save changes{% endif %}
-            </button>
-            <button type="button" id="preview-btn"
-                    class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">
-                Preview
-            </button>
-            <a href="{% url 'articles:manage_article_list' %}"
-               class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">Cancel</a>
-        </div>
-    </form>
+            <div class="flex gap-1 p-1 bg-gray-100 rounded-xl mb-8" role="tablist">
+                <button type="button" data-tab="content" data-tab-index="0" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Content</button>
+                <button type="button" data-tab="publishing" data-tab-index="1" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Publishing</button>
+                <button type="button" data-tab="media" data-tab-index="2" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Media</button>
+            </div>
+
+            <div data-panel="content" class="space-y-5"
+                 {% if form.title.errors or form.slug.errors or form.article_type.errors or form.abstract.errors or form.keywords.errors or form.html_content.errors or form.references.errors %}data-has-error="true"{% endif %}>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.title %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.article_type %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.abstract %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.keywords %}
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-sm font-medium text-gray-700" for="{{ form.html_content.id_for_label }}">
+                            {{ form.html_content.label }}
+                        </label>
+                        <button type="button" id="insert-template-btn"
+                                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Insert template
+                        </button>
+                    </div>
+                    {{ form.html_content }}
+                    {% if form.html_content.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.html_content.help_text }}</p>{% endif %}
+                    {% for error in form.html_content.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.references %}
+            </div>
+
+            <div data-panel="publishing" class="space-y-5 hidden"
+                 {% if form.access_type.errors or form.price.errors or form.homepage_section.errors or form.issue.errors or form.volume.errors or form.page_numbers.errors or form.doi.errors %}data-has-error="true"{% endif %}>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
+                <div id="price-field" class="hidden">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.price %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.homepage_section %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.volume %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.page_numbers %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.doi %}
+                {% if not is_create and object.publication_date %}
+                    <p class="text-xs text-gray-400">Published {{ object.publication_date|date:"M j, Y" }} (set automatically).</p>
+                {% endif %}
+            </div>
+
+            <div data-panel="media" class="space-y-6 hidden"
+                 {% if form.featured_image.errors or form.pdf_file.errors %}data-has-error="true"{% endif %}>
+                <div>
+                    <label for="{{ form.featured_image.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.featured_image.label }}</label>
+                    {% if form.instance.featured_image %}
+                        <img src="{{ form.instance.featured_image.url }}" alt="" class="mb-2.5 h-20 w-auto rounded-xl border border-gray-100">
+                    {% endif %}
+                    {{ form.featured_image }}
+                    {% if form.featured_image.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.featured_image.help_text }}</p>{% endif %}
+                    {% for error in form.featured_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.pdf_file.label }}</label>
+                    {% if form.instance.pdf_file %}
+                        <p class="mb-1.5 text-xs text-gray-600">
+                            Current: <a href="{{ form.instance.pdf_file.url }}" target="_blank" rel="noopener" class="underline">{{ form.instance.pdf_file.name }}</a>
+                        </p>
+                    {% endif %}
+                    {{ form.pdf_file }}
+                    {% if form.pdf_file.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.pdf_file.help_text }}</p>{% endif %}
+                    {% for error in form.pdf_file.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
+                <button type="button" id="prev-btn"
+                        class="hidden inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    ← Back
+                </button>
+                <button type="button" id="next-btn"
+                        class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    Next →
+                </button>
+                <button type="submit" name="action" value="draft" id="save-draft-btn"
+                        class="hidden inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Save as Draft
+                </button>
+                <button type="submit" name="action" value="publish" id="save-publish-btn"
+                        class="hidden inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    Save &amp; Publish
+                </button>
+                <button type="button" id="preview-btn"
+                        class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Preview
+                </button>
+                <a href="{% url 'articles:manage_article_list' %}"
+                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+                <span id="autosave-status" class="text-xs text-gray-400 ml-auto"></span>
+            </div>
+        </form>
+    </div>
 </div>
 
 {{ content_templates|json_script:"content-templates-data" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('article-form');
+    var TAB_ORDER = ['content', 'publishing', 'media'];
+    var isCreate = {{ is_create|yesno:"true,false" }};
+
+    var tabButtons = Array.prototype.slice.call(form.querySelectorAll('.tab-btn'));
+    var panels = Array.prototype.slice.call(form.querySelectorAll('[data-panel]'));
+    var prevBtn = document.getElementById('prev-btn');
+    var nextBtn = document.getElementById('next-btn');
+    var saveDraftBtn = document.getElementById('save-draft-btn');
+    var savePublishBtn = document.getElementById('save-publish-btn');
+    var autosaveStatus = document.getElementById('autosave-status');
+    var articlePkInput = document.getElementById('article-pk');
+    var previewSourcePkInput = document.getElementById('preview-source-pk');
+    var editUrlInput = document.getElementById('edit-url');
+
+    // Editing an already-saved article starts with every tab unlocked —
+    // the step-by-step gating below only matters for a brand-new article,
+    // where each tab's required fields must be entered before the next one
+    // unlocks. Re-editing shouldn't force re-walking tabs that are already filled in.
+    var maxReachedIndex = isCreate ? 0 : TAB_ORDER.length - 1;
+    var currentIndex = 0;
+
+    function currentPanel() { return panels[currentIndex]; }
+
+    function render() {
+        tabButtons.forEach(function (btn) {
+            var idx = parseInt(btn.dataset.tabIndex, 10);
+            var active = idx === currentIndex;
+            var locked = idx > maxReachedIndex;
+            btn.classList.toggle('bg-white', active);
+            btn.classList.toggle('shadow-sm', active);
+            btn.classList.toggle('text-gray-900', active && !locked);
+            btn.classList.toggle('text-gray-500', !active && !locked);
+            btn.classList.toggle('text-gray-300', locked);
+            btn.classList.toggle('cursor-not-allowed', locked);
+            btn.disabled = locked;
+        });
+        panels.forEach(function (panel, idx) {
+            panel.classList.toggle('hidden', idx !== currentIndex);
+        });
+        var atLast = currentIndex === TAB_ORDER.length - 1;
+        prevBtn.classList.toggle('hidden', currentIndex === 0);
+        nextBtn.classList.toggle('hidden', atLast);
+        saveDraftBtn.classList.toggle('hidden', !atLast);
+        savePublishBtn.classList.toggle('hidden', !atLast);
+    }
+
+    function goTo(idx) {
+        currentIndex = idx;
+        maxReachedIndex = Math.max(maxReachedIndex, idx);
+        render();
+    }
+
+    tabButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var idx = parseInt(btn.dataset.tabIndex, 10);
+            if (idx > maxReachedIndex) return;
+            goTo(idx);
+        });
+    });
+
+    function validateCurrentTab() {
+        var invalid = null;
+        currentPanel().querySelectorAll('[required]').forEach(function (el) {
+            if (!invalid && !el.value.trim()) invalid = el;
+        });
+        if (invalid) {
+            invalid.reportValidity();
+            return false;
+        }
+        return true;
+    }
+
+    function showStatus(text, isError) {
+        autosaveStatus.textContent = text;
+        autosaveStatus.classList.toggle('text-red-600', !!isError);
+        autosaveStatus.classList.toggle('text-gray-400', !isError);
+    }
+
+    function autosave(onDone) {
+        showStatus('Saving…', false);
+        var formData = new FormData(form);
+        fetch('{% url "articles:manage_article_autosave" %}', { method: 'POST', body: formData })
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    articlePkInput.value = data.article_pk;
+                    previewSourcePkInput.value = data.article_pk;
+                    editUrlInput.value = data.edit_url || '';
+                    var slugField = document.getElementById('id_slug');
+                    if (slugField && !slugField.value) slugField.value = data.slug;
+                    showStatus('Saved as draft ✓', false);
+                    onDone(true);
+                } else {
+                    showStatus('Could not save — check this tab for errors', true);
+                    onDone(false);
+                }
+            })
+            .catch(function () {
+                showStatus('Could not save (check your connection)', true);
+                onDone(false);
+            });
+    }
+
+    nextBtn.addEventListener('click', function () {
+        if (!validateCurrentTab()) return;
+        autosave(function (ok) {
+            if (ok) goTo(currentIndex + 1);
+        });
+    });
+
+    prevBtn.addEventListener('click', function () {
+        autosave(function () {
+            goTo(currentIndex - 1);
+        });
+    });
+
+    // Once autosave has created a real row, the final Save as Draft / Save &
+    // Publish submit must UPDATE that same row instead of the Create view
+    // making a second, duplicate one — redirect the form to the edit URL
+    // right before a real submit. form.submit() (used by Preview, below)
+    // doesn't fire this event, so it can't interfere with that flow.
+    form.addEventListener('submit', function () {
+        if (editUrlInput.value) form.action = editUrlInput.value;
+    });
+
+    render();
+
+    // Price only matters (and is only required) for the pay-per-article tier.
+    var accessTypeField = document.getElementById('id_access_type');
+    var priceField = document.getElementById('price-field');
+    function updatePriceVisibility() {
+        priceField.classList.toggle('hidden', accessTypeField.value !== 'pay_per_article');
+    }
+    if (accessTypeField && priceField) {
+        accessTypeField.addEventListener('change', updatePriceVisibility);
+        updatePriceVisibility();
+    }
+
+    // Land on whichever tab has a validation error from the last submit,
+    // since `novalidate` means the browser won't jump there on its own.
+    var errorPanelIndex = -1;
+    panels.forEach(function (panel, idx) {
+        if (panel.dataset.hasError === 'true') errorPanelIndex = idx;
+    });
+    if (errorPanelIndex !== -1) goTo(errorPanelIndex);
+
     var templates = JSON.parse(document.getElementById('content-templates-data').textContent);
     var typeField = document.getElementById('id_article_type');
     var contentField = document.getElementById('id_html_content');
@@ -82,13 +303,33 @@ document.addEventListener('DOMContentLoaded', function () {
                 : 'No template for this type';
         }
 
+        // CKEditor5 renders its own UI over #id_html_content and only reads
+        // the textarea's value at creation time — setting .value directly
+        // afterwards doesn't touch what's on screen. The editor instance
+        // (once created) lives at window.editors[id]; setData() there both
+        // updates the visible editor and re-syncs the textarea via its own
+        // change:data listener (see django_ckeditor_5's app.js).
+        // window.ckeditorRegisterCallback queues the same call for the rare
+        // case this fires before the async editor has finished initializing.
+        function setContentFieldValue(value) {
+            var editor = window.editors && window.editors[contentField.id];
+            if (editor) {
+                editor.setData(value);
+            } else if (window.ckeditorRegisterCallback) {
+                contentField.value = value;
+                window.ckeditorRegisterCallback(contentField.id, function (ed) { ed.setData(value); });
+            } else {
+                contentField.value = value;
+            }
+        }
+
         insertBtn.addEventListener('click', function () {
             var template = templates[typeField.value];
             if (!template) return;
             if (contentField.value.trim() && !confirm('Replace the current Full Text content with the template?')) {
                 return;
             }
-            contentField.value = template;
+            setContentFieldValue(template);
         });
 
         typeField.addEventListener('change', updateButtonState);
@@ -96,9 +337,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Preview: submit the same form data to the preview endpoint in a new tab,
-    // then restore the form's normal action/target so "Save" still works here.
+    // then restore the form's normal action/target so Save still works here.
     var previewBtn = document.getElementById('preview-btn');
-    var form = document.getElementById('article-form');
     previewBtn.addEventListener('click', function () {
         var originalAction = form.action;
         var originalTarget = form.target;

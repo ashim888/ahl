@@ -4,49 +4,98 @@
 {% block page_title %}{% if is_create %}New Author{% else %}Edit Author{% endif %}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl">
+<div class="">
     {% if not is_create %}
-        <p class="text-sm text-gray-500 mb-6">
-            Role: {{ object.get_role_display }} · Verification: {{ object.get_verification_status_display }}
+        <p class="text-sm text-gray-500 mb-4">
+            Role: <span class="font-medium text-gray-700">{{ object.get_role_display }}</span> ·
+            Verification: <span class="font-medium text-gray-700">{{ object.get_verification_status_display }}</span>
             — changed via the <a href="{% url 'users:verification_queue' %}" class="underline">verification queue</a>, not this form.
         </p>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="space-y-5">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <p class="text-sm text-red-600">{{ form.non_field_errors }}</p>
-        {% endif %}
-
-        {% if object.photo %}
-            <img src="{{ object.photo.url }}" alt="" class="w-16 h-16 rounded-full object-cover">
-        {% endif %}
-
-        {% for field in form %}
-            {% if field.name == 'is_active' %}
-                <div class="flex items-center gap-2">
-                    {{ field }}
-                    <label class="text-sm text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                </div>
-            {% else %}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">
-                        {{ field.label }}
-                    </label>
-                    {{ field }}
-                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
-                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+                    {{ form.non_field_errors }}
                 </div>
             {% endif %}
-        {% endfor %}
 
-        <div class="flex gap-3">
-            <button type="submit" class="py-2.5 px-6 rounded-md bg-gray-900 text-white font-medium hover:bg-gray-700">
-                {% if is_create %}Create author{% else %}Save changes{% endif %}
-            </button>
-            <a href="{% url 'users:manage_author_list' %}"
-               class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">Cancel</a>
-        </div>
-    </form>
+            <div class="space-y-5">
+                <div>
+                    <label for="{{ form.photo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.photo.label }}</label>
+                    {% if object.photo %}
+                        <img src="{{ object.photo.url }}" alt="" class="w-16 h-16 rounded-full object-cover mb-2.5">
+                    {% endif %}
+                    {{ form.photo }}
+                    {% if form.photo.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.photo.help_text }}</p>{% endif %}
+                    {% for error in form.photo.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.first_name %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.last_name %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.email %}
+
+                {% if is_create %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.password1 %}
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.password2 %}
+                    </div>
+                {% endif %}
+
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.is_active %}
+            </div>
+
+            <details class="mt-8 group" {% if form.orcid.errors or form.affiliation.errors or form.bio.errors or form.cv_file.errors %}open{% endif %}>
+                <summary class="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-900 flex items-center gap-1.5 select-none">
+                    <svg class="w-4 h-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/>
+                    </svg>
+                    Profile details
+                    <span class="text-gray-300 font-normal">(optional)</span>
+                </summary>
+                <div class="mt-5 space-y-5 pt-5 border-t border-gray-100">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.affiliation %}
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.department %}
+                    </div>
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.orcid %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.bio %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.research_interests %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.publications %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.linkedin_url %}
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.researchgate_url %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.cv_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.cv_file.label }}</label>
+                        {% if object.cv_file %}
+                            <p class="mb-1.5 text-xs text-gray-600">
+                                Current: <a href="{{ object.cv_file.url }}" target="_blank" rel="noopener" class="underline">{{ object.cv_file.name }}</a>
+                            </p>
+                        {% endif %}
+                        {{ form.cv_file }}
+                        {% if form.cv_file.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.cv_file.help_text }}</p>{% endif %}
+                        {% for error in form.cv_file.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    </div>
+                </div>
+            </details>
+
+            <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+                <button type="submit"
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                    {% if is_create %}Create author{% else %}Save changes{% endif %}
+                </button>
+                <a href="{% url 'users:manage_author_list' %}"
+                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

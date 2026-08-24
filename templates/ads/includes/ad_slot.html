@@ -1,0 +1,30 @@
+{% comment %}
+Rendered exclusively via the `ad_slot` template tag (ads/templatetags/ads_tags.py) —
+usage: {% load ads_tags %} then {% ad_slot 'zone_value' wrapper_class='...' %}.
+Not meant to be {% include %}d directly: `ad` and `wrapper_class` come from
+the tag, which is also what performs ad selection + impression recording
+(ads.services.get_ad_for_request) before this template ever renders.
+
+Sized to the zone's exact IAB dimensions (AdSlot.width/height, from
+AdSlot.ZONE_DIMENSIONS) via both the width/height HTML attributes (correct
+intrinsic size, no layout shift) and inline CSS (the actual displayed box) —
+this, together with AdSlotForm's upload-time dimension check, is what keeps
+an ad from ever rendering "overwhelmingly" larger than its slot regardless
+of what an editor uploads. `object-fit: cover` and `aspect-ratio` are a
+second line of defense for any pre-existing ad whose stored image doesn't
+exactly match its zone (e.g. from before this validation existed) — it gets
+cropped to fit the box instead of stretched/distorted.
+{% endcomment %}
+{% if ad %}
+<div class="{{ wrapper_class }}">
+    <div class="inline-block border border-border bg-secondary max-w-full">
+        <p class="font-mono-editorial text-[0.6rem] text-muted-foreground tracking-widest px-3 pt-2">SPONSORED</p>
+        <a href="{% url 'ads:click' ad.pk %}" target="_blank" rel="sponsored noopener" class="block p-3 pt-1">
+            <img src="{{ ad.image.url }}" alt="{{ ad.sponsor_name }}"
+                 width="{{ ad.width }}" height="{{ ad.height }}"
+                 class="block mx-auto max-w-full"
+                 style="width: {{ ad.width }}px; max-width: 100%; aspect-ratio: {{ ad.width }} / {{ ad.height }}; object-fit: cover;">
+        </a>
+    </div>
+</div>
+{% endif %}

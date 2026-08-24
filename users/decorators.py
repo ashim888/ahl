@@ -26,7 +26,13 @@ def verification_required(view_func):
 
 
 def role_required(*roles):
-    """Restrict a view to specific User.Role values. Superusers always pass."""
+    """Restrict a view to specific User.Role values. Superusers always pass.
+
+    Call with a centralized tuple from users/models.py — e.g.
+    role_required(*User.EDITORIAL_ROLES) — rather than a locally redefined
+    role list, so the view-level check and the User.is_editorial_staff /
+    is_senior_staff properties used in templates can't drift apart.
+    """
 
     def decorator(view_func):
         @login_required

@@ -6,7 +6,9 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from articles.models import Article, ArticleAuthor
+from ads.models import AdSlot
+from articles.models import Article, ArticleAuthor, ArticleView
+from billing.models import PlanFeature, SubscriptionPlan
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from peer_review.models import Review
@@ -15,7 +17,7 @@ from training.models import TrainingCourse
 from users.models import User
 
 # Model apps an Editor needs view/add/change access to in /admin/ — matches
-# ARCHITECTURE.md §6.2 (Editor: assign reviewers, make decisions; not verify users).
+# ARCHITECTURE.md §6.3 (Editor: assign reviewers, make decisions; not verify users).
 EDITOR_PERMISSION_APPS = ['submissions', 'peer_review', 'articles', 'issues', 'training']
 
 DEMO_PASSWORD = 'DemoPass123!'
@@ -25,16 +27,33 @@ def demo_pdf(name):
     return ContentFile(f'%PDF-1.4 demo content for {name}'.encode(), name=name)
 
 
+def demo_jpeg(name, size=(600, 200), color=(210, 210, 200)):
+    """A real, validly-encoded JPEG (via Pillow, already a project
+    dependency) — not just renamed text bytes, since it needs to actually
+    render as an <img> in the demo (ad banners, etc.), not just pass an
+    extension check.
+    """
+    import io
+
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new('RGB', size, color=color).save(buffer, format='JPEG')
+    return ContentFile(buffer.getvalue(), name=name)
+
+
 # Full-text body for the case report demo article — shows what an open-access
 # article's html_content looks like once populated, including an inline D3.js
-# chart and citation superscripts pointing at the References section (see
-# templates/articles/article_detail.html, which renders #ref-N anchors).
+# chart and [N] citation placeholders. These are plain text as an editor
+# would type them in CKEditor — articles/citations.linkify_citations() turns
+# them into hyperlinked superscripts pointing at the References section at
+# render time (see templates/articles/article_detail.html's #ref-N anchors).
 CASE_REPORT_HTML_CONTENT = """
 <h2>Introduction</h2>
 <p>Acute myocarditis in young, otherwise healthy adults is an uncommon but clinically significant
 cause of chest pain and troponin elevation, frequently mimicking acute coronary syndrome on initial
-presentation.<sup><a href="#ref-1">1</a></sup> Distinguishing myocarditis from an acute coronary event
-early is essential, since management and short-term risk differ substantially.<sup><a href="#ref-2">2</a></sup>
+presentation.[1] Distinguishing myocarditis from an acute coronary event
+early is essential, since management and short-term risk differ substantially.[2]
 We describe a young adult presenting with pleuritic chest pain and a markedly elevated troponin trend
 following a recent viral illness.</p>
 
@@ -49,7 +68,7 @@ absent and the patient was hemodynamically stable throughout admission.</p>
 <p>Serial troponin I measurements over the following 72 hours showed a rise-and-fall pattern more
 consistent with myocarditis than an evolving coronary occlusion, corroborated by cardiac MRI findings
 of subepicardial late gadolinium enhancement in the inferolateral wall — a pattern well described in
-viral myocarditis.<sup><a href="#ref-3">3</a></sup></p>
+viral myocarditis.[3]</p>
 
 <figure>
   <div id="troponin-chart" style="max-width: 640px;"></div>
@@ -116,19 +135,19 @@ viral myocarditis.<sup><a href="#ref-3">3</a></sup></p>
 
 <h2>Discussion</h2>
 <p>The differential for young patients presenting with chest pain and troponin elevation includes
-acute coronary syndrome, pericarditis, and myocarditis.<sup><a href="#ref-4">4</a></sup> A preceding
+acute coronary syndrome, pericarditis, and myocarditis.[4] A preceding
 viral prodrome, diffuse (rather than territorial) ECG changes, and a troponin trajectory that peaks
 and resolves within days — rather than the more sustained elevation typical of infarction — favor
 myocarditis, as does subepicardial (rather than subendocardial) late gadolinium enhancement on
-MRI.<sup><a href="#ref-5">5</a></sup> Most cases in young, hemodynamically stable patients are
+MRI.[5] Most cases in young, hemodynamically stable patients are
 self-limited and managed conservatively, though structured follow-up is warranted given a small
-but recognized risk of late ventricular dysfunction.<sup><a href="#ref-6">6</a></sup><sup><a href="#ref-7">7</a></sup></p>
+but recognized risk of late ventricular dysfunction.[6][7]</p>
 
 <h2>Conclusion</h2>
 <p>Myocarditis should remain a key differential in young adults presenting with chest pain and
 troponin elevation following a viral illness. Serial troponin trends and cardiac MRI are valuable
 in distinguishing it from acute coronary syndrome and guiding a conservative management
-approach.<sup><a href="#ref-8">8</a></sup></p>
+approach.[8]</p>
 """.strip()
 
 CASE_REPORT_REFERENCES = """
@@ -139,12 +158,13 @@ Sharma A, Gurung R. Distinguishing acute coronary syndrome from myocarditis in y
 Luetkens JA, Faron A, Isaak A, et al. Comparison of original and 2018 Lake Louise criteria for diagnosis of acute myocarditis. Radiol Cardiothorac Imaging. 2019;1(3):e190010.
 Ammirati E, Frigerio M, Adler ED, et al. Management of acute myocarditis and chronic inflammatory cardiomyopathy: an expert consensus document. Circ Heart Fail. 2020;13(11):e007405.
 Anzini M, Merlo M, Sabbadini G, et al. Long-term evolution and prognostic stratification of biopsy-proven active myocarditis. Circulation. 2013;128(22):2384-2394.
-Thapa B, Karki S. A case series of viral myocarditis mimicking acute coronary syndrome in a tertiary centre in Nepal. Ajna Health Lens. 2025;1(3):22-29.
+Thapa B, Karki S. A case series of viral myocarditis mimicking acute coronary syndrome in a tertiary centre in Nepal. Ajna Health Lens. 2025;1(3):22-29. https://doi.org/10.1234/ahl.2025.010329
 """.strip()
 
 
 class Command(BaseCommand):
-    help = 'Seed realistic demo data (users, issues, articles, submissions, reviews, training courses) for local development.'
+    help = ('Seed realistic demo data (users, issues, articles, submissions, reviews, training courses, '
+            'subscription plans) for local development.')
 
     def handle(self, *args, **options):
         with transaction.atomic():
@@ -154,6 +174,9 @@ class Command(BaseCommand):
             self.seed_submissions(users, articles)
             self.seed_training()
             self.seed_editorial_board()
+            self.seed_subscription_plans()
+            self.seed_ads()
+            self.seed_article_views(articles)
 
         self.stdout.write(self.style.SUCCESS('\nDemo data seeded.'))
         self.stdout.write(f'All seeded users share the password: {DEMO_PASSWORD}')
@@ -230,7 +253,7 @@ class Command(BaseCommand):
         for email in ('eic@ajnahealthlens.example', 'editor.gurung@ajnahealthlens.example'):
             users[email].groups.add(editors_group)
 
-        # User verification is EiC/Admin-only (ARCHITECTURE.md §6.2) — granted
+        # User verification is EiC/Admin-only (ARCHITECTURE.md §6.3) — granted
         # directly to the EiC, not via the shared Editorial Staff group, so
         # Editor accounts don't pick it up too.
         eic = users['eic@ajnahealthlens.example']
@@ -245,19 +268,19 @@ class Command(BaseCommand):
     def seed_issues(self):
         self.stdout.write('Seeding issues...')
         specs = [
-            dict(volume=1, number=1, title='Inaugural Issue', is_published=True,
+            dict(slug='inaugural-issue', title='Inaugural Issue', is_published=True,
                  publication_date=datetime.date(2026, 1, 15),
                  editorial_note='Welcome to the first issue of Ajna Health Lens.'),
-            dict(volume=1, number=2, title='Maternal & Child Health', is_published=True,
+            dict(slug='maternal-child-health', title='Maternal & Child Health', is_published=True,
                  publication_date=datetime.date(2026, 4, 1),
                  editorial_note='This issue focuses on maternal and child health outcomes across Nepal.'),
-            dict(volume=2, number=1, title='In Production', is_published=False,
+            dict(slug='in-production', title='In Production', is_published=False,
                  editorial_note='Not yet published — used to verify unpublished issues stay hidden.'),
         ]
         issues = {}
         for spec in specs:
-            issue, _ = Issue.objects.get_or_create(volume=spec['volume'], number=spec['number'], defaults=spec)
-            issues[(issue.volume, issue.number)] = issue
+            issue, _ = Issue.objects.get_or_create(slug=spec['slug'], defaults=spec)
+            issues[issue.slug] = issue
         self.stdout.write(f'  {len(issues)} issues ready.')
         return issues
 
@@ -274,23 +297,28 @@ class Command(BaseCommand):
                           'health posts in Nepal between 2020 and 2025, identifying key gaps in antenatal care access.',
                  keywords='maternal health, Nepal, rural healthcare, antenatal care',
                  article_type=Article.ArticleType.ORIGINAL_RESEARCH, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 1, 20), issue=issues[(1, 1)], volume='1', page_numbers='1-14',
-                 doi='10.5555/ahl.2026.0001', authors=[(sharma, True), (thapa, False)]),
+                 publication_date=datetime.date(2026, 1, 20), issue=issues['inaugural-issue'], volume='1', page_numbers='1-14',
+                 doi='10.5555/ahl.2026.0001', authors=[(sharma, True), (thapa, False)],
+                 # Editorially chosen as the lead story even though it isn't the
+                 # most recently published article — demonstrates that
+                 # homepage_section overrides the "most recent" hero default.
+                 homepage_section=Article.HomepageSection.HERO),
             dict(slug='systematic-review-tb-screening-methods',
                  title='A Systematic Review of Community-Based Tuberculosis Screening Methods',
                  abstract='We systematically review community-based TB screening approaches used across '
                           'South Asia, comparing sensitivity, cost, and scalability.',
                  keywords='tuberculosis, screening, systematic review, South Asia',
                  article_type=Article.ArticleType.REVIEW_ARTICLE, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 1, 25), issue=issues[(1, 1)], volume='1', page_numbers='15-32',
-                 doi='10.5555/ahl.2026.0002', authors=[(thapa, True)]),
+                 publication_date=datetime.date(2026, 1, 25), issue=issues['inaugural-issue'], volume='1', page_numbers='15-32',
+                 doi='10.5555/ahl.2026.0002', authors=[(thapa, True)],
+                 homepage_section=Article.HomepageSection.RESEARCH),
             dict(slug='letter-response-antenatal-care-study',
                  title='Letter: A Response to the Antenatal Care Access Study',
                  abstract='A brief response raising methodological questions about sampling in the antenatal '
                           'care access literature.',
                  keywords='letter, antenatal care, methodology',
                  article_type=Article.ArticleType.LETTER_TO_EDITOR, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 2, 1), issue=issues[(1, 1)], volume='1', page_numbers='33-34',
+                 publication_date=datetime.date(2026, 2, 1), issue=issues['inaugural-issue'], volume='1', page_numbers='33-34',
                  authors=[(karki, True)]),
             dict(slug='case-report-rare-cardiac-presentation',
                  title='A Rare Cardiac Presentation in a Young Adult: A Case Report',
@@ -298,15 +326,15 @@ class Command(BaseCommand):
                           'workup and management.',
                  keywords='case report, cardiology, young adult',
                  article_type=Article.ArticleType.CASE_REPORT, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 4, 5), issue=issues[(1, 2)], volume='1', page_numbers='1-6',
+                 publication_date=datetime.date(2026, 4, 5), issue=issues['maternal-child-health'], volume='1', page_numbers='1-6',
                  html_content=CASE_REPORT_HTML_CONTENT, references=CASE_REPORT_REFERENCES,
-                 authors=[(karki, True)]),
+                 authors=[(karki, True)], homepage_section=Article.HomepageSection.RESEARCH),
             dict(slug='short-communication-child-nutrition-pilot',
                  title='Short Communication: Preliminary Findings from a Child Nutrition Pilot Program',
                  abstract='Preliminary data from a six-month child nutrition pilot program in three rural districts.',
                  keywords='child nutrition, pilot program, preliminary findings',
                  article_type=Article.ArticleType.SHORT_COMMUNICATION, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 4, 10), issue=issues[(1, 2)], volume='1', page_numbers='7-10',
+                 publication_date=datetime.date(2026, 4, 10), issue=issues['maternal-child-health'], volume='1', page_numbers='7-10',
                  authors=[(sharma, True)]),
             dict(slug='editorial-strengthening-rural-health-systems',
                  title='Editorial: Strengthening Rural Health Systems Through Local Research',
@@ -314,7 +342,8 @@ class Command(BaseCommand):
                           'systems in Nepal.',
                  keywords='editorial, health systems, rural health',
                  article_type=Article.ArticleType.EDITORIAL, status=Article.Status.PUBLISHED,
-                 publication_date=datetime.date(2026, 5, 1), authors=[(users['eic@ajnahealthlens.example'], True)]),
+                 publication_date=datetime.date(2026, 5, 1), authors=[(users['eic@ajnahealthlens.example'], True)],
+                 homepage_section=Article.HomepageSection.OPINION),
             dict(slug='news-tb-screening-guidelines-update',
                  title='Nepal Issues New Tuberculosis Screening Guidelines',
                  abstract='The Ministry of Health has released updated TB screening guidelines for community '
@@ -339,6 +368,7 @@ class Command(BaseCommand):
         articles = {}
         for spec in specs:
             authors = spec.pop('authors')
+            homepage_section = spec.pop('homepage_section', '')
             article, created = Article.objects.get_or_create(slug=spec['slug'], defaults=spec)
             if created:
                 for order, (author, is_corresponding) in enumerate(authors):
@@ -346,6 +376,14 @@ class Command(BaseCommand):
                         article=article, user=author,
                         defaults=dict(order=order, is_corresponding=is_corresponding),
                     )
+            # Re-applied even on an already-seeded DB (unlike the rest of
+            # `spec`, which only takes on a fresh create) — homepage curation
+            # is the whole point of this seed step, so a re-run should always
+            # leave the homepage looking right rather than silently no-op'ing
+            # on rows created before this field existed.
+            if article.homepage_section != homepage_section:
+                article.homepage_section = homepage_section
+                article.save(update_fields=['homepage_section'])
             articles[article.slug] = article
         self.stdout.write(f'  {len(articles)} articles ready.')
         return articles
@@ -485,3 +523,122 @@ class Command(BaseCommand):
             _, created = EditorialBoardMember.objects.get_or_create(name=spec['name'], defaults=spec)
             count += created
         self.stdout.write(f'  {count} editorial board members created.')
+
+    # -- Subscription plans -----------------------------------------------
+
+    def seed_subscription_plans(self):
+        self.stdout.write('Seeding subscription plans...')
+
+        # Ordered master feature list — every plan opts into a prefix of this
+        # list, so higher tiers strictly include everything lower tiers get,
+        # plus more (the standard SaaS pricing-table shape).
+        feature_labels = [
+            'Full access to subscriber-only articles',
+            'Free access to special (pay-per-article) content',
+            'Ad-free reading',
+            'Weekly newsletter digest',
+            'Downloadable PDF archive',
+            'Priority customer support',
+            'Early access to new platform features',
+            'Multi-user access (up to 50 reader seats)',
+            'Organization-wide IP-based access',
+            'Usage analytics dashboard for admins',
+            'Dedicated account manager',
+            'Custom invoicing',
+        ]
+        features = {}
+        for order, label in enumerate(feature_labels):
+            feature, _ = PlanFeature.objects.get_or_create(label=label, defaults={'order': order})
+            features[label] = feature
+
+        specs = [
+            dict(name='Reader Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+                 price=499, duration_days=30,
+                 description='Full digital access to Ajna Health Lens, billed monthly. Cancel anytime.',
+                 feature_count=4),
+            dict(name='Reader Annual', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL,
+                 price=4999, duration_days=365, is_featured=True,
+                 description='Our best value for individual readers — pay for 10 months, read for 12, '
+                              'plus priority support and early access to new features.',
+                 feature_count=7),
+            dict(name='Institutional', plan_type=SubscriptionPlan.PlanType.INSTITUTIONAL,
+                 price=49999, duration_days=365,
+                 description='Campus- or organization-wide access for universities, hospitals, and '
+                              'research institutions, with usage reporting and a dedicated account manager.',
+                 feature_count=len(feature_labels)),
+        ]
+
+        count = 0
+        for spec in specs:
+            feature_count = spec.pop('feature_count')
+            plan, created = SubscriptionPlan.objects.get_or_create(name=spec['name'], defaults=spec)
+            if created:
+                count += 1
+            plan.features.set([features[label] for label in feature_labels[:feature_count]])
+
+        self.stdout.write(f'  {count} subscription plans created.')
+
+    # -- Ads --------------------------------------------------------------
+
+    def seed_ads(self):
+        self.stdout.write('Seeding ads...')
+        # One sponsor per zone, image generated at that zone's exact
+        # required size (AdSlot.ZONE_DIMENSIONS) — demonstrates the fixed-
+        # size system end to end, not just seeding data that happens to
+        # bypass AdSlotForm's dimension validation (management commands
+        # write via the ORM directly, not the form).
+        specs = [
+            dict(sponsor_name='Himalayan Diagnostics Lab', zone=AdSlot.Zone.HEADER_LEADERBOARD,
+                 link_url='https://example.com/himalayan-diagnostics'),
+            dict(sponsor_name="St. Xavier's Pharmacy", zone=AdSlot.Zone.MOBILE_ANCHOR,
+                 link_url='https://example.com/st-xaviers-pharmacy'),
+            dict(sponsor_name='Everest Wellness App', zone=AdSlot.Zone.MOBILE_LARGE_BANNER,
+                 link_url='https://example.com/everest-wellness'),
+            dict(sponsor_name='Patan Eye Care Center', zone=AdSlot.Zone.HOMEPAGE_RECTANGLE,
+                 link_url='https://example.com/patan-eye-care'),
+            dict(sponsor_name='Norvic International Hospital', zone=AdSlot.Zone.HOMEPAGE_HALF_PAGE,
+                 link_url='https://example.com/norvic-hospital'),
+            dict(sponsor_name='Kathmandu Medical Conference 2026', zone=AdSlot.Zone.ARTICLE_IN_CONTENT,
+                 link_url='https://example.com/kmc-2026'),
+            dict(sponsor_name='Bir Hospital Diagnostics', zone=AdSlot.Zone.ARTICLE_SIDEBAR,
+                 link_url='https://example.com/bir-hospital-diagnostics'),
+            dict(sponsor_name='Nepal Public Health Fellowship', zone=AdSlot.Zone.ARTICLE_SKYSCRAPER,
+                 link_url='https://example.com/nph-fellowship'),
+        ]
+        count = 0
+        for spec in specs:
+            ad, created = AdSlot.objects.get_or_create(
+                sponsor_name=spec['sponsor_name'], defaults={
+                    **spec, 'image': demo_jpeg(f"{spec['zone']}.jpg", size=AdSlot.ZONE_DIMENSIONS[spec['zone']]),
+                },
+            )
+            count += created
+        self.stdout.write(f'  {count} ads created.')
+
+    # -- Article page views (for the homepage's Trending section) ---------
+
+    def seed_article_views(self, articles):
+        self.stdout.write('Seeding article page views...')
+        # A handful of published articles get simulated recent traffic so
+        # the homepage's Trending This Week section (purely data-driven,
+        # not editor-curated — see HomeView) has something to show out of
+        # the box instead of sitting empty until real readers show up.
+        trending_slugs = [
+            'maternal-health-outcomes-rural-nepal',
+            'news-tb-screening-guidelines-update',
+            'case-report-rare-cardiac-presentation',
+        ]
+        view_counts = [12, 8, 5]
+        count = 0
+        for slug, views in zip(trending_slugs, view_counts):
+            article = articles.get(slug)
+            if not article:
+                continue
+            existing = ArticleView.objects.filter(article=article).count()
+            for i in range(max(views - existing, 0)):
+                # session_key is max_length=40 — a short synthetic key,
+                # unique per (article, i), is enough to avoid the live
+                # dedup window ever colliding across these seeded rows.
+                ArticleView.objects.create(article=article, session_key=f'seed-{article.pk}-{i}')
+                count += 1
+        self.stdout.write(f'  {count} article views created.')

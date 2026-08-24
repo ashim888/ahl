@@ -1,3 +1,113 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.urls import reverse
 
-# Create your tests here.
+from users.models import User
+
+from .models import Enrollment, TrainingCourse
+
+# See ARCHITECTURE.md §9.4 / users/tests.py:FAST_PASSWORD_HASHERS — a burst
+# of create_user() calls with real PBKDF2 hashing is slow enough to matter
+# once a test creates more than a handful of users (here, 35 enrollees).
+FAST_PASSWORD_HASHERS = override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
+
+
+class CourseManageListFilterTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='course-filter-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def test_filters_by_active_status(self):
+        active_course = TrainingCourse.objects.create(
+            title='Active Course', description='...', price=10, duration='2 weeks',
+            instructor='Dr. A', is_active=True,
+        )
+        TrainingCourse.objects.create(
+            title='Inactive Course', description='...', price=10, duration='2 weeks',
+            instructor='Dr. B', is_active=False,
+        )
+        response = self.client.get(reverse('training:manage_course_list'), {'active': 'yes'})
+        self.assertEqual(list(response.context['courses']), [active_course])
+
+
+@FAST_PASSWORD_HASHERS
+class CourseEnrollmentsListTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='enrollments-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='enrollments-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.course = TrainingCourse.objects.create(
+            title='Paginated Course', description='...', price=10, duration='2 weeks', instructor='Dr. P',
+        )
+
+    def test_non_editorial_cannot_view(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('training:manage_course_enrollments', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_can_view_and_list_is_paginated(self):
+        for i in range(35):
+            user = User.objects.create_user(email=f'enrollee{i}@example.com', password='pw', first_name='E', last_name=str(i))
+            Enrollment.objects.create(user=user, course=self.course, payment_status=Enrollment.PaymentStatus.PAID)
+
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('training:manage_course_enrollments', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_paginated'])
+        self.assertEqual(response.context['page_obj'].paginator.count, 35)
+        self.assertEqual(len(response.context['page_obj']), 30)
+
+
+class CourseCheckoutTests(TestCase):
+    """Self-serve enroll-and-pay — StubGateway always succeeds (see
+    billing/gateway.py) but the flow itself is real: no editorial action needed.
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='enrollee@example.com', password='pw', first_name='E', last_name='N',
+        )
+        self.course = TrainingCourse.objects.create(
+            title='Research Writing 101', description='...', price=25,
+            duration='4 weeks', instructor='Dr. Rao',
+        )
+
+    def test_checkout_requires_login(self):
+        response = self.client.get(reverse('training:course_checkout', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_checkout_creates_paid_active_enrollment(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 302)
+        enrollment = Enrollment.objects.get(user=self.reader, course=self.course)
+        self.assertEqual(enrollment.status, Enrollment.Status.ACTIVE)
+        self.assertEqual(enrollment.payment_status, Enrollment.PaymentStatus.PAID)
+        self.assertTrue(enrollment.payment_reference.startswith('stub-'))
+
+    def test_full_course_blocks_checkout(self):
+        self.course.max_enrollments = 1
+        self.course.save(update_fields=['max_enrollments'])
+        other = User.objects.create_user(email='other@example.com', password='pw', first_name='O', last_name='T')
+        Enrollment.objects.create(
+            user=other, course=self.course,
+            payment_status=Enrollment.PaymentStatus.PAID, payment_reference='stub-existing',
+        )
+
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Enrollment.objects.filter(user=self.reader, course=self.course).exists())
+
+    def test_already_enrolled_reader_not_double_charged(self):
+        Enrollment.objects.create(
+            user=self.reader, course=self.course,
+            payment_status=Enrollment.PaymentStatus.PAID, payment_reference='stub-existing',
+        )
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Enrollment.objects.filter(user=self.reader, course=self.course).count(), 1)

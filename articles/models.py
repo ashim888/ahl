@@ -1,10 +1,32 @@
+import secrets
+import string
+
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
+from django.utils import timezone
+from django.utils.text import slugify
 
 from .validators import (
     article_image_extension_validator, article_pdf_extension_validator,
     validate_article_pdf_size, validate_featured_image_size,
 )
+
+# Shared with articles/views.py HomeView, which caches under this key —
+# defined here (not there) so Article.save() can invalidate it without
+# models.py importing from views.py.
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v2'
+
+# 5 lowercase-alphanumeric chars, e.g. "3f2a4" — short enough to be a usable
+# permalink (/articles/3f2a4/, see articles/converters.py + urls.py), long
+# enough that 36**5 (~60M) combinations make a collision on any one retry
+# vanishingly unlikely, matching the retry-loop pattern Article.save() uses.
+SHORT_CODE_ALPHABET = string.ascii_lowercase + string.digits
+SHORT_CODE_LENGTH = 5
+
+
+def generate_short_code():
+    return ''.join(secrets.choice(SHORT_CODE_ALPHABET) for _ in range(SHORT_CODE_LENGTH))
 
 
 class Article(models.Model):
@@ -26,37 +48,57 @@ class Article(models.Model):
         LETTER_TO_EDITOR = 'letter_to_editor', 'Letter to Editor'
 
     class AccessType(models.TextChoices):
-        OPEN_ACCESS = 'open_access', 'Open Access'
+        OPEN_ACCESS = 'open_access', 'Free'
         SUBSCRIPTION = 'subscription', 'Subscription'
+        PAY_PER_ARTICLE = 'pay_per_article', 'Pay-per-article (special)'
 
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         PUBLISHED = 'published', 'Published'
         ARCHIVED = 'archived', 'Archived'
 
-    # Default access model per article type (editor can override afterward —
-    # e.g. an author pays the APC to make a normally-subscription article OA).
-    ACCESS_TYPE_DEFAULTS = {
-        ArticleType.ORIGINAL_RESEARCH: AccessType.SUBSCRIPTION,
-        ArticleType.REVIEW_ARTICLE: AccessType.SUBSCRIPTION,
-        ArticleType.METHODOLOGY_PAPER: AccessType.SUBSCRIPTION,
-        ArticleType.CASE_REPORT: AccessType.OPEN_ACCESS,
-        ArticleType.SHORT_COMMUNICATION: AccessType.OPEN_ACCESS,
-        ArticleType.EDITORIAL: AccessType.OPEN_ACCESS,
-        ArticleType.NEWS_COMMENTARY: AccessType.OPEN_ACCESS,
-        ArticleType.LETTER_TO_EDITOR: AccessType.OPEN_ACCESS,
-    }
+    class HomepageSection(models.TextChoices):
+        HERO = 'hero', 'Hero (top story)'
+        LATEST_NEWS = 'latest_news', 'Latest News'
+        OPINION = 'opinion', 'Opinion & Editorial'
+        RESEARCH = 'research', 'Research Highlights'
 
     title = models.CharField(max_length=500)
-    slug = models.SlugField(max_length=500, unique=True)
+    slug = models.SlugField(
+        max_length=500, unique=True, blank=True,
+        help_text='Leave blank to generate from the title (plus a short unique code, e.g. "my-article-3f2a4").',
+    )
+    short_code = models.CharField(
+        max_length=SHORT_CODE_LENGTH, unique=True, blank=True, editable=False,
+        help_text='Auto-generated permalink code — also reachable at /articles/<code>/.',
+    )
     abstract = models.TextField()
     keywords = models.CharField(max_length=500, null=True, blank=True)
     article_type = models.CharField(max_length=30, choices=ArticleType.choices)
+    # A per-article editorial/business call, independent of article_type —
+    # see ROADMAP.md Phase 7 "Business model (revised — three access tiers)".
+    # No longer derived from article_type (that was a leftover academic-journal
+    # assumption — a news article's monetization tier isn't implied by its category).
     access_type = models.CharField(
-        max_length=20, choices=AccessType.choices, blank=True,
-        help_text='Leave blank to default from article_type on creation; editors may override.',
+        max_length=20, choices=AccessType.choices, default=AccessType.OPEN_ACCESS,
+        help_text='Free, subscriber-only, or a one-time-purchase "special" article.',
+    )
+    price = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='One-time price, required only when access type is Pay-per-article.',
     )
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.DRAFT)
+    is_pinned = models.BooleanField(
+        default=False,
+        help_text='Pin to the top of listings and the homepage, ahead of publication date. '
+                   'If more than one article is pinned, the most recently published pinned one leads.',
+    )
+    homepage_section = models.CharField(
+        max_length=20, choices=HomepageSection.choices, blank=True,
+        help_text='Feature this article in a specific homepage section, regardless of its article '
+                   'type. Leave blank to let that section auto-fill from recent articles of the '
+                   'matching type instead — see articles/views.py HomeView.',
+    )
 
     submission = models.OneToOneField(
         'submissions.Submission', on_delete=models.SET_NULL, null=True, blank=True,
@@ -64,8 +106,10 @@ class Article(models.Model):
         help_text='Source submission this article was promoted from, if any.',
     )
 
-    submission_date = models.DateField(null=True, blank=True)
-    acceptance_date = models.DateField(null=True, blank=True)
+    # Fully automatic, not editor-facing: created_at (below) already records
+    # when the article was created, and publication_date is stamped by
+    # save() the moment status becomes Published (see below) — no manual
+    # submission/acceptance dates to track without an OJS integration.
     publication_date = models.DateField(null=True, blank=True)
 
     doi = models.CharField(max_length=100, unique=True, null=True, blank=True)
@@ -96,6 +140,7 @@ class Article(models.Model):
     )
     issue = models.ForeignKey(
         'issues.Issue', on_delete=models.SET_NULL, null=True, blank=True, related_name='articles',
+        help_text='Optional story trail / issue this article belongs to.',
     )
 
     volume = models.CharField(max_length=10, null=True, blank=True)
@@ -106,17 +151,12 @@ class Article(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @classmethod
-    def resolve_access_type(cls, article_type, access_type):
-        """Shared by save() and the unsaved preview view (articles/views.py)
-        so both apply the exact same default-resolution rule.
-        """
-        return access_type or cls.ACCESS_TYPE_DEFAULTS.get(article_type, cls.AccessType.SUBSCRIPTION)
-
     @property
     def estimated_read_minutes(self):
-        """Word count / 200wpm, based on whichever body text is actually
-        public (full text if open access, otherwise just the abstract).
+        """Word count / 200wpm. Only counts html_content for open-access
+        articles — a rough public-facing estimate, not viewer-aware (the
+        actual paywall gate for subscription/pay-per-article tiers lives in
+        billing.access.article_is_accessible, not here).
         """
         text = self.abstract or ''
         if self.access_type == self.AccessType.OPEN_ACCESS and self.html_content:
@@ -124,8 +164,36 @@ class Article(models.Model):
         return max(1, round(len(text.split()) / 200))
 
     def save(self, *args, **kwargs):
-        self.access_type = self.resolve_access_type(self.article_type, self.access_type)
+        # short_code first — a blank slug is built from it below, so it must
+        # already exist by the time that runs. Applies regardless of how the
+        # article was created (the editorial form, the pitches accept flow,
+        # seed_demo_data, Django admin, ...) since every path ends up here.
+        if not self.short_code:
+            code = generate_short_code()
+            while Article.objects.filter(short_code=code).exists():
+                code = generate_short_code()
+            self.short_code = code
+        # Auto-slug from the title when an editor leaves it blank
+        # (ArticleForm makes it optional) — the short_code suffix means two
+        # articles with the same title can never collide, so there's no
+        # uniqueness retry loop needed here the way _unique_article_slug
+        # needs one elsewhere for slugs without a code suffix.
+        if not self.slug:
+            base = slugify(self.title) or 'article'
+            self.slug = f'{base}-{self.short_code}'
+        # publication_date is entirely automatic — stamped the moment status
+        # becomes Published, never editor-facing. Doesn't re-stamp on a later
+        # save (e.g. an edit to an already-published article).
+        if self.status == self.Status.PUBLISHED and not self.publication_date:
+            self.publication_date = timezone.localdate()
         super().save(*args, **kwargs)
+        # Cheap and unconditional rather than trying to detect exactly which
+        # field changes matter (status, homepage_section, is_pinned, or just
+        # an edit to an already-featured article's title/image) — a save is
+        # rare enough that clearing on every one isn't worth the complexity
+        # of tracking which changes actually affect the homepage. See
+        # articles/views.py HomeView.CACHE_KEY.
+        cache.delete(HOME_SECTIONS_CACHE_KEY)
 
     def __str__(self):
         return self.title
@@ -143,3 +211,26 @@ class ArticleAuthor(models.Model):
 
     def __str__(self):
         return f'{self.user} on {self.article}'
+
+
+class ArticleView(models.Model):
+    """One page-view event — first-party, no third-party analytics vendor
+    (August 2026 decision: buildable without an external account, unlike
+    GA/Plausible/PostHog). Timestamped events, not just a running total on
+    Article, so a real "trending this week" is possible, not just an
+    all-time counter. See HomeView._build_sections (articles/views.py) for
+    the trending query and ArticleDetailView for where these get recorded.
+    """
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='page_views')
+    session_key = models.CharField(
+        max_length=40, blank=True,
+        help_text='Django session key, used only to de-duplicate repeat views within a short window — no IP/fingerprinting.',
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['article', 'viewed_at'])]
+
+    def __str__(self):
+        return f'View of {self.article} at {self.viewed_at}'

@@ -4,6 +4,7 @@ Django settings for ajna_health_lens project.
 See CLAUDE.md and ARCHITECTURE.md for the full spec this file implements.
 """
 
+import datetime
 import os
 from pathlib import Path
 
@@ -31,6 +32,30 @@ if DEBUG:
     # dev/test only, never in production.
     ALLOWED_HOSTS.append('testserver')
 
+# Used to build absolute links (confirm/unsubscribe) inside emails sent from
+# a background task (newsletter/tasks.py), where there's no request to pull
+# a domain from. No trailing slash.
+SITE_BASE_URL = os.environ.get('SITE_BASE_URL', 'http://localhost:8000')
+
+
+# Production security hardening — every setting here defaults to a no-op in
+# dev (DEBUG=True) so nothing changes locally; each only takes its real
+# value once DEBUG=False in an actual deployment. These are exactly the
+# gaps `manage.py check --deploy` flags (W004/W008/W012/W016) when absent.
+# Individually env-overridable in case a specific deployment terminates TLS
+# somewhere in front of Django (a load balancer, etc.) and needs different values.
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', not DEBUG)
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', not DEBUG)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
+SECURE_CONTENT_TYPE_NOSNIFF = env_bool('SECURE_CONTENT_TYPE_NOSNIFF', True)
+# HSTS is the one setting here that's actively harmful to turn on
+# accidentally in dev/staging (browsers cache it stubbornly), hence 0 unless
+# DEBUG=False — a deployment should raise this once HTTPS is confirmed working.
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0' if DEBUG else str(60 * 60 * 24 * 365)))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', not DEBUG)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', not DEBUG)
+X_FRAME_OPTIONS = os.environ.get('X_FRAME_OPTIONS', 'DENY')
+
 
 # Application definition
 
@@ -41,6 +66,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
+    'django_q',
+    'axes',
+    'django_ckeditor_5',
 
     # Ajna Health Lens apps
     'users',
@@ -51,6 +80,10 @@ INSTALLED_APPS = [
     'admin_custom',
     'training',
     'editorial_board',
+    'billing',
+    'newsletter',
+    'ads',
+    'pitches',
 ]
 
 MIDDLEWARE = [
@@ -61,7 +94,22 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # django-axes' docs require this to be the last middleware in the list —
+    # it reads a lockout flag AxesStandaloneBackend leaves on the request
+    # (see AUTHENTICATION_BACKENDS/AXES_* below) and, only then, rewrites the
+    # response into a 429. Debug Toolbar inserts itself at index 1 below,
+    # which doesn't disturb this middleware staying last.
+    'axes.middleware.AxesMiddleware',
 ]
+
+# Django Debug Toolbar — dev-only, entirely gated behind DEBUG so it's never
+# installed/active in production regardless of what's in INSTALLED_APPS
+# above. Needs INTERNAL_IPS to actually render (see below).
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
+    # As early as possible, but after SecurityMiddleware per the toolbar's docs.
+    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    INTERNAL_IPS = [h.strip() for h in os.environ.get('INTERNAL_IPS', '127.0.0.1,::1').split(',') if h.strip()]
 
 ROOT_URLCONF = 'ajna_health_lens.urls'
 
@@ -106,6 +154,36 @@ DATABASES = {
 AUTH_USER_MODEL = 'users.User'
 
 
+# Account-level login lockout (django-axes) — complements, not replaces, the
+# per-IP django_ratelimit throttle already on EmailLoginView (15/m; see
+# users/views.py). Rate limiting alone doesn't stop a slow/distributed
+# attacker rotating IPs against one account — axes tracks failures by
+# username (email) instead, independent of source IP. AxesStandaloneBackend
+# must be first so a locked-out account is rejected before ModelBackend ever
+# checks the password.
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+AXES_FAILURE_LIMIT = 5
+AXES_LOCKOUT_PARAMETERS = ['username']
+# django.contrib.auth.forms.AuthenticationForm always names its field
+# "username" — even though User.USERNAME_FIELD is "email" — so axes' default
+# of reading USERNAME_FIELD ("email") from POST data looks for a key that's
+# never actually sent and silently tracks nothing. Point it at the real field.
+AXES_USERNAME_FORM_FIELD = 'username'
+# Auto-expires the lockout rather than requiring an admin to manually clear
+# it in Django admin (axes.AccessAttempt) — 30 minutes is enough friction to
+# stop a credential-stuffing run without locking a real reader out for long.
+AXES_COOLOFF_TIME = datetime.timedelta(minutes=30)
+AXES_RESET_ON_SUCCESS = True
+# axes.W006 warns that username-only lockout doesn't stop an attacker who
+# rotates IPs/cookies — true, but that's deliberately EmailLoginView's job
+# (per-IP ratelimit) rather than axes'; the two are complementary, not
+# redundant, by design (see the AUTHENTICATION_BACKENDS comment above).
+SILENCED_SYSTEM_CHECKS = ['axes.W006']
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -142,11 +220,66 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Env-overridable, same `or` reasoning as MEDIA_ROOT below — a deployment
+# can point collectstatic wherever it actually needs to serve static files
+# from (ARCHITECTURE.md §9 documents this as configurable; it needs to
+# actually be configurable for that to be true).
+STATIC_ROOT = Path(os.environ.get('STATIC_ROOT') or BASE_DIR / 'staticfiles')
 
-# Media files (user uploads: manuscripts, CVs, article PDFs, covers)
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Media files (user uploads: manuscripts, CVs, article PDFs, covers).
+# In production, Django itself does NOT serve these (see the DEBUG check in
+# ajna_health_lens/urls.py) — the web server (nginx/Apache) serves /media/
+# directly from MEDIA_ROOT. Both are env-overridable so a deployment can
+# point them at wherever media actually lives on that host, and MEDIA_URL
+# can become a full CDN domain later (e.g. https://cdn.example.com/media/)
+# without any code change — see ARCHITECTURE.md §9 for the nginx config.
+# `or` (not a .get default) so an empty value in .env — e.g. an unedited
+# MEDIA_ROOT= left over from .env.example — falls back too, instead of
+# resolving to '' (MEDIA_ROOT='' would silently mean "the cwd").
+MEDIA_URL = os.environ.get('MEDIA_URL') or '/media/'
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT') or BASE_DIR / 'media')
+
+
+# CKEditor 5 (django-ckeditor-5) — WYSIWYG editing for the "trusted,
+# editor-authored HTML" fields that used to be plain <textarea>s an editor
+# had to hand-write raw HTML into (Article.html_content, NewsletterIssue.body_html;
+# see ARCHITECTURE.md §4.2/§4.10). `articles` config adds a "sourceEditing"
+# button so a technical editor can still drop into raw HTML when they need
+# to (e.g. an embedded D3.js chart, ARCHITECTURE.md's chart-embedding note)
+# — WYSIWYG is the default view, not the only option. Citations are typed
+# as plain [1], [2] placeholders (see articles/citations.py) rather than
+# needing hand-written <sup><a href="#ref-1"> markup at all.
+CKEDITOR_5_CONFIGS = {
+    'default': {
+        'toolbar': [
+            'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList',
+            'blockQuote', '|', 'undo', 'redo',
+        ],
+    },
+    'articles': {
+        'toolbar': [
+            'heading', '|', 'bold', 'italic', 'underline', 'link', '|',
+            'bulletedList', 'numberedList', 'blockQuote', 'insertTable', '|',
+            'undo', 'redo', '|', 'sourceEditing',
+        ],
+        'table': {
+            'contentToolbar': ['tableColumn', 'tableRow', 'mergeTableCells'],
+        },
+    },
+}
+# django-ckeditor-5's built-in upload-permission check only understands two
+# modes: "staff" (request.user.is_staff) or "authenticated". Neither maps
+# onto this project's role-based RBAC — Editor/EiC/Admin accounts don't get
+# is_staff=True here (see users/forms.py StaffCreateForm, ARCHITECTURE.md
+# §6.2), so "staff" would lock real editors out, and "authenticated" would
+# let any logged-in reader hit the upload endpoint directly. Real
+# enforcement (EDITORIAL_ROLES) happens in the wrapper view at
+# ajna_health_lens/ckeditor_views.py, which is registered under this same
+# view name instead of the package's own urls.py — this setting is left at
+# "authenticated" so the package's own inner check, which still runs after
+# the wrapper's, is just a harmless pass-through rather than a second,
+# conflicting gate.
+CKEDITOR_5_FILE_UPLOAD_PERMISSION = 'authenticated'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -173,12 +306,40 @@ EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@ajnahealthlens.example')
 
 
+# Cache — DB-backed (django_cache_table, via `manage.py createcachetable`),
+# not Redis/Memcached, matching the project's no-extra-infra pattern (see
+# Q_CLUSTER above — same reasoning). LocMemCache (Django's default) is
+# per-process and useless once more than one worker process runs, so
+# something real needs to be configured even at this scale. Used surgically
+# for shared, non-personalized query results (HomeView's section picks,
+# ArticleDetailView's related-articles/structured-data) — never for
+# anything that varies by request.user, to avoid caching one visitor's
+# subscription-gated view of a page for everyone else. See articles/views.py.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
+        'TIMEOUT': 300,  # 5 minutes — short enough that a publish/unpublish is never stale for long
+    },
+}
+
+
 # Journal branding (see ARCHITECTURE.md §10.1)
-JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Ajna Health Lens')
+JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Health Lens')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
 JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
-JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Ajna Health Lens Publishing')
+JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing')
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.example')
+
+
+# Cloudflare Turnstile (CAPTCHA) — pitches app, story-pitch submission
+# (August 2026: opened to any authenticated account, not just verified
+# authors, so a real bot-mitigation layer matters here now). Keys are added
+# later; pitches/captcha.py treats a blank TURNSTILE_SECRET_KEY as "not
+# configured yet" and skips verification (never blocks submissions) rather
+# than failing every request until real keys are set.
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '')
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
 
 
 # File upload limits (see ARCHITECTURE.md §7.1)
@@ -188,3 +349,19 @@ PROFILE_PHOTO_MAX_UPLOAD_SIZE_MB = 5
 ISSUE_COVER_MAX_UPLOAD_SIZE_MB = 10
 ARTICLE_PDF_MAX_UPLOAD_SIZE_MB = 100
 ARTICLE_IMAGE_MAX_UPLOAD_SIZE_MB = 10
+AD_IMAGE_MAX_UPLOAD_SIZE_MB = 5
+
+
+# Async task queue (Django-Q2) — used for bulk newsletter sends so a
+# "compose & send" submit doesn't block the request while it emails every
+# subscriber. ORM broker: no Redis/RabbitMQ to deploy, just a DB table,
+# which fits this project's MySQL-only footprint. Run a worker with
+# `python manage.py qcluster` (see ARCHITECTURE.md §9 for the deployment note).
+Q_CLUSTER = {
+    'name': 'ajna_health_lens',
+    'orm': 'default',
+    'workers': 2,
+    'timeout': 90,
+    'retry': 120,
+    'sync': env_bool('Q_CLUSTER_SYNC', False),
+}

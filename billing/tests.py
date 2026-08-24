@@ -1,0 +1,324 @@
+import datetime
+
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from articles.models import Article
+from users.models import User
+
+from .access import article_is_accessible
+from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
+from .views import build_comparison_matrix
+
+
+def make_article(access_type, price=None, status=Article.Status.PUBLISHED):
+    return Article.objects.create(
+        title='Test Article', slug=f'test-article-{access_type}', abstract='Abstract',
+        article_type=Article.ArticleType.NEWS_COMMENTARY, access_type=access_type, price=price, status=status,
+    )
+
+
+class ArticleAccessGateTests(TestCase):
+    """billing.access.article_is_accessible is the real paywall gate — these
+    cover each tier for anonymous, plain, subscribed, purchasing, and
+    editorial-staff readers.
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='reader@example.com', password='pw', first_name='R', last_name='D',
+        )
+        self.editor = User.objects.create_user(
+            email='editor@example.com', password='pw', first_name='E', last_name='D',
+            role=User.Role.EDITOR,
+        )
+        from django.contrib.auth.models import AnonymousUser
+        self.anon = AnonymousUser()
+
+    def test_open_access_is_always_accessible(self):
+        article = make_article(Article.AccessType.OPEN_ACCESS)
+        self.assertTrue(article_is_accessible(self.anon, article))
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+    def test_subscription_article_blocked_without_subscription(self):
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        self.assertFalse(article_is_accessible(self.anon, article))
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_subscription_article_open_with_active_subscription(self):
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+    def test_expired_subscription_does_not_grant_access(self):
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=plan,
+            start_date=today - datetime.timedelta(days=60), end_date=today - datetime.timedelta(days=30),
+        )
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_pay_per_article_blocked_without_purchase(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_pay_per_article_open_after_purchase(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
+        ArticlePurchase.objects.create(user=self.reader, article=article, amount=2)
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+    def test_editorial_staff_always_has_access(self):
+        subscription_article = make_article(Article.AccessType.SUBSCRIPTION)
+        special_article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
+        self.assertTrue(article_is_accessible(self.editor, subscription_article))
+        self.assertTrue(article_is_accessible(self.editor, special_article))
+
+    def test_active_subscriber_can_read_pay_per_article_without_separate_purchase(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+
+class ArticleDetailPaywallViewTests(TestCase):
+    """End-to-end: the public article detail view actually applies the gate."""
+
+    def test_subscription_article_hides_full_text_from_anonymous_reader(self):
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        article.html_content = 'Secret full text'
+        article.save()
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(response, 'Secret full text')
+
+    def test_subscription_article_shows_full_text_to_active_subscriber(self):
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        article.html_content = 'Secret full text'
+        article.save()
+        reader = User.objects.create_user(email='sub@example.com', password='pw', first_name='S', last_name='B')
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'Secret full text')
+
+
+class GrantSubscriptionViewTests(TestCase):
+    """The manual-grant flow that stands in for Stripe checkout today."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email='admin@example.com', password='pw', first_name='A', last_name='D', role=User.Role.ADMIN,
+        )
+        self.reader = User.objects.create_user(
+            email='reader2@example.com', password='pw', first_name='R', last_name='D',
+        )
+        self.plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30,
+        )
+
+    def test_admin_can_grant_subscription(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('billing:manage_subscription_grant'), {'user': self.reader.pk, 'plan': self.plan.pk},
+        )
+        self.assertEqual(response.status_code, 302)
+        subscription = UserSubscription.objects.get(user=self.reader, plan=self.plan)
+        self.assertTrue(subscription.is_currently_active)
+        self.assertEqual(subscription.end_date, timezone.localdate() + datetime.timedelta(days=30))
+
+    def test_non_senior_staff_cannot_grant_subscription(self):
+        editor = User.objects.create_user(
+            email='editor2@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        response = self.client.post(
+            reverse('billing:manage_subscription_grant'), {'user': self.reader.pk, 'plan': self.plan.pk},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(UserSubscription.objects.filter(user=self.reader).exists())
+
+
+class SelfServeCheckoutTests(TestCase):
+    """Public checkout — no gateway is wired in yet (StubGateway always
+    succeeds, see billing/gateway.py), but the flow itself is real and
+    self-serve: a reader completes it without any editorial action.
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='checkout@example.com', password='pw', first_name='C', last_name='O',
+        )
+        self.plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30,
+        )
+
+    def test_plan_browse_is_public(self):
+        response = self.client.get(reverse('billing:plan_browse'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.plan.name)
+
+    def test_subscribe_checkout_requires_login(self):
+        response = self.client.get(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_subscribe_checkout_creates_active_subscription(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 302)
+        subscription = UserSubscription.objects.get(user=self.reader, plan=self.plan)
+        self.assertTrue(subscription.is_currently_active)
+        self.assertTrue(subscription.payment_reference.startswith('stub-'))
+
+    def test_already_subscribed_reader_is_not_double_charged(self):
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=self.plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(UserSubscription.objects.filter(user=self.reader).count(), 1)
+
+    def test_purchase_checkout_creates_purchase_and_unlocks_article(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=3)
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('billing:purchase_checkout', args=[article.slug]))
+        self.assertEqual(response.status_code, 302)
+        purchase = ArticlePurchase.objects.get(user=self.reader, article=article)
+        self.assertTrue(purchase.payment_reference.startswith('stub-'))
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+
+class PlanDetailAndComparisonTests(TestCase):
+    def setUp(self):
+        f1 = PlanFeature.objects.create(label='Full access to subscriber-only articles', order=0)
+        f2 = PlanFeature.objects.create(label='Priority support', order=1)
+        f3 = PlanFeature.objects.create(label='Dedicated account manager', order=2)
+        self.basic = SubscriptionPlan.objects.create(
+            name='Basic', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=100, duration_days=30,
+        )
+        self.basic.features.set([f1])
+        self.premium = SubscriptionPlan.objects.create(
+            name='Premium', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL, price=1000, duration_days=365,
+            is_featured=True,
+        )
+        self.premium.features.set([f1, f2])
+        self.enterprise = SubscriptionPlan.objects.create(
+            name='Enterprise', plan_type=SubscriptionPlan.PlanType.INSTITUTIONAL, price=5000, duration_days=365,
+        )
+        self.enterprise.features.set([f1, f2, f3])
+
+    def test_comparison_matrix_shape_and_ordering(self):
+        plans = [self.basic, self.premium, self.enterprise]
+        matrix = build_comparison_matrix(plans)
+        self.assertEqual([row['feature'].label for row in matrix], [
+            'Full access to subscriber-only articles', 'Priority support', 'Dedicated account manager',
+        ])
+        # Basic has only the first feature; Enterprise has all three.
+        self.assertEqual([row['included'][0] for row in matrix], [True, False, False])
+        self.assertEqual([row['included'][2] for row in matrix], [True, True, True])
+
+    def test_plan_detail_page_renders_its_own_features_and_comparison_table(self):
+        response = self.client.get(reverse('billing:plan_detail', args=[self.premium.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Premium')
+        self.assertContains(response, 'Priority support')
+        self.assertContains(response, 'MOST POPULAR')
+        # Comparison table includes the other plans too.
+        self.assertContains(response, 'Basic')
+        self.assertContains(response, 'Enterprise')
+
+    def test_inactive_plan_detail_page_404s(self):
+        self.basic.is_active = False
+        self.basic.save(update_fields=['is_active'])
+        response = self.client.get(reverse('billing:plan_detail', args=[self.basic.pk]))
+        self.assertEqual(response.status_code, 404)
+
+
+class PlanListFilterTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='plan-filter-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+        self.monthly = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=10, duration_days=30,
+        )
+        self.annual = SubscriptionPlan.objects.create(
+            name='Annual', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL, price=100, duration_days=365,
+            is_active=False,
+        )
+
+    def test_filters_by_plan_type(self):
+        response = self.client.get(reverse('billing:manage_plan_list'), {'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY})
+        self.assertEqual(list(response.context['plans']), [self.monthly])
+
+    def test_filters_by_active_status(self):
+        response = self.client.get(reverse('billing:manage_plan_list'), {'active': 'no'})
+        self.assertEqual(list(response.context['plans']), [self.annual])
+
+    def test_default_ordering_is_newest_first(self):
+        # Distinct from PlanBrowseView (public), which orders by price on
+        # purpose — this is the editorial manage list.
+        response = self.client.get(reverse('billing:manage_plan_list'))
+        plans = list(response.context['plans'])
+        self.assertLess(plans.index(self.annual), plans.index(self.monthly))
+
+
+class SubscriptionListFilterTests(TestCase):
+    def setUp(self):
+        self.eic = User.objects.create_user(
+            email='sub-filter-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        self.client.force_login(self.eic)
+        self.reader = User.objects.create_user(email='sub-filter-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.monthly = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=10, duration_days=30,
+        )
+        self.annual = SubscriptionPlan.objects.create(
+            name='Annual', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL, price=100, duration_days=365,
+        )
+        self.active_sub = UserSubscription.objects.create(
+            user=self.reader, plan=self.monthly, status=UserSubscription.Status.ACTIVE,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+        self.cancelled_sub = UserSubscription.objects.create(
+            user=self.reader, plan=self.annual, status=UserSubscription.Status.CANCELLED,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+
+    def test_filters_by_status(self):
+        response = self.client.get(reverse('billing:manage_subscription_list'), {'status': UserSubscription.Status.CANCELLED})
+        self.assertEqual(list(response.context['subscriptions']), [self.cancelled_sub])
+
+    def test_filters_by_plan(self):
+        response = self.client.get(reverse('billing:manage_subscription_list'), {'plan': self.monthly.pk})
+        self.assertEqual(list(response.context['subscriptions']), [self.active_sub])

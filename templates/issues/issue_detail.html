@@ -9,9 +9,9 @@
             <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" class="w-full md:w-56 object-cover" style="filter: grayscale(10%);">
         {% endif %}
         <div>
-            <p class="font-mono-editorial text-xs text-muted-foreground mb-2">Vol. {{ issue.volume }} · Issue {{ issue.number }}</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">ISSUE</p>
             <h1 class="font-display text-3xl font-bold italic leading-tight" style="letter-spacing: -0.02em;">
-                {{ issue.title|default:"Untitled Issue" }}
+                {{ issue.title }}
             </h1>
             {% if issue.publication_date %}
                 <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">{{ issue.publication_date|date:"F j, Y" }}</p>

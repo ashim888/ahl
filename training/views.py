@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -7,14 +8,15 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from billing.gateway import get_gateway
 from users.decorators import role_required
 from users.models import User
 
 from .forms import TrainingCourseForm
 from .models import Enrollment, TrainingCourse
 
-# Matches EDITORIAL_ROLES in articles/views.py, admin_custom/views.py, editorial_board/views.py.
-EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
+EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 
 class CourseListView(ListView):
@@ -50,8 +52,10 @@ class CourseDetailView(DetailView):
 
 
 @login_required
-@require_POST
-def enroll(request, pk):
+def course_checkout(request, pk):
+    """Self-serve enroll-and-pay. No real gateway is wired in yet
+    (billing.gateway.StubGateway always succeeds) — see ROADMAP.md Phase 7.
+    """
     course = get_object_or_404(TrainingCourse, pk=pk, is_active=True)
     existing = Enrollment.objects.filter(user=request.user, course=course).first()
 
@@ -65,14 +69,24 @@ def enroll(request, pk):
             messages.error(request, 'This course is full.')
             return redirect('training:course_detail', pk=pk)
 
-    if existing:
-        existing.status = Enrollment.Status.ACTIVE
-        existing.save()
-    else:
-        Enrollment.objects.create(user=request.user, course=course)
+    if request.method == 'POST':
+        result = get_gateway().charge(request.user, course.price, f'Training — {course.title}')
+        if result.success:
+            if existing:
+                existing.status = Enrollment.Status.ACTIVE
+                existing.payment_status = Enrollment.PaymentStatus.PAID
+                existing.payment_reference = result.reference
+                existing.save(update_fields=['status', 'payment_status', 'payment_reference'])
+            else:
+                Enrollment.objects.create(
+                    user=request.user, course=course,
+                    payment_status=Enrollment.PaymentStatus.PAID, payment_reference=result.reference,
+                )
+            messages.success(request, f'Enrolled in "{course.title}".')
+            return redirect('training:course_detail', pk=pk)
+        messages.error(request, result.error or 'Payment failed — please try again.')
 
-    messages.success(request, f'Enrolled in "{course.title}". Payment is tracked as pending until Phase 7\'s payment integration lands.')
-    return redirect('training:course_detail', pk=pk)
+    return render(request, 'training/course_checkout.html', {'course': course})
 
 
 # -- Editorial course management (CRUD, not public browsing) ---------------
@@ -87,7 +101,18 @@ class CourseManageListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return TrainingCourse.objects.annotate(enrollment_count=Count('enrollments')).order_by('-created_at')
+        queryset = TrainingCourse.objects.annotate(enrollment_count=Count('enrollments')).order_by('-created_at')
+        active = self.request.GET.get('active')
+        if active == 'yes':
+            queryset = queryset.filter(is_active=True)
+        elif active == 'no':
+            queryset = queryset.filter(is_active=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['selected_active'] = self.request.GET.get('active', '')
+        return context
 
 
 class CourseFormMixin:
@@ -142,6 +167,30 @@ class CourseDeleteView(DeleteView):
 def course_enrollments(request, pk):
     course = get_object_or_404(TrainingCourse, pk=pk)
     enrollments = course.enrollments.select_related('user').order_by('-enrolled_at')
+    # A plain function view (not a ListView), so pagination is manual —
+    # a popular course's enrollment list can run into the hundreds, and
+    # this previously rendered every row with no pagination at all.
+    page_obj = Paginator(enrollments, 30).get_page(request.GET.get('page'))
     return render(request, 'training/manage/course_enrollments.html', {
-        'course': course, 'enrollments': enrollments,
+        'course': course, 'enrollments': page_obj, 'page_obj': page_obj, 'is_paginated': page_obj.has_other_pages(),
+        'status_choices': Enrollment.Status.choices,
+        'payment_status_choices': Enrollment.PaymentStatus.choices,
     })
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def enrollment_update(request, pk):
+    """Quick inline edit from the enrollments list — status/payment_status
+    only (matches Django admin's EnrollmentAdmin, minus the bulk actions).
+    """
+    enrollment = get_object_or_404(Enrollment, pk=pk)
+    status = request.POST.get('status')
+    payment_status = request.POST.get('payment_status')
+    if status in Enrollment.Status.values:
+        enrollment.status = status
+    if payment_status in Enrollment.PaymentStatus.values:
+        enrollment.payment_status = payment_status
+    enrollment.save(update_fields=['status', 'payment_status'])
+    messages.success(request, f'Enrollment for {enrollment.user.email} updated.')
+    return redirect('training:manage_course_enrollments', pk=enrollment.course_id)

@@ -1,0 +1,83 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Subscriptions — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Subscriptions{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+        Every subscription grant, active or not. <a href="{% url 'billing:manage_plan_list' %}" class="underline">Plans</a> define what's available to grant.
+    </p>
+    <a href="{% url 'billing:manage_subscription_grant' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 whitespace-nowrap">
+        + Grant Subscription
+    </a>
+</div>
+
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+        <select name="status" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All statuses</option>
+            {% for value, label in statuses %}
+                <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Plan</label>
+        <select name="plan" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All plans</option>
+            {% for plan in plans %}
+                <option value="{{ plan.pk }}" {% if plan.pk|stringformat:"s" == selected_plan %}selected{% endif %}>{{ plan.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3">#</th>
+                <th class="px-4 py-3">Reader</th>
+                <th class="px-4 py-3">Plan</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Window</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for subscription in subscriptions %}
+                <tr>
+                    <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ subscription.user.get_full_name }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ subscription.plan.name }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {{ subscription.get_status_display }}
+                        {% if subscription.is_currently_active %}<span class="text-green-600">●</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{{ subscription.start_date }} – {{ subscription.end_date }}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        {% if subscription.status == 'active' %}
+                            <form method="post" action="{% url 'billing:manage_subscription_revoke' subscription.pk %}" class="inline"
+                                  onsubmit="return confirm('Cancel this subscription?');">
+                                {% csrf_token %}
+                                <button type="submit" class="icon-action-btn icon-action-danger" title="Cancel" aria-label="Cancel subscription">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="m15 9-6 6m0-6 6 6"/></svg>
+                                </button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No subscriptions granted yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}

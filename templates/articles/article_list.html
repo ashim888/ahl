@@ -7,13 +7,29 @@
     <div class="rule-editorial mb-6"></div>
     <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Articles</h1>
 
+    <form method="get" class="mt-6 flex items-center gap-2 max-w-sm">
+        {% if selected_type %}<input type="hidden" name="type" value="{{ selected_type }}">{% endif %}
+        <input type="text" name="keyword" value="{{ selected_keyword }}" placeholder="Search by keyword…"
+               class="flex-1 border border-border px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-foreground">
+        <button type="submit"
+                class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors whitespace-nowrap">
+            SEARCH
+        </button>
+    </form>
+    {% if selected_keyword %}
+        <p class="mt-3 text-sm text-muted-foreground">
+            Tagged <span class="font-semibold text-foreground">{{ selected_keyword }}</span>
+            <a href="{% url 'articles:article_list' %}{% if selected_type %}?type={{ selected_type }}{% endif %}" class="ml-2 underline hover:text-accent">Clear</a>
+        </p>
+    {% endif %}
+
     <div class="mt-6 flex flex-wrap gap-2">
-        <a href="{% url 'articles:article_list' %}"
+        <a href="{% if selected_keyword %}?keyword={{ selected_keyword }}{% else %}{% url 'articles:article_list' %}{% endif %}"
            class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if not selected_type %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">
             ALL
         </a>
         {% for value, label in article_types %}
-            <a href="?type={{ value }}"
+            <a href="?type={{ value }}{% if selected_keyword %}&keyword={{ selected_keyword }}{% endif %}"
                class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if value == selected_type %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">
                 {{ label|upper }}
             </a>
@@ -33,6 +49,7 @@
                 </a>
                 <div class="flex-1 min-w-0">
                     <span class="section-label text-muted-foreground">
+                        {% if article.is_pinned %}<span class="text-accent">PINNED ·</span> {% endif %}
                         {{ article.get_article_type_display }} · {{ article.get_access_type_display }}
                     </span>
                     <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">

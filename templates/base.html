@@ -1,12 +1,27 @@
-{% load static %}
+{% load static ads_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
-    <meta name="description" content="{{ JOURNAL_TAGLINE }}">
+    <meta name="description" content="{{ meta_description|default:JOURNAL_TAGLINE }}">
+    <link rel="canonical" href="{{ canonical_url|default:request.build_absolute_uri }}">
     <link rel="icon" href="{% static 'images/logo.png' %}">
+    <link rel="alternate" type="application/rss+xml" title="{{ JOURNAL_NAME }} — Latest Articles" href="{% url 'articles:latest_feed' %}">
+
+    {# Open Graph / Twitter Card — sitewide defaults; ArticleDetailView overrides meta_title/meta_description/meta_image_url/og_type so shared article links render a real preview instead of a bare URL. #}
+    <meta property="og:site_name" content="{{ JOURNAL_NAME }}">
+    <meta property="og:type" content="{{ og_type|default:'website' }}">
+    <meta property="og:title" content="{{ meta_title|default:JOURNAL_NAME }}">
+    <meta property="og:description" content="{{ meta_description|default:JOURNAL_TAGLINE }}">
+    <meta property="og:url" content="{{ canonical_url|default:request.build_absolute_uri }}">
+    <meta property="og:image" content="{{ meta_image_url|default:default_og_image_url }}">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ meta_title|default:JOURNAL_NAME }}">
+    <meta name="twitter:description" content="{{ meta_description|default:JOURNAL_TAGLINE }}">
+    <meta name="twitter:image" content="{{ meta_image_url|default:default_og_image_url }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -60,6 +75,18 @@
             outline: 2px solid transparent; box-shadow: 0 0 0 2px #111110;
         }
 
+        /* Password show/hide toggle — injected by JS (see the bottom script
+           block) around every input[type=password] on the page, so login
+           and register need no template-specific markup. */
+        .password-field-wrapper { position: relative; }
+        .password-field-wrapper input { padding-right: 2.75rem; }
+        .password-toggle-btn {
+            position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%);
+            background: none; border: none; padding: 0.25rem; margin: 0; cursor: pointer;
+            color: #6b6860; display: flex; align-items: center;
+        }
+        .password-toggle-btn:hover { color: #111110; }
+
         /* Full-text article body (Article.html_content) */
         .prose-article { font-family: Georgia, serif; }
         .prose-article h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-top: 2rem; border-top: 1px solid #d4d0cb; letter-spacing: -0.015em; }
@@ -81,6 +108,18 @@
         .prose-article figcaption { margin-top: 0.75rem; font-size: 0.8rem; color: #6b6860; }
         .prose-article sup { vertical-align: super; font-size: 0.7em; }
         .prose-article a { text-decoration: underline; }
+
+        /* The header is `sticky top-0` (see <header> below), so an in-page
+           anchor jump — e.g. clicking a [N] citation superscript, which
+           links to #ref-N in the References list — lands the target right
+           under it, hidden. :target only matches whatever element the URL
+           fragment currently points at, so this doesn't affect normal
+           layout. Two breakpoints because the header gains a second row
+           (the HOME/ARTICLES/... nav) at `md`, matching that breakpoint below. */
+        :target { scroll-margin-top: 6.5rem; }
+        @media (min-width: 768px) {
+            :target { scroll-margin-top: 11rem; }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -91,7 +130,7 @@
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <span class="font-mono-editorial text-xs tracking-widest opacity-80">
                 {% if latest_issue %}
-                    VOL. {{ latest_issue.volume }} · ISSUE {{ latest_issue.number }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}
+                    LATEST ISSUE: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}
                 {% else %}
                     {{ JOURNAL_TAGLINE|upper }}
                 {% endif %}
@@ -103,26 +142,40 @@
     </div>
 
     <header class="bg-background border-b-2 border-foreground sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="flex items-center justify-between py-5 border-b border-border">
-                <div class="flex-1">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6">
+            <div class="flex items-center justify-between py-4 sm:py-5 border-b border-border">
+                <button type="button" id="mobile-menu-button" aria-label="Menu" aria-expanded="false"
+                        class="md:hidden -ml-2 p-2 text-foreground">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+
+                <div class="hidden md:flex flex-1">
                     <form method="get" action="{% url 'articles:search' %}" class="flex items-center border border-border max-w-[220px]">
                         <input type="text" name="q" placeholder="Search…"
                                class="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0 !w-auto">
                     </form>
                 </div>
-                <a href="{% url 'articles:home' %}" class="flex flex-col items-center text-center">
-                    <img src="{% static 'images/logo.png' %}" alt="" class="h-10 w-auto mb-1">
-                    <h1 class="font-display text-3xl font-black tracking-tight leading-none" style="letter-spacing: -0.02em;">
+
+                <a href="{% url 'articles:home' %}" class="flex flex-col items-center text-center mx-auto md:mx-0">
+                    <img src="{% static 'images/logo.png' %}" alt="" class="h-7 sm:h-10 w-auto mb-1">
+                    <h1 class="font-display text-lg sm:text-2xl md:text-3xl font-black tracking-tight leading-none" style="letter-spacing: -0.02em;">
                         {{ JOURNAL_NAME|upper }}
                     </h1>
-                    <p class="font-mono-editorial text-[0.6rem] tracking-[0.25em] text-muted-foreground mt-1">
+                    <p class="hidden sm:block font-mono-editorial text-[0.6rem] tracking-[0.25em] text-muted-foreground mt-1">
                         {{ JOURNAL_TAGLINE|upper }}
                     </p>
                 </a>
+
                 <div class="flex-1 flex justify-end items-center gap-4">
+                    <a href="{% url 'articles:search' %}" aria-label="Search" class="md:hidden p-2 -mr-2 text-foreground">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
+                        </svg>
+                    </a>
                     {% if user.is_authenticated %}
-                        <div class="relative">
+                        <div class="relative hidden md:block">
                             <button type="button" id="profile-menu-button" class="flex items-center gap-2 text-foreground hover:text-accent">
                                 {% if user.photo %}
                                     <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0">
@@ -141,7 +194,7 @@
                                     <p class="font-medium text-sm truncate">{{ user.get_full_name }}</p>
                                     <p class="font-mono-editorial text-xs text-muted-foreground">{{ user.get_role_display }}</p>
                                 </div>
-                                {% if user.role == 'editor' or user.role == 'editor_in_chief' or user.role == 'admin' %}
+                                {% if user.is_editorial_staff %}
                                     <a href="{% url 'admin_custom:dashboard' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
                                         Dashboard
                                     </a>
@@ -157,21 +210,30 @@
                                 </form>
                             </div>
                         </div>
+                        <a href="{% url 'users:profile' %}" class="md:hidden shrink-0" aria-label="Profile">
+                            {% if user.photo %}
+                                <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover">
+                            {% else %}
+                                <span class="w-8 h-8 rounded-full bg-foreground text-primary-foreground flex items-center justify-center text-xs font-semibold font-mono-editorial">
+                                    {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                                </span>
+                            {% endif %}
+                        </a>
                     {% else %}
-                        <a href="{% url 'users:login' %}" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-foreground">
+                        <a href="{% url 'users:login' %}" class="hidden md:inline font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-foreground">
                             LOGIN
                         </a>
                         <a href="{% url 'users:register' %}"
-                           class="font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:bg-foreground hover:text-primary-foreground transition-colors">
+                           class="hidden md:inline font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:bg-foreground hover:text-primary-foreground transition-colors">
                             REGISTER
                         </a>
                     {% endif %}
                 </div>
             </div>
 
-            <nav class="flex items-center justify-between gap-0 overflow-x-auto">
+            <nav class="hidden md:flex items-center justify-between gap-0 overflow-x-auto">
                 <a href="{% url 'articles:home' %}"
-                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
+                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' or path == '/index/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     HOME
                 </a>
                 <a href="{% url 'articles:article_list' %}"
@@ -190,10 +252,48 @@
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/about/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     ABOUT
                 </a>
+                <a href="{% url 'pitches:pitch_create' %}"
+                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/pitches/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
+                    PITCH A STORY
+                </a>
             </nav>
+        </div>
+
+        <div id="mobile-menu-dropdown" class="hidden md:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
+            <form method="get" action="{% url 'articles:search' %}" class="flex items-center border border-border mx-4 mt-4">
+                <input type="text" name="q" placeholder="Search…"
+                       class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
+            </form>
+            <nav class="px-4 py-4 space-y-1">
+                <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' or path == '/index/' %}text-accent{% endif %}">HOME</a>
+                <a href="{% url 'articles:article_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">ARTICLES</a>
+                <a href="{% url 'issues:issue_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/issues/' in path %}text-accent{% endif %}">ISSUES</a>
+                <a href="{% url 'training:course_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/training/' in path %}text-accent{% endif %}">TRAINING</a>
+                <a href="{% url 'editorial_board:public_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">ABOUT</a>
+                <a href="{% url 'pitches:pitch_create' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/pitches/' in path %}text-accent{% endif %}">PITCH A STORY</a>
+            </nav>
+            <div class="border-t border-border px-4 py-4">
+                {% if user.is_authenticated %}
+                    <p class="font-medium text-sm">{{ user.get_full_name }}</p>
+                    <p class="font-mono-editorial text-xs text-muted-foreground mb-3">{{ user.get_role_display }}</p>
+                    {% if user.is_editorial_staff %}
+                        <a href="{% url 'admin_custom:dashboard' %}" class="block py-2 text-sm">Dashboard</a>
+                    {% endif %}
+                    <a href="{% url 'users:profile' %}" class="block py-2 text-sm">Profile</a>
+                    <form method="post" action="{% url 'users:logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full text-left py-2 text-sm">Log out</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'users:login' %}" class="block py-2 text-sm">Login</a>
+                    <a href="{% url 'users:register' %}" class="block py-2 text-sm font-semibold">Register</a>
+                {% endif %}
+            </div>
         </div>
     </header>
     {% endwith %}
+
+    {% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}
 
     <main class="flex-1">
         {% if messages %}
@@ -211,8 +311,27 @@
         {% block content %}{% endblock %}
     </main>
 
+    {% ad_slot 'mobile_anchor' wrapper_class='md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border flex justify-center py-1' %}
+
     <footer class="bg-foreground text-primary-foreground">
         <div class="max-w-7xl mx-auto px-6 py-10">
+            <div class="border-b border-white/10 pb-8 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-1">NEWSLETTER</p>
+                    <p class="text-sm opacity-70">Free — the latest articles and news, straight to your inbox.</p>
+                </div>
+                <form method="post" action="{% url 'newsletter:subscribe' %}" class="flex gap-2 w-full md:w-auto">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
+                    <input type="email" name="email" required placeholder="you@example.com"
+                           class="flex-1 md:w-64 px-3 py-2 text-sm bg-white/10 border border-white/20 text-primary-foreground placeholder-white/40 focus:outline-none focus:border-white/50">
+                    <button type="submit"
+                            class="font-mono-editorial text-xs tracking-widest bg-primary-foreground text-foreground px-4 py-2 hover:opacity-80 transition-opacity whitespace-nowrap">
+                        SUBSCRIBE
+                    </button>
+                </form>
+            </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">SECTIONS</p>
@@ -220,6 +339,7 @@
                     <a href="{% url 'articles:article_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Articles</a>
                     <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Issues</a>
                     <a href="{% url 'training:course_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Training</a>
+                    <a href="{% url 'billing:plan_browse' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Subscribe</a>
                 </div>
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">JOURNAL</p>
@@ -244,7 +364,7 @@
                     &copy; {% now "Y" %} {{ JOURNAL_NAME }}. All rights reserved.
                 </p>
                 <p class="font-mono-editorial text-xs opacity-30">
-                    ISSN {{ JOURNAL_ISSN }}{% if latest_issue %} · VOL. {{ latest_issue.volume }} · ISSUE {{ latest_issue.number }}{% endif %}
+                    ISSN {{ JOURNAL_ISSN }}
                 </p>
             </div>
         </div>
@@ -254,19 +374,66 @@
     document.addEventListener('DOMContentLoaded', function () {
         var btn = document.getElementById('profile-menu-button');
         var dropdown = document.getElementById('profile-menu-dropdown');
-        if (!btn || !dropdown) return;
+        if (btn && dropdown) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden');
+            });
+            document.addEventListener('click', function (e) {
+                if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+            dropdown.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') dropdown.classList.add('hidden');
+            });
+        }
 
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            dropdown.classList.toggle('hidden');
-        });
-        document.addEventListener('click', function (e) {
-            if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
-                dropdown.classList.add('hidden');
-            }
-        });
-        dropdown.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') dropdown.classList.add('hidden');
+        var mobileBtn = document.getElementById('mobile-menu-button');
+        var mobileMenu = document.getElementById('mobile-menu-dropdown');
+        if (mobileBtn && mobileMenu) {
+            mobileBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isHidden = mobileMenu.classList.toggle('hidden');
+                mobileBtn.setAttribute('aria-expanded', String(!isHidden));
+            });
+            // Collapse the mobile menu automatically if the viewport is
+            // resized past the md breakpoint while it's open (e.g. rotating
+            // a tablet, or a devtools resize) so it can't get stuck open
+            // behind the desktop layout.
+            window.addEventListener('resize', function () {
+                if (window.innerWidth >= 768 && !mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                    mobileBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // Show/hide toggle on every password field (login, register, ...) —
+        // wraps each input[type=password] in a positioned container and
+        // appends an eye/eye-off icon button, so no template needs its own
+        // markup for this; it applies uniformly wherever a password field appears.
+        var EYE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
+        var EYE_OFF_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a10.94 10.94 0 0 0 5.39-1.61M1 1l22 22"/></svg>';
+        document.querySelectorAll('input[type="password"]').forEach(function (input) {
+            var wrapper = document.createElement('div');
+            wrapper.className = 'password-field-wrapper';
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            var toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'password-toggle-btn';
+            toggle.setAttribute('aria-label', 'Show password');
+            toggle.innerHTML = EYE_ICON;
+            wrapper.appendChild(toggle);
+
+            toggle.addEventListener('click', function () {
+                var nowShowing = input.type === 'password';
+                input.type = nowShowing ? 'text' : 'password';
+                toggle.innerHTML = nowShowing ? EYE_OFF_ICON : EYE_ICON;
+                toggle.setAttribute('aria-label', nowShowing ? 'Hide password' : 'Show password');
+            });
         });
     });
     </script>

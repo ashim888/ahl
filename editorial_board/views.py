@@ -12,9 +12,8 @@ from users.models import User
 from .forms import EditorialBoardMemberForm
 from .models import EditorialBoardMember
 
-# Matches EDITORIAL_ROLES in articles/views.py and admin_custom/views.py —
-# editorial board management is an Editor/EiC/Admin capability.
-EDITORIAL_ROLES = (User.Role.EDITOR, User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+# Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
+EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 ABOUT_TABS = ('about', 'board', 'policies')
 
@@ -108,9 +107,9 @@ class EditorialBoardPublicView(TemplateView):
         context['article_types'] = Article.ArticleType.choices
         context['policies'] = POLICIES
 
-        latest_issue = Issue.objects.filter(is_published=True).order_by('-publication_date').first()
+        latest_issue = Issue.objects.filter(is_published=True).order_by('-created_at').first()
         context['publication_facts'] = [
-            ('Current volume', f'Vol. {latest_issue.volume}, Issue {latest_issue.number}' if latest_issue else 'Not yet published'),
+            ('Latest issue', latest_issue.title if latest_issue else 'Not yet published'),
             ('ISSN', settings.JOURNAL_ISSN),
             ('Publisher', settings.JOURNAL_PUBLISHER),
             ('Peer review', 'Conducted externally via OJS'),
@@ -125,6 +124,20 @@ class BoardMemberManageListView(ListView):
     template_name = 'editorial_board/manage/member_list.html'
     context_object_name = 'members'
     paginate_by = 30
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        active = self.request.GET.get('active')
+        if active == 'yes':
+            queryset = queryset.filter(is_active=True)
+        elif active == 'no':
+            queryset = queryset.filter(is_active=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['selected_active'] = self.request.GET.get('active', '')
+        return context
 
 
 class BoardMemberFormMixin:

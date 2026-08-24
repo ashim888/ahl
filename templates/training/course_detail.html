@@ -41,12 +41,10 @@
                     COURSE FULL
                 </button>
             {% else %}
-                <form method="post" action="{% url 'training:enroll' course.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
-                        ENROLL
-                    </button>
-                </form>
+                <a href="{% url 'training:course_checkout' course.pk %}"
+                   class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                    ENROLL — ${{ course.price }}
+                </a>
             {% endif %}
         {% else %}
             <a href="{% url 'users:login' %}?next={{ request.path }}"

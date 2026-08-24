@@ -1,0 +1,15 @@
+from django.urls import path
+
+from . import views
+
+app_name = 'newsletter'
+
+urlpatterns = [
+    path('newsletter/subscribe/', views.subscribe, name='subscribe'),
+    path('newsletter/confirm/<str:token>/', views.confirm, name='confirm'),
+    path('newsletter/unsubscribe/<str:token>/', views.unsubscribe, name='unsubscribe'),
+
+    # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
+    path('manage/newsletter/', views.IssueListView.as_view(), name='manage_issue_list'),
+    path('manage/newsletter/compose/', views.IssueComposeView.as_view(), name='manage_issue_compose'),
+]

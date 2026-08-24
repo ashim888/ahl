@@ -1,0 +1,60 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{{ ad.sponsor_name }} Analytics — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{{ ad.sponsor_name }}{% endblock %}
+{% block page_actions %}
+<a href="{% url 'ads:manage_adslot_list' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900">← All ads</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Impressions ({{ daily_stats|length }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_impressions }}</p>
+        <p class="mt-2 text-xs text-gray-400">{{ ad.impression_count }} all-time</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Clicks ({{ daily_stats|length }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_clicks }}</p>
+        <p class="mt-2 text-xs text-gray-400">{{ ad.click_count }} all-time</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">CTR ({{ daily_stats|length }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{% if window_ctr is not None %}{{ window_ctr }}%{% else %}—{% endif %}</p>
+        <p class="mt-2 text-xs text-gray-400">{{ ad.get_zone_display }} · {% if ad.is_currently_active %}Running{% else %}Not running{% endif %}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <div class="flex items-start justify-between mb-6">
+        <h2 class="text-base font-semibold text-gray-900">Daily Impressions &amp; Clicks</h2>
+        <div class="flex items-center gap-4 text-xs">
+            <span class="flex items-center gap-1.5 text-gray-500">
+                <span class="w-2.5 h-2.5 rounded-sm bg-sky-200"></span> Impressions
+            </span>
+            <span class="flex items-center gap-1.5 text-gray-500">
+                <span class="w-2.5 h-2.5 rounded-sm bg-sky-600"></span> Clicks
+            </span>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <div class="flex items-end justify-between gap-1.5 h-40 min-w-[640px]">
+            {% for d in daily_stats %}
+                <div class="flex-1 flex flex-col items-center h-full" title="{{ d.label }}: {{ d.impressions }} impressions, {{ d.clicks }} clicks">
+                    <div class="relative w-full max-w-6 h-full flex items-end justify-center">
+                        <div class="absolute bottom-0 w-full rounded-t-md bg-sky-200" style="height: {{ d.impressions_pct }}%; min-height: {% if d.impressions %}4px{% else %}0{% endif %};"></div>
+                        <div class="absolute bottom-0 w-1/2 rounded-t-md bg-sky-600" style="height: {{ d.clicks_pct }}%; min-height: {% if d.clicks %}4px{% else %}0{% endif %};"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="flex items-center justify-between gap-1.5 mt-2 min-w-[640px]">
+            {% for d in daily_stats %}
+                <span class="flex-1 text-center text-[0.6rem] text-gray-400">{{ d.label }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

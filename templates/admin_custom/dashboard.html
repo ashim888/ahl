@@ -2,78 +2,185 @@
 
 {% block title %}Dashboard — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
+{% block page_actions %}
+<a href="{% url 'articles:manage_article_create' %}"
+   class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 shrink-0">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+    </svg>
+    New Article
+</a>
+{% endblock %}
 
 {% block content %}
 
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
-        <p class="text-xs uppercase tracking-wide text-gray-500">Pending Verifications</p>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Published Articles</p>
+        <div class="flex items-baseline gap-2 mt-2">
+            <p class="text-3xl font-bold text-gray-900">{{ published_count }}</p>
+            {% if published_delta_pct is not None %}
+                <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md {% if published_delta_pct >= 0 %}bg-green-50 text-green-700{% else %}bg-red-50 text-red-700{% endif %}">
+                    {% if published_delta_pct >= 0 %}+{% endif %}{{ published_delta_pct }}%
+                </span>
+            {% endif %}
+        </div>
+        <p class="mt-2 text-xs text-gray-400">{{ published_this_month }} this month</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Draft Articles</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ draft_count }}</p>
+        <p class="mt-2 text-xs text-gray-400">Awaiting review or publish</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Pending Verifications</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ pending_verifications }}</p>
-        <a href="{% url 'users:verification_queue' %}" class="mt-2 inline-block text-xs underline text-gray-500">Review queue</a>
+        <a href="{% url 'users:verification_queue' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">Review queue →</a>
     </div>
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
-        <p class="text-xs uppercase tracking-wide text-gray-500">Pending Reviews</p>
-        <p class="mt-2 text-3xl font-bold text-gray-900">{{ pending_reviews }}</p>
-        <p class="mt-2 text-xs text-gray-400">Invitations awaiting a response</p>
-    </div>
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
-        <p class="text-xs uppercase tracking-wide text-gray-500">Active Reviews</p>
-        <p class="mt-2 text-3xl font-bold text-gray-900">{{ active_reviews }}</p>
-        <p class="mt-2 text-xs text-gray-400">Invited or accepted, in progress</p>
-    </div>
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
-        <p class="text-xs uppercase tracking-wide text-gray-500">Overdue Reviews</p>
-        <p class="mt-2 text-3xl font-bold {% if overdue_reviews %}text-red-700{% else %}text-gray-900{% endif %}">
-            {{ overdue_reviews }}
-        </p>
-        <p class="mt-2 text-xs text-gray-400">Past their due date</p>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Active Enrollments</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ active_enrollments }}</p>
+        <p class="mt-2 text-xs text-gray-400">Across {{ active_course_count }} active course(s)</p>
     </div>
 </div>
 
-<div class="mt-8 bg-white rounded-lg border border-gray-200 p-5">
-    <h2 class="text-sm font-semibold text-gray-700">Submission Pipeline</h2>
-    <div class="mt-4 flex flex-wrap gap-3 text-sm">
-        {% for label, count in submission_counts.items %}
-            <div class="flex items-center gap-2 px-3 py-2 rounded-md bg-gray-50 border border-gray-200">
-                <span class="text-gray-500">{{ label }}</span>
-                <span class="font-semibold text-gray-900">{{ count }}</span>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Active Subscriptions</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ active_subscriptions }}</p>
+        <a href="{% url 'billing:manage_subscription_list' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">View subscriptions →</a>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Newsletter Subscribers</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ newsletter_subscribers }}</p>
+        <a href="{% url 'newsletter:manage_issue_list' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">Compose &amp; send →</a>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Open Pitches</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ open_pitches }}</p>
+        <a href="{% url 'pitches:manage_pitch_queue' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">Review queue →</a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
+    <div class="lg:col-span-7 bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <div class="flex items-start justify-between mb-6">
+            <h2 class="text-base font-semibold text-gray-900">Article Activity</h2>
+            <div class="flex items-center gap-4 text-xs">
+                <span class="flex items-center gap-1.5 text-gray-500">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-violet-200"></span> Created ({{ daily_created_total }})
+                </span>
+                <span class="flex items-center gap-1.5 text-gray-500">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-violet-600"></span> Published ({{ daily_published_total }})
+                </span>
             </div>
-            {% if not forloop.last %}<span class="self-center text-gray-300">→</span>{% endif %}
-        {% endfor %}
+        </div>
+        <div class="flex items-end justify-between gap-2 sm:gap-4 h-40">
+            {% for d in daily_stats %}
+                <div class="flex-1 flex flex-col items-center h-full">
+                    <div class="relative w-full max-w-10 h-full flex items-end justify-center">
+                        <div class="absolute bottom-0 w-full rounded-t-md bg-violet-200" style="height: {{ d.created_pct }}%; min-height: {% if d.created %}4px{% else %}0{% endif %};"></div>
+                        <div class="absolute bottom-0 w-1/2 rounded-t-md bg-violet-600" style="height: {{ d.published_pct }}%; min-height: {% if d.published %}4px{% else %}0{% endif %};"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="flex items-center justify-between gap-2 sm:gap-4 mt-2">
+            {% for d in daily_stats %}
+                <span class="flex-1 text-center text-[0.65rem] text-gray-400">{{ d.label }}</span>
+            {% endfor %}
+        </div>
     </div>
-    <p class="mt-3 text-xs text-gray-400">{{ submission_total }} submission(s) total</p>
+
+    <div class="lg:col-span-5 bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-6">Articles by Type</h2>
+        {% if articles_by_type %}
+            <div class="flex items-center gap-6">
+                <div class="relative w-32 h-32 rounded-full shrink-0" style="background: conic-gradient({{ articles_by_type_gradient|safe }});">
+                    <div class="absolute inset-7 rounded-full bg-white flex items-center justify-center flex-col">
+                        <p class="text-xl font-bold text-gray-900 leading-none">{{ article_type_total }}</p>
+                        <p class="text-[0.6rem] text-gray-400 uppercase tracking-wide mt-1">Total</p>
+                    </div>
+                </div>
+                <div class="space-y-2 text-sm min-w-0 flex-1">
+                    {% for t in articles_by_type %}
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {{ t.color }};"></span>
+                            <span class="text-gray-600 truncate flex-1">{{ t.label }}</span>
+                            <span class="font-semibold text-gray-900 shrink-0">{{ t.pct }}%</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <p class="text-sm text-gray-400">No articles yet.</p>
+        {% endif %}
+    </div>
 </div>
 
-<div class="mt-8 grid md:grid-cols-2 gap-6">
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
-        <h2 class="text-sm font-semibold text-gray-700">Articles by Status</h2>
-        <div class="mt-4 space-y-2 text-sm">
-            {% for label, count in article_counts.items %}
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-600">{{ label }}</span>
-                    <span class="font-semibold text-gray-900">{{ count }}</span>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Verification Breakdown</h2>
+        <p class="text-xs text-gray-400 mb-5">{{ verification_total }} account(s) total</p>
+        <div class="space-y-4">
+            {% for v in verification_breakdown %}
+                <div>
+                    <div class="flex items-center justify-between text-sm mb-1.5">
+                        <span class="text-gray-600">{{ v.label }}</span>
+                        <span class="font-semibold text-gray-900">{{ v.pct }}% <span class="text-gray-400 font-normal">({{ v.count }})</span></span>
+                    </div>
+                    <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div class="h-full rounded-full {{ v.bar_color }}" style="width: {{ v.pct }}%;"></div>
+                    </div>
                 </div>
             {% endfor %}
         </div>
-        <p class="mt-3 text-xs text-gray-400">{{ article_total }} article(s) total</p>
-        <a href="{% url 'articles:manage_article_list' %}" class="mt-3 inline-block text-xs underline text-gray-500">Manage articles</a>
     </div>
 
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
-        <h2 class="text-sm font-semibold text-gray-700">Recent Submissions</h2>
-        <div class="mt-4 divide-y divide-gray-100 text-sm">
-            {% for submission in recent_submissions %}
-                <div class="py-2">
-                    <p class="font-medium text-gray-900">{{ submission.title }}</p>
-                    <p class="text-xs text-gray-500">
-                        {{ submission.get_status_display }} &middot; {{ submission.submitter.get_full_name }}
-                        &middot; {{ submission.submission_date|date:"M j, Y" }}
-                    </p>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Training Snapshot</h2>
+        <p class="text-xs text-gray-400 mb-5">{{ enrollment_total }} enrollment(s) total</p>
+        {% if enrollment_total %}
+            <div class="h-3 rounded-full bg-gray-100 overflow-hidden flex mb-4">
+                {% for t in training_breakdown %}
+                    {% if t.pct %}<div style="width: {{ t.pct }}%; background: {{ t.color }};"></div>{% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+            {% for t in training_breakdown %}
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full shrink-0" style="background: {{ t.color }};"></span>
+                    <span class="text-gray-500">{{ t.label }}</span>
+                    <span class="font-semibold text-gray-900">{{ t.count }}</span>
                 </div>
-            {% empty %}
-                <p class="py-2 text-gray-500">No submissions yet.</p>
             {% endfor %}
         </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-gray-900">Recently Updated Articles</h2>
+        <a href="{% url 'articles:manage_article_list' %}" class="text-xs font-medium text-gray-500 hover:text-gray-900">View all →</a>
+    </div>
+    <div class="divide-y divide-gray-100 text-sm">
+        {% for article in recent_articles %}
+            <a href="{% url 'articles:manage_article_update' article.slug %}" class="flex items-center justify-between gap-4 py-3 hover:bg-gray-50 -mx-2 px-2 rounded-lg">
+                <span class="min-w-0">
+                    <span class="block font-medium text-gray-900 truncate">{{ article.title }}</span>
+                    <span class="block text-xs text-gray-400 mt-0.5">{{ article.get_article_type_display }} · {{ article.updated_at|date:"M j, Y" }}</span>
+                </span>
+                <span class="shrink-0 text-xs font-medium px-2 py-1 rounded-md
+                    {% if article.status == 'published' %}bg-green-50 text-green-700
+                    {% elif article.status == 'draft' %}bg-amber-50 text-amber-700
+                    {% else %}bg-gray-100 text-gray-500{% endif %}">
+                    {{ article.get_status_display }}
+                </span>
+            </a>
+        {% empty %}
+            <p class="py-3 text-gray-400">No articles yet.</p>
+        {% endfor %}
     </div>
 </div>
 

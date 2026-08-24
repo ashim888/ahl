@@ -1,4 +1,4 @@
-{% load static %}
+{% load static admin_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,19 +8,57 @@
     <link rel="icon" href="{% static 'images/logo.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Admin form design system — minimal, single accent (indigo), generous
+           padding/rounding. Scoped to this file (not ajna_health_lens/forms.py's
+           apply_tailwind_widgets) since the public site keeps its own deliberately
+           sharp-cornered editorial look — these two are not meant to match. */
         form input[type="text"], form input[type="email"], form input[type="password"],
         form input[type="url"], form input[type="date"], form input[type="number"],
         form textarea, form select {
             width: 100%;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.875rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.9375rem;
+            color: #111827;
+            background: #fff;
+            transition: border-color .15s ease, box-shadow .15s ease;
         }
+        form input[type="text"]::placeholder, form input[type="email"]::placeholder,
+        form input[type="password"]::placeholder, form input[type="url"]::placeholder,
+        form input[type="number"]::placeholder, form textarea::placeholder {
+            color: #b0b4bb;
+        }
+        form input:hover, form textarea:hover, form select:hover { border-color: #d1d5db; }
         form input:focus, form textarea:focus, form select:focus {
-            outline: 2px solid transparent;
-            box-shadow: 0 0 0 2px #111827;
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
         }
+        form input[type="file"] {
+            font-size: 0.8125rem; color: #6b7280; width: 100%;
+        }
+        form input[type="file"]::file-selector-button {
+            margin-right: 0.75rem; padding: 0.5rem 0.875rem; border-radius: 0.625rem;
+            border: 1px solid #e5e7eb; background: #f9fafb; font-size: 0.8125rem;
+            font-weight: 500; color: #374151; cursor: pointer;
+        }
+        form input[type="file"]::file-selector-button:hover { background: #f3f4f6; }
+        form input[type="checkbox"] {
+            width: 1.125rem; height: 1.125rem; border-radius: 0.375rem;
+            border: 1px solid #d1d5db; accent-color: #111827; cursor: pointer;
+        }
+        /* Icon-only row actions (Edit/Delete/Toggle/...) on every manage
+           listing table — one shared style so every table's action column
+           looks and behaves identically instead of each re-deriving its own. */
+        .icon-action-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 1.75rem; height: 1.75rem; border-radius: 0.375rem;
+            color: #6b7280; background: transparent; border: none; cursor: pointer;
+        }
+        .icon-action-btn:hover { background: #f3f4f6; color: #111827; }
+        .icon-action-btn.icon-action-danger:hover { background: #fef2f2; color: #b91c1c; }
+        .icon-action-btn.icon-action-success:hover { background: #f0fdf4; color: #15803d; }
         .prose-article h2 { font-size: 1.25rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.75rem; font-family: ui-serif, Georgia, serif; }
         .prose-article h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
         .prose-article p { margin-top: 1rem; }
@@ -39,83 +77,205 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="h-screen flex bg-gray-100 text-gray-900 overflow-hidden">
+<body class="h-screen bg-gray-100 text-gray-900 overflow-hidden">
 
     {% with view_name=request.resolver_match.view_name %}
-    <aside class="w-64 shrink-0 bg-gray-900 text-gray-300 flex flex-col h-screen">
-        <div class="flex flex-col items-center text-center px-5 py-4 border-b border-gray-800 shrink-0">
-            <a href="{% url 'admin_custom:dashboard' %}" class="flex flex-col items-center text-center">
-                <img src="{% static 'images/logo.png' %}" alt="" class="h-8 w-auto mb-1">
-                <span class="text-white font-serif font-bold text-sm leading-tight">
-                    {{ JOURNAL_NAME }}
+    <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
+
+    <div class="h-screen lg:p-3 flex">
+    <div class="flex w-full min-w-0 bg-white lg:rounded-2xl lg:shadow-sm lg:border lg:border-gray-200 overflow-hidden">
+
+    <aside id="sidebar"
+           class="fixed inset-y-0 left-0 z-40 w-72 shrink-0 bg-white text-gray-700 flex flex-col h-screen border-r border-gray-200 -translate-x-full transition-transform duration-200 lg:static lg:translate-x-0">
+        <div class="flex items-center gap-2.5 px-5 py-4 shrink-0">
+            <a href="{% url 'admin_custom:dashboard' %}" class="flex items-center gap-2.5 flex-1 min-w-0">
+                <img src="{% static 'images/logo.png' %}" alt="" class="h-9 w-9 rounded-lg object-cover shrink-0 bg-gray-100">
+                <span class="min-w-0">
+                    <span class="block text-sm font-semibold text-gray-900 truncate">{{ JOURNAL_NAME }}</span>
+                    <span class="block text-xs text-gray-500 truncate">Editorial Admin</span>
                 </span>
-                <span class="text-xs font-sans font-normal text-gray-400">Editorial Dashboard</span>
             </a>
+            <svg class="w-4 h-4 text-gray-400 shrink-0 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8 9 4-4 4 4m0 6-4 4-4-4"/>
+            </svg>
+            <button type="button" id="sidebar-close" aria-label="Close menu" class="lg:hidden p-1 text-gray-400 hover:text-gray-900 shrink-0">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                </svg>
+            </button>
         </div>
 
-        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1 text-sm">
+        <div class="px-5 pb-3 shrink-0">
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-400">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
+                </svg>
+                <span class="text-sm">Search</span>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-3 pb-4 space-y-1 text-sm">
+            <p class="px-3 pt-1 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400">Overview</p>
             <a href="{% url 'admin_custom:dashboard' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if view_name == 'admin_custom:dashboard' %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if view_name == 'admin_custom:dashboard' %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z"/>
                 </svg>
                 Dashboard
             </a>
+            <a href="{% url 'admin_custom:analytics' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if view_name == 'admin_custom:analytics' %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 15l4-5 3 3 5-7"/>
+                </svg>
+                Analytics
+            </a>
+            <a href="{% url 'admin_custom:revenue' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if view_name == 'admin_custom:revenue' %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                Revenue
+            </a>
+
+            <p class="px-3 pt-4 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400 border-t border-gray-100 mt-2">Content</p>
             <a href="{% url 'articles:manage_article_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_article' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_article' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V7l-5-5H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Zm5-16v4a1 1 0 0 0 1 1h4"/>
                 </svg>
                 Articles
             </a>
-            <a href="{% url 'users:verification_queue' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'verification' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+            <a href="{% url 'issues:manage_issue_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_issue' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4m5-3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4 8 4Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/>
                 </svg>
-                Verification Queue
+                Issues
             </a>
-            <a href="{% url 'users:manage_author_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_author' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+            <a href="{% url 'pitches:manage_pitch_queue' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'pitches:manage' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5m-1.5-9.5a2.121 2.121 0 0 1 3 3L12 17l-4 1 1-4 9.5-9.5Z"/>
                 </svg>
-                Authors
+                Pitch Queue
             </a>
             <a href="{% url 'editorial_board:manage_member_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_member' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_member' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87m5-4.13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6 4a4 4 0 0 0-3-3.87M4 20v-2a4 4 0 0 1 5.5-3.7"/>
                 </svg>
                 Editorial Board
             </a>
+
+            <p class="px-3 pt-4 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400 border-t border-gray-100 mt-2">People &amp; Access</p>
+            <a href="{% url 'users:verification_queue' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'verification' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4m5-3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4 8 4Z"/>
+                </svg>
+                New User
+            </a>
+            <a href="{% url 'users:manage_author_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_author' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
+                </svg>
+                Authors
+            </a>
+            {% if user.is_senior_staff %}
+                <a href="{% url 'users:manage_staff_list' %}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_staff' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm11 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Staff
+                </a>
+                <a href="{% url 'users:manage_permissions_list' %}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_permissions' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.5 7.5 0 0 1-.15 1.5l2.1 1.63-2 3.46-2.5-1a7.6 7.6 0 0 1-2.6 1.5l-.38 2.66h-4l-.38-2.66a7.6 7.6 0 0 1-2.6-1.5l-2.5 1-2-3.46 2.1-1.63a7.5 7.5 0 0 1 0-3l-2.1-1.63 2-3.46 2.5 1a7.6 7.6 0 0 1 2.6-1.5L9.6 2.5h4l.38 2.66a7.6 7.6 0 0 1 2.6 1.5l2.5-1 2 3.46-2.1 1.63c.1.49.15.99.15 1.5Z"/>
+                    </svg>
+                    Permissions
+                </a>
+            {% endif %}
+            {% if user.is_admin %}
+                <a href="{% url 'users:manage_group_list' %}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_group' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4"/>
+                    </svg>
+                    Groups
+                </a>
+            {% endif %}
+
+            <p class="px-3 pt-4 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400 border-t border-gray-100 mt-2">Growth &amp; Revenue</p>
+            <a href="{% url 'billing:manage_plan_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'billing:manage' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h2m10-9H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z"/>
+                </svg>
+                Plans
+            </a>
             <a href="{% url 'training:manage_course_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-md {% if 'manage_course' in view_name %}bg-gray-800 text-white{% else %}hover:bg-gray-800 hover:text-white{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_course' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5Zm0 0v6m-9-6v4a9 9 0 0 0 18 0v-4"/>
                 </svg>
                 Training Courses
             </a>
+            <a href="{% url 'newsletter:manage_issue_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'newsletter:manage' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v16H4V4Zm0 0 8 8 8-8"/>
+                </svg>
+                Newsletter
+            </a>
+            <a href="{% url 'ads:manage_adslot_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'ads:manage' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h18v18H3V3Zm4 4h10v6H7V7Zm0 8h6v3H7v-3Z"/>
+                </svg>
+                Ads
+            </a>
 
-            <div class="pt-4 mt-4 border-t border-gray-800">
-                <p class="px-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Coming later</p>
-                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Public browsing exists; CRUD is still plain Django admin">
-                    Issues
-                </span>
-                <span class="flex items-center gap-3 px-3 py-2 text-gray-600 cursor-not-allowed" title="Roadmap Phase 7">
-                    Revenue
-                </span>
-            </div>
+            {% recent_draft_articles as draft_articles %}
+            {% if draft_articles %}
+                <div class="pt-4 mt-2 border-t border-gray-100">
+                    <div class="flex items-center justify-between px-3 pt-3 pb-2">
+                        <p class="text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400">Draft articles</p>
+                        <a href="{% url 'articles:manage_article_list' %}?status=draft" class="text-[0.65rem] font-medium text-gray-400 hover:text-gray-900">View all</a>
+                    </div>
+                    {% for draft in draft_articles %}
+                        <a href="{% url 'articles:manage_article_update' draft.slug %}"
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-900">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                            <span class="truncate text-xs">{{ draft.title }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </nav>
 
-        <div class="border-t border-gray-800 p-4 text-xs shrink-0">
-            <p class="text-gray-300 font-medium">{{ user.get_full_name }}</p>
-            <p class="text-gray-500">{{ user.get_role_display }}</p>
-            <div class="mt-3 flex items-center justify-between">
-                <a href="{% url 'articles:home' %}" class="underline text-gray-400 hover:text-gray-200">← Site</a>
+        <div class="border-t border-gray-100 p-4 text-xs shrink-0">
+            <div class="flex items-center gap-2.5 mb-3">
+                {% if user.photo %}
+                    <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0">
+                {% else %}
+                    <span class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                    </span>
+                {% endif %}
+                <span class="min-w-0">
+                    <span class="block text-gray-900 font-medium truncate">{{ user.get_full_name }}</span>
+                    <span class="block text-gray-400 truncate">{{ user.get_role_display }}</span>
+                </span>
+            </div>
+            <div class="flex items-center justify-between">
+                <a href="{% url 'articles:home' %}" class="text-gray-400 hover:text-gray-900">← Site</a>
                 <form method="post" action="{% url 'users:logout' %}">
                     {% csrf_token %}
-                    <button type="submit" class="underline text-gray-400 hover:text-gray-200">Log out</button>
+                    <button type="submit" class="text-gray-400 hover:text-gray-900">Log out</button>
                 </form>
             </div>
         </div>
@@ -123,15 +283,25 @@
     {% endwith %}
 
     <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center px-6 shrink-0">
-            <h1 class="text-lg font-semibold text-gray-900">{% block page_title %}Dashboard{% endblock %}</h1>
-        </header>
+        <div class="lg:hidden h-14 border-b border-gray-100 flex items-center gap-3 px-4 shrink-0">
+            <button type="button" id="sidebar-toggle" aria-label="Menu" class="-ml-2 p-2 text-gray-600">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <span class="text-sm font-semibold text-gray-900 truncate">{{ JOURNAL_NAME }}</span>
+        </div>
 
-        <main class="flex-1 overflow-y-auto p-6">
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <div class="flex items-center justify-between gap-4 mb-6">
+                <h1 class="text-2xl font-bold text-gray-900 truncate">{% block page_title %}Dashboard{% endblock %}</h1>
+                {% block page_actions %}{% endblock %}
+            </div>
+
             {% if messages %}
                 <div class="mb-6 space-y-2">
                     {% for message in messages %}
-                        <div class="rounded-md px-4 py-3 text-sm border
+                        <div class="rounded-lg px-4 py-3 text-sm border
                                     {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
                                     {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
                                     {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
@@ -143,6 +313,40 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+
+    </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var sidebar = document.getElementById('sidebar');
+        var backdrop = document.getElementById('sidebar-backdrop');
+        var openBtn = document.getElementById('sidebar-toggle');
+        var closeBtn = document.getElementById('sidebar-close');
+        if (!sidebar || !backdrop || !openBtn) return;
+
+        function openSidebar() {
+            sidebar.classList.remove('-translate-x-full');
+            backdrop.classList.remove('hidden');
+        }
+        function closeSidebar() {
+            sidebar.classList.add('-translate-x-full');
+            backdrop.classList.add('hidden');
+        }
+
+        openBtn.addEventListener('click', openSidebar);
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        backdrop.addEventListener('click', closeSidebar);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeSidebar();
+        });
+        // A sidebar link navigates to a new page anyway, but reset the
+        // translate class so back/forward-cache restores don't show it stuck open.
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 1024) closeSidebar();
+        });
+    });
+    </script>
 
 </body>
 </html>
