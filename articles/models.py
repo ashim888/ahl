@@ -4,6 +4,7 @@ import string
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -197,6 +198,12 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        # Required by django_comments_xtd (comment confirmation/moderation
+        # redirects and email templates resolve content_object.get_absolute_url()
+        # directly) — see ARCHITECTURE.md's comments section.
+        return reverse('articles:article_detail', args=[self.slug])
 
 
 class ArticleAuthor(models.Model):

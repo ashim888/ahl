@@ -67,9 +67,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
+    'django.contrib.sites',   # required by django_comments / django_comments_xtd
     'django_q',
     'axes',
     'django_ckeditor_5',
+    'rest_framework',        # required by django_comments_xtd's comment API
+    'django_comments',
+    'django_comments_xtd',
 
     # Ajna Health Lens apps
     'users',
@@ -280,6 +284,42 @@ CKEDITOR_5_CONFIGS = {
 # the wrapper's, is just a harmless pass-through rather than a second,
 # conflicting gate.
 CKEDITOR_5_FILE_UPLOAD_PERMISSION = 'authenticated'
+
+
+# Reader comments (django-comments-xtd) — threaded comments on articles.
+# django.contrib.sites (SITE_ID) is a hard dependency of django_comments;
+# its Site row's `domain` is kept in sync with SITE_BASE_URL above by a data
+# migration (articles/migrations/0019_sync_site_domain.py) so confirmation/
+# follow-up emails link back to the real site instead of the "example.com"
+# the sites migration creates by default.
+SITE_ID = 1
+COMMENTS_APP = 'django_comments_xtd'
+
+# Nesting depth for replies (0 = flat, no replies at all). 3 matches what
+# most news/blog comment sections use in practice — deep enough for a real
+# back-and-forth, shallow enough that a reply thread doesn't need its own UI.
+COMMENTS_XTD_MAX_THREAD_LEVEL = 3
+
+# Anonymous commenters must confirm via a one-click emailed link before
+# their comment goes live (django-comments-xtd's own anti-spam mechanism,
+# no CAPTCHA needed) — logged-in readers post immediately. See
+# COMMENTS_XTD_APP_MODEL_OPTIONS default ("who_can_post": "all") for who's
+# allowed to post at all; this only governs anonymous ones specifically.
+COMMENTS_XTD_CONFIRM_EMAIL = True
+
+# Every other synchronous-email flow in this project (users/signals.py,
+# newsletter/emails.py, pitches/signals.py) sends inline rather than
+# spinning up its own async mechanism — comment confirmation/follow-up
+# emails are one-at-a-time, not a bulk send, so they don't need Django-Q2
+# either. False here keeps that the one pattern, instead of adding raw
+# background threading (the package's default) as a second one.
+COMMENTS_XTD_THREADED_EMAILS = False
+
+# Our custom User model (users.User) has no `username` field — email is the
+# USERNAME_FIELD (see CLAUDE.md). The package's default COMMENTS_XTD_API_USER_REPR
+# assumes `u.username`, so it's overridden here; only used by the comment
+# API's like/dislike user lists.
+COMMENTS_XTD_API_USER_REPR = lambda u: u.get_full_name() or u.email  # noqa: E731
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

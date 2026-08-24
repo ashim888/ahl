@@ -725,3 +725,143 @@ class CKEditorUploadPermissionTests(TestCase):
         response = self.client.post(reverse('ck_editor_5_upload_file'), {'upload': self._make_image_upload()})
         self.assertEqual(response.status_code, 200)
         self.assertIn('url', response.json())
+
+
+def _comment_post_data(article, comment_text, **extra):
+    """Builds valid POST data for django_comments's post_comment view —
+    including the anti-spoofing content_type/object_pk/timestamp/security_hash
+    fields, which only django_comments_xtd's own form knows how to generate.
+    """
+    from django_comments_xtd.forms import XtdCommentForm
+
+    data = XtdCommentForm(article).initial.copy()
+    data.update({
+        'comment': comment_text, 'name': '', 'email': '', 'url': '',
+        'reply_to': 0, 'followup': False, 'honeypot': '',
+        'next': article.get_absolute_url(),
+    })
+    data.update(extra)
+    return data
+
+
+class ArticleCommentsTests(TestCase):
+    """Reader comments (django-comments-xtd) — see ARCHITECTURE.md's
+    comments section. Authenticated readers post immediately; anonymous
+    readers must confirm via an emailed link first (the package's own
+    anti-spam mechanism, no CAPTCHA). Threaded up to 3 levels deep.
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.article = make_article('commentable-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.reader = User.objects.create_user(
+            email='commenter@example.com', password='pw', first_name='Reader', last_name='One',
+        )
+
+    def test_get_absolute_url(self):
+        self.assertEqual(
+            self.article.get_absolute_url(), reverse('articles:article_detail', args=[self.article.slug]),
+        )
+
+    def test_comment_form_and_count_render_on_article_detail(self):
+        response = self.client.get(self.article.get_absolute_url())
+        self.assertContains(response, 'id_comment')
+        self.assertContains(response, 'Comments')
+
+    def test_authenticated_user_comment_posts_immediately(self):
+        from django_comments_xtd.models import XtdComment
+
+        self.client.force_login(self.reader)
+        response = self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(self.article, 'A signed-in reader comment.'),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        comment = XtdComment.objects.get(comment='A signed-in reader comment.')
+        self.assertTrue(comment.is_public)
+        self.assertEqual(comment.user, self.reader)
+        self.assertContains(response, 'A signed-in reader comment.')
+
+    def test_anonymous_comment_requires_email_confirmation(self):
+        from django.core import mail
+
+        from django_comments_xtd.models import XtdComment
+
+        response = self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(
+                self.article, 'An anonymous reader comment.', name='Anon Reader', email='anon@example.com',
+            ),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(XtdComment.objects.filter(comment='An anonymous reader comment.').exists())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['anon@example.com'])
+        self.assertIn('confirm', mail.outbox[0].body)
+
+    def test_confirming_anonymous_comment_publishes_it(self):
+        import re
+
+        from django.core import mail
+
+        from django_comments_xtd.models import XtdComment
+
+        self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(
+                self.article, 'Confirm-me comment.', name='Anon Reader', email='anon2@example.com',
+            ),
+        )
+        confirm_path = re.search(r'(/comments/confirm/\S+/)', mail.outbox[0].body).group(1)
+        response = self.client.get(confirm_path, follow=True)
+        self.assertEqual(response.status_code, 200)
+        comment = XtdComment.objects.get(comment='Confirm-me comment.')
+        self.assertTrue(comment.is_public)
+        self.assertEqual(comment.user_email, 'anon2@example.com')
+        self.assertContains(response, 'Confirm-me comment.')
+
+    def test_threaded_reply_nests_under_parent(self):
+        from django_comments_xtd.models import XtdComment
+
+        self.client.force_login(self.reader)
+        self.client.post(
+            reverse('comments-post-comment'), _comment_post_data(self.article, 'Parent comment.'),
+        )
+        parent = XtdComment.objects.get(comment='Parent comment.')
+
+        self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(self.article, 'Reply comment.', reply_to=parent.pk),
+        )
+        reply = XtdComment.objects.get(comment='Reply comment.')
+        self.assertEqual(reply.level, 1)
+        self.assertEqual(reply.parent_id, parent.pk)
+        self.assertEqual(reply.thread_id, parent.thread_id)
+
+    def test_comments_hidden_in_preview_mode(self):
+        from users.models import User
+
+        editor = User.objects.create_user(
+            email='preview-editor@example.com', password='pw', first_name='E', last_name='D',
+            role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        response = self.client.post(reverse('articles:manage_article_preview'), {
+            'title': 'Preview Article', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'abstract': 'An abstract.',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id_comment')
+
+    def test_honeypot_rejects_spam_submission(self):
+        from django_comments_xtd.models import XtdComment
+
+        self.client.force_login(self.reader)
+        self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(self.article, 'Spam comment.', honeypot='filled-in-by-a-bot'),
+        )
+        self.assertFalse(XtdComment.objects.filter(comment='Spam comment.').exists())

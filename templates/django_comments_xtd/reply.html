@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load comments %}
+
+{% block title %}{% trans "Reply to comment" %} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Reply to comment" %}</h1>
+
+    <div class="mt-6 border border-border bg-secondary p-4">
+        <p class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-2">{{ comment.name }}</p>
+        <p class="text-sm text-foreground leading-relaxed">{{ comment.comment|linebreaksbr }}</p>
+    </div>
+
+    <div class="mt-8">
+        {% include "comments/form.html" %}
+    </div>
+</div>
+{% endblock %}
