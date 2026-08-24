@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load ads_tags %}
 
 {% block content %}
 
@@ -68,6 +69,8 @@
 </section>
 {% endif %}
 
+{% ad_slot 'mobile_large_banner' wrapper_class='md:hidden max-w-7xl mx-auto px-6 pb-6 flex justify-center' %}
+
 {% if trending_articles %}
 <section class="max-w-7xl mx-auto px-6 py-8">
     <div class="flex items-center gap-4 mb-5">
@@ -85,11 +88,7 @@
 </section>
 {% endif %}
 
-{% if homepage_ad %}
-<div class="max-w-7xl mx-auto px-6 pb-8">
-    {% include 'ads/includes/ad_slot.html' with ad=homepage_ad %}
-</div>
-{% endif %}
+{% ad_slot 'homepage_rectangle' wrapper_class='max-w-7xl mx-auto px-6 pb-8 flex justify-center' %}
 
 {% if latest_news %}
 <section class="max-w-7xl mx-auto px-6 py-10">
@@ -171,6 +170,8 @@
     </div>
 </section>
 {% endif %}
+
+{% ad_slot 'homepage_half_page' wrapper_class='hidden lg:flex lg:justify-center max-w-7xl mx-auto px-6 py-10' %}
 
 {% if research_highlights %}
 <section class="bg-secondary border-t border-border">

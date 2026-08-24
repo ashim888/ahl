@@ -18,9 +18,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django_ratelimit.decorators import ratelimit
 
-from ads.models import AdSlot
-from ads.services import get_ad_for_zone, record_impression
-from billing.access import article_is_accessible, user_has_active_subscription
+from billing.access import article_is_accessible
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from newsletter.models import Subscriber
@@ -72,21 +70,6 @@ def _record_article_view(request, article):
     ).exists()
     if not recent_duplicate:
         ArticleView.objects.create(article=article, session_key=session_key)
-
-
-def _ad_for_request(request, zone):
-    """None for a reader with an active subscription — "ad-free reading" is
-    a promised subscriber perk (billing app, August 2026) — otherwise picks
-    and records one impression for `zone`. Deliberately never cached
-    (subscription status is per-request, and an impression must be counted
-    on every real view, not once per cache TTL).
-    """
-    if request.user.is_authenticated and user_has_active_subscription(request.user):
-        return None
-    ad = get_ad_for_zone(zone)
-    if ad:
-        record_impression(ad)
-    return ad
 
 
 class ComingSoonView(TemplateView):
@@ -219,7 +202,6 @@ class HomeView(TemplateView):
                 user=self.request.user, status=Subscriber.Status.CONFIRMED,
             ).exists()
 
-        context['homepage_ad'] = _ad_for_request(self.request, AdSlot.Zone.HOMEPAGE)
         return context
 
 
@@ -274,7 +256,6 @@ class ArticleDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         _record_article_view(self.request, self.object)
-        context['sidebar_ad'] = _ad_for_request(self.request, AdSlot.Zone.ARTICLE_SIDEBAR)
 
         article_authors = list(self.object.articleauthor_set.select_related('user').order_by('order'))
         context['article_authors'] = article_authors

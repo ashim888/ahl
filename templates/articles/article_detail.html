@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load text_filters %}
+{% load text_filters ads_tags %}
 
 {% block title %}{{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
 
@@ -114,6 +114,8 @@
                     DOWNLOAD PDF
                 </a>
             {% endif %}
+
+            {% ad_slot 'article_in_content' wrapper_class='hidden md:flex md:justify-center my-8' %}
 
             {% if show_full_text %}
                 {% if article.html_content %}
@@ -254,11 +256,8 @@
                     </div>
                 {% endif %}
 
-                {% if sidebar_ad %}
-                    <div class="mb-8">
-                        {% include 'ads/includes/ad_slot.html' with ad=sidebar_ad %}
-                    </div>
-                {% endif %}
+                {% ad_slot 'article_sidebar' wrapper_class='mb-6' %}
+                {% ad_slot 'article_skyscraper' wrapper_class='mb-8' %}
             </div>
         </aside>
     </div>

@@ -580,17 +580,34 @@ class Command(BaseCommand):
 
     def seed_ads(self):
         self.stdout.write('Seeding ads...')
+        # One sponsor per zone, image generated at that zone's exact
+        # required size (AdSlot.ZONE_DIMENSIONS) — demonstrates the fixed-
+        # size system end to end, not just seeding data that happens to
+        # bypass AdSlotForm's dimension validation (management commands
+        # write via the ORM directly, not the form).
         specs = [
-            dict(sponsor_name='Himalayan Diagnostics Lab', zone=AdSlot.Zone.HOMEPAGE,
+            dict(sponsor_name='Himalayan Diagnostics Lab', zone=AdSlot.Zone.HEADER_LEADERBOARD,
                  link_url='https://example.com/himalayan-diagnostics'),
-            dict(sponsor_name='Kathmandu Medical Conference 2026', zone=AdSlot.Zone.ARTICLE_SIDEBAR,
+            dict(sponsor_name="St. Xavier's Pharmacy", zone=AdSlot.Zone.MOBILE_ANCHOR,
+                 link_url='https://example.com/st-xaviers-pharmacy'),
+            dict(sponsor_name='Everest Wellness App', zone=AdSlot.Zone.MOBILE_LARGE_BANNER,
+                 link_url='https://example.com/everest-wellness'),
+            dict(sponsor_name='Patan Eye Care Center', zone=AdSlot.Zone.HOMEPAGE_RECTANGLE,
+                 link_url='https://example.com/patan-eye-care'),
+            dict(sponsor_name='Norvic International Hospital', zone=AdSlot.Zone.HOMEPAGE_HALF_PAGE,
+                 link_url='https://example.com/norvic-hospital'),
+            dict(sponsor_name='Kathmandu Medical Conference 2026', zone=AdSlot.Zone.ARTICLE_IN_CONTENT,
                  link_url='https://example.com/kmc-2026'),
+            dict(sponsor_name='Bir Hospital Diagnostics', zone=AdSlot.Zone.ARTICLE_SIDEBAR,
+                 link_url='https://example.com/bir-hospital-diagnostics'),
+            dict(sponsor_name='Nepal Public Health Fellowship', zone=AdSlot.Zone.ARTICLE_SKYSCRAPER,
+                 link_url='https://example.com/nph-fellowship'),
         ]
         count = 0
         for spec in specs:
             ad, created = AdSlot.objects.get_or_create(
                 sponsor_name=spec['sponsor_name'], defaults={
-                    **spec, 'image': demo_jpeg(f"{spec['zone']}.jpg"),
+                    **spec, 'image': demo_jpeg(f"{spec['zone']}.jpg", size=AdSlot.ZONE_DIMENSIONS[spec['zone']]),
                 },
             )
             count += created

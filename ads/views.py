@@ -84,6 +84,17 @@ class AdSlotFormMixin:
     def get_success_url(self):
         return reverse('ads:manage_adslot_list')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Cheat-sheet on the create/edit form — the Zone select's label
+        # already states one zone's required size, but an editor picking a
+        # zone still needs to know it *before* choosing/cropping an image,
+        # not just get an error after uploading the wrong size.
+        context['zone_dimensions'] = [
+            (label, *AdSlot.ZONE_DIMENSIONS[value]) for value, label in AdSlot.Zone.choices
+        ]
+        return context
+
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
 class AdSlotCreateView(AdSlotFormMixin, CreateView):

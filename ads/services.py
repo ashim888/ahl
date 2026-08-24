@@ -1,11 +1,28 @@
-"""Shared by articles/views.py (homepage + article sidebar placements) — one
-place decides which ad (if any) fills a zone, so both placements pick and
-count consistently.
+"""The `ad_slot` template tag (ads/templatetags/ads_tags.py) is the one call
+site every ad placement in the site goes through — one place decides which
+ad (if any) fills a zone, so every zone picks and counts consistently.
 """
 from django.db.models import F, Q
 from django.utils import timezone
 
+from billing.access import user_has_active_subscription
+
 from .models import AdEvent, AdSlot
+
+
+def get_ad_for_request(request, zone):
+    """None for a reader with an active subscription — "ad-free reading" is
+    a promised subscriber perk (billing app) — otherwise picks and records
+    one impression for `zone`. Deliberately never cached: subscription
+    status is per-request, and an impression must be counted on every real
+    view, not once per cache TTL.
+    """
+    if request.user.is_authenticated and user_has_active_subscription(request.user):
+        return None
+    ad = get_ad_for_zone(zone)
+    if ad:
+        record_impression(ad)
+    return ad
 
 
 def get_ad_for_zone(zone):

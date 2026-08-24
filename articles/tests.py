@@ -367,7 +367,11 @@ class TrendingSectionTests(TestCase):
 
 class AdFreeSubscriberPerkTests(TestCase):
     """"Ad-free reading" is a promised subscriber perk (billing app) —
-    articles/views.py:_ad_for_request is the one place that enforces it.
+    ads.services.get_ad_for_request (called from the `ad_slot` template tag,
+    ads/templatetags/ads_tags.py) is the one place that enforces it. See
+    ads/tests.py:AdSlotTemplateTagTests for the general "ad renders and
+    records an impression" coverage — this class is scoped to the
+    subscriber-perk behavior specifically.
     """
 
     def setUp(self):
@@ -382,15 +386,15 @@ class AdFreeSubscriberPerkTests(TestCase):
         from ads.models import AdSlot
 
         buffer = io.BytesIO()
-        Image.new('RGB', (10, 10)).save(buffer, format='JPEG')
+        Image.new('RGB', (300, 250)).save(buffer, format='JPEG')
         self.ad = AdSlot.objects.create(
-            sponsor_name='Test Sponsor', zone=AdSlot.Zone.HOMEPAGE,
+            sponsor_name='Test Sponsor', zone=AdSlot.Zone.HOMEPAGE_RECTANGLE,
             image=ContentFile(buffer.getvalue(), name='ad.jpg'), link_url='https://example.com',
         )
 
     def test_anonymous_visitor_sees_ad(self):
         response = self.client.get(reverse('articles:home'))
-        self.assertEqual(response.context['homepage_ad'], self.ad)
+        self.assertContains(response, 'Test Sponsor')
 
     def test_active_subscriber_does_not_see_ad(self):
         from users.models import User
@@ -406,7 +410,7 @@ class AdFreeSubscriberPerkTests(TestCase):
         )
         self.client.force_login(reader)
         response = self.client.get(reverse('articles:home'))
-        self.assertIsNone(response.context['homepage_ad'])
+        self.assertNotContains(response, 'Test Sponsor')
 
     def test_impression_is_recorded_when_ad_shown(self):
         self.client.get(reverse('articles:home'))

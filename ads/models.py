@@ -14,15 +14,49 @@ class AdSlot(models.Model):
     """
 
     class Zone(models.TextChoices):
-        HOMEPAGE = 'homepage', 'Homepage'
-        ARTICLE_SIDEBAR = 'article_sidebar', 'Article Page — Sidebar'
+        """Every zone name embeds its required IAB ad size so it's never
+        ambiguous which dimensions to design/export for — the same string
+        shows up in the manage-list filter, the create/edit form's Zone
+        select, and admin/list-display everywhere `get_zone_display()` is
+        used. Actual pixel dimensions live in ZONE_DIMENSIONS below (used
+        for upload validation and render sizing) — kept as a separate dict
+        rather than parsed out of the label text, so the two can never
+        silently drift out of sync from a label copy-edit.
+        """
+        HEADER_LEADERBOARD = 'header_leaderboard', 'Site Header — Leaderboard (728×90)'
+        MOBILE_ANCHOR = 'mobile_anchor', 'Mobile Anchor Banner (320×50)'
+        MOBILE_LARGE_BANNER = 'mobile_large_banner', 'Mobile — Large Banner (320×100)'
+        HOMEPAGE_RECTANGLE = 'homepage_rectangle', 'Homepage Feed — Medium Rectangle (300×250)'
+        HOMEPAGE_HALF_PAGE = 'homepage_half_page', 'Homepage — Half Page (300×600)'
+        ARTICLE_IN_CONTENT = 'article_in_content', 'In-Article — Large Rectangle (336×280)'
+        ARTICLE_SIDEBAR = 'article_sidebar', 'Article Sidebar — Medium Rectangle (300×250)'
+        ARTICLE_SKYSCRAPER = 'article_skyscraper', 'Article Sidebar — Wide Skyscraper (160×600)'
+
+    # Standard IAB ad unit sizes (px) — the single source of truth for both
+    # upload-time validation (AdSlotForm.clean, "an ad this size" not "an ad
+    # under N MB of any shape") and render-time sizing (the `ad_slot`
+    # template tag) — see ARCHITECTURE.md §4.11. Every zone maps to exactly
+    # one size; the same size can legitimately be reused across zones (e.g.
+    # Medium Rectangle for both the homepage feed and the article sidebar)
+    # since it's a real, common placement for that unit.
+    ZONE_DIMENSIONS = {
+        Zone.HEADER_LEADERBOARD: (728, 90),
+        Zone.MOBILE_ANCHOR: (320, 50),
+        Zone.MOBILE_LARGE_BANNER: (320, 100),
+        Zone.HOMEPAGE_RECTANGLE: (300, 250),
+        Zone.HOMEPAGE_HALF_PAGE: (300, 600),
+        Zone.ARTICLE_IN_CONTENT: (336, 280),
+        Zone.ARTICLE_SIDEBAR: (300, 250),
+        Zone.ARTICLE_SKYSCRAPER: (160, 600),
+    }
 
     sponsor_name = models.CharField(max_length=255)
     zone = models.CharField(max_length=30, choices=Zone.choices)
     image = models.ImageField(
         upload_to='ads/%Y/%m/',
         validators=[ad_image_extension_validator, validate_ad_image_size],
-        help_text='JPG or PNG, up to 5 MB.',
+        help_text='JPG or PNG, up to 5 MB. Must exactly match the pixel dimensions '
+                   "required by the selected zone — see the size reference on this form.",
     )
     link_url = models.URLField(help_text="Where a click sends the reader — the sponsor's page, not this site.")
     is_active = models.BooleanField(default=True)
@@ -46,6 +80,14 @@ class AdSlot(models.Model):
         if self.end_date and self.end_date < today:
             return False
         return True
+
+    @property
+    def width(self):
+        return self.ZONE_DIMENSIONS[self.zone][0]
+
+    @property
+    def height(self):
+        return self.ZONE_DIMENSIONS[self.zone][1]
 
     @property
     def ctr(self):

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static ads_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -272,6 +272,8 @@
     </header>
     {% endwith %}
 
+    {% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}
+
     <main class="flex-1">
         {% if messages %}
             <div class="max-w-7xl mx-auto px-6 pt-6 space-y-2">
@@ -287,6 +289,8 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
+
+    {% ad_slot 'mobile_anchor' wrapper_class='md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border flex justify-center py-1' %}
 
     <footer class="bg-foreground text-primary-foreground">
         <div class="max-w-7xl mx-auto px-6 py-10">
