@@ -285,6 +285,13 @@ class PlanListFilterTests(TestCase):
         response = self.client.get(reverse('billing:manage_plan_list'), {'active': 'no'})
         self.assertEqual(list(response.context['plans']), [self.annual])
 
+    def test_default_ordering_is_newest_first(self):
+        # Distinct from PlanBrowseView (public), which orders by price on
+        # purpose — this is the editorial manage list.
+        response = self.client.get(reverse('billing:manage_plan_list'))
+        plans = list(response.context['plans'])
+        self.assertLess(plans.index(self.annual), plans.index(self.monthly))
+
 
 class SubscriptionListFilterTests(TestCase):
     def setUp(self):

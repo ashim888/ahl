@@ -1,7 +1,10 @@
-from django.urls import path
+from django.urls import path, register_converter
 
 from . import views
+from .converters import ShortCodeConverter
 from .feeds import LatestArticlesAtomFeed, LatestArticlesFeed
+
+register_converter(ShortCodeConverter, 'shortcode')
 
 app_name = 'articles'
 
@@ -15,6 +18,11 @@ urlpatterns = [
     path('search/', views.SearchView.as_view(), name='search'),
     path('feed/', LatestArticlesFeed(), name='latest_feed'),
     path('feed/atom/', LatestArticlesAtomFeed(), name='latest_feed_atom'),
+    # Must come before <slug:slug> below — a bare short code (e.g. "3f2a4")
+    # would otherwise match the slug converter too (it's a valid slug shape)
+    # and 404 there, since a real slug is the full "title-slug-code" string,
+    # never just the code alone. Django tries patterns in list order.
+    path('articles/<shortcode:code>/', views.article_short_link, name='article_short_link'),
     path('articles/<slug:slug>/', views.ArticleDetailView.as_view(), name='article_detail'),
     path('authors/<int:pk>/', views.AuthorDetailView.as_view(), name='author_detail'),
     path(

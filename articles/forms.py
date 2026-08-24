@@ -38,6 +38,11 @@ class ArticleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['homepage_section'].choices = [('', "Auto (don't feature)")] + list(Article.HomepageSection.choices)
+        # Blank is valid — Article.save() auto-generates slug + short_code
+        # from the title when left empty (see articles/models.py). Django's
+        # own unique-value validation on the ModelForm already rejects an
+        # explicitly-typed slug that collides with another article's.
+        self.fields['slug'].required = False
 
     def clean(self):
         cleaned_data = super().clean()

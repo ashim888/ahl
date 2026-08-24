@@ -294,3 +294,39 @@ class GroupManagementAccessTests(TestCase):
         self.assertEqual(response.status_code, 302)
         from django.contrib.auth.models import Group
         self.assertTrue(Group.objects.filter(name='Reviewers').exists())
+
+    def test_groups_list_newest_first(self):
+        from django.contrib.auth.models import Group
+        first = Group.objects.create(name='Older Group')
+        second = Group.objects.create(name='Newer Group')
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('users:manage_group_list'))
+        groups = list(response.context['groups'])
+        self.assertLess(groups.index(second), groups.index(first))
+
+
+@FAST_PASSWORD_HASHERS
+class ManageListOrderingTests(TestCase):
+    """"Last entered item at the top" — listing pages default to newest-
+    first rather than alphabetical/role grouping (still available via the
+    Role filter on these two screens).
+    """
+
+    def setUp(self):
+        self.admin = make_user('order-admin@example.com', User.Role.ADMIN, is_staff=True, is_superuser=True)
+
+    def test_staff_list_newest_first(self):
+        older = make_user('older-staff@example.com', User.Role.EDITOR)
+        newer = make_user('newer-staff@example.com', User.Role.EDITOR)
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('users:manage_staff_list'))
+        staff = list(response.context['staff'])
+        self.assertLess(staff.index(newer), staff.index(older))
+
+    def test_permissions_list_newest_first(self):
+        older = make_user('older-account@example.com', User.Role.VERIFIED_AUTHOR)
+        newer = make_user('newer-account@example.com', User.Role.VERIFIED_AUTHOR)
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('users:manage_permissions_list'))
+        accounts = list(response.context['accounts'])
+        self.assertLess(accounts.index(newer), accounts.index(older))

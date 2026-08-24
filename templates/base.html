@@ -75,6 +75,18 @@
             outline: 2px solid transparent; box-shadow: 0 0 0 2px #111110;
         }
 
+        /* Password show/hide toggle — injected by JS (see the bottom script
+           block) around every input[type=password] on the page, so login
+           and register need no template-specific markup. */
+        .password-field-wrapper { position: relative; }
+        .password-field-wrapper input { padding-right: 2.75rem; }
+        .password-toggle-btn {
+            position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%);
+            background: none; border: none; padding: 0.25rem; margin: 0; cursor: pointer;
+            color: #6b6860; display: flex; align-items: center;
+        }
+        .password-toggle-btn:hover { color: #111110; }
+
         /* Full-text article body (Article.html_content) */
         .prose-article { font-family: Georgia, serif; }
         .prose-article h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-top: 2rem; border-top: 1px solid #d4d0cb; letter-spacing: -0.015em; }
@@ -387,6 +399,33 @@
                 }
             });
         }
+
+        // Show/hide toggle on every password field (login, register, ...) —
+        // wraps each input[type=password] in a positioned container and
+        // appends an eye/eye-off icon button, so no template needs its own
+        // markup for this; it applies uniformly wherever a password field appears.
+        var EYE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
+        var EYE_OFF_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a10.94 10.94 0 0 0 5.39-1.61M1 1l22 22"/></svg>';
+        document.querySelectorAll('input[type="password"]').forEach(function (input) {
+            var wrapper = document.createElement('div');
+            wrapper.className = 'password-field-wrapper';
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            var toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'password-toggle-btn';
+            toggle.setAttribute('aria-label', 'Show password');
+            toggle.innerHTML = EYE_ICON;
+            wrapper.appendChild(toggle);
+
+            toggle.addEventListener('click', function () {
+                var nowShowing = input.type === 'password';
+                input.type = nowShowing ? 'text' : 'password';
+                toggle.innerHTML = nowShowing ? EYE_OFF_ICON : EYE_ICON;
+                toggle.setAttribute('aria-label', nowShowing ? 'Hide password' : 'Show password');
+            });
+        });
     });
     </script>
 

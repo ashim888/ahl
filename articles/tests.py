@@ -416,3 +416,86 @@ class AdFreeSubscriberPerkTests(TestCase):
         self.client.get(reverse('articles:home'))
         self.ad.refresh_from_db()
         self.assertEqual(self.ad.impression_count, 1)
+
+
+class SlugAndShortCodeTests(TestCase):
+    def test_every_new_article_gets_a_short_code(self):
+        article = make_article('has-a-slug', Article.ArticleType.NEWS_COMMENTARY)
+        self.assertEqual(len(article.short_code), 5)
+
+    def test_blank_slug_is_generated_from_title_plus_short_code(self):
+        article = Article.objects.create(
+            title='Tuberculosis Screening Update', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        self.assertTrue(article.slug.startswith('tuberculosis-screening-update-'))
+        self.assertTrue(article.slug.endswith(article.short_code))
+
+    def test_explicit_slug_is_not_overridden(self):
+        article = make_article('my-custom-slug', Article.ArticleType.NEWS_COMMENTARY)
+        self.assertEqual(article.slug, 'my-custom-slug')
+
+    def test_two_articles_with_identical_titles_get_distinct_slugs(self):
+        first = Article.objects.create(
+            title='Duplicate Title', abstract='a', article_type=Article.ArticleType.NEWS_COMMENTARY,
+            status=Article.Status.PUBLISHED,
+        )
+        second = Article.objects.create(
+            title='Duplicate Title', abstract='b', article_type=Article.ArticleType.NEWS_COMMENTARY,
+            status=Article.Status.PUBLISHED,
+        )
+        self.assertNotEqual(first.slug, second.slug)
+        self.assertNotEqual(first.short_code, second.short_code)
+
+    def test_editing_an_existing_article_does_not_change_its_short_code(self):
+        article = make_article('stable-code-article', Article.ArticleType.NEWS_COMMENTARY)
+        original_code = article.short_code
+        article.title = 'Updated Title'
+        article.save()
+        self.assertEqual(article.short_code, original_code)
+
+    def test_short_link_redirects_to_canonical_detail_page(self):
+        article = make_article('short-link-target', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_short_link', args=[article.short_code]))
+        self.assertRedirects(
+            response, reverse('articles:article_detail', args=[article.slug]), status_code=301,
+        )
+
+    def test_short_link_404s_for_unpublished_article(self):
+        article = make_article('draft-short-link', Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT)
+        response = self.client.get(reverse('articles:article_short_link', args=[article.short_code]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_short_link_404s_for_unknown_code(self):
+        response = self.client.get(reverse('articles:article_short_link', args=['zzzzz']))
+        self.assertEqual(response.status_code, 404)
+
+    def test_article_detail_page_exposes_short_url(self):
+        article = make_article('exposed-short-url', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, f'/articles/{article.short_code}/')
+
+    def test_a_short_code_shaped_manual_slug_still_takes_the_slug_route(self):
+        # An editor-typed slug that happens to be 5 lowercase-alnum chars
+        # (the same shape as a short_code) must still resolve as a normal
+        # article — it's a real slug value, distinct from any article's
+        # actual short_code, so it should never hit article_short_link.
+        article = make_article('abcde', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_create_form_generates_slug_when_left_blank(self):
+        from users.models import User
+
+        editor = User.objects.create_user(
+            email='slug-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        response = self.client.post(reverse('articles:manage_article_create'), {
+            'title': 'Freshly Typed Headline', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'abstract': 'An abstract.', 'action': 'draft',
+        })
+        article = Article.objects.get(title='Freshly Typed Headline')
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(article.slug.startswith('freshly-typed-headline-'))
+        self.assertEqual(len(article.short_code), 5)

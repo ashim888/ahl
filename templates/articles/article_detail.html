@@ -46,11 +46,17 @@
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="Share on LinkedIn">
                     <span class="font-mono-editorial text-[0.6rem] font-bold">LI</span>
                 </button>
-                <button type="button" id="copy-link-btn"
+                <button type="button" id="copy-link-btn" data-copy-url="{{ canonical_url }}"
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="Copy link" title="Copy link">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                </button>
+                <button type="button" id="copy-short-link-btn" data-copy-url="{{ short_url }}"
+                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="Copy short link" title="Copy short link">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13.5 6h5a4 4 0 1 1 0 8h-3M10.5 18h-5a4 4 0 1 1 0-8h3"/>
                     </svg>
                 </button>
             </div>
@@ -198,7 +204,8 @@
                 <span class="font-mono-editorial text-xs text-muted-foreground">Share:</span>
                 <button type="button" data-share="x" class="font-mono-editorial text-xs border border-border px-3 py-1.5">X</button>
                 <button type="button" data-share="linkedin" class="font-mono-editorial text-xs border border-border px-3 py-1.5">LinkedIn</button>
-                <button type="button" id="copy-link-btn-mobile" class="font-mono-editorial text-xs border border-border px-3 py-1.5">Copy link</button>
+                <button type="button" id="copy-link-btn-mobile" data-copy-url="{{ canonical_url }}" class="font-mono-editorial text-xs border border-border px-3 py-1.5">Copy link</button>
+                <button type="button" id="copy-short-link-btn-mobile" data-copy-url="{{ short_url }}" class="font-mono-editorial text-xs border border-border px-3 py-1.5">Short link</button>
             </div>
         </article>
 
@@ -317,16 +324,17 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function copyLink(btn) {
-        navigator.clipboard.writeText(pageUrl).then(function () {
+        var url = btn.getAttribute('data-copy-url') || pageUrl;
+        navigator.clipboard.writeText(url).then(function () {
             var original = btn.innerHTML;
             btn.textContent = 'Copied!';
             setTimeout(function () { btn.innerHTML = original; }, 1500);
         });
     }
-    var copyBtn = document.getElementById('copy-link-btn');
-    if (copyBtn) copyBtn.addEventListener('click', function () { copyLink(copyBtn); });
-    var copyBtnMobile = document.getElementById('copy-link-btn-mobile');
-    if (copyBtnMobile) copyBtnMobile.addEventListener('click', function () { copyLink(copyBtnMobile); });
+    ['copy-link-btn', 'copy-short-link-btn', 'copy-link-btn-mobile', 'copy-short-link-btn-mobile'].forEach(function (id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', function () { copyLink(btn); });
+    });
 });
 </script>
 

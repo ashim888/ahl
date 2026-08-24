@@ -13,7 +13,6 @@ from django.templatetags.static import static
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django_ratelimit.decorators import ratelimit
@@ -279,6 +278,9 @@ class ArticleDetailView(DetailView):
         context['meta_description'] = (self.object.abstract or '')[:200]
         context['og_type'] = 'article'
         context['canonical_url'] = self.request.build_absolute_uri(self.request.path)
+        context['short_url'] = self.request.build_absolute_uri(
+            reverse('articles:article_short_link', kwargs={'code': self.object.short_code}),
+        )
         image_url = None
         if self.object.featured_image:
             image_url = self.request.build_absolute_uri(self.object.featured_image.url)
@@ -289,6 +291,27 @@ class ArticleDetailView(DetailView):
             authors=article_authors,
         )
         return context
+
+
+def article_short_link(request, code):
+    """/articles/<code>/ — a short, shareable alternative to the full
+    title-slug URL (e.g. /articles/3f2a4/ instead of
+    /articles/tuberculosis-screening-update-3f2a4/). Redirects (301) to the
+    canonical slug URL rather than rendering the page directly at this path,
+    so there's exactly one indexable URL per article — the usual reason
+    short-link services redirect instead of serving duplicate content.
+
+    `code` is only guaranteed to *look like* a short_code (the URL converter
+    enforces the shape, not uniqueness against real slugs) — an editor can
+    still manually type a real slug that happens to be the same shape (e.g.
+    "abcde"). Falls through to rendering the detail page directly for that
+    case instead of 404ing; redirecting to the same URL string it's already
+    on would loop.
+    """
+    article = Article.objects.filter(short_code=code, status=Article.Status.PUBLISHED).first()
+    if article:
+        return redirect('articles:article_detail', slug=article.slug, permanent=True)
+    return ArticleDetailView.as_view()(request, slug=code)
 
 
 class AuthorDetailView(DetailView):
@@ -518,17 +541,6 @@ def article_quick_publish(request, slug):
     return redirect('articles:manage_article_list')
 
 
-def _unique_article_slug(article, base):
-    """Append -2, -3, ... to `base` until it doesn't collide with another article."""
-    base = base or 'untitled-draft'
-    slug = base
-    n = 2
-    while Article.objects.exclude(pk=article.pk).filter(slug=slug).exists():
-        slug = f'{base}-{n}'
-        n += 1
-    return slug
-
-
 @role_required(*EDITORIAL_ROLES)
 @require_POST
 def article_autosave(request):
@@ -551,8 +563,8 @@ def article_autosave(request):
     article = form.save(commit=False)
     if instance is None:
         article.status = Article.Status.DRAFT
-    if not article.slug:
-        article.slug = _unique_article_slug(article, slugify(article.title))
+    # A blank slug is auto-generated (from the title + a unique short_code)
+    # by Article.save() itself now — no need to pre-fill it here.
 
     try:
         article.save()

@@ -41,6 +41,7 @@
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
             <tr>
+                <th class="px-4 py-3">#</th>
                 <th class="px-4 py-3">Reader</th>
                 <th class="px-4 py-3">Plan</th>
                 <th class="px-4 py-3">Status</th>
@@ -51,6 +52,7 @@
         <tbody class="divide-y divide-gray-200 bg-white">
             {% for subscription in subscriptions %}
                 <tr>
+                    <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
                     <td class="px-4 py-3 font-medium text-gray-900">{{ subscription.user.get_full_name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ subscription.plan.name }}</td>
                     <td class="px-4 py-3 text-gray-600">
@@ -63,13 +65,15 @@
                             <form method="post" action="{% url 'billing:manage_subscription_revoke' subscription.pk %}" class="inline"
                                   onsubmit="return confirm('Cancel this subscription?');">
                                 {% csrf_token %}
-                                <button type="submit" class="underline text-red-700">Cancel</button>
+                                <button type="submit" class="icon-action-btn icon-action-danger" title="Cancel" aria-label="Cancel subscription">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="m15 9-6 6m0-6 6 6"/></svg>
+                                </button>
                             </form>
                         {% endif %}
                     </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No subscriptions granted yet.</td></tr>
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No subscriptions granted yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

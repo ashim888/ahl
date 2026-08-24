@@ -34,6 +34,7 @@
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
             <tr>
+                <th class="px-4 py-3">#</th>
                 <th class="px-4 py-3"></th>
                 <th class="px-4 py-3">Name</th>
                 <th class="px-4 py-3">Email</th>
@@ -47,6 +48,7 @@
         <tbody class="divide-y divide-gray-200 bg-white">
             {% for author in authors %}
                 <tr>
+                    <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
                     <td class="px-4 py-3">
                         {% if author.photo %}
                             <img src="{{ author.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover">
@@ -67,20 +69,27 @@
                     </td>
                     <td class="px-4 py-3 text-gray-600">{% if author.is_active %}Yes{% else %}No{% endif %}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
-                        <a href="{% url 'users:manage_author_update' author.pk %}" class="underline mr-3">Edit</a>
+                        <a href="{% url 'users:manage_author_update' author.pk %}" class="icon-action-btn" title="Edit" aria-label="Edit">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5m-1.5-9.5a2.121 2.121 0 0 1 3 3L12 17l-4 1 1-4 9.5-9.5Z"/></svg>
+                        </a>
                         {% if user.is_senior_staff %}
-                            <a href="{% url 'users:change_role' author.pk %}" class="underline mr-3">Change Role</a>
+                            <a href="{% url 'users:change_role' author.pk %}" class="icon-action-btn" title="Change Role" aria-label="Change Role">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.5 7.5 0 0 1-.15 1.5l2.1 1.63-2 3.46-2.5-1a7.6 7.6 0 0 1-2.6 1.5l-.38 2.66h-4l-.38-2.66a7.6 7.6 0 0 1-2.6-1.5l-2.5 1-2-3.46 2.1-1.63a7.5 7.5 0 0 1 0-3l-2.1-1.63 2-3.46 2.5 1a7.6 7.6 0 0 1 2.6-1.5L9.6 2.5h4l.38 2.66a7.6 7.6 0 0 1 2.6 1.5l2.5-1 2 3.46-2.1 1.63c.1.49.15.99.15 1.5Z"/></svg>
+                            </a>
                         {% endif %}
                         <form method="post" action="{% url 'users:manage_author_toggle_active' author.pk %}" class="inline">
                             {% csrf_token %}
-                            <button type="submit" class="underline {% if author.is_active %}text-red-700{% else %}text-green-700{% endif %}">
-                                {% if author.is_active %}Deactivate{% else %}Reactivate{% endif %}
+                            <button type="submit"
+                                    class="icon-action-btn {% if author.is_active %}icon-action-danger{% else %}icon-action-success{% endif %}"
+                                    title="{% if author.is_active %}Deactivate{% else %}Reactivate{% endif %}"
+                                    aria-label="{% if author.is_active %}Deactivate{% else %}Reactivate{% endif %}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v10M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
                             </button>
                         </form>
                     </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">No authors yet.</td></tr>
+                <tr><td colspan="9" class="px-4 py-6 text-center text-gray-500">No authors yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

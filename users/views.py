@@ -252,7 +252,10 @@ class StaffManageListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = User.objects.filter(role__in=STAFF_ROLES).order_by('role', 'first_name')
+        # Newest-joined first — role-based grouping is still available via
+        # the Role filter above, so this doesn't lose that, just stops
+        # defaulting to it.
+        queryset = User.objects.filter(role__in=STAFF_ROLES).order_by('-date_joined')
         role = self.request.GET.get('role')
         if role:
             queryset = queryset.filter(role=role)
@@ -374,7 +377,7 @@ class PermissionsListView(ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        queryset = User.objects.order_by('role', 'first_name')
+        queryset = User.objects.order_by('-date_joined')
         role = self.request.GET.get('role')
         if role:
             queryset = queryset.filter(role=role)
@@ -399,10 +402,13 @@ class GroupManageListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
+        # Django's built-in auth.Group has no created_at field — -id is the
+        # closest available proxy for "most recently created" on MySQL,
+        # where ids are assigned in insertion order.
         return Group.objects.annotate(
             member_count=Count('user', distinct=True),
             permission_count=Count('permissions', distinct=True),
-        ).order_by('name')
+        ).order_by('-id')
 
 
 class GroupFormMixin:

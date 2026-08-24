@@ -4,7 +4,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView
 from django_ratelimit.decorators import ratelimit
@@ -24,16 +23,6 @@ PITCH_SUBMIT_ROLES = (User.Role.VERIFIED_AUTHOR,)
 # Reviewing pitches is editorial content triage, same boundary as Article
 # CRUD — not the narrower EiC/Admin-only verification-queue boundary.
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
-
-
-def _unique_article_slug(base):
-    base = base or 'untitled-pitch'
-    slug = base
-    n = 2
-    while Article.objects.filter(slug=slug).exists():
-        slug = f'{base}-{n}'
-        n += 1
-    return slug
 
 
 @method_decorator(role_required(*PITCH_SUBMIT_ROLES), name='dispatch')
@@ -137,8 +126,10 @@ def pitch_decide(request, pk, decision):
         pitch.save()
         messages.success(request, f'"{pitch.title}" rejected.')
     elif decision == 'accept':
+        # slug left blank — Article.save() generates one from the title
+        # (plus a unique short_code) automatically.
         article = Article.objects.create(
-            title=pitch.title, slug=_unique_article_slug(slugify(pitch.title)), abstract=pitch.summary,
+            title=pitch.title, abstract=pitch.summary,
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
             html_content=pitch.body or None,
         )

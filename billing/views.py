@@ -143,7 +143,10 @@ class PlanListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = SubscriptionPlan.objects.order_by('price')
+        # Newest-created first for editorial management — distinct from
+        # PlanBrowseView above, which orders by price on purpose (a reader
+        # comparing plans wants cheapest-first, not most-recently-added).
+        queryset = SubscriptionPlan.objects.order_by('-created_at')
         plan_type = self.request.GET.get('plan_type')
         active = self.request.GET.get('active')
         if plan_type:

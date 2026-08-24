@@ -1,7 +1,11 @@
+import secrets
+import string
+
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 
 from .validators import (
     article_image_extension_validator, article_pdf_extension_validator,
@@ -12,6 +16,17 @@ from .validators import (
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
 HOME_SECTIONS_CACHE_KEY = 'home:sections:v2'
+
+# 5 lowercase-alphanumeric chars, e.g. "3f2a4" — short enough to be a usable
+# permalink (/articles/3f2a4/, see articles/converters.py + urls.py), long
+# enough that 36**5 (~60M) combinations make a collision on any one retry
+# vanishingly unlikely, matching the retry-loop pattern Article.save() uses.
+SHORT_CODE_ALPHABET = string.ascii_lowercase + string.digits
+SHORT_CODE_LENGTH = 5
+
+
+def generate_short_code():
+    return ''.join(secrets.choice(SHORT_CODE_ALPHABET) for _ in range(SHORT_CODE_LENGTH))
 
 
 class Article(models.Model):
@@ -49,7 +64,14 @@ class Article(models.Model):
         RESEARCH = 'research', 'Research Highlights'
 
     title = models.CharField(max_length=500)
-    slug = models.SlugField(max_length=500, unique=True)
+    slug = models.SlugField(
+        max_length=500, unique=True, blank=True,
+        help_text='Leave blank to generate from the title (plus a short unique code, e.g. "my-article-3f2a4").',
+    )
+    short_code = models.CharField(
+        max_length=SHORT_CODE_LENGTH, unique=True, blank=True, editable=False,
+        help_text='Auto-generated permalink code — also reachable at /articles/<code>/.',
+    )
     abstract = models.TextField()
     keywords = models.CharField(max_length=500, null=True, blank=True)
     article_type = models.CharField(max_length=30, choices=ArticleType.choices)
@@ -142,6 +164,23 @@ class Article(models.Model):
         return max(1, round(len(text.split()) / 200))
 
     def save(self, *args, **kwargs):
+        # short_code first — a blank slug is built from it below, so it must
+        # already exist by the time that runs. Applies regardless of how the
+        # article was created (the editorial form, the pitches accept flow,
+        # seed_demo_data, Django admin, ...) since every path ends up here.
+        if not self.short_code:
+            code = generate_short_code()
+            while Article.objects.filter(short_code=code).exists():
+                code = generate_short_code()
+            self.short_code = code
+        # Auto-slug from the title when an editor leaves it blank
+        # (ArticleForm makes it optional) — the short_code suffix means two
+        # articles with the same title can never collide, so there's no
+        # uniqueness retry loop needed here the way _unique_article_slug
+        # needs one elsewhere for slugs without a code suffix.
+        if not self.slug:
+            base = slugify(self.title) or 'article'
+            self.slug = f'{base}-{self.short_code}'
         # publication_date is entirely automatic — stamped the moment status
         # becomes Published, never editor-facing. Doesn't re-stamp on a later
         # save (e.g. an edit to an already-published article).
