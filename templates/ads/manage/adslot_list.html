@@ -15,6 +15,21 @@
     </a>
 </div>
 
+{% if zone_stats %}
+<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {% for z in zone_stats %}
+        <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <p class="text-sm text-gray-500">{{ z.label }}</p>
+            <div class="mt-2 flex items-baseline gap-4">
+                <span><span class="text-2xl font-bold text-gray-900">{{ z.impressions }}</span> <span class="text-xs text-gray-400">impressions</span></span>
+                <span><span class="text-2xl font-bold text-gray-900">{{ z.clicks }}</span> <span class="text-xs text-gray-400">clicks</span></span>
+            </div>
+            <p class="mt-2 text-xs text-gray-400">CTR: {% if z.ctr is not None %}{{ z.ctr }}%{% else %}—{% endif %}</p>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <div class="mt-6 overflow-x-auto">
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -24,6 +39,7 @@
                 <th class="px-4 py-3">Runs</th>
                 <th class="px-4 py-3">Impressions</th>
                 <th class="px-4 py-3">Clicks</th>
+                <th class="px-4 py-3">CTR</th>
                 <th class="px-4 py-3">Active</th>
                 <th class="px-4 py-3"></th>
             </tr>
@@ -38,10 +54,12 @@
                     </td>
                     <td class="px-4 py-3 text-gray-600">{{ ad.impression_count }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ ad.click_count }}</td>
+                    <td class="px-4 py-3 text-gray-600">{% if ad.ctr is not None %}{{ ad.ctr }}%{% else %}—{% endif %}</td>
                     <td class="px-4 py-3 text-gray-600">
                         {% if ad.is_currently_active %}<span class="text-green-700">Yes</span>{% elif ad.is_active %}Scheduled{% else %}No{% endif %}
                     </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <a href="{% url 'ads:manage_adslot_analytics' ad.pk %}" class="underline mr-3">Analytics</a>
                         <a href="{% url 'ads:manage_adslot_update' ad.pk %}" class="underline mr-3">Edit</a>
                         <form method="post" action="{% url 'ads:manage_adslot_toggle_active' ad.pk %}" class="inline">
                             {% csrf_token %}
@@ -52,7 +70,7 @@
                     </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">No ads yet.</td></tr>
+                <tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">No ads yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

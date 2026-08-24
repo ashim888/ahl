@@ -4,6 +4,7 @@ Django settings for ajna_health_lens project.
 See CLAUDE.md and ARCHITECTURE.md for the full spec this file implements.
 """
 
+import datetime
 import os
 from pathlib import Path
 
@@ -67,6 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     'django_q',
+    'axes',
 
     # Ajna Health Lens apps
     'users',
@@ -91,6 +93,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # django-axes' docs require this to be the last middleware in the list —
+    # it reads a lockout flag AxesStandaloneBackend leaves on the request
+    # (see AUTHENTICATION_BACKENDS/AXES_* below) and, only then, rewrites the
+    # response into a 429. Debug Toolbar inserts itself at index 1 below,
+    # which doesn't disturb this middleware staying last.
+    'axes.middleware.AxesMiddleware',
 ]
 
 # Django Debug Toolbar — dev-only, entirely gated behind DEBUG so it's never
@@ -143,6 +151,36 @@ DATABASES = {
 
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
+
+
+# Account-level login lockout (django-axes) — complements, not replaces, the
+# per-IP django_ratelimit throttle already on EmailLoginView (15/m; see
+# users/views.py). Rate limiting alone doesn't stop a slow/distributed
+# attacker rotating IPs against one account — axes tracks failures by
+# username (email) instead, independent of source IP. AxesStandaloneBackend
+# must be first so a locked-out account is rejected before ModelBackend ever
+# checks the password.
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+AXES_FAILURE_LIMIT = 5
+AXES_LOCKOUT_PARAMETERS = ['username']
+# django.contrib.auth.forms.AuthenticationForm always names its field
+# "username" — even though User.USERNAME_FIELD is "email" — so axes' default
+# of reading USERNAME_FIELD ("email") from POST data looks for a key that's
+# never actually sent and silently tracks nothing. Point it at the real field.
+AXES_USERNAME_FORM_FIELD = 'username'
+# Auto-expires the lockout rather than requiring an admin to manually clear
+# it in Django admin (axes.AccessAttempt) — 30 minutes is enough friction to
+# stop a credential-stuffing run without locking a real reader out for long.
+AXES_COOLOFF_TIME = datetime.timedelta(minutes=30)
+AXES_RESET_ON_SUCCESS = True
+# axes.W006 warns that username-only lockout doesn't stop an attacker who
+# rotates IPs/cookies — true, but that's deliberately EmailLoginView's job
+# (per-IP ratelimit) rather than axes'; the two are complementary, not
+# redundant, by design (see the AUTHENTICATION_BACKENDS comment above).
+SILENCED_SYSTEM_CHECKS = ['axes.W006']
 
 
 # Password validation
@@ -244,10 +282,10 @@ CACHES = {
 
 
 # Journal branding (see ARCHITECTURE.md §10.1)
-JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Ajna Health Lens')
+JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Health Lens')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
 JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
-JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Ajna Health Lens Publishing')
+JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing')
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.example')
 
 

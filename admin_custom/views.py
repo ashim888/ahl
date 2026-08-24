@@ -1,13 +1,15 @@
 import datetime
+from decimal import Decimal
 
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
-from articles.models import Article
-from billing.models import UserSubscription
-from newsletter.models import Subscriber
+from ads.models import AdEvent, AdSlot
+from articles.models import Article, ArticleView
+from billing.models import ArticlePurchase, SubscriptionPlan, UserSubscription
+from newsletter.models import NewsletterIssue, Subscriber
 from pitches.models import StoryPitch
 from training.models import Enrollment, TrainingCourse
 from users.decorators import role_required
@@ -16,10 +18,54 @@ from users.models import User
 # Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
-# Palette for the "Articles by Type" donut — chosen for contrast against
-# white cards and against each other; order doesn't matter, slices are
-# assigned by descending count so the biggest slice always gets the first color.
+# Palette for donut charts — chosen for contrast against white cards and
+# against each other; order doesn't matter, slices are assigned by
+# descending count so the biggest slice always gets the first color.
 TYPE_CHART_COLORS = ['#7c6fea', '#34d399', '#fbbf24', '#60a5fa', '#f87171', '#22d3ee', '#f472b6', '#a3a3a3']
+
+
+def _daily_counts(queryset, date_field, days):
+    """Buckets `queryset` row counts into local-midnight-to-midnight ranges
+    for each day in `days`. Explicit datetime ranges rather than a
+    `date_field__date=day` lookup — the latter needs MySQL's CONVERT_TZ() to
+    resolve the named TIME_ZONE, which silently matches nothing unless the
+    server's mysql.time_zone_name tables have been loaded (see
+    DashboardHomeView.get_context_data above for the same reasoning).
+    """
+    counts = []
+    for day in days:
+        day_start = timezone.make_aware(datetime.datetime.combine(day, datetime.time.min))
+        day_end = day_start + datetime.timedelta(days=1)
+        counts.append(queryset.filter(**{f'{date_field}__gte': day_start, f'{date_field}__lt': day_end}).count())
+    return counts
+
+
+def _trend_bars(day_labels, counts):
+    max_count = max(counts + [1])
+    return [
+        {'label': label, 'count': count, 'pct': round(count / max_count * 100)}
+        for label, count in zip(day_labels, counts)
+    ]
+
+
+def _donut_breakdown(counts_by_value, choices):
+    """Same "sorted slices + conic-gradient stops" shape as DashboardHomeView's
+    Articles-by-Type donut, factored out here since AnalyticsView needs it twice
+    (subscription plan mix, newsletter subscriber status).
+    """
+    rows = [{'label': label, 'count': counts_by_value.get(value, 0)} for value, label in choices if counts_by_value.get(value)]
+    rows.sort(key=lambda d: -d['count'])
+    total = sum(d['count'] for d in rows)
+    gradient_stops = []
+    cursor = 0
+    for i, d in enumerate(rows):
+        d['color'] = TYPE_CHART_COLORS[i % len(TYPE_CHART_COLORS)]
+        d['pct'] = round(d['count'] / total * 100) if total else 0
+        start = cursor
+        cursor = 100 if i == len(rows) - 1 else cursor + d['pct']
+        gradient_stops.append(f"{d['color']} {start}% {cursor}%")
+    gradient = ', '.join(gradient_stops) if gradient_stops else '#e5e7eb 0% 100%'
+    return rows, gradient, total
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -168,10 +214,10 @@ class DashboardHomeView(TemplateView):
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
 class RevenueView(TemplateView):
-    """Read-only revenue summary from Training's Enrollment.payment_status —
-    the only real payment data this platform has. Deliberately not a
-    Stripe/subscription billing page — that's ROADMAP.md Phase 7, a separate,
-    much larger undertaking than surfacing data that already exists.
+    """Read-only revenue summary from Training's Enrollment.payment_status.
+    Subscription/purchase revenue (billing app) and ad performance live on
+    AnalyticsView below instead — this page stays scoped to training, its
+    original purpose, rather than growing into a second BI page.
     """
 
     template_name = 'admin_custom/revenue.html'
@@ -198,5 +244,112 @@ class RevenueView(TemplateView):
         for course in courses:
             course.collected = course.paid_count * course.price
         context['courses'] = courses
+
+        return context
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class AnalyticsView(TemplateView):
+    """Cross-domain BI overview: article readership, subscription/purchase
+    revenue, ad performance, and newsletter growth in one place — a level
+    above DashboardHomeView's day-to-day KPIs (today's counts) and
+    RevenueView's training-only numbers. Read-only; no CSV export yet.
+    """
+
+    template_name = 'admin_custom/analytics.html'
+    TREND_DAYS = 14
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        days = [today - datetime.timedelta(days=i) for i in range(self.TREND_DAYS - 1, -1, -1)]
+        day_labels = [d.strftime('%b %-d') for d in days]
+        window_start = timezone.make_aware(datetime.datetime.combine(days[0], datetime.time.min))
+
+        # -- Articles --------------------------------------------------------
+        views_counts = _daily_counts(ArticleView.objects.all(), 'viewed_at', days)
+        context['article_views_trend'] = _trend_bars(day_labels, views_counts)
+        context['article_views_window_total'] = sum(views_counts)
+
+        top_articles = list(
+            Article.objects.filter(status=Article.Status.PUBLISHED)
+            .annotate(recent_views=Count('page_views', filter=Q(page_views__viewed_at__gte=window_start)))
+            .order_by('-recent_views', '-download_count', '-citation_count')[:10],
+        )
+        context['top_articles'] = [
+            a for a in top_articles if a.recent_views or a.download_count or a.citation_count
+        ]
+        context['lifetime_downloads'] = Article.objects.aggregate(total=Sum('download_count'))['total'] or 0
+        context['lifetime_citations'] = Article.objects.aggregate(total=Sum('citation_count'))['total'] or 0
+
+        # -- Subscriptions / revenue ------------------------------------------
+        active_subs = list(
+            UserSubscription.objects.filter(
+                status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
+            ).select_related('plan'),
+        )
+        plan_type_counts = {}
+        for sub in active_subs:
+            plan_type_counts[sub.plan.plan_type] = plan_type_counts.get(sub.plan.plan_type, 0) + 1
+        subscription_breakdown, subscription_gradient, active_subscription_count = _donut_breakdown(
+            plan_type_counts, SubscriptionPlan.PlanType.choices,
+        )
+        context['subscription_breakdown'] = subscription_breakdown
+        context['subscription_gradient'] = subscription_gradient
+        context['active_subscription_count'] = active_subscription_count
+
+        # Approximate monthly-recurring-revenue value of currently active
+        # subscriptions — normalizes each plan's price to a 30-day cycle
+        # (e.g. an annual plan counts at 1/12th its price) so mixed
+        # monthly/annual/institutional plans combine into one comparable number.
+        mrr_estimate = sum(
+            (sub.plan.price / (Decimal(sub.plan.duration_days) / Decimal(30))) for sub in active_subs
+        ) if active_subs else Decimal('0')
+        context['mrr_estimate'] = round(mrr_estimate, 2)
+
+        new_subs_counts = _daily_counts(UserSubscription.objects.all(), 'created_at', days)
+        context['new_subscriptions_trend'] = _trend_bars(day_labels, new_subs_counts)
+        context['cancelled_subscription_count'] = UserSubscription.objects.filter(
+            status=UserSubscription.Status.CANCELLED,
+        ).count()
+        context['purchase_count'] = ArticlePurchase.objects.count()
+        context['purchase_revenue'] = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+
+        # -- Ads ---------------------------------------------------------------
+        ads_all_time_impressions = AdSlot.objects.aggregate(total=Sum('impression_count'))['total'] or 0
+        ads_all_time_clicks = AdSlot.objects.aggregate(total=Sum('click_count'))['total'] or 0
+        context['ads_all_time_impressions'] = ads_all_time_impressions
+        context['ads_all_time_clicks'] = ads_all_time_clicks
+        context['ads_all_time_ctr'] = (
+            round(ads_all_time_clicks / ads_all_time_impressions * 100, 2) if ads_all_time_impressions else None
+        )
+
+        recent_ad_events = AdEvent.objects.filter(occurred_at__gte=window_start)
+        context['ads_window_impressions'] = recent_ad_events.filter(event_type=AdEvent.EventType.IMPRESSION).count()
+        context['ads_window_clicks'] = recent_ad_events.filter(event_type=AdEvent.EventType.CLICK).count()
+        context['top_ads'] = list(AdSlot.objects.order_by('-click_count', '-impression_count')[:5])
+
+        # -- Newsletter / other --------------------------------------------
+        subscriber_counts = dict(Subscriber.objects.values_list('status').annotate(count=Count('id')).order_by())
+        newsletter_breakdown, newsletter_gradient, newsletter_total = _donut_breakdown(
+            subscriber_counts, Subscriber.Status.choices,
+        )
+        context['newsletter_breakdown'] = newsletter_breakdown
+        context['newsletter_gradient'] = newsletter_gradient
+        context['newsletter_total'] = newsletter_total
+        context['newsletter_confirmed_count'] = subscriber_counts.get(Subscriber.Status.CONFIRMED, 0)
+
+        new_confirmed_counts = _daily_counts(
+            Subscriber.objects.filter(status=Subscriber.Status.CONFIRMED), 'confirmed_at', days,
+        )
+        context['newsletter_confirmed_trend'] = _trend_bars(day_labels, new_confirmed_counts)
+        context['newsletter_issues_sent'] = NewsletterIssue.objects.filter(sent_at__isnull=False).count()
+        context['newsletter_total_recipients'] = (
+            NewsletterIssue.objects.aggregate(total=Sum('recipient_count'))['total'] or 0
+        )
+
+        context['open_pitches'] = StoryPitch.objects.filter(
+            status__in=[StoryPitch.Status.SUBMITTED, StoryPitch.Status.IN_REVIEW],
+        ).count()
 
         return context

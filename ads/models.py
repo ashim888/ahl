@@ -46,3 +46,36 @@ class AdSlot(models.Model):
         if self.end_date and self.end_date < today:
             return False
         return True
+
+    @property
+    def ctr(self):
+        """Click-through rate as a percentage, rounded to 2dp. None (not 0)
+        with zero impressions — an ad that hasn't run yet has no rate, not a
+        0% one; the template shows "—" for that case instead of a misleading number.
+        """
+        if not self.impression_count:
+            return None
+        return round(self.click_count / self.impression_count * 100, 2)
+
+
+class AdEvent(models.Model):
+    """One impression or click event — first-party, timestamped, same pattern
+    as articles.ArticleView. AdSlot.impression_count/click_count (above) stay
+    as cheap running totals for the list page; this event log is what makes a
+    real day-by-day CTR trend possible (see ads/services.py and
+    admin_custom's Analytics page), not just an all-time number.
+    """
+
+    class EventType(models.TextChoices):
+        IMPRESSION = 'impression', 'Impression'
+        CLICK = 'click', 'Click'
+
+    ad_slot = models.ForeignKey(AdSlot, on_delete=models.CASCADE, related_name='events')
+    event_type = models.CharField(max_length=20, choices=EventType.choices)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['ad_slot', 'event_type', 'occurred_at'])]
+
+    def __str__(self):
+        return f'{self.get_event_type_display()} on {self.ad_slot} at {self.occurred_at}'

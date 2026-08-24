@@ -1,10 +1,12 @@
 import datetime
+import re
 
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Case, Count, F, IntegerField, Q, When, prefetch_related_objects
+from django.db.models import Case, Count, F, FloatField, IntegerField, Q, Value, When, prefetch_related_objects
+from django.db.models.expressions import RawSQL
 from django.http import HttpResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
@@ -394,8 +396,42 @@ def article_download(request, slug):
     return redirect(article.pdf_file.url)
 
 
+# Chars MySQL's BOOLEAN MODE gives special meaning to (+ - < > ( ) ~ * " @) —
+# stripped from each token before it's wrapped as a required prefix match,
+# so a reader typing e.g. "COVID-19" doesn't accidentally write boolean syntax.
+_BOOLEAN_MODE_SPECIAL_CHARS = re.compile(r'[+\-<>()~*"@]')
+
+
+def _fulltext_boolean_query(raw_query):
+    """Turns free-text input into a MySQL BOOLEAN MODE AGAINST() expression:
+    every word becomes a required (+), prefix (*) match, so word order and
+    which indexed column it landed in don't matter, and partial words still
+    match (e.g. "tubercul" finds "tuberculosis"). Tokens under 3 characters
+    are dropped — MySQL's own minimum indexed token length (innodb_ft_min_token_size,
+    default 3) would never match them anyway, and a bare "+" is a BOOLEAN MODE
+    syntax error. Returns '' if nothing usable is left (e.g. a query that's
+    only short acronyms), signaling the caller to skip full-text matching
+    and rely on the icontains fallback instead.
+    """
+    tokens = []
+    for word in raw_query.split():
+        cleaned = _BOOLEAN_MODE_SPECIAL_CHARS.sub('', word)
+        if len(cleaned) >= 3:
+            tokens.append(f'+{cleaned}*')
+    return ' '.join(tokens)
+
+
 @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True), name='dispatch')
 class SearchView(ListView):
+    """Public search — backed by a MySQL FULLTEXT index on (title, abstract,
+    keywords) (see migration 0015) for real word-based matching, e.g. word
+    order doesn't matter and results aren't limited to a single contiguous
+    substring. The plain icontains scan is kept alongside it (not replaced)
+    for two reasons: author name isn't part of the FULLTEXT index, and short
+    tokens (under MySQL's ~3-char minimum, common for medical acronyms like
+    "TB"/"HIV"/"flu") would otherwise silently stop matching anything.
+    """
+
     model = Article
     template_name = 'articles/search_results.html'
     context_object_name = 'articles'
@@ -407,19 +443,34 @@ class SearchView(ListView):
             status=Article.Status.PUBLISHED,
         ).prefetch_related('articleauthor_set__user')
         if self.query:
-            queryset = queryset.filter(
+            boolean_query = _fulltext_boolean_query(self.query)
+            icontains_filter = (
                 Q(title__icontains=self.query)
                 | Q(abstract__icontains=self.query)
                 | Q(keywords__icontains=self.query)
                 | Q(authors__first_name__icontains=self.query)
                 | Q(authors__last_name__icontains=self.query)
-            ).distinct()
-            # Lightweight relevance signal — a title match ranks ahead of an
-            # abstract/keyword/author-only match, no full-text index needed.
-            # See ROADMAP.md Phase 9 for the (still-open) real-index gap.
-            queryset = queryset.annotate(
-                relevance=Case(When(title__icontains=self.query, then=0), default=1, output_field=IntegerField()),
-            ).order_by('relevance', '-publication_date', '-created_at')
+            )
+            if boolean_query:
+                relevance = RawSQL(
+                    'MATCH(articles_article.title, articles_article.abstract, articles_article.keywords) '
+                    'AGAINST (%s IN BOOLEAN MODE)',
+                    (boolean_query,), output_field=FloatField(),
+                )
+                queryset = queryset.annotate(relevance=relevance).filter(
+                    icontains_filter | Q(relevance__gt=0),
+                )
+            else:
+                queryset = queryset.annotate(
+                    relevance=Value(0.0, output_field=FloatField()),
+                ).filter(icontains_filter)
+            # A title match still ranks first regardless of full-text score —
+            # deterministic and keeps the most obviously-relevant result on
+            # top rather than trusting MySQL's opaque relevance number for
+            # the primary sort.
+            queryset = queryset.distinct().annotate(
+                title_match=Case(When(title__icontains=self.query, then=0), default=1, output_field=IntegerField()),
+            ).order_by('title_match', '-relevance', '-publication_date', '-created_at')
         else:
             queryset = queryset.order_by('-publication_date', '-created_at')
         return queryset

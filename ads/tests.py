@@ -9,7 +9,7 @@ from PIL import Image
 
 from users.models import User
 
-from .models import AdSlot
+from .models import AdEvent, AdSlot
 from .services import get_ad_for_zone, record_click, record_impression
 
 
@@ -78,6 +78,30 @@ class ImpressionAndClickTrackingTests(TestCase):
         ad.refresh_from_db()
         self.assertEqual(ad.click_count, 1)
 
+    def test_record_impression_writes_event_log_row(self):
+        ad = make_ad()
+        record_impression(ad)
+        self.assertEqual(AdEvent.objects.filter(ad_slot=ad, event_type=AdEvent.EventType.IMPRESSION).count(), 1)
+
+    def test_record_click_writes_event_log_row(self):
+        ad = make_ad()
+        record_click(ad)
+        self.assertEqual(AdEvent.objects.filter(ad_slot=ad, event_type=AdEvent.EventType.CLICK).count(), 1)
+
+
+class AdSlotCtrTests(TestCase):
+    def test_ctr_is_none_with_no_impressions(self):
+        ad = make_ad()
+        self.assertIsNone(ad.ctr)
+
+    def test_ctr_is_computed_from_counts(self):
+        ad = make_ad()
+        for _ in range(4):
+            record_impression(ad)
+        record_click(ad)
+        ad.refresh_from_db()
+        self.assertEqual(ad.ctr, 25.0)
+
 
 class AdSlotManageTests(TestCase):
     def setUp(self):
@@ -103,3 +127,39 @@ class AdSlotManageTests(TestCase):
         self.client.post(reverse('ads:manage_adslot_toggle_active', args=[ad.pk]))
         ad.refresh_from_db()
         self.assertFalse(ad.is_active)
+
+    def test_list_view_includes_zone_stats(self):
+        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE)
+        record_impression(ad)
+        record_click(ad)
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        homepage_stats = next(z for z in response.context['zone_stats'] if z['label'] == 'Homepage')
+        self.assertEqual(homepage_stats['impressions'], 1)
+        self.assertEqual(homepage_stats['clicks'], 1)
+        self.assertEqual(homepage_stats['ctr'], 100.0)
+
+
+class AdSlotAnalyticsTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='ad-analytics-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='ad-analytics-reader@example.com', password='pw', first_name='R', last_name='D')
+
+    def test_editorial_staff_can_view_analytics(self):
+        ad = make_ad()
+        record_impression(ad)
+        record_click(ad)
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_adslot_analytics', args=[ad.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['window_impressions'], 1)
+        self.assertEqual(response.context['window_clicks'], 1)
+        self.assertEqual(response.context['window_ctr'], 100.0)
+
+    def test_reader_cannot_view_analytics(self):
+        ad = make_ad()
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('ads:manage_adslot_analytics', args=[ad.pk]))
+        self.assertEqual(response.status_code, 403)

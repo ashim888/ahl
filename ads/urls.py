@@ -11,5 +11,6 @@ urlpatterns = [
     path('manage/ads/', views.AdSlotListView.as_view(), name='manage_adslot_list'),
     path('manage/ads/new/', views.AdSlotCreateView.as_view(), name='manage_adslot_create'),
     path('manage/ads/<int:pk>/edit/', views.AdSlotUpdateView.as_view(), name='manage_adslot_update'),
+    path('manage/ads/<int:pk>/analytics/', views.AdSlotAnalyticsView.as_view(), name='manage_adslot_analytics'),
     path('manage/ads/<int:pk>/toggle-active/', views.adslot_toggle_active, name='manage_adslot_toggle_active'),
 ]

@@ -5,7 +5,7 @@ count consistently.
 from django.db.models import F, Q
 from django.utils import timezone
 
-from .models import AdSlot
+from .models import AdEvent, AdSlot
 
 
 def get_ad_for_zone(zone):
@@ -21,7 +21,9 @@ def get_ad_for_zone(zone):
 
 def record_impression(ad_slot):
     AdSlot.objects.filter(pk=ad_slot.pk).update(impression_count=F('impression_count') + 1)
+    AdEvent.objects.create(ad_slot=ad_slot, event_type=AdEvent.EventType.IMPRESSION)
 
 
 def record_click(ad_slot):
     AdSlot.objects.filter(pk=ad_slot.pk).update(click_count=F('click_count') + 1)
+    AdEvent.objects.create(ad_slot=ad_slot, event_type=AdEvent.EventType.CLICK)

@@ -27,12 +27,48 @@ class LoginRateLimitTests(TestCase):
             self.assertEqual(response.status_code, 200)  # re-renders the form with an error, not blocked
 
     def test_excessive_login_attempts_are_rate_limited(self):
-        # Limit is 15/m (users/views.py EmailLoginView) — the 16th POST in
-        # the same window should be blocked rather than processed.
-        for _ in range(15):
-            self.client.post(reverse('users:login'), {'username': 'nobody@example.com', 'password': 'wrong'})
-        response = self.client.post(reverse('users:login'), {'username': 'nobody@example.com', 'password': 'wrong'})
+        # Limit is 15/m by IP (users/views.py EmailLoginView) — the 16th POST
+        # in the same window should be blocked rather than processed. Uses a
+        # distinct username per attempt so django-axes' account-level lockout
+        # (AXES_FAILURE_LIMIT=5, see AccountLockoutTests below) never kicks
+        # in and this test stays isolated to exercising django_ratelimit only.
+        for i in range(15):
+            self.client.post(reverse('users:login'), {'username': f'nobody{i}@example.com', 'password': 'wrong'})
+        response = self.client.post(reverse('users:login'), {'username': 'nobody-overflow@example.com', 'password': 'wrong'})
         self.assertEqual(response.status_code, 403)
+
+
+@FAST_PASSWORD_HASHERS
+class AccountLockoutTests(TestCase):
+    """django-axes account-level lockout (settings.py AUTHENTICATION_BACKENDS/
+    AXES_*) — locks by username (email), independent of source IP, so it
+    still stops an attacker who rotates IPs against one account. Deliberately
+    a separate concern from LoginRateLimitTests above, which covers the
+    per-IP throttle.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(
+            email='locktarget@example.com', password='correct-horse', first_name='F', last_name='L',
+        )
+
+    def test_locks_out_after_failure_limit_regardless_of_correct_password(self):
+        # AXES_FAILURE_LIMIT=5 — the 6th attempt (even with the right
+        # password) should be blocked rather than logged in.
+        for _ in range(5):
+            self.client.post(reverse('users:login'), {'username': self.user.email, 'password': 'wrong'})
+        response = self.client.post(reverse('users:login'), {'username': self.user.email, 'password': 'correct-horse'})
+        self.assertEqual(response.status_code, 429)
+
+    def test_failures_on_one_account_do_not_lock_out_another(self):
+        other = User.objects.create_user(
+            email='other@example.com', password='correct-horse', first_name='O', last_name='T',
+        )
+        for _ in range(5):
+            self.client.post(reverse('users:login'), {'username': self.user.email, 'password': 'wrong'})
+        response = self.client.post(reverse('users:login'), {'username': other.email, 'password': 'correct-horse'})
+        self.assertEqual(response.status_code, 302)
 
 
 @FAST_PASSWORD_HASHERS
