@@ -246,6 +246,22 @@
                     </div>
                 {% endif %}
 
+                {% if trending_articles %}
+                    <div class="border-t-2 border-foreground pt-6 mb-8">
+                        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-4">TRENDING THIS WEEK</p>
+                        <ol class="space-y-4">
+                            {% for trending in trending_articles %}
+                                <li>
+                                    <a href="{% url 'articles:article_detail' trending.slug %}" class="group flex items-baseline gap-3">
+                                        <span class="font-display text-lg font-bold text-border group-hover:text-accent">{{ forloop.counter }}</span>
+                                        <span class="text-sm font-medium leading-snug group-hover:text-accent group-hover:underline">{{ trending.title }}</span>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                {% endif %}
+
                 {% if article.doi %}
                     <div class="border border-border p-4 mb-8 bg-secondary">
                         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">DOI</p>

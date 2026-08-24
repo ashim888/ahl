@@ -78,6 +78,28 @@ class ComingSoonView(TemplateView):
     template_name = 'coming_soon.html'
 
 
+def _trending_articles(limit=5):
+    """Published articles ranked by page views in the last 7 days (not an
+    all-time count), so this reflects what's hot *now*, not what was hot
+    once. Shared by HomeView's Trending section and ArticleDetailView's
+    sidebar — see ArticleView in models.py for where these rows get
+    recorded (and _record_article_view above for the dedup rules).
+    """
+    trending_cutoff = timezone.now() - datetime.timedelta(days=7)
+    trending_counts = (
+        ArticleView.objects.filter(viewed_at__gte=trending_cutoff, article__status=Article.Status.PUBLISHED)
+        .values('article').annotate(view_count=Count('id')).order_by('-view_count')[:limit]
+    )
+    view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
+    articles = list(
+        Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__user'),
+    )
+    articles.sort(key=lambda article: -view_counts_by_pk[article.pk])
+    for article in articles:
+        article.week_view_count = view_counts_by_pk[article.pk]
+    return articles
+
+
 class HomeView(TemplateView):
     """Journal homepage: hero story, latest news, opinion, research
     highlights, special issues, and an editorial board preview.
@@ -164,23 +186,8 @@ class HomeView(TemplateView):
         # Trending — the one section that's purely algorithm-driven, not
         # editor-curated (no HomepageSection value for it) and not subject
         # to the used_pks dedup above; it's fine for a trending piece to
-        # also appear in a curated section. Ranked by ArticleView rows from
-        # the last 7 days, not an all-time count, so this actually reflects
-        # what's hot *now* — see ArticleView in models.py and where these
-        # rows get recorded, ArticleDetailView below.
-        trending_cutoff = timezone.now() - datetime.timedelta(days=7)
-        trending_counts = (
-            ArticleView.objects.filter(viewed_at__gte=trending_cutoff, article__status=Article.Status.PUBLISHED)
-            .values('article').annotate(view_count=Count('id')).order_by('-view_count')[:5]
-        )
-        view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
-        trending_articles = list(
-            Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__user'),
-        )
-        trending_articles.sort(key=lambda article: -view_counts_by_pk[article.pk])
-        for article in trending_articles:
-            article.week_view_count = view_counts_by_pk[article.pk]
-        sections['trending_articles'] = trending_articles
+        # also appear in a curated section.
+        sections['trending_articles'] = _trending_articles(limit=5)
         return sections
 
     def get_context_data(self, **kwargs):
@@ -271,6 +278,13 @@ class ArticleDetailView(DetailView):
         context['related_articles'] = Article.objects.filter(
             status=Article.Status.PUBLISHED, article_type=self.object.article_type,
         ).exclude(pk=self.object.pk).order_by('-publication_date', '-created_at')[:3]
+
+        # Fetch one extra and trim, so excluding the article being viewed
+        # (it'd be a strange thing to see "trending" on its own page) still
+        # leaves a full 5 whenever it would otherwise have placed in the top 5.
+        context['trending_articles'] = [
+            a for a in _trending_articles(limit=6) if a.pk != self.object.pk
+        ][:5]
 
         # Social-share preview (Open Graph/Twitter Card, templates/base.html)
         # and search-engine structured data — the article page is the one

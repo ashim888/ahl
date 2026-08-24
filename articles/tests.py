@@ -400,6 +400,45 @@ class TrendingSectionTests(TestCase):
         self.assertNotIn(draft, response.context['trending_articles'])
 
 
+class ArticleDetailTrendingSidebarTests(TestCase):
+    """The article detail page sidebar shows the same "trending this week"
+    ranking as the homepage (see _trending_articles, shared by both views)
+    — minus the article currently being viewed.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_trending_articles_shown_in_sidebar(self):
+        from articles.models import ArticleView
+
+        viewed = make_article('sidebar-trending-viewed', Article.ArticleType.NEWS_COMMENTARY)
+        popular = make_article('sidebar-trending-popular', Article.ArticleType.NEWS_COMMENTARY)
+        for i in range(3):
+            ArticleView.objects.create(article=popular, session_key=f's{i}')
+
+        response = self.client.get(reverse('articles:article_detail', args=[viewed.slug]))
+        trending = list(response.context['trending_articles'])
+        self.assertIn(popular, trending)
+        self.assertContains(response, 'TRENDING THIS WEEK')
+
+    def test_current_article_excluded_from_its_own_trending_list(self):
+        from articles.models import ArticleView
+
+        viewed = make_article('sidebar-trending-self', Article.ArticleType.NEWS_COMMENTARY)
+        for i in range(5):
+            ArticleView.objects.create(article=viewed, session_key=f's{i}')
+
+        response = self.client.get(reverse('articles:article_detail', args=[viewed.slug]))
+        self.assertNotIn(viewed, list(response.context['trending_articles']))
+
+    def test_no_trending_section_when_nothing_is_trending(self):
+        article = make_article('sidebar-no-trending', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(response, 'TRENDING THIS WEEK')
+
+
 class AdFreeSubscriberPerkTests(TestCase):
     """"Ad-free reading" is a promised subscriber perk (billing app) —
     ads.services.get_ad_for_request (called from the `ad_slot` template tag,
