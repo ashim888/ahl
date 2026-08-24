@@ -289,6 +289,16 @@ JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing'
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.example')
 
 
+# Cloudflare Turnstile (CAPTCHA) — pitches app, story-pitch submission
+# (August 2026: opened to any authenticated account, not just verified
+# authors, so a real bot-mitigation layer matters here now). Keys are added
+# later; pitches/captcha.py treats a blank TURNSTILE_SECRET_KEY as "not
+# configured yet" and skips verification (never blocks submissions) rather
+# than failing every request until real keys are set.
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '')
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
+
+
 # File upload limits (see ARCHITECTURE.md §7.1)
 MANUSCRIPT_MAX_UPLOAD_SIZE_MB = 50
 CV_MAX_UPLOAD_SIZE_MB = 10

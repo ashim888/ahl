@@ -5,7 +5,7 @@ from . import views
 app_name = 'pitches'
 
 urlpatterns = [
-    # Verified authors only — see PITCH_SUBMIT_ROLES in views.py
+    # Any authenticated account — see PitchCreateView in views.py
     path('pitches/new/', views.PitchCreateView.as_view(), name='pitch_create'),
     path('pitches/mine/', views.MyPitchesListView.as_view(), name='my_pitches'),
 

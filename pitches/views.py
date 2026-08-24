@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -15,22 +17,34 @@ from users.models import User
 from .forms import PitchDecisionForm, StoryPitchForm
 from .models import StoryPitch
 
-# August 2026 decision: only verified_author accounts may pitch a story —
-# same trust tier as byline authorship elsewhere on the site (see
-# ROADMAP.md Phase 8). Not EDITORIAL_ROLES too — editorial staff write
-# articles directly, they don't need to pitch themselves.
-PITCH_SUBMIT_ROLES = (User.Role.VERIFIED_AUTHOR,)
+# Revised (August 2026): any authenticated account may pitch, no role
+# restriction — the earlier verified_author-only rule required an editor to
+# already trust someone as an author before they could even suggest a story
+# idea, which defeats the point of a lightweight pitch. Opening it up is
+# exactly why real CAPTCHA (pitches/captcha.py) was added alongside this
+# change — a login-gate alone was a much stronger bot deterrent when only
+# vetted accounts could reach the form.
 # Reviewing pitches is editorial content triage, same boundary as Article
 # CRUD — not the narrower EiC/Admin-only verification-queue boundary.
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 
-@method_decorator(role_required(*PITCH_SUBMIT_ROLES), name='dispatch')
+@method_decorator(login_required, name='dispatch')
 @method_decorator(ratelimit(key='user', rate='10/h', method='POST', block=True), name='dispatch')
 class PitchCreateView(CreateView):
     model = StoryPitch
     form_class = StoryPitchForm
     template_name = 'pitches/pitch_form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request'] = self.request
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['turnstile_site_key'] = settings.TURNSTILE_SITE_KEY
+        return context
 
     def form_valid(self, form):
         form.instance.submitter = self.request.user
@@ -42,7 +56,7 @@ class PitchCreateView(CreateView):
         return reverse('pitches:my_pitches')
 
 
-@method_decorator(role_required(*PITCH_SUBMIT_ROLES), name='dispatch')
+@method_decorator(login_required, name='dispatch')
 class MyPitchesListView(ListView):
     model = StoryPitch
     template_name = 'pitches/my_pitches.html'

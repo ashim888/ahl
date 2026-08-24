@@ -290,6 +290,56 @@ class HomepageNewsletterCTATests(TestCase):
         self.assertNotContains(response, 'FREE NEWSLETTER')
 
 
+class HomepagePitchCTATests(TestCase):
+    """A visible on-page banner, not just the nav dropdown link — shown to
+    any authenticated account (no role restriction, see
+    pitches.views.PitchCreateView). Only an anonymous visitor doesn't see
+    it: there's no account yet to submit under.
+    """
+
+    def test_verified_author_sees_cta(self):
+        from users.models import User
+
+        author = User.objects.create_user(
+            email='home-pitch-author@example.com', password='pw', first_name='A', last_name='U',
+            role=User.Role.VERIFIED_AUTHOR,
+        )
+        self.client.force_login(author)
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'PITCH A STORY')
+        self.assertContains(response, reverse('pitches:pitch_create'))
+
+    def test_unverified_reader_also_sees_cta(self):
+        # The whole point of a lightweight pitch is that it doesn't require
+        # already being trusted as a verified author.
+        from users.models import User
+
+        reader = User.objects.create_user(
+            email='home-pitch-unverified@example.com', password='pw', first_name='U', last_name='V',
+        )
+        self.assertEqual(reader.role, User.Role.UNVERIFIED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'PITCH A STORY')
+
+    def test_anonymous_visitor_does_not_see_cta(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotContains(response, 'PITCH A STORY')
+
+    def test_editorial_staff_also_sees_cta(self):
+        # No role restriction at all now — see PitchSubmissionAccessTests
+        # in pitches/tests.py.
+        from users.models import User
+
+        editor = User.objects.create_user(
+            email='home-pitch-editor@example.com', password='pw', first_name='E', last_name='D',
+            role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'PITCH A STORY')
+
+
 class ArticleViewTrackingTests(TestCase):
     """First-party page-view tracking (August 2026 decision — no third-party
     analytics vendor). ArticleView rows power the homepage's Trending

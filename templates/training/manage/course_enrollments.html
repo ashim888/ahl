@@ -10,6 +10,7 @@
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
             <tr>
+                <th class="px-4 py-3">#</th>
                 <th class="px-4 py-3">User</th>
                 <th class="px-4 py-3">Status</th>
                 <th class="px-4 py-3">Payment</th>
@@ -19,6 +20,7 @@
         <tbody class="divide-y divide-gray-200 bg-white">
             {% for enrollment in enrollments %}
                 <tr>
+                    <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
                     <td class="px-4 py-3 font-medium text-gray-900">
                         {{ enrollment.user.get_full_name }} &lt;{{ enrollment.user.email }}&gt;
                     </td>
@@ -45,9 +47,11 @@
                     <td class="px-4 py-3 text-gray-500">{{ enrollment.enrolled_at|date:"M j, Y" }}</td>
                 </tr>
             {% empty %}
-                <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">No enrollments yet.</td></tr>
+                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No enrollments yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+{% include 'includes/pagination.html' %}
 {% endblock %}

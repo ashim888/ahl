@@ -85,6 +85,30 @@ class RegisterRateLimitTests(TestCase):
         self.assertFalse(User.objects.filter(email='spam-overflow@example.com').exists())
 
 
+@FAST_PASSWORD_HASHERS
+class RegisterSuccessTests(TestCase):
+    """A *valid* submission — RegisterRateLimitTests above deliberately posts
+    incomplete data, which never reaches form_valid()/login(), so it can't
+    catch a regression there (see the "multiple authentication backends"
+    login() bug this class exists to guard against).
+    """
+
+    def test_valid_registration_creates_and_logs_in_user(self):
+        response = self.client.post(reverse('users:register'), {
+            'email': 'newauthor@example.com', 'first_name': 'New', 'last_name': 'Author',
+            'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
+        })
+        self.assertEqual(response.status_code, 302)
+        user = User.objects.get(email='newauthor@example.com')
+        self.assertEqual(user.role, User.Role.UNVERIFIED)
+        self.assertEqual(user.verification_status, User.VerificationStatus.PENDING)
+        # Registration logs the new account straight in — confirmed by
+        # requesting a login-required page and never being bounced to /login/.
+        profile_response = self.client.get(reverse('users:profile'))
+        self.assertEqual(profile_response.status_code, 200)
+        self.assertEqual(profile_response.context['profile_user'], user)
+
+
 def make_user(email, role, **extra):
     return User.objects.create_user(email=email, password='pw', first_name='F', last_name='L', role=role, **extra)
 
@@ -330,3 +354,38 @@ class ManageListOrderingTests(TestCase):
         response = self.client.get(reverse('users:manage_permissions_list'))
         accounts = list(response.context['accounts'])
         self.assertLess(accounts.index(newer), accounts.index(older))
+
+
+@FAST_PASSWORD_HASHERS
+class ProfileViewPitchesTests(TestCase):
+    """The profile page previously showed Training Enrollments but nothing
+    about story pitches at all — no section, no link in — even though
+    pitches/models.py:StoryPitch has existed since Phase 8.
+    """
+
+    def test_story_pitches_section_shown_for_verified_author(self):
+        from pitches.models import StoryPitch
+
+        author = make_user('profile-pitch-author@example.com', User.Role.VERIFIED_AUTHOR)
+        StoryPitch.objects.create(title='My Great Idea', summary='s', submitter=author)
+        self.client.force_login(author)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'STORY PITCHES')
+        self.assertContains(response, 'My Great Idea')
+        self.assertEqual(list(response.context['story_pitches']), list(StoryPitch.objects.filter(submitter=author)))
+
+    def test_story_pitches_section_shown_for_unverified_reader_too(self):
+        # Any authenticated account, not just already-verified authors — see
+        # pitches.views.PitchCreateView.
+        reader = make_user('profile-pitch-unverified@example.com', User.Role.UNVERIFIED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'STORY PITCHES')
+
+    def test_story_pitches_section_shown_for_editorial_staff_too(self):
+        # No role restriction at all now — the profile page itself is
+        # login_required, so any account that can view it can pitch.
+        editor = make_user('profile-pitch-editor@example.com', User.Role.EDITOR)
+        self.client.force_login(editor)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'STORY PITCHES')

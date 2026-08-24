@@ -190,11 +190,9 @@
                                 <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
                                     Profile
                                 </a>
-                                {% if user.role == 'verified_author' %}
-                                    <a href="{% url 'pitches:my_pitches' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
-                                        Pitch a Story
-                                    </a>
-                                {% endif %}
+                                <a href="{% url 'pitches:pitch_create' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
+                                    Pitch a Story
+                                </a>
                                 <form method="post" action="{% url 'users:logout' %}">
                                     {% csrf_token %}
                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-secondary">
@@ -268,9 +266,7 @@
                         <a href="{% url 'admin_custom:dashboard' %}" class="block py-2 text-sm">Dashboard</a>
                     {% endif %}
                     <a href="{% url 'users:profile' %}" class="block py-2 text-sm">Profile</a>
-                    {% if user.role == 'verified_author' %}
-                        <a href="{% url 'pitches:my_pitches' %}" class="block py-2 text-sm">Pitch a Story</a>
-                    {% endif %}
+                    <a href="{% url 'pitches:pitch_create' %}" class="block py-2 text-sm">Pitch a Story</a>
                     <form method="post" action="{% url 'users:logout' %}">
                         {% csrf_token %}
                         <button type="submit" class="w-full text-left py-2 text-sm">Log out</button>

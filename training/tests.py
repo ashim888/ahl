@@ -1,9 +1,14 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from users.models import User
 
 from .models import Enrollment, TrainingCourse
+
+# See ARCHITECTURE.md §9.4 / users/tests.py:FAST_PASSWORD_HASHERS — a burst
+# of create_user() calls with real PBKDF2 hashing is slow enough to matter
+# once a test creates more than a handful of users (here, 35 enrollees).
+FAST_PASSWORD_HASHERS = override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
 
 
 class CourseManageListFilterTests(TestCase):
@@ -24,6 +29,35 @@ class CourseManageListFilterTests(TestCase):
         )
         response = self.client.get(reverse('training:manage_course_list'), {'active': 'yes'})
         self.assertEqual(list(response.context['courses']), [active_course])
+
+
+@FAST_PASSWORD_HASHERS
+class CourseEnrollmentsListTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='enrollments-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='enrollments-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.course = TrainingCourse.objects.create(
+            title='Paginated Course', description='...', price=10, duration='2 weeks', instructor='Dr. P',
+        )
+
+    def test_non_editorial_cannot_view(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('training:manage_course_enrollments', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_can_view_and_list_is_paginated(self):
+        for i in range(35):
+            user = User.objects.create_user(email=f'enrollee{i}@example.com', password='pw', first_name='E', last_name=str(i))
+            Enrollment.objects.create(user=user, course=self.course, payment_status=Enrollment.PaymentStatus.PAID)
+
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('training:manage_course_enrollments', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_paginated'])
+        self.assertEqual(response.context['page_obj'].paginator.count, 35)
+        self.assertEqual(len(response.context['page_obj']), 30)
 
 
 class CourseCheckoutTests(TestCase):

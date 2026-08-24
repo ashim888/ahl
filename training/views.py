@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -166,8 +167,12 @@ class CourseDeleteView(DeleteView):
 def course_enrollments(request, pk):
     course = get_object_or_404(TrainingCourse, pk=pk)
     enrollments = course.enrollments.select_related('user').order_by('-enrolled_at')
+    # A plain function view (not a ListView), so pagination is manual —
+    # a popular course's enrollment list can run into the hundreds, and
+    # this previously rendered every row with no pagination at all.
+    page_obj = Paginator(enrollments, 30).get_page(request.GET.get('page'))
     return render(request, 'training/manage/course_enrollments.html', {
-        'course': course, 'enrollments': enrollments,
+        'course': course, 'enrollments': page_obj, 'page_obj': page_obj, 'is_paginated': page_obj.has_other_pages(),
         'status_choices': Enrollment.Status.choices,
         'payment_status_choices': Enrollment.PaymentStatus.choices,
     })

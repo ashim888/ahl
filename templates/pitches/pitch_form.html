@@ -2,6 +2,12 @@
 
 {% block title %}Pitch a Story — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block extra_head %}
+    {% if turnstile_site_key %}
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="max-w-2xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
@@ -32,6 +38,9 @@
                 {% endfor %}
             </div>
         {% endfor %}
+        {% if turnstile_site_key %}
+            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+        {% endif %}
         <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent transition-colors">
             SUBMIT PITCH
         </button>

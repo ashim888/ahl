@@ -50,6 +50,32 @@
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">STORY PITCHES</p>
+            <a href="{% url 'pitches:pitch_create' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
+                PITCH A STORY →
+            </a>
+        </div>
+        {% if story_pitches %}
+            <div class="divide-y divide-border border-t border-border">
+                {% for pitch in story_pitches %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <span class="text-sm font-medium">{{ pitch.title }}</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ pitch.get_status_display }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            <a href="{% url 'pitches:my_pitches' %}" class="mt-3 inline-block font-mono-editorial text-xs text-muted-foreground hover:text-accent underline">
+                View all my pitches →
+            </a>
+        {% else %}
+            <p class="text-sm text-muted-foreground">
+                No pitches yet — <a href="{% url 'pitches:pitch_create' %}" class="underline hover:text-accent">send us your first one</a>.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="mt-10">
+        <div class="flex items-center justify-between mb-4">
             <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">TRAINING ENROLLMENTS</p>
             <a href="{% url 'training:course_list' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
                 BROWSE COURSES →

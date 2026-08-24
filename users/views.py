@@ -13,6 +13,7 @@ from django.views.generic.detail import DetailView
 from django_ratelimit.decorators import ratelimit
 
 from articles.models import Article
+from pitches.models import StoryPitch
 from training.models import Enrollment
 
 from .decorators import role_required
@@ -45,7 +46,15 @@ class RegisterView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        login(self.request, self.object)
+        # Explicit backend required since AUTHENTICATION_BACKENDS has more
+        # than one entry (axes.backends.AxesStandaloneBackend +
+        # ModelBackend, see settings.py §9.6) — login() can only infer the
+        # backend automatically when exactly one is configured, and this
+        # call never goes through authenticate() (there's no password check
+        # here, the account was just created) so nothing else sets it.
+        # AxesStandaloneBackend itself never authenticates a user — it only
+        # blocks locked-out attempts — so ModelBackend is the real one.
+        login(self.request, self.object, backend='django.contrib.auth.backends.ModelBackend')
         return response
 
 
@@ -72,6 +81,12 @@ class ProfileView(DetailView):
         context['enrollments'] = Enrollment.objects.filter(
             user=self.request.user,
         ).select_related('course').order_by('-enrolled_at')
+        # Any authenticated account can submit a pitch (see
+        # pitches.views.PitchCreateView) — this page itself is
+        # login_required, so no further role check is needed here.
+        context['story_pitches'] = StoryPitch.objects.filter(
+            submitter=self.request.user,
+        ).order_by('-created_at')[:5]
         return context
 
 

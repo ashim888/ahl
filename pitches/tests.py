@@ -32,17 +32,22 @@ class PitchSubmissionAccessTests(TestCase):
         response = self.client.get(reverse('pitches:pitch_create'))
         self.assertEqual(response.status_code, 200)
 
-    def test_unverified_user_cannot_submit(self):
+    def test_unverified_user_can_submit(self):
+        # The whole point of a lightweight pitch is that it's the low-barrier
+        # way in — a brand-new, not-yet-verified account can use it without
+        # first being trusted as an author.
         reader = User.objects.create_user(email='reader@example.com', password='pw', first_name='R', last_name='D')
+        self.assertEqual(reader.role, User.Role.UNVERIFIED)
         self.client.force_login(reader)
         response = self.client.get(reverse('pitches:pitch_create'))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
 
-    def test_editorial_staff_cannot_submit(self):
-        # Deliberate: editors write articles directly, they don't pitch — see PITCH_SUBMIT_ROLES.
+    def test_editorial_staff_can_also_submit(self):
+        # Revised August 2026: no role restriction at all, any authenticated
+        # account may pitch — see pitches/views.py PitchCreateView.
         self.client.force_login(make_editor())
         response = self.client.get(reverse('pitches:pitch_create'))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
 
     def test_anonymous_redirected_to_login(self):
         response = self.client.get(reverse('pitches:pitch_create'))
@@ -72,7 +77,7 @@ class PitchSubmissionTests(TestCase):
         self.assertFalse(StoryPitch.objects.filter(title='Spam Pitch').exists())
 
     def test_excessive_submissions_are_rate_limited(self):
-        # Limit is 10/h by user (pitches/views.py PITCH_SUBMIT_ROLES / ratelimit).
+        # Limit is 10/h by user (pitches/views.py PitchCreateView / ratelimit).
         for i in range(10):
             self.client.post(reverse('pitches:pitch_create'), {'title': f'Pitch {i}', 'summary': 'x'})
         response = self.client.post(reverse('pitches:pitch_create'), {'title': 'Pitch overflow', 'summary': 'x'})
@@ -196,3 +201,152 @@ class PitchArticlePublishSyncTests(TestCase):
 
         pitch.refresh_from_db()
         self.assertEqual(pitch.status, StoryPitch.Status.PUBLISHED)
+
+
+@FAST_PASSWORD_HASHERS
+class PitchDiscoverabilityTests(TestCase):
+    """The "Pitch a Story" nav link (templates/base.html, desktop + mobile)
+    previously pointed at pitches:my_pitches (the list of a verified
+    author's existing pitches) instead of pitches:pitch_create (the actual
+    submit form) — a real author had no direct way in from the nav at all,
+    only via the "+ New Pitch" button buried on that list page.
+    """
+
+    def test_nav_pitch_link_points_to_the_submit_form(self):
+        author = make_verified_author()
+        self.client.force_login(author)
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('pitches:pitch_create'))
+
+    def test_nav_pitch_link_shown_to_unverified_readers_too(self):
+        # Any authenticated account, not just already-verified authors.
+        reader = User.objects.create_user(email='reader-nav@example.com', password='pw', first_name='R', last_name='D')
+        self.assertEqual(reader.role, User.Role.UNVERIFIED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('pitches:pitch_create'))
+
+    def test_nav_pitch_link_shown_to_editorial_staff_too(self):
+        # No role restriction at all now — see PitchSubmissionAccessTests.
+        editor = make_editor()
+        self.client.force_login(editor)
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('pitches:pitch_create'))
+
+    def test_nav_pitch_link_hidden_for_anonymous_visitors(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotContains(response, reverse('pitches:pitch_create'))
+
+
+class VerifyTurnstileTests(TestCase):
+    """pitches/captcha.py:verify_turnstile — the actual bot-mitigation this
+    now-open-to-anyone form relies on (see PitchSubmissionAccessTests).
+    """
+
+    def test_passes_when_secret_key_not_configured(self):
+        from .captcha import verify_turnstile
+
+        with override_settings(TURNSTILE_SECRET_KEY=''):
+            self.assertTrue(verify_turnstile(''))
+            self.assertTrue(verify_turnstile('anything'))
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_fails_with_no_token_once_configured(self):
+        from .captcha import verify_turnstile
+
+        self.assertFalse(verify_turnstile(''))
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_passes_when_cloudflare_reports_success(self):
+        from unittest.mock import MagicMock, patch
+
+        from .captcha import verify_turnstile
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = b'{"success": true}'
+        mock_response.__enter__.return_value = mock_response
+        with patch('pitches.captcha.urllib.request.urlopen', return_value=mock_response):
+            self.assertTrue(verify_turnstile('a-real-looking-token'))
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_fails_when_cloudflare_reports_failure(self):
+        from unittest.mock import MagicMock, patch
+
+        from .captcha import verify_turnstile
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = b'{"success": false, "error-codes": ["invalid-input-response"]}'
+        mock_response.__enter__.return_value = mock_response
+        with patch('pitches.captcha.urllib.request.urlopen', return_value=mock_response):
+            self.assertFalse(verify_turnstile('a-bad-token'))
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_fails_closed_on_network_error(self):
+        import urllib.error
+        from unittest.mock import patch
+
+        from .captcha import verify_turnstile
+
+        with patch('pitches.captcha.urllib.request.urlopen', side_effect=urllib.error.URLError('boom')):
+            self.assertFalse(verify_turnstile('a-token'))
+
+
+@FAST_PASSWORD_HASHERS
+class PitchFormCaptchaTests(TestCase):
+    """End-to-end through PitchCreateView, not just the helper function —
+    proves the view/form actually wires cf-turnstile-response through to
+    verify_turnstile rather than just importing it unused.
+    """
+
+    def setUp(self):
+        self.author = make_verified_author()
+        self.client.force_login(self.author)
+
+    def test_submission_succeeds_without_captcha_by_default(self):
+        # TURNSTILE_SECRET_KEY is blank in tests (no real keys yet) —
+        # verify_turnstile short-circuits to True, matching every other
+        # submission test in this file that never sends a token at all.
+        response = self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'No Captcha Configured Yet', 'summary': 's',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(StoryPitch.objects.filter(title='No Captcha Configured Yet').exists())
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_submission_rejected_without_token_once_configured(self):
+        response = self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'Missing Token', 'summary': 's',
+        })
+        self.assertEqual(response.status_code, 200)  # re-renders the form with an error, not a redirect
+        self.assertFalse(StoryPitch.objects.filter(title='Missing Token').exists())
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_submission_succeeds_with_a_verified_token(self):
+        from unittest.mock import MagicMock, patch
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = b'{"success": true}'
+        mock_response.__enter__.return_value = mock_response
+        with patch('pitches.captcha.urllib.request.urlopen', return_value=mock_response):
+            response = self.client.post(reverse('pitches:pitch_create'), {
+                'title': 'Verified Token', 'summary': 's', 'cf-turnstile-response': 'a-real-looking-token',
+            })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(StoryPitch.objects.filter(title='Verified Token').exists())
+
+
+class PitchFormWidgetRenderingTests(TestCase):
+    def test_widget_hidden_when_no_site_key_configured(self):
+        author = make_verified_author()
+        self.client.force_login(author)
+        with override_settings(TURNSTILE_SITE_KEY=''):
+            response = self.client.get(reverse('pitches:pitch_create'))
+        self.assertNotContains(response, 'cf-turnstile')
+
+    def test_widget_shown_when_site_key_configured(self):
+        author = make_verified_author('widget-author@example.com')
+        self.client.force_login(author)
+        with override_settings(TURNSTILE_SITE_KEY='test-site-key'):
+            response = self.client.get(reverse('pitches:pitch_create'))
+        self.assertContains(response, 'cf-turnstile')
+        self.assertContains(response, 'test-site-key')
