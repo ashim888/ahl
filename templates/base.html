@@ -108,6 +108,18 @@
         .prose-article figcaption { margin-top: 0.75rem; font-size: 0.8rem; color: #6b6860; }
         .prose-article sup { vertical-align: super; font-size: 0.7em; }
         .prose-article a { text-decoration: underline; }
+
+        /* The header is `sticky top-0` (see <header> below), so an in-page
+           anchor jump — e.g. clicking a [N] citation superscript, which
+           links to #ref-N in the References list — lands the target right
+           under it, hidden. :target only matches whatever element the URL
+           fragment currently points at, so this doesn't affect normal
+           layout. Two breakpoints because the header gains a second row
+           (the HOME/ARTICLES/... nav) at `md`, matching that breakpoint below. */
+        :target { scroll-margin-top: 6.5rem; }
+        @media (min-width: 768px) {
+            :target { scroll-margin-top: 11rem; }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
