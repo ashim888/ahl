@@ -13,9 +13,11 @@
     <div class="rule-editorial mb-6"></div>
     <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Pitch a Story</h1>
     <p class="mt-2 text-muted-foreground">
-        Have a health story you think we should cover? Send us the pitch — no manuscript, no file
-        upload required. Our editorial team reviews every pitch and will follow up either way. See your
-        past pitches and their status on <a href="{% url 'pitches:my_pitches' %}" class="underline hover:text-accent">My Pitches</a>.
+        Have a health story you think we should cover? Send us the pitch — no account, no manuscript,
+        no file upload required. Our editorial team reviews every pitch and will follow up either way.
+        {% if user.is_authenticated %}
+            See your past pitches and their status on <a href="{% url 'pitches:my_pitches' %}" class="underline hover:text-accent">My Pitches</a>.
+        {% endif %}
     </p>
 
     <form method="post" class="mt-8 space-y-5">

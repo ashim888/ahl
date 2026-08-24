@@ -217,7 +217,6 @@
 </section>
 {% endif %}
 
-{% if user.is_authenticated %}
 <section class="border-t-2 border-foreground bg-secondary">
     <div class="max-w-7xl mx-auto px-6 py-14 flex flex-col md:flex-row items-center justify-between gap-6">
         <div class="text-center md:text-left">
@@ -225,7 +224,7 @@
             <h3 class="font-display text-2xl md:text-3xl font-bold" style="letter-spacing: -0.02em;">
                 Pitch a health story to our editors.
             </h3>
-            <p class="mt-2 text-sm text-muted-foreground">No manuscript, no file upload — just the idea.</p>
+            <p class="mt-2 text-sm text-muted-foreground">No account, no manuscript — just the idea.</p>
         </div>
         <a href="{% url 'pitches:pitch_create' %}"
            class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors whitespace-nowrap flex-shrink-0">
@@ -233,7 +232,6 @@
         </a>
     </div>
 </section>
-{% endif %}
 
 {% if not user.is_authenticated or not already_subscribed_to_newsletter %}
 <section class="border-t-2 border-foreground bg-foreground text-primary-foreground">

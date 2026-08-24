@@ -28,13 +28,17 @@ def notify_on_status_change(sender, instance, **kwargs):
         return
 
     template = EMAIL_TEMPLATES.get(instance.status)
-    if template:
+    # contact_email covers both an account's email and an anonymous
+    # submitter's typed-in one (see StoryPitch.contact_email) — guarded
+    # since an anonymous pitch's email is user input, not guaranteed
+    # present at the DB level the way an account's email is.
+    if template and instance.contact_email:
         body = render_to_string(template, {'pitch': instance})
         send_mail(
             subject=f'Update on your story pitch: "{instance.title}"',
             message=body,
             from_email=None,
-            recipient_list=[instance.submitter.email],
+            recipient_list=[instance.contact_email],
         )
 
 

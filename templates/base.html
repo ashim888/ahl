@@ -190,9 +190,6 @@
                                 <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
                                     Profile
                                 </a>
-                                <a href="{% url 'pitches:pitch_create' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
-                                    Pitch a Story
-                                </a>
                                 <form method="post" action="{% url 'users:logout' %}">
                                     {% csrf_token %}
                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-secondary">
@@ -243,6 +240,10 @@
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/about/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     ABOUT
                 </a>
+                <a href="{% url 'pitches:pitch_create' %}"
+                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/pitches/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
+                    PITCH A STORY
+                </a>
             </nav>
         </div>
 
@@ -257,6 +258,7 @@
                 <a href="{% url 'issues:issue_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/issues/' in path %}text-accent{% endif %}">ISSUES</a>
                 <a href="{% url 'training:course_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/training/' in path %}text-accent{% endif %}">TRAINING</a>
                 <a href="{% url 'editorial_board:public_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">ABOUT</a>
+                <a href="{% url 'pitches:pitch_create' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/pitches/' in path %}text-accent{% endif %}">PITCH A STORY</a>
             </nav>
             <div class="border-t border-border px-4 py-4">
                 {% if user.is_authenticated %}
@@ -266,7 +268,6 @@
                         <a href="{% url 'admin_custom:dashboard' %}" class="block py-2 text-sm">Dashboard</a>
                     {% endif %}
                     <a href="{% url 'users:profile' %}" class="block py-2 text-sm">Profile</a>
-                    <a href="{% url 'pitches:pitch_create' %}" class="block py-2 text-sm">Pitch a Story</a>
                     <form method="post" action="{% url 'users:logout' %}">
                         {% csrf_token %}
                         <button type="submit" class="w-full text-left py-2 text-sm">Log out</button>

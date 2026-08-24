@@ -33,9 +33,6 @@ class PitchSubmissionAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_unverified_user_can_submit(self):
-        # The whole point of a lightweight pitch is that it's the low-barrier
-        # way in — a brand-new, not-yet-verified account can use it without
-        # first being trusted as an author.
         reader = User.objects.create_user(email='reader@example.com', password='pw', first_name='R', last_name='D')
         self.assertEqual(reader.role, User.Role.UNVERIFIED)
         self.client.force_login(reader)
@@ -43,16 +40,17 @@ class PitchSubmissionAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_editorial_staff_can_also_submit(self):
-        # Revised August 2026: no role restriction at all, any authenticated
-        # account may pitch — see pitches/views.py PitchCreateView.
         self.client.force_login(make_editor())
         response = self.client.get(reverse('pitches:pitch_create'))
         self.assertEqual(response.status_code, 200)
 
-    def test_anonymous_redirected_to_login(self):
+    def test_anonymous_visitor_can_view_and_submit(self):
+        # Revised August 2026: no login required at all — see
+        # pitches/views.py PitchCreateView. Anyone can pitch a story;
+        # CAPTCHA (pitches/captcha.py) is the actual bot mitigation now,
+        # not a login gate.
         response = self.client.get(reverse('pitches:pitch_create'))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn('/login/', response.url)
+        self.assertEqual(response.status_code, 200)
 
 
 @FAST_PASSWORD_HASHERS
@@ -70,6 +68,11 @@ class PitchSubmissionTests(TestCase):
         self.assertEqual(pitch.submitter, self.author)
         self.assertEqual(pitch.status, StoryPitch.Status.SUBMITTED)
 
+    def test_logged_in_submitter_is_not_asked_for_contact_info(self):
+        response = self.client.get(reverse('pitches:pitch_create'))
+        self.assertNotContains(response, 'name="submitter_name"')
+        self.assertNotContains(response, 'name="submitter_email"')
+
     def test_honeypot_blocks_submission(self):
         self.client.post(reverse('pitches:pitch_create'), {
             'title': 'Spam Pitch', 'summary': 'x', 'website': 'http://spam.example',
@@ -77,12 +80,62 @@ class PitchSubmissionTests(TestCase):
         self.assertFalse(StoryPitch.objects.filter(title='Spam Pitch').exists())
 
     def test_excessive_submissions_are_rate_limited(self):
-        # Limit is 10/h by user (pitches/views.py PitchCreateView / ratelimit).
+        # Limit is 10/h by IP now (pitches/views.py PitchCreateView /
+        # ratelimit) — keyed on IP, not user, since submission no longer
+        # requires an account.
         for i in range(10):
             self.client.post(reverse('pitches:pitch_create'), {'title': f'Pitch {i}', 'summary': 'x'})
         response = self.client.post(reverse('pitches:pitch_create'), {'title': 'Pitch overflow', 'summary': 'x'})
         self.assertEqual(response.status_code, 403)
         self.assertFalse(StoryPitch.objects.filter(title='Pitch overflow').exists())
+
+
+@FAST_PASSWORD_HASHERS
+class AnonymousPitchSubmissionTests(TestCase):
+    """No account at all — the actual point of this revision: anyone can
+    pitch, and their contact info is captured directly on the pitch
+    (StoryPitch.submitter_name/submitter_email) so the editorial team can
+    still follow up or credit them, even though there's no User row to link.
+    """
+
+    def test_submitting_creates_pitch_with_no_submitter_account(self):
+        response = self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'Guest Pitch', 'summary': 'An idea worth covering.',
+            'submitter_name': 'Jane Guest', 'submitter_email': 'jane.guest@example.com',
+        })
+        self.assertEqual(response.status_code, 302)
+        pitch = StoryPitch.objects.get(title='Guest Pitch')
+        self.assertIsNone(pitch.submitter)
+        self.assertEqual(pitch.contact_name, 'Jane Guest')
+        self.assertEqual(pitch.contact_email, 'jane.guest@example.com')
+
+    def test_missing_name_is_rejected(self):
+        response = self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'No Name', 'summary': 'x', 'submitter_email': 'noname@example.com',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(StoryPitch.objects.filter(title='No Name').exists())
+
+    def test_missing_email_is_rejected(self):
+        response = self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'No Email', 'summary': 'x', 'submitter_name': 'No Email Guest',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(StoryPitch.objects.filter(title='No Email').exists())
+
+    def test_anonymous_redirect_goes_to_homepage_not_my_pitches(self):
+        # An anonymous submitter has no account to view pitches:my_pitches
+        # with — the confirmation message is their only feedback.
+        response = self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'Redirect Check', 'summary': 'x',
+            'submitter_name': 'Guest', 'submitter_email': 'redirect-check@example.com',
+        })
+        self.assertRedirects(response, reverse('articles:home'))
+
+    def test_anonymous_form_shows_contact_fields(self):
+        response = self.client.get(reverse('pitches:pitch_create'))
+        self.assertContains(response, 'name="submitter_name"')
+        self.assertContains(response, 'name="submitter_email"')
 
 
 @FAST_PASSWORD_HASHERS
@@ -184,6 +237,26 @@ class PitchDecisionTests(TestCase):
         self.pitch.refresh_from_db()
         self.assertEqual(self.pitch.status, StoryPitch.Status.SUBMITTED)
 
+    def test_accepting_an_anonymous_pitch_creates_no_byline(self):
+        # No submitter account to link — an editor adds authorship by hand
+        # later if they follow up with the guest via pitch.contact_email.
+        anon_pitch = StoryPitch.objects.create(
+            title='Guest Idea', summary='s', submitter_name='Guest', submitter_email='guest@example.com',
+        )
+        response = self.client.post(reverse('pitches:manage_pitch_decide', args=[anon_pitch.pk, 'accept']))
+        self.assertEqual(response.status_code, 302)
+        anon_pitch.refresh_from_db()
+        self.assertIsNotNone(anon_pitch.article)
+        self.assertFalse(ArticleAuthor.objects.filter(article=anon_pitch.article).exists())
+
+    def test_status_change_email_goes_to_anonymous_contact_email(self):
+        anon_pitch = StoryPitch.objects.create(
+            title='Guest Idea', summary='s', submitter_name='Guest', submitter_email='guest-email@example.com',
+        )
+        self.client.post(reverse('pitches:manage_pitch_decide', args=[anon_pitch.pk, 'reject']))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('guest-email@example.com', mail.outbox[0].to)
+
 
 @FAST_PASSWORD_HASHERS
 class PitchArticlePublishSyncTests(TestCase):
@@ -203,39 +276,23 @@ class PitchArticlePublishSyncTests(TestCase):
         self.assertEqual(pitch.status, StoryPitch.Status.PUBLISHED)
 
 
-@FAST_PASSWORD_HASHERS
 class PitchDiscoverabilityTests(TestCase):
-    """The "Pitch a Story" nav link (templates/base.html, desktop + mobile)
-    previously pointed at pitches:my_pitches (the list of a verified
-    author's existing pitches) instead of pitches:pitch_create (the actual
-    submit form) — a real author had no direct way in from the nav at all,
-    only via the "+ New Pitch" button buried on that list page.
+    """"Pitch a Story" is a top-level public nav item (templates/base.html)
+    and a homepage banner (templates/home.html) — both unconditional now
+    that submission itself has no login requirement, so every visitor sees
+    the same entry point regardless of account state.
     """
 
-    def test_nav_pitch_link_points_to_the_submit_form(self):
+    def test_nav_pitch_link_shown_to_anonymous_visitors(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('pitches:pitch_create'))
+        self.assertContains(response, 'GOT A STORY')
+
+    def test_nav_pitch_link_shown_to_logged_in_users_too(self):
         author = make_verified_author()
         self.client.force_login(author)
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, reverse('pitches:pitch_create'))
-
-    def test_nav_pitch_link_shown_to_unverified_readers_too(self):
-        # Any authenticated account, not just already-verified authors.
-        reader = User.objects.create_user(email='reader-nav@example.com', password='pw', first_name='R', last_name='D')
-        self.assertEqual(reader.role, User.Role.UNVERIFIED)
-        self.client.force_login(reader)
-        response = self.client.get(reverse('articles:home'))
-        self.assertContains(response, reverse('pitches:pitch_create'))
-
-    def test_nav_pitch_link_shown_to_editorial_staff_too(self):
-        # No role restriction at all now — see PitchSubmissionAccessTests.
-        editor = make_editor()
-        self.client.force_login(editor)
-        response = self.client.get(reverse('articles:home'))
-        self.assertContains(response, reverse('pitches:pitch_create'))
-
-    def test_nav_pitch_link_hidden_for_anonymous_visitors(self):
-        response = self.client.get(reverse('articles:home'))
-        self.assertNotContains(response, reverse('pitches:pitch_create'))
 
 
 class VerifyTurnstileTests(TestCase):

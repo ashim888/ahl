@@ -17,20 +17,19 @@ from users.models import User
 from .forms import PitchDecisionForm, StoryPitchForm
 from .models import StoryPitch
 
-# Revised (August 2026): any authenticated account may pitch, no role
-# restriction — the earlier verified_author-only rule required an editor to
-# already trust someone as an author before they could even suggest a story
-# idea, which defeats the point of a lightweight pitch. Opening it up is
-# exactly why real CAPTCHA (pitches/captcha.py) was added alongside this
-# change — a login-gate alone was a much stronger bot deterrent when only
-# vetted accounts could reach the form.
+# Revised (August 2026, twice): first opened from verified_author-only to
+# any authenticated account, then dropped the login requirement entirely —
+# no account needed at all to pitch a story. A logged-out visitor's contact
+# info is captured directly on the pitch instead (submitter_name/
+# submitter_email, see pitches/models.py) so the editorial team can still
+# follow up. That openness is exactly why real CAPTCHA (pitches/captcha.py)
+# exists — rate limiting keys on IP, not user, since there's often no user.
 # Reviewing pitches is editorial content triage, same boundary as Article
 # CRUD — not the narrower EiC/Admin-only verification-queue boundary.
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 
-@method_decorator(login_required, name='dispatch')
-@method_decorator(ratelimit(key='user', rate='10/h', method='POST', block=True), name='dispatch')
+@method_decorator(ratelimit(key='ip', rate='10/h', method='POST', block=True), name='dispatch')
 class PitchCreateView(CreateView):
     model = StoryPitch
     form_class = StoryPitchForm
@@ -47,13 +46,19 @@ class PitchCreateView(CreateView):
         return context
 
     def form_valid(self, form):
-        form.instance.submitter = self.request.user
+        if self.request.user.is_authenticated:
+            form.instance.submitter = self.request.user
         response = super().form_valid(form)
         messages.success(self.request, 'Your pitch has been submitted — the editorial team will review it soon.')
         return response
 
     def get_success_url(self):
-        return reverse('pitches:my_pitches')
+        # An anonymous submitter has no account to see pitches:my_pitches
+        # with — the success message above is their only confirmation, so
+        # send them back to the homepage where it'll actually render.
+        if self.request.user.is_authenticated:
+            return reverse('pitches:my_pitches')
+        return reverse('articles:home')
 
 
 @method_decorator(login_required, name='dispatch')
@@ -147,7 +152,12 @@ def pitch_decide(request, pk, decision):
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
             html_content=pitch.body or None,
         )
-        ArticleAuthor.objects.create(article=article, user=pitch.submitter, order=0, is_corresponding=True)
+        # An anonymous pitch (no submitter account) can't get an automatic
+        # byline — nobody to link. The editor adds authorship by hand (the
+        # existing "Authors" screen on the article) once they've followed up
+        # via pitch.contact_email, e.g. if that person registers an account.
+        if pitch.submitter:
+            ArticleAuthor.objects.create(article=article, user=pitch.submitter, order=0, is_corresponding=True)
         pitch.article = article
         pitch.status = StoryPitch.Status.ACCEPTED
         pitch.reviewed_by = request.user

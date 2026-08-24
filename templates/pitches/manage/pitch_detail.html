@@ -8,10 +8,14 @@
     <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
         <div class="flex items-center justify-between mb-1">
             <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{{ pitch.get_status_display }}</span>
+            {% if not pitch.submitter %}
+                <span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">Guest — no account</span>
+            {% endif %}
         </div>
         <h1 class="text-2xl font-bold text-gray-900 mt-3">{{ pitch.title }}</h1>
         <p class="text-sm text-gray-500 mt-1">
-            {{ pitch.submitter.get_full_name }} &lt;{{ pitch.submitter.email }}&gt; · Submitted {{ pitch.created_at|date:"M j, Y" }}
+            {{ pitch.contact_name }} · <a href="mailto:{{ pitch.contact_email }}" class="underline hover:text-gray-900">{{ pitch.contact_email }}</a>
+            · Submitted {{ pitch.created_at|date:"M j, Y" }}
         </p>
 
         <div class="mt-6">

@@ -24,8 +24,20 @@ class StoryPitch(models.Model):
     body = models.TextField(
         blank=True, help_text='Optional draft text, if you already have one. Not required to submit a pitch.',
     )
+    # Nullable (August 2026 — submission opened to anyone, no account
+    # required): set automatically when submitted while logged in; null for
+    # an anonymous pitch, which carries its own contact info in
+    # submitter_name/submitter_email instead. Use the contact_name/
+    # contact_email properties below rather than reading these fields
+    # directly, so callers don't have to branch on which case applies.
     submitter = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='story_pitches',
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='story_pitches',
+    )
+    submitter_name = models.CharField(
+        max_length=255, blank=True, help_text='Only used for an anonymous (not logged in) pitch.',
+    )
+    submitter_email = models.EmailField(
+        blank=True, help_text='Only used for an anonymous (not logged in) pitch — how to follow up with them.',
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED)
     editor_feedback = models.TextField(
@@ -47,3 +59,11 @@ class StoryPitch(models.Model):
 
     def __str__(self):
         return f'{self.title} ({self.get_status_display()})'
+
+    @property
+    def contact_name(self):
+        return self.submitter.get_full_name() if self.submitter else self.submitter_name
+
+    @property
+    def contact_email(self):
+        return self.submitter.email if self.submitter else self.submitter_email
