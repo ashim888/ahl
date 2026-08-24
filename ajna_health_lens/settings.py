@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',
     'django_q',
     'axes',
+    'django_ckeditor_5',
 
     # Ajna Health Lens apps
     'users',
@@ -237,6 +238,48 @@ STATIC_ROOT = Path(os.environ.get('STATIC_ROOT') or BASE_DIR / 'staticfiles')
 # resolving to '' (MEDIA_ROOT='' would silently mean "the cwd").
 MEDIA_URL = os.environ.get('MEDIA_URL') or '/media/'
 MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT') or BASE_DIR / 'media')
+
+
+# CKEditor 5 (django-ckeditor-5) — WYSIWYG editing for the "trusted,
+# editor-authored HTML" fields that used to be plain <textarea>s an editor
+# had to hand-write raw HTML into (Article.html_content, NewsletterIssue.body_html;
+# see ARCHITECTURE.md §4.2/§4.10). `articles` config adds a "sourceEditing"
+# button so a technical editor can still drop into raw HTML when they need
+# to (e.g. an embedded D3.js chart, ARCHITECTURE.md's chart-embedding note)
+# — WYSIWYG is the default view, not the only option. Citations are typed
+# as plain [1], [2] placeholders (see articles/citations.py) rather than
+# needing hand-written <sup><a href="#ref-1"> markup at all.
+CKEDITOR_5_CONFIGS = {
+    'default': {
+        'toolbar': [
+            'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList',
+            'blockQuote', '|', 'undo', 'redo',
+        ],
+    },
+    'articles': {
+        'toolbar': [
+            'heading', '|', 'bold', 'italic', 'underline', 'link', '|',
+            'bulletedList', 'numberedList', 'blockQuote', 'insertTable', '|',
+            'undo', 'redo', '|', 'sourceEditing',
+        ],
+        'table': {
+            'contentToolbar': ['tableColumn', 'tableRow', 'mergeTableCells'],
+        },
+    },
+}
+# django-ckeditor-5's built-in upload-permission check only understands two
+# modes: "staff" (request.user.is_staff) or "authenticated". Neither maps
+# onto this project's role-based RBAC — Editor/EiC/Admin accounts don't get
+# is_staff=True here (see users/forms.py StaffCreateForm, ARCHITECTURE.md
+# §6.2), so "staff" would lock real editors out, and "authenticated" would
+# let any logged-in reader hit the upload endpoint directly. Real
+# enforcement (EDITORIAL_ROLES) happens in the wrapper view at
+# ajna_health_lens/ckeditor_views.py, which is registered under this same
+# view name instead of the package's own urls.py — this setting is left at
+# "authenticated" so the package's own inner check, which still runs after
+# the wrapper's, is just a harmless pass-through rather than a second,
+# conflicting gate.
+CKEDITOR_5_FILE_UPLOAD_PERMISSION = 'authenticated'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

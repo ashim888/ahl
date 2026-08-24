@@ -44,14 +44,16 @@ def demo_jpeg(name, size=(600, 200), color=(210, 210, 200)):
 
 # Full-text body for the case report demo article — shows what an open-access
 # article's html_content looks like once populated, including an inline D3.js
-# chart and citation superscripts pointing at the References section (see
-# templates/articles/article_detail.html, which renders #ref-N anchors).
+# chart and [N] citation placeholders. These are plain text as an editor
+# would type them in CKEditor — articles/citations.linkify_citations() turns
+# them into hyperlinked superscripts pointing at the References section at
+# render time (see templates/articles/article_detail.html's #ref-N anchors).
 CASE_REPORT_HTML_CONTENT = """
 <h2>Introduction</h2>
 <p>Acute myocarditis in young, otherwise healthy adults is an uncommon but clinically significant
 cause of chest pain and troponin elevation, frequently mimicking acute coronary syndrome on initial
-presentation.<sup><a href="#ref-1">1</a></sup> Distinguishing myocarditis from an acute coronary event
-early is essential, since management and short-term risk differ substantially.<sup><a href="#ref-2">2</a></sup>
+presentation.[1] Distinguishing myocarditis from an acute coronary event
+early is essential, since management and short-term risk differ substantially.[2]
 We describe a young adult presenting with pleuritic chest pain and a markedly elevated troponin trend
 following a recent viral illness.</p>
 
@@ -66,7 +68,7 @@ absent and the patient was hemodynamically stable throughout admission.</p>
 <p>Serial troponin I measurements over the following 72 hours showed a rise-and-fall pattern more
 consistent with myocarditis than an evolving coronary occlusion, corroborated by cardiac MRI findings
 of subepicardial late gadolinium enhancement in the inferolateral wall — a pattern well described in
-viral myocarditis.<sup><a href="#ref-3">3</a></sup></p>
+viral myocarditis.[3]</p>
 
 <figure>
   <div id="troponin-chart" style="max-width: 640px;"></div>
@@ -133,19 +135,19 @@ viral myocarditis.<sup><a href="#ref-3">3</a></sup></p>
 
 <h2>Discussion</h2>
 <p>The differential for young patients presenting with chest pain and troponin elevation includes
-acute coronary syndrome, pericarditis, and myocarditis.<sup><a href="#ref-4">4</a></sup> A preceding
+acute coronary syndrome, pericarditis, and myocarditis.[4] A preceding
 viral prodrome, diffuse (rather than territorial) ECG changes, and a troponin trajectory that peaks
 and resolves within days — rather than the more sustained elevation typical of infarction — favor
 myocarditis, as does subepicardial (rather than subendocardial) late gadolinium enhancement on
-MRI.<sup><a href="#ref-5">5</a></sup> Most cases in young, hemodynamically stable patients are
+MRI.[5] Most cases in young, hemodynamically stable patients are
 self-limited and managed conservatively, though structured follow-up is warranted given a small
-but recognized risk of late ventricular dysfunction.<sup><a href="#ref-6">6</a></sup><sup><a href="#ref-7">7</a></sup></p>
+but recognized risk of late ventricular dysfunction.[6][7]</p>
 
 <h2>Conclusion</h2>
 <p>Myocarditis should remain a key differential in young adults presenting with chest pain and
 troponin elevation following a viral illness. Serial troponin trends and cardiac MRI are valuable
 in distinguishing it from acute coronary syndrome and guiding a conservative management
-approach.<sup><a href="#ref-8">8</a></sup></p>
+approach.[8]</p>
 """.strip()
 
 CASE_REPORT_REFERENCES = """
@@ -156,7 +158,7 @@ Sharma A, Gurung R. Distinguishing acute coronary syndrome from myocarditis in y
 Luetkens JA, Faron A, Isaak A, et al. Comparison of original and 2018 Lake Louise criteria for diagnosis of acute myocarditis. Radiol Cardiothorac Imaging. 2019;1(3):e190010.
 Ammirati E, Frigerio M, Adler ED, et al. Management of acute myocarditis and chronic inflammatory cardiomyopathy: an expert consensus document. Circ Heart Fail. 2020;13(11):e007405.
 Anzini M, Merlo M, Sabbadini G, et al. Long-term evolution and prognostic stratification of biopsy-proven active myocarditis. Circulation. 2013;128(22):2384-2394.
-Thapa B, Karki S. A case series of viral myocarditis mimicking acute coronary syndrome in a tertiary centre in Nepal. Ajna Health Lens. 2025;1(3):22-29.
+Thapa B, Karki S. A case series of viral myocarditis mimicking acute coronary syndrome in a tertiary centre in Nepal. Ajna Health Lens. 2025;1(3):22-29. https://doi.org/10.1234/ahl.2025.010329
 """.strip()
 
 

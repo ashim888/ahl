@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django_ckeditor_5.widgets import CKEditor5Widget
 
 from users.models import User
 
@@ -31,7 +32,12 @@ class ArticleForm(forms.ModelForm):
         ]
         widgets = {
             'abstract': forms.Textarea(attrs={'rows': 5}),
-            'html_content': forms.Textarea(attrs={'rows': 16, 'class': 'font-mono text-xs'}),
+            # 'articles' config adds sourceEditing so a technical editor can
+            # still drop into raw HTML (e.g. an embedded chart) — see the
+            # CKEDITOR_5_CONFIGS comment in settings.py. Citations are typed
+            # as plain [1], [2] placeholders (articles/citations.py), not
+            # hand-written <sup><a href="#ref-1"> markup.
+            'html_content': CKEditor5Widget(config_name='articles'),
             'references': forms.Textarea(attrs={'rows': 6}),
         }
 

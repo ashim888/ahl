@@ -126,7 +126,7 @@
             {% if show_full_text %}
                 {% if article.html_content %}
                     <div class="prose-article leading-relaxed text-foreground">
-                        {{ article.html_content|safe }}
+                        {{ rendered_html_content|safe }}
                     </div>
                 {% else %}
                     <p class="text-sm text-muted-foreground">Full text has not been added for this article yet.</p>
@@ -172,7 +172,7 @@
                     <h2 class="font-display text-xl font-bold mb-5" style="letter-spacing: -0.015em;">References</h2>
                     <ol class="space-y-3 text-sm text-muted-foreground list-decimal list-inside">
                         {% for reference in references_list %}
-                            <li id="ref-{{ forloop.counter }}">{{ reference }}</li>
+                            <li id="ref-{{ forloop.counter }}">{{ reference|urlize }}</li>
                         {% endfor %}
                     </ol>
                 </div>

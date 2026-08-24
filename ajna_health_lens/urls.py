@@ -5,10 +5,17 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
 from articles.sitemaps import sitemaps
+from ajna_health_lens.ckeditor_views import ckeditor5_upload_file
 from ajna_health_lens.views import robots_txt
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Registered directly (not via include('django_ckeditor_5.urls')) under
+    # the exact view name the widget reverses, so the upload endpoint goes
+    # through EDITORIAL_ROLES instead of the package's own weaker check —
+    # see ckeditor_views.py and the CKEDITOR_5_FILE_UPLOAD_PERMISSION
+    # comment in settings.py.
+    path('ckeditor5/image_upload/', ckeditor5_upload_file, name='ck_editor_5_upload_file'),
     path('', include('articles.urls')),
     path('', include('issues.urls')),
     path('', include('users.urls')),

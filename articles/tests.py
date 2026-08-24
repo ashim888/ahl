@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from .citations import linkify_citations
 from .models import Article
 
 
@@ -533,3 +534,155 @@ class SlugAndShortCodeTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(article.slug.startswith('freshly-typed-headline-'))
         self.assertEqual(len(article.short_code), 5)
+
+
+class CitationLinkifyingTests(TestCase):
+    """articles.citations.linkify_citations — turns editor-typed [N]
+    placeholders into hyperlinked superscripts, at render time only.
+    """
+
+    def test_single_placeholder_is_linkified(self):
+        result = linkify_citations('<p>Some claim.[1]</p>')
+        self.assertEqual(result, '<p>Some claim.<sup><a href="#ref-1">1</a></sup></p>')
+
+    def test_multiple_placeholders_including_multi_digit(self):
+        result = linkify_citations('Look [1] and [2] and [10].')
+        self.assertEqual(
+            result,
+            'Look <sup><a href="#ref-1">1</a></sup> and <sup><a href="#ref-2">2</a></sup> '
+            'and <sup><a href="#ref-10">10</a></sup>.',
+        )
+
+    def test_adjacent_placeholders(self):
+        result = linkify_citations('Combined risk.[6][7]')
+        self.assertEqual(
+            result, 'Combined risk.<sup><a href="#ref-6">6</a></sup><sup><a href="#ref-7">7</a></sup>',
+        )
+
+    def test_empty_content_returned_unchanged(self):
+        self.assertEqual(linkify_citations(''), '')
+        self.assertIsNone(linkify_citations(None))
+
+    def test_content_with_no_placeholders_is_unchanged(self):
+        html = '<p>Nothing to cite here.</p>'
+        self.assertEqual(linkify_citations(html), html)
+
+
+class ArticleDetailCitationRenderingTests(TestCase):
+    """End-to-end: [N] placeholders in html_content render as working
+    #ref-N links against the auto-generated references list anchors, and a
+    bare URL inside a reference entry gets auto-linked via |urlize.
+    """
+
+    def test_placeholder_becomes_working_anchor_link(self):
+        article = make_article('citation-article', Article.ArticleType.NEWS_COMMENTARY)
+        article.html_content = '<p>A claim needing support.[1]</p>'
+        article.references = 'Smith J. Some Journal. 2024.'
+        article.save()
+
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, '<sup><a href="#ref-1">1</a></sup>')
+        self.assertContains(response, 'id="ref-1"')
+        self.assertNotContains(response, '[1]')
+
+    def test_bare_url_in_reference_entry_is_urlized(self):
+        article = make_article('citation-url-article', Article.ArticleType.NEWS_COMMENTARY)
+        article.html_content = '<p>See the source.[1]</p>'
+        article.references = 'Thapa B. Ajna Health Lens. 2025. https://doi.org/10.1234/ahl.2025.010329'
+        article.save()
+
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(
+            response, '<a href="https://doi.org/10.1234/ahl.2025.010329" rel="nofollow">',
+        )
+
+    def test_stored_html_content_is_never_mutated_by_rendering(self):
+        article = make_article('citation-source-untouched', Article.ArticleType.NEWS_COMMENTARY)
+        article.html_content = '<p>A claim.[1]</p>'
+        article.references = 'Smith J. Some Journal. 2024.'
+        article.save()
+
+        self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        article.refresh_from_db()
+        self.assertEqual(article.html_content, '<p>A claim.[1]</p>')
+
+
+class CKEditorWidgetRenderingTests(TestCase):
+    """Article.html_content and NewsletterIssue.body_html swapped from plain
+    <textarea>s to django-ckeditor-5's widget (see articles/forms.py,
+    newsletter/forms.py) — these confirm the manage forms actually render
+    the widget's markup/assets, not just that the field is still present.
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='ckeditor-editor@example.com', password='pw', first_name='E', last_name='D',
+            role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def test_article_create_form_renders_ckeditor_widget(self):
+        response = self.client.get(reverse('articles:manage_article_create'))
+        self.assertContains(response, 'ck-editor-container')
+        self.assertContains(response, 'django_ckeditor_5/dist/bundle.js')
+
+    def test_article_form_widget_config_has_source_editing(self):
+        from .forms import ArticleForm
+
+        widget = ArticleForm().fields['html_content'].widget
+        self.assertIn('sourceEditing', widget.config['toolbar'])
+
+    def test_newsletter_compose_form_renders_ckeditor_widget(self):
+        response = self.client.get(reverse('newsletter:manage_issue_compose'))
+        self.assertContains(response, 'ck-editor-container')
+        self.assertContains(response, 'django_ckeditor_5/dist/bundle.js')
+
+
+class CKEditorUploadPermissionTests(TestCase):
+    """The upload endpoint is registered under a custom wrapper view
+    (ajna_health_lens/ckeditor_views.py) instead of the package's own urls.py,
+    so it's gated by this project's EDITORIAL_ROLES instead of the package's
+    built-in "staff"/"authenticated" modes — neither of which fits, since
+    Editor/EiC accounts here don't carry is_staff=True (see
+    ajna_health_lens/settings.py's CKEDITOR_5_FILE_UPLOAD_PERMISSION comment).
+    """
+
+    def _make_image_upload(self):
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new('RGB', (10, 10)).save(buffer, format='JPEG')
+        return SimpleUploadedFile('test.jpg', buffer.getvalue(), content_type='image/jpeg')
+
+    def test_anonymous_upload_redirects_to_login(self):
+        response = self.client.post(reverse('ck_editor_5_upload_file'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_non_editorial_user_gets_403(self):
+        from users.models import User
+
+        reader = User.objects.create_user(
+            email='ckeditor-reader@example.com', password='pw', first_name='R', last_name='D',
+            role=User.Role.VERIFIED_AUTHOR,
+        )
+        self.client.force_login(reader)
+        response = self.client.post(reverse('ck_editor_5_upload_file'), {'upload': self._make_image_upload()})
+        self.assertEqual(response.status_code, 403)
+
+    def test_editorial_user_can_upload(self):
+        from users.models import User
+
+        editor = User.objects.create_user(
+            email='ckeditor-uploader@example.com', password='pw', first_name='E', last_name='D',
+            role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        response = self.client.post(reverse('ck_editor_5_upload_file'), {'upload': self._make_image_upload()})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('url', response.json())

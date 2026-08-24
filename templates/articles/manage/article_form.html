@@ -2,6 +2,7 @@
 
 {% block title %}{% if is_create %}New Article{% else %}Edit Article{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}{% if is_create %}New Article{% else %}Edit Article{% endif %}{% endblock %}
+{% block extra_head %}{{ form.media }}{% endblock %}
 
 {% block content %}
 <div class="">
@@ -302,13 +303,33 @@ document.addEventListener('DOMContentLoaded', function () {
                 : 'No template for this type';
         }
 
+        // CKEditor5 renders its own UI over #id_html_content and only reads
+        // the textarea's value at creation time — setting .value directly
+        // afterwards doesn't touch what's on screen. The editor instance
+        // (once created) lives at window.editors[id]; setData() there both
+        // updates the visible editor and re-syncs the textarea via its own
+        // change:data listener (see django_ckeditor_5's app.js).
+        // window.ckeditorRegisterCallback queues the same call for the rare
+        // case this fires before the async editor has finished initializing.
+        function setContentFieldValue(value) {
+            var editor = window.editors && window.editors[contentField.id];
+            if (editor) {
+                editor.setData(value);
+            } else if (window.ckeditorRegisterCallback) {
+                contentField.value = value;
+                window.ckeditorRegisterCallback(contentField.id, function (ed) { ed.setData(value); });
+            } else {
+                contentField.value = value;
+            }
+        }
+
         insertBtn.addEventListener('click', function () {
             var template = templates[typeField.value];
             if (!template) return;
             if (contentField.value.trim() && !confirm('Replace the current Full Text content with the template?')) {
                 return;
             }
-            contentField.value = template;
+            setContentFieldValue(template);
         });
 
         typeField.addEventListener('change', updateButtonState);
