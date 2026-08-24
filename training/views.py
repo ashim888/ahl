@@ -100,7 +100,18 @@ class CourseManageListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return TrainingCourse.objects.annotate(enrollment_count=Count('enrollments')).order_by('-created_at')
+        queryset = TrainingCourse.objects.annotate(enrollment_count=Count('enrollments')).order_by('-created_at')
+        active = self.request.GET.get('active')
+        if active == 'yes':
+            queryset = queryset.filter(is_active=True)
+        elif active == 'no':
+            queryset = queryset.filter(is_active=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['selected_active'] = self.request.GET.get('active', '')
+        return context
 
 
 class CourseFormMixin:

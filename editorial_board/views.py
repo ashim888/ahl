@@ -125,6 +125,20 @@ class BoardMemberManageListView(ListView):
     context_object_name = 'members'
     paginate_by = 30
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        active = self.request.GET.get('active')
+        if active == 'yes':
+            queryset = queryset.filter(is_active=True)
+        elif active == 'no':
+            queryset = queryset.filter(is_active=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['selected_active'] = self.request.GET.get('active', '')
+        return context
+
 
 class BoardMemberFormMixin:
     def get_success_url(self):

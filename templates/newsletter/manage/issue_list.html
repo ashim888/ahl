@@ -14,6 +14,18 @@
     </a>
 </div>
 
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+        <select name="status" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All</option>
+            <option value="sent" {% if selected_status == 'sent' %}selected{% endif %}>Sent</option>
+            <option value="sending" {% if selected_status == 'sending' %}selected{% endif %}>Sending…</option>
+        </select>
+    </div>
+</form>
+
 <div class="mt-6 overflow-x-auto">
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">

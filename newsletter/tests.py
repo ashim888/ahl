@@ -3,6 +3,7 @@ from unittest.mock import patch
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from users.models import User
 
@@ -85,3 +86,23 @@ class ComposeViewTests(TestCase):
             'subject': 'Hello', 'body_html': '<p>Hi</p>',
         })
         self.assertEqual(response.status_code, 403)
+
+
+class IssueListFilterTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='newsletter-filter-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def test_filters_by_sent_status(self):
+        sent = NewsletterIssue.objects.create(subject='Sent Issue', body_html='<p>Hi</p>', sent_at=timezone.now())
+        NewsletterIssue.objects.create(subject='Sending Issue', body_html='<p>Hi</p>')
+
+        response = self.client.get(reverse('newsletter:manage_issue_list'), {'status': 'sent'})
+        self.assertEqual(list(response.context['issues']), [sent])
+
+        response = self.client.get(reverse('newsletter:manage_issue_list'), {'status': 'sending'})
+        issues = list(response.context['issues'])
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].subject, 'Sending Issue')

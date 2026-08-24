@@ -15,6 +15,28 @@
     </a>
 </div>
 
+    <form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Zone</label>
+            <select name="zone" onchange="this.form.submit()"
+                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                <option value="">All zones</option>
+                {% for value, label in zones %}
+                    <option value="{{ value }}" {% if value == selected_zone %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Active</label>
+            <select name="active" onchange="this.form.submit()"
+                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                <option value="">All</option>
+                <option value="yes" {% if selected_active == 'yes' %}selected{% endif %}>Active</option>
+                <option value="no" {% if selected_active == 'no' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+    </form>
+
 {% if zone_stats %}
 <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
     {% for z in zone_stats %}

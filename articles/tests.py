@@ -223,6 +223,14 @@ class KeywordBrowsingTests(TestCase):
         self.assertNotIn(other, articles)
         self.assertEqual(response.context['selected_keyword'], 'tuberculosis')
 
+    def test_keyword_search_box_prefills_current_keyword(self):
+        response = self.client.get(reverse('articles:article_list'), {'keyword': 'tuberculosis'})
+        self.assertContains(response, 'value="tuberculosis"')
+
+    def test_type_pill_preserves_active_keyword_filter(self):
+        response = self.client.get(reverse('articles:article_list'), {'keyword': 'tuberculosis'})
+        self.assertContains(response, '&keyword=tuberculosis')
+
 
 class SearchRelevanceAndRateLimitTests(TestCase):
     def test_title_match_ranks_above_abstract_only_match(self):

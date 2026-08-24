@@ -21,6 +21,28 @@
     </a>
 </div>
 
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Type</label>
+        <select name="plan_type" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All types</option>
+            {% for value, label in plan_types %}
+                <option value="{{ value }}" {% if value == selected_plan_type %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Active</label>
+        <select name="active" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All</option>
+            <option value="yes" {% if selected_active == 'yes' %}selected{% endif %}>Active</option>
+            <option value="no" {% if selected_active == 'no' %}selected{% endif %}>Inactive</option>
+        </select>
+    </div>
+</form>
+
 <div class="mt-6 overflow-x-auto">
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -57,4 +79,6 @@
         </tbody>
     </table>
 </div>
+
+{% include 'includes/pagination.html' %}
 {% endblock %}

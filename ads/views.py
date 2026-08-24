@@ -40,10 +40,22 @@ class AdSlotListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return AdSlot.objects.order_by('-created_at')
+        queryset = AdSlot.objects.order_by('-created_at')
+        zone = self.request.GET.get('zone')
+        active = self.request.GET.get('active')
+        if zone:
+            queryset = queryset.filter(zone=zone)
+        if active == 'yes':
+            queryset = queryset.filter(is_active=True)
+        elif active == 'no':
+            queryset = queryset.filter(is_active=False)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['zones'] = AdSlot.Zone.choices
+        context['selected_zone'] = self.request.GET.get('zone', '')
+        context['selected_active'] = self.request.GET.get('active', '')
         # Zone-level totals — a single ad's CTR (shown per-row) doesn't
         # answer "is the homepage or the sidebar performing better overall",
         # which is the question that actually informs where to sell more

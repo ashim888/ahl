@@ -53,7 +53,18 @@ class IssueManageListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return Issue.objects.order_by('-created_at')
+        queryset = Issue.objects.order_by('-created_at')
+        published = self.request.GET.get('published')
+        if published == 'yes':
+            queryset = queryset.filter(is_published=True)
+        elif published == 'no':
+            queryset = queryset.filter(is_published=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['selected_published'] = self.request.GET.get('published', '')
+        return context
 
 
 class IssueFormMixin:

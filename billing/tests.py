@@ -261,3 +261,57 @@ class PlanDetailAndComparisonTests(TestCase):
         self.basic.save(update_fields=['is_active'])
         response = self.client.get(reverse('billing:plan_detail', args=[self.basic.pk]))
         self.assertEqual(response.status_code, 404)
+
+
+class PlanListFilterTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='plan-filter-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+        self.monthly = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=10, duration_days=30,
+        )
+        self.annual = SubscriptionPlan.objects.create(
+            name='Annual', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL, price=100, duration_days=365,
+            is_active=False,
+        )
+
+    def test_filters_by_plan_type(self):
+        response = self.client.get(reverse('billing:manage_plan_list'), {'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY})
+        self.assertEqual(list(response.context['plans']), [self.monthly])
+
+    def test_filters_by_active_status(self):
+        response = self.client.get(reverse('billing:manage_plan_list'), {'active': 'no'})
+        self.assertEqual(list(response.context['plans']), [self.annual])
+
+
+class SubscriptionListFilterTests(TestCase):
+    def setUp(self):
+        self.eic = User.objects.create_user(
+            email='sub-filter-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        self.client.force_login(self.eic)
+        self.reader = User.objects.create_user(email='sub-filter-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.monthly = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=10, duration_days=30,
+        )
+        self.annual = SubscriptionPlan.objects.create(
+            name='Annual', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL, price=100, duration_days=365,
+        )
+        self.active_sub = UserSubscription.objects.create(
+            user=self.reader, plan=self.monthly, status=UserSubscription.Status.ACTIVE,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+        self.cancelled_sub = UserSubscription.objects.create(
+            user=self.reader, plan=self.annual, status=UserSubscription.Status.CANCELLED,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+
+    def test_filters_by_status(self):
+        response = self.client.get(reverse('billing:manage_subscription_list'), {'status': UserSubscription.Status.CANCELLED})
+        self.assertEqual(list(response.context['subscriptions']), [self.cancelled_sub])
+
+    def test_filters_by_plan(self):
+        response = self.client.get(reverse('billing:manage_subscription_list'), {'plan': self.monthly.pk})
+        self.assertEqual(list(response.context['subscriptions']), [self.active_sub])

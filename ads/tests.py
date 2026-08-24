@@ -140,6 +140,32 @@ class AdSlotManageTests(TestCase):
         self.assertEqual(homepage_stats['ctr'], 100.0)
 
 
+class AdSlotListFilterTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='ad-filter-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def test_filters_by_zone(self):
+        homepage_ad = make_ad(zone=AdSlot.Zone.HOMEPAGE, sponsor_name='Homepage Sponsor')
+        make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Sidebar Sponsor')
+        response = self.client.get(reverse('ads:manage_adslot_list'), {'zone': AdSlot.Zone.HOMEPAGE})
+        ads = list(response.context['ad_slots'])
+        self.assertEqual(ads, [homepage_ad])
+
+    def test_filters_by_active_status(self):
+        active_ad = make_ad(is_active=True, sponsor_name='Active Sponsor')
+        make_ad(is_active=False, sponsor_name='Inactive Sponsor')
+        response = self.client.get(reverse('ads:manage_adslot_list'), {'active': 'yes'})
+        self.assertEqual(list(response.context['ad_slots']), [active_ad])
+
+        response = self.client.get(reverse('ads:manage_adslot_list'), {'active': 'no'})
+        ads = list(response.context['ad_slots'])
+        self.assertEqual(len(ads), 1)
+        self.assertEqual(ads[0].sponsor_name, 'Inactive Sponsor')
+
+
 class AdSlotAnalyticsTests(TestCase):
     def setUp(self):
         self.editor = User.objects.create_user(

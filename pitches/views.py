@@ -61,7 +61,17 @@ class MyPitchesListView(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return StoryPitch.objects.filter(submitter=self.request.user).select_related('article')
+        queryset = StoryPitch.objects.filter(submitter=self.request.user).select_related('article')
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['statuses'] = StoryPitch.Status.choices
+        context['selected_status'] = self.request.GET.get('status', '')
+        return context
 
 
 # -- Editorial review queue -------------------------------------------------

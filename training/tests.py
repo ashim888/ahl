@@ -6,6 +6,26 @@ from users.models import User
 from .models import Enrollment, TrainingCourse
 
 
+class CourseManageListFilterTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='course-filter-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def test_filters_by_active_status(self):
+        active_course = TrainingCourse.objects.create(
+            title='Active Course', description='...', price=10, duration='2 weeks',
+            instructor='Dr. A', is_active=True,
+        )
+        TrainingCourse.objects.create(
+            title='Inactive Course', description='...', price=10, duration='2 weeks',
+            instructor='Dr. B', is_active=False,
+        )
+        response = self.client.get(reverse('training:manage_course_list'), {'active': 'yes'})
+        self.assertEqual(list(response.context['courses']), [active_course])
+
+
 class CourseCheckoutTests(TestCase):
     """Self-serve enroll-and-pay — StubGateway always succeeds (see
     billing/gateway.py) but the flow itself is real: no editorial action needed.

@@ -94,6 +94,17 @@ class MyPitchesListTests(TestCase):
         self.assertIn('Mine', titles)
         self.assertNotIn('Theirs', titles)
 
+    def test_filters_by_status(self):
+        author = make_verified_author()
+        submitted = StoryPitch.objects.create(
+            title='Submitted', summary='s', submitter=author, status=StoryPitch.Status.SUBMITTED,
+        )
+        StoryPitch.objects.create(title='Rejected', summary='s', submitter=author, status=StoryPitch.Status.REJECTED)
+
+        self.client.force_login(author)
+        response = self.client.get(reverse('pitches:my_pitches'), {'status': StoryPitch.Status.SUBMITTED})
+        self.assertEqual(list(response.context['pitches']), [submitted])
+
 
 @FAST_PASSWORD_HASHERS
 class PitchQueueAccessTests(TestCase):

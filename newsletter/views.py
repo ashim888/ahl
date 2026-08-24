@@ -72,13 +72,20 @@ class IssueListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return NewsletterIssue.objects.order_by('-created_at')
+        queryset = NewsletterIssue.objects.order_by('-created_at')
+        status = self.request.GET.get('status')
+        if status == 'sent':
+            queryset = queryset.filter(sent_at__isnull=False)
+        elif status == 'sending':
+            queryset = queryset.filter(sent_at__isnull=True)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['confirmed_subscriber_count'] = Subscriber.objects.filter(
             status=Subscriber.Status.CONFIRMED,
         ).count()
+        context['selected_status'] = self.request.GET.get('status', '')
         return context
 
 

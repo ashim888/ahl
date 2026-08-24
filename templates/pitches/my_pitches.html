@@ -13,6 +13,19 @@
         </a>
     </div>
 
+    <div class="mt-6 flex flex-wrap gap-2">
+        <a href="{% url 'pitches:my_pitches' %}"
+           class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if not selected_status %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">
+            ALL
+        </a>
+        {% for value, label in statuses %}
+            <a href="?status={{ value }}"
+               class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if value == selected_status %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">
+                {{ label|upper }}
+            </a>
+        {% endfor %}
+    </div>
+
     <div class="mt-10 divide-y divide-border">
         {% for pitch in pitches %}
             <div class="py-6">

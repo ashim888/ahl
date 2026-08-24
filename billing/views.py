@@ -140,9 +140,26 @@ class PlanListView(ListView):
     model = SubscriptionPlan
     template_name = 'billing/manage/plan_list.html'
     context_object_name = 'plans'
+    paginate_by = 30
 
     def get_queryset(self):
-        return SubscriptionPlan.objects.order_by('price')
+        queryset = SubscriptionPlan.objects.order_by('price')
+        plan_type = self.request.GET.get('plan_type')
+        active = self.request.GET.get('active')
+        if plan_type:
+            queryset = queryset.filter(plan_type=plan_type)
+        if active == 'yes':
+            queryset = queryset.filter(is_active=True)
+        elif active == 'no':
+            queryset = queryset.filter(is_active=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['plan_types'] = SubscriptionPlan.PlanType.choices
+        context['selected_plan_type'] = self.request.GET.get('plan_type', '')
+        context['selected_active'] = self.request.GET.get('active', '')
+        return context
 
 
 class PlanFormMixin:
@@ -204,7 +221,22 @@ class SubscriptionListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return UserSubscription.objects.select_related('user', 'plan').order_by('-created_at')
+        queryset = UserSubscription.objects.select_related('user', 'plan').order_by('-created_at')
+        status = self.request.GET.get('status')
+        plan_id = self.request.GET.get('plan')
+        if status:
+            queryset = queryset.filter(status=status)
+        if plan_id:
+            queryset = queryset.filter(plan_id=plan_id)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['statuses'] = UserSubscription.Status.choices
+        context['plans'] = SubscriptionPlan.objects.order_by('name')
+        context['selected_status'] = self.request.GET.get('status', '')
+        context['selected_plan'] = self.request.GET.get('plan', '')
+        return context
 
 
 @method_decorator(role_required(*SENIOR_STAFF_ROLES), name='dispatch')
