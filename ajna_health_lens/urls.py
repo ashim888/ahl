@@ -1,3 +1,5 @@
+from django.views.static import serve
+from django.urls import re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -7,6 +9,7 @@ from django.urls import include, path
 from articles.sitemaps import sitemaps
 from ajna_health_lens.ckeditor_views import ckeditor5_upload_file
 from ajna_health_lens.views import robots_txt
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,9 +36,22 @@ urlpatterns = [
     path('', include('newsletter.urls')),
     path('', include('ads.urls')),
     path('', include('pitches.urls')),
+    # django_comments_xtd.urls also includes django_comments.urls (the
+    # actual post/delete/flag endpoints) under this same prefix.
+    path('comments/', include('django_comments_xtd.urls')),
     path('editorial/', include('admin_custom.urls')),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
     path('robots.txt', robots_txt, name='robots_txt'),
+    re_path(
+        r'^media/(?P<path>.*)$',
+        serve,
+        {'document_root': settings.MEDIA_ROOT},
+    ),
+    re_path(
+        r'^static/(?P<path>.*)$',
+        serve,
+        {'document_root': settings.STATIC_ROOT},
+    ),
 ]
 
 # Django serves /media/ itself only in DEBUG — Django's own docs call this
