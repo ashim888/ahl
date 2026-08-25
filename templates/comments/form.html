@@ -1,20 +1,24 @@
 {% load i18n %}
 {% load comments %}
 
-{# Tailwind-styled override of django_comments's default (Bootstrap-classed)
-   comments/form.html — see ARCHITECTURE.md's comments section. Bare
-   input/textarea elements inside a <form> already pick up this project's
-   styling from templates/base.html, so no per-field classes are needed here. #}
+{% comment %}
+Tailwind-styled override of django_comments's default (Bootstrap-classed)
+comments/form.html — see ARCHITECTURE.md's comments section. Bare
+input/textarea elements inside a <form> already pick up this project's
+styling from templates/base.html, so no per-field classes are needed here.
+{% endcomment %}
 <form method="POST" action="{% comment_form_target %}" class="space-y-5"
       onsubmit="this.querySelector('[name=post]').disabled = true; return true;">
     {% csrf_token %}
     {% for field in form %}
         {% if field.is_hidden %}{{ field }}{% endif %}
     {% endfor %}
-    {# Where to redirect after a successful post — back to the article, not
-       django_comments' generic "posted" page. Used from both
-       article_detail.html (where `article` is in scope) and reply.html
-       (where only `comment`, the parent being replied to, is). #}
+    {% comment %}
+    Where to redirect after a successful post — back to the article, not
+    django_comments' generic "posted" page. Used from both
+    article_detail.html (where `article` is in scope) and reply.html
+    (where only `comment`, the parent being replied to, is).
+    {% endcomment %}
     <input type="hidden" name="next" value="{% if article %}{% url 'articles:article_detail' article.slug %}{% elif comment %}{{ comment.content_object.get_absolute_url }}{% endif %}">
     {# Honeypot — real visitors never see this field; a bot that fills every field trips it. #}
     <div style="position: absolute; left: -9999px;" aria-hidden="true">{{ form.honeypot }}</div>
