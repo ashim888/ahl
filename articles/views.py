@@ -27,6 +27,7 @@ from users.models import User
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
+from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
 from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView
 from .seo import news_article_structured_data
@@ -271,7 +272,9 @@ class ArticleDetailView(DetailView):
             (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
         )
         context['show_full_text'] = article_is_accessible(self.request.user, self.object)
-        context['content_blocks'] = build_content_blocks(linkify_citations(self.object.html_content))
+        html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
+        context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
+        context['content_blocks'] = build_content_blocks(html_with_ids)
         if self.object.references:
             context['references_list'] = [
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
@@ -732,8 +735,10 @@ def article_preview(request):
         'show_full_text': True,
         'preview_mode': True,
         'related_articles': [],
-        'content_blocks': build_content_blocks(linkify_citations(article.html_content)),
     }
+    _html_with_ids, _toc_entries = extract_toc(linkify_citations(article.html_content))
+    context['toc_entries'] = _toc_entries if len(_toc_entries) > MIN_HEADINGS_FOR_TOC else []
+    context['content_blocks'] = build_content_blocks(_html_with_ids)
     if article.references:
         context['references_list'] = [
             line.strip() for line in article.references.strip().splitlines() if line.strip()

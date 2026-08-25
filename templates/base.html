@@ -65,6 +65,11 @@
         .section-label { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; }
         .drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.5rem; font-weight: 700; float: left; line-height: 0.8; margin-right: 0.08em; margin-top: 0.06em; }
         .article-link:hover .article-title { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+        /* Article sidebar "In This Article" nav — .is-active toggled by
+           IntersectionObserver (article_detail.html) as each heading it
+           links to scrolls past the trigger band. */
+        .toc-link { border-left: 2px solid transparent; padding-left: 0.75rem; margin-left: -0.75rem; }
+        .toc-link.is-active { border-left-color: #c0392b; color: #c0392b; font-weight: 600; }
 
         form input[type="text"], form input[type="email"], form input[type="password"],
         form input[type="url"], form input[type="date"], form input[type="number"],
@@ -91,7 +96,14 @@
         .prose-article { font-family: Georgia, serif; }
         .prose-article h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-top: 2rem; border-top: 1px solid #d4d0cb; letter-spacing: -0.015em; }
         .prose-article h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-        .prose-article p { margin-top: 1.5rem; font-size: 1.0625rem; line-height: 1.85; }
+        /* Text elements only (not figure/table/ad blocks, which stay full
+           column width) get a narrower, ~68-character measure — the column
+           itself (~699px at the lg breakpoint) is wider than ideal for
+           sustained reading at this font size. line-height tightened from
+           1.85 to 1.7 to match — very airy line-height needs a wide measure
+           to still feel balanced; a narrower one reads better a touch tighter. */
+        .prose-article p, .prose-article ul, .prose-article ol, .prose-article blockquote { max-width: 68ch; }
+        .prose-article p { margin-top: 1.5rem; font-size: 1.0625rem; line-height: 1.7; }
         .prose-article > p:first-of-type::first-letter {
             font-family: 'Playfair Display', serif; font-size: 4.5rem; font-weight: 700;
             float: left; line-height: 0.8; margin-right: 0.08em; margin-top: 0.06em;

@@ -7,6 +7,7 @@ from django.utils import timezone
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .models import Article
+from .toc import extract_toc
 
 
 def make_article(slug, article_type, status=Article.Status.PUBLISHED, homepage_section='', publication_date=None):
@@ -974,3 +975,65 @@ class InArticleAdInjectionRenderingTests(TestCase):
         # Second injection point (banner, after paragraph 9) lands correctly too.
         self.assertLess(content.index('Paragraph 9.'), content.index('Banner Sponsor'))
         self.assertLess(content.index('Banner Sponsor'), content.index('Paragraph 10.'))
+
+
+class TableOfContentsTests(TestCase):
+    """articles.toc.extract_toc — heading ids + the sidebar "In This
+    Article" nav they power (article_detail.html).
+    """
+
+    def test_headings_get_ids_and_toc_entries(self):
+        html, entries = extract_toc('<h2>Introduction</h2><p>Text.</p><h2>Discussion</h2><p>More.</p>')
+        self.assertEqual(html, '<h2 id="introduction">Introduction</h2><p>Text.</p><h2 id="discussion">Discussion</h2><p>More.</p>')
+        self.assertEqual(entries, [
+            {'level': 2, 'text': 'Introduction', 'id': 'introduction'},
+            {'level': 2, 'text': 'Discussion', 'id': 'discussion'},
+        ])
+
+    def test_h3_included_with_correct_level(self):
+        _html, entries = extract_toc('<h2>Section</h2><h3>Subsection</h3>')
+        self.assertEqual([e['level'] for e in entries], [2, 3])
+
+    def test_duplicate_heading_text_gets_a_unique_id(self):
+        html, entries = extract_toc('<h2>Overview</h2><h2>Overview</h2>')
+        self.assertEqual([e['id'] for e in entries], ['overview', 'overview-2'])
+        self.assertIn('id="overview"', html)
+        self.assertIn('id="overview-2"', html)
+
+    def test_heading_with_existing_id_is_left_alone(self):
+        html, entries = extract_toc('<h2 id="custom-anchor">Custom</h2>')
+        self.assertEqual(entries[0]['id'], 'custom-anchor')
+        self.assertIn('id="custom-anchor"', html)
+        self.assertNotIn('id="custom-anchor" id=', html)
+
+    def test_heading_text_is_stripped_of_inner_markup(self):
+        _html, entries = extract_toc('<h2>Why <em>this</em> matters</h2>')
+        self.assertEqual(entries[0]['text'], 'Why this matters')
+
+    def test_non_heading_content_is_untouched(self):
+        html, entries = extract_toc('<p>No headings here at all.</p>')
+        self.assertEqual(html, '<p>No headings here at all.</p>')
+        self.assertEqual(entries, [])
+
+    def test_empty_content(self):
+        self.assertEqual(extract_toc(''), ('', []))
+        self.assertEqual(extract_toc(None), (None, []))
+
+
+class ArticleDetailTocRenderingTests(TestCase):
+    def test_toc_rendered_for_article_with_multiple_headings(self):
+        article = make_article('toc-article', Article.ArticleType.NEWS_COMMENTARY)
+        article.html_content = '<h2>First Section</h2><p>Text.</p><h2>Second Section</h2><p>More.</p>'
+        article.save()
+        response = self.client.get(article.get_absolute_url())
+        self.assertContains(response, 'IN THIS ARTICLE')
+        self.assertContains(response, 'href="#first-section"')
+        self.assertContains(response, 'href="#second-section"')
+        self.assertContains(response, 'id="first-section"')
+
+    def test_no_toc_for_article_with_one_or_no_headings(self):
+        article = make_article('no-toc-article', Article.ArticleType.NEWS_COMMENTARY)
+        article.html_content = '<h2>Only Section</h2><p>Text.</p>'
+        article.save()
+        response = self.client.get(article.get_absolute_url())
+        self.assertNotContains(response, 'IN THIS ARTICLE')
