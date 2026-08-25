@@ -608,6 +608,26 @@ class CitationLinkifyingTests(TestCase):
         html = '<p>Nothing to cite here.</p>'
         self.assertEqual(linkify_citations(html), html)
 
+    def test_bracket_index_inside_a_code_block_is_left_alone(self):
+        html = '<p>See below.[1]</p><pre><code class="language-python">data[1] = x</code></pre><p>After.[2]</p>'
+        result = linkify_citations(html)
+        self.assertIn('<pre><code class="language-python">data[1] = x</code></pre>', result)
+        self.assertIn('See below.<sup><a href="#ref-1">1</a></sup>', result)
+        self.assertIn('After.<sup><a href="#ref-2">2</a></sup>', result)
+
+    def test_bracket_index_inside_inline_code_is_left_alone(self):
+        html = '<p>Access with <code>arr[0]</code>, see ref.[1]</p>'
+        result = linkify_citations(html)
+        self.assertIn('<code>arr[0]</code>', result)
+        self.assertIn('<sup><a href="#ref-1">1</a></sup>', result)
+
+    def test_multiple_code_blocks_all_protected(self):
+        html = '<pre><code>x[1]</code></pre><p>Text[1]</p><pre><code>y[2]</code></pre>'
+        result = linkify_citations(html)
+        self.assertIn('<pre><code>x[1]</code></pre>', result)
+        self.assertIn('<pre><code>y[2]</code></pre>', result)
+        self.assertIn('Text<sup><a href="#ref-1">1</a></sup>', result)
+
 
 class ArticleDetailCitationRenderingTests(TestCase):
     """End-to-end: [N] placeholders in html_content render as working

@@ -120,6 +120,23 @@
         .prose-article figcaption { margin-top: 0.75rem; font-size: 0.8rem; color: #6b6860; }
         .prose-article sup { vertical-align: super; font-size: 0.7em; }
         .prose-article a { text-decoration: underline; }
+        /* CKEditor's codeBlock ("code" + "codeBlock" toolbar buttons, see
+           CKEDITOR_5_CONFIGS in settings.py) outputs <pre><code
+           class="language-xxx">...</code></pre> for a block and a bare
+           <code>...</code> inline — no syntax highlighter is wired up (no
+           JS library loaded for it), just legible monospace styling. Full
+           column width, not the ~68ch text measure above — code wrapping
+           mid-line is worse than a wider block with its own horizontal
+           scroll for a long line. */
+        .prose-article pre {
+            max-width: none; margin: 2rem 0; padding: 1.25rem 1.5rem; background: #1c1b1a; color: #e8e5e0;
+            overflow-x: auto; font-size: 0.875rem; line-height: 1.6; border-radius: 2px;
+        }
+        .prose-article pre code { font-family: 'Space Mono', monospace; background: none; padding: 0; color: inherit; }
+        .prose-article code {
+            font-family: 'Space Mono', monospace; background: #f0ede8; color: #111110;
+            padding: 0.15em 0.4em; font-size: 0.875em; border-radius: 2px;
+        }
 
         /* The header is `sticky top-0` (see <header> below), so an in-page
            anchor jump — e.g. clicking a [N] citation superscript, which

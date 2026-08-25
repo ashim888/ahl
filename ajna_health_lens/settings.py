@@ -264,10 +264,29 @@ CKEDITOR_5_CONFIGS = {
         'toolbar': [
             'heading', '|', 'bold', 'italic', 'underline', 'link', '|',
             'bulletedList', 'numberedList', 'blockQuote', 'insertTable', '|',
+            'code', 'codeBlock', '|',
             'undo', 'redo', '|', 'sourceEditing',
         ],
         'table': {
             'contentToolbar': ['tableColumn', 'tableRow', 'mergeTableCells'],
+        },
+        # Language options for the "codeBlock" dropdown (a methodology paper
+        # describing an analysis script, most plausibly) — each renders as
+        # <pre><code class="language-{language}">, which is what the
+        # .prose-article pre/code CSS in templates/base.html styles. Not
+        # wired to a real syntax highlighter (no JS highlighting library is
+        # loaded) — the class is there for whichever highlighter gets added
+        # later, or just as a readable label for now.
+        'codeBlock': {
+            'languages': [
+                {'language': 'plaintext', 'label': 'Plain text'},
+                {'language': 'python', 'label': 'Python'},
+                {'language': 'r', 'label': 'R'},
+                {'language': 'sql', 'label': 'SQL'},
+                {'language': 'javascript', 'label': 'JavaScript'},
+                {'language': 'bash', 'label': 'Shell'},
+                {'language': 'json', 'label': 'JSON'},
+            ],
         },
     },
 }
