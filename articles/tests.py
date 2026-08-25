@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .citations import linkify_citations
+from .content_ads import build_content_blocks
 from .models import Article
 
 
@@ -865,3 +866,111 @@ class ArticleCommentsTests(TestCase):
             _comment_post_data(self.article, 'Spam comment.', honeypot='filled-in-by-a-bot'),
         )
         self.assertFalse(XtdComment.objects.filter(comment='Spam comment.').exists())
+
+
+def _paragraphs(n):
+    return ''.join(f'<p>Paragraph {i}.</p>' for i in range(1, n + 1))
+
+
+class ContentBlockSplittingTests(TestCase):
+    """articles.content_ads.build_content_blocks — where in-article ads get
+    injected between paragraphs (see article_detail.html). Pure function,
+    no DB needed for these.
+    """
+
+    def test_empty_content_is_a_single_block_with_no_ad(self):
+        self.assertEqual(build_content_blocks(''), [('', None)])
+        self.assertEqual(build_content_blocks(None), [(None, None)])
+
+    def test_short_article_gets_no_ad_injected(self):
+        html = _paragraphs(3)
+        self.assertEqual(build_content_blocks(html), [(html, None)])
+
+    def test_first_ad_appears_after_the_minimum_paragraph_count(self):
+        html = _paragraphs(4)
+        blocks = build_content_blocks(html)
+        self.assertEqual(len(blocks), 2)
+        self.assertEqual(blocks[0][0], _paragraphs(4))
+        self.assertEqual(blocks[0][1], 'article_in_content')
+        self.assertEqual(blocks[1][1], None)
+
+    def test_zones_alternate_between_rectangle_and_banner(self):
+        # MIN=4, then every 5 more: paragraphs 4, 9, 14 -> 3 injection points.
+        html = _paragraphs(20)
+        blocks = build_content_blocks(html)
+        zones = [zone for _chunk, zone in blocks if zone]
+        self.assertEqual(zones, ['article_in_content', 'article_content_banner', 'article_in_content'])
+
+    def test_never_more_than_the_maximum_ads(self):
+        html = _paragraphs(100)
+        blocks = build_content_blocks(html)
+        ad_count = sum(1 for _chunk, zone in blocks if zone)
+        self.assertEqual(ad_count, 3)
+
+    def test_reassembled_chunks_equal_the_original_content(self):
+        html = _paragraphs(20)
+        blocks = build_content_blocks(html)
+        self.assertEqual(''.join(chunk for chunk, _zone in blocks), html)
+
+    def test_split_only_happens_at_paragraph_boundaries(self):
+        html = _paragraphs(20)
+        for chunk, _zone in build_content_blocks(html)[:-1]:
+            self.assertTrue(chunk.endswith('</p>'))
+
+
+class InArticleAdInjectionRenderingTests(TestCase):
+    """End-to-end: a long article's rendered page actually shows in-article
+    ads between paragraphs, not just the existing fixed one before the body.
+    """
+
+    def _make_ad(self, zone, size, sponsor_name):
+        import io
+
+        from django.core.files.base import ContentFile
+        from PIL import Image
+
+        from ads.models import AdSlot
+
+        buffer = io.BytesIO()
+        Image.new('RGB', size).save(buffer, format='JPEG')
+        return AdSlot.objects.create(
+            sponsor_name=sponsor_name, zone=zone,
+            image=ContentFile(buffer.getvalue(), name=f'{zone}.jpg'), link_url='https://example.com',
+        )
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        from ads.models import AdSlot
+        self._make_ad(AdSlot.Zone.ARTICLE_IN_CONTENT, (336, 280), 'Rectangle Sponsor')
+        self._make_ad(AdSlot.Zone.ARTICLE_CONTENT_BANNER, (728, 90), 'Banner Sponsor')
+
+    def test_short_article_shows_no_in_article_ad(self):
+        article = make_article('short-in-article-ad', Article.ArticleType.NEWS_COMMENTARY)
+        article.html_content = _paragraphs(3)
+        article.save()
+        response = self.client.get(article.get_absolute_url())
+        content = response.content.decode()
+        # The fixed ad before the body (unrelated to injection) still shows,
+        # exactly once — a short article just gets no *additional* ones.
+        self.assertEqual(content.count('Rectangle Sponsor'), 1)
+        self.assertNotIn('Banner Sponsor', content)
+
+    def test_long_article_shows_ads_between_paragraphs(self):
+        article = make_article('long-in-article-ad', Article.ArticleType.NEWS_COMMENTARY)
+        article.html_content = _paragraphs(20)
+        article.save()
+        response = self.client.get(article.get_absolute_url())
+        content = response.content.decode()
+        self.assertIn('Banner Sponsor', content)
+        # "Rectangle Sponsor" appears twice on this page: the fixed ad
+        # before the body, then again as the first in-article injection
+        # (alternation starts with the rectangle zone) — the second
+        # occurrence is the one that has to land between paragraphs 4 and 5.
+        first_rectangle_ad = content.index('Rectangle Sponsor')
+        second_rectangle_ad = content.index('Rectangle Sponsor', first_rectangle_ad + 1)
+        self.assertLess(content.index('Paragraph 4.'), second_rectangle_ad)
+        self.assertLess(second_rectangle_ad, content.index('Paragraph 5.'))
+        # Second injection point (banner, after paragraph 9) lands correctly too.
+        self.assertLess(content.index('Paragraph 9.'), content.index('Banner Sponsor'))
+        self.assertLess(content.index('Banner Sponsor'), content.index('Paragraph 10.'))

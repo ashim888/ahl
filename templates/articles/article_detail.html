@@ -126,7 +126,12 @@
             {% if show_full_text %}
                 {% if article.html_content %}
                     <div class="prose-article leading-relaxed text-foreground">
-                        {{ rendered_html_content|safe }}
+                        {% for chunk, ad_zone in content_blocks %}
+                            {{ chunk|safe }}
+                            {% if ad_zone %}
+                                {% ad_slot ad_zone wrapper_class='my-10 flex justify-center' %}
+                            {% endif %}
+                        {% endfor %}
                     </div>
                 {% else %}
                     <p class="text-sm text-muted-foreground">Full text has not been added for this article yet.</p>

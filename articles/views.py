@@ -25,6 +25,7 @@ from users.decorators import role_required
 from users.models import User
 
 from .citations import linkify_citations
+from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
 from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView
@@ -270,7 +271,7 @@ class ArticleDetailView(DetailView):
             (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
         )
         context['show_full_text'] = article_is_accessible(self.request.user, self.object)
-        context['rendered_html_content'] = linkify_citations(self.object.html_content)
+        context['content_blocks'] = build_content_blocks(linkify_citations(self.object.html_content))
         if self.object.references:
             context['references_list'] = [
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
@@ -731,7 +732,7 @@ def article_preview(request):
         'show_full_text': True,
         'preview_mode': True,
         'related_articles': [],
-        'rendered_html_content': linkify_citations(article.html_content),
+        'content_blocks': build_content_blocks(linkify_citations(article.html_content)),
     }
     if article.references:
         context['references_list'] = [

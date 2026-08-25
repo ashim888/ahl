@@ -46,6 +46,16 @@ class AdSlot(models.Model):
         # the old zone rather than orphaning them.
         HOMEPAGE_LEADERBOARD = 'homepage_leaderboard', 'Homepage — Leaderboard (728×90)'
         ARTICLE_IN_CONTENT = 'article_in_content', 'In-Article — Large Rectangle (336×280)'
+        # Injected between paragraphs partway through a long article's body
+        # (articles/content_ads.py + article_detail.html), not a fixed
+        # placement — alternates with ARTICLE_IN_CONTENT (rectangle) at each
+        # injection point rather than getting its own separate rectangle
+        # zone, so a longer article doesn't read as one shape breaking it up
+        # over and over. Same 728×90 shape as the site's other leaderboards
+        # (kept consistent rather than inventing a third banner size), auto-
+        # scaled down by the existing responsive max-width handling to fit
+        # the ~699px article column.
+        ARTICLE_CONTENT_BANNER = 'article_content_banner', 'Article Body — Banner (728×90)'
         ARTICLE_SIDEBAR = 'article_sidebar', 'Article Sidebar — Medium Rectangle (300×250)'
         # Was a 160×600 Wide Skyscraper in a sidebar column that renders at
         # ~379px wide — under half the column filled. 300×600 (a Half Page,
@@ -69,6 +79,7 @@ class AdSlot(models.Model):
         Zone.HOMEPAGE_RECTANGLE_3: (300, 250),
         Zone.HOMEPAGE_LEADERBOARD: (728, 90),
         Zone.ARTICLE_IN_CONTENT: (336, 280),
+        Zone.ARTICLE_CONTENT_BANNER: (728, 90),
         Zone.ARTICLE_SIDEBAR: (300, 250),
         Zone.ARTICLE_SIDEBAR_HALF_PAGE: (300, 600),
     }
