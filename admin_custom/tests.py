@@ -104,7 +104,7 @@ class AnalyticsDataTests(TestCase):
 
     def test_ad_totals_and_top_ads(self):
         ad = AdSlot.objects.create(
-            sponsor_name='Sponsor', zone=AdSlot.Zone.HOMEPAGE_RECTANGLE, image=demo_ad_image(),
+            sponsor_name='Sponsor', zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, image=demo_ad_image(),
             link_url='https://example.com',
         )
         record_impression(ad)

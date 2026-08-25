@@ -462,7 +462,7 @@ class AdFreeSubscriberPerkTests(TestCase):
         buffer = io.BytesIO()
         Image.new('RGB', (300, 250)).save(buffer, format='JPEG')
         self.ad = AdSlot.objects.create(
-            sponsor_name='Test Sponsor', zone=AdSlot.Zone.HOMEPAGE_RECTANGLE,
+            sponsor_name='Test Sponsor', zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1,
             image=ContentFile(buffer.getvalue(), name='ad.jpg'), link_url='https://example.com',
         )
 

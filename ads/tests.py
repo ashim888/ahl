@@ -20,7 +20,7 @@ def demo_image(name='ad.jpg', size=(10, 10)):
     return ContentFile(buffer.getvalue(), name=name)
 
 
-def make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE, is_active=True, start_date=None, end_date=None, sponsor_name='Test Sponsor'):
+def make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, is_active=True, start_date=None, end_date=None, sponsor_name='Test Sponsor'):
     return AdSlot.objects.create(
         sponsor_name=sponsor_name, zone=zone, image=demo_image(), link_url='https://example.com/sponsor',
         is_active=is_active, start_date=start_date or timezone.localdate(), end_date=end_date,
@@ -29,32 +29,32 @@ def make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE, is_active=True, start_date=None
 
 class AdSelectionTests(TestCase):
     def test_active_ad_in_zone_is_selected(self):
-        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE)
-        self.assertEqual(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE), ad)
+        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1)
+        self.assertEqual(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE_1), ad)
 
     def test_wrong_zone_is_not_selected(self):
         make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR)
-        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE))
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE_1))
 
     def test_inactive_ad_is_not_selected(self):
-        make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE, is_active=False)
-        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE))
+        make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, is_active=False)
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE_1))
 
     def test_not_yet_started_ad_is_not_selected(self):
-        make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE, start_date=timezone.localdate() + datetime.timedelta(days=1))
-        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE))
+        make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, start_date=timezone.localdate() + datetime.timedelta(days=1))
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE_1))
 
     def test_expired_ad_is_not_selected(self):
         make_ad(
-            zone=AdSlot.Zone.HOMEPAGE_RECTANGLE,
+            zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1,
             start_date=timezone.localdate() - datetime.timedelta(days=10),
             end_date=timezone.localdate() - datetime.timedelta(days=1),
         )
-        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE))
+        self.assertIsNone(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE_1))
 
     def test_ad_with_no_end_date_runs_indefinitely(self):
-        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE, end_date=None)
-        self.assertEqual(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE), ad)
+        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, end_date=None)
+        self.assertEqual(get_ad_for_zone(AdSlot.Zone.HOMEPAGE_RECTANGLE_1), ad)
 
 
 class ImpressionAndClickTrackingTests(TestCase):
@@ -130,13 +130,13 @@ class AdSlotManageTests(TestCase):
         self.assertFalse(ad.is_active)
 
     def test_list_view_includes_zone_stats(self):
-        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE)
+        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1)
         record_impression(ad)
         record_click(ad)
         self.client.force_login(self.editor)
         response = self.client.get(reverse('ads:manage_adslot_list'))
         homepage_stats = next(
-            z for z in response.context['zone_stats'] if z['label'] == AdSlot.Zone.HOMEPAGE_RECTANGLE.label
+            z for z in response.context['zone_stats'] if z['label'] == AdSlot.Zone.HOMEPAGE_RECTANGLE_1.label
         )
         self.assertEqual(homepage_stats['impressions'], 1)
         self.assertEqual(homepage_stats['clicks'], 1)
@@ -151,9 +151,9 @@ class AdSlotListFilterTests(TestCase):
         self.client.force_login(self.editor)
 
     def test_filters_by_zone(self):
-        homepage_ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE, sponsor_name='Homepage Sponsor')
+        homepage_ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, sponsor_name='Homepage Sponsor')
         make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Sidebar Sponsor')
-        response = self.client.get(reverse('ads:manage_adslot_list'), {'zone': AdSlot.Zone.HOMEPAGE_RECTANGLE})
+        response = self.client.get(reverse('ads:manage_adslot_list'), {'zone': AdSlot.Zone.HOMEPAGE_RECTANGLE_1})
         ads = list(response.context['ad_slots'])
         self.assertEqual(ads, [homepage_ad])
 
@@ -196,8 +196,8 @@ class AdSlotAnalyticsTests(TestCase):
 
 class AdSlotDimensionsTests(TestCase):
     def test_width_and_height_match_the_zone(self):
-        ad = make_ad(zone=AdSlot.Zone.ARTICLE_SKYSCRAPER)
-        self.assertEqual(ad.width, 160)
+        ad = make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR_HALF_PAGE)
+        self.assertEqual(ad.width, 300)
         self.assertEqual(ad.height, 600)
 
     def test_every_zone_has_dimensions_defined(self):
@@ -215,14 +215,14 @@ class AdSlotFormDimensionValidationTests(TestCase):
 
     def test_correctly_sized_image_is_accepted(self):
         form = AdSlotForm(data={
-            'sponsor_name': 'Sponsor', 'zone': AdSlot.Zone.HOMEPAGE_RECTANGLE,
+            'sponsor_name': 'Sponsor', 'zone': AdSlot.Zone.HOMEPAGE_RECTANGLE_1,
             'link_url': 'https://example.com', 'start_date': timezone.localdate(), 'is_active': True,
         }, files={'image': demo_image(size=(300, 250))})
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_wrong_sized_image_is_rejected(self):
         form = AdSlotForm(data={
-            'sponsor_name': 'Sponsor', 'zone': AdSlot.Zone.HOMEPAGE_RECTANGLE,
+            'sponsor_name': 'Sponsor', 'zone': AdSlot.Zone.HOMEPAGE_RECTANGLE_1,
             'link_url': 'https://example.com', 'start_date': timezone.localdate(), 'is_active': True,
         }, files={'image': demo_image(size=(600, 200))})
         self.assertFalse(form.is_valid())

@@ -26,11 +26,32 @@ class AdSlot(models.Model):
         HEADER_LEADERBOARD = 'header_leaderboard', 'Site Header — Leaderboard (728×90)'
         MOBILE_ANCHOR = 'mobile_anchor', 'Mobile Anchor Banner (320×50)'
         MOBILE_LARGE_BANNER = 'mobile_large_banner', 'Mobile — Large Banner (320×100)'
-        HOMEPAGE_RECTANGLE = 'homepage_rectangle', 'Homepage Feed — Medium Rectangle (300×250)'
-        HOMEPAGE_HALF_PAGE = 'homepage_half_page', 'Homepage — Half Page (300×600)'
+        # Three same-size slots, not one — a single 300×250 box centered in
+        # the ~1232px homepage feed container leaves large empty margins on
+        # both sides. Rendered side by side (templates/home.html) so however
+        # many of the three an editor has actually filled in fill that width
+        # instead of one narrow box floating in the middle of it. Slot 1 keeps
+        # the original 'homepage_rectangle' value (only its label gained the
+        # "1") since its size/shape hasn't changed; 2 and 3 are new.
+        HOMEPAGE_RECTANGLE_1 = 'homepage_rectangle', 'Homepage Feed — Medium Rectangle 1 (300×250)'
+        HOMEPAGE_RECTANGLE_2 = 'homepage_rectangle_2', 'Homepage Feed — Medium Rectangle 2 (300×250)'
+        HOMEPAGE_RECTANGLE_3 = 'homepage_rectangle_3', 'Homepage Feed — Medium Rectangle 3 (300×250)'
+        # Was a 300×600 Half Page — tall but only 300px wide, leaving large
+        # empty margins either side in the same ~1232px container the three
+        # rectangles above sit in. A 728×90 Leaderboard spans that width
+        # properly instead. Value renamed along with the constant/label (not
+        # left as the stale 'homepage_half_page') so nothing about this zone
+        # still claims to be a half page — see migration 0006, which follows
+        # 0004's precedent for remapping any AdSlot rows already sold under
+        # the old zone rather than orphaning them.
+        HOMEPAGE_LEADERBOARD = 'homepage_leaderboard', 'Homepage — Leaderboard (728×90)'
         ARTICLE_IN_CONTENT = 'article_in_content', 'In-Article — Large Rectangle (336×280)'
         ARTICLE_SIDEBAR = 'article_sidebar', 'Article Sidebar — Medium Rectangle (300×250)'
-        ARTICLE_SKYSCRAPER = 'article_skyscraper', 'Article Sidebar — Wide Skyscraper (160×600)'
+        # Was a 160×600 Wide Skyscraper in a sidebar column that renders at
+        # ~379px wide — under half the column filled. 300×600 (a Half Page,
+        # not a Skyscraper — value renamed along with it, see migration 0006)
+        # uses most of that width instead.
+        ARTICLE_SIDEBAR_HALF_PAGE = 'article_sidebar_half_page', 'Article Sidebar — Half Page (300×600)'
 
     # Standard IAB ad unit sizes (px) — the single source of truth for both
     # upload-time validation (AdSlotForm.clean, "an ad this size" not "an ad
@@ -43,11 +64,13 @@ class AdSlot(models.Model):
         Zone.HEADER_LEADERBOARD: (728, 90),
         Zone.MOBILE_ANCHOR: (320, 50),
         Zone.MOBILE_LARGE_BANNER: (320, 100),
-        Zone.HOMEPAGE_RECTANGLE: (300, 250),
-        Zone.HOMEPAGE_HALF_PAGE: (300, 600),
+        Zone.HOMEPAGE_RECTANGLE_1: (300, 250),
+        Zone.HOMEPAGE_RECTANGLE_2: (300, 250),
+        Zone.HOMEPAGE_RECTANGLE_3: (300, 250),
+        Zone.HOMEPAGE_LEADERBOARD: (728, 90),
         Zone.ARTICLE_IN_CONTENT: (336, 280),
         Zone.ARTICLE_SIDEBAR: (300, 250),
-        Zone.ARTICLE_SKYSCRAPER: (160, 600),
+        Zone.ARTICLE_SIDEBAR_HALF_PAGE: (300, 600),
     }
 
     sponsor_name = models.CharField(max_length=255)
