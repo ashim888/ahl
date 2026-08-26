@@ -27,4 +27,22 @@ cropped to fit the box instead of stretched/distorted.
         </a>
     </div>
 </div>
+{% elif placeholder %}
+{% comment %}
+ads/models.py:AdSettings.show_placeholder_when_empty, toggled at /manage/ads/ — never shown to an
+ad-free (subscriber) reader, see ads_tags.py; sized to the zone like a real ad would be.
+{% endcomment %}
+<div class="{{ wrapper_class }}">
+    <div class="inline-flex flex-col items-center justify-center text-center border border-dashed border-border bg-secondary/40 max-w-full p-4"
+         style="width: {{ placeholder.width }}px; max-width: 100%; aspect-ratio: {{ placeholder.width }} / {{ placeholder.height }};">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">ADVERTISE HERE</p>
+        <p class="font-mono-editorial text-[0.65rem] text-muted-foreground mt-1">{{ placeholder.zone_label }}</p>
+        {% if placeholder.contact_email %}
+            <a href="mailto:{{ placeholder.contact_email }}"
+               class="mt-2 font-mono-editorial text-[0.65rem] underline text-muted-foreground hover:text-accent">
+                Get in touch →
+            </a>
+        {% endif %}
+    </div>
+</div>
 {% endif %}

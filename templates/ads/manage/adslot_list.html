@@ -15,6 +15,23 @@
     </a>
 </div>
 
+<div class="mt-6 flex items-center justify-between gap-4 bg-white rounded-2xl border border-gray-100 p-5">
+    <div>
+        <p class="text-sm font-medium text-gray-900">"Advertise Here" placeholders</p>
+        <p class="text-xs text-gray-500 mt-0.5">
+            When a zone has no active ad sold for it, show an "Advertise Here" box instead of hiding
+            the space entirely. Never shown to a subscriber (ad-free reading), regardless of this setting.
+        </p>
+    </div>
+    <form method="post" action="{% url 'ads:manage_ad_settings_toggle_placeholder' %}" class="shrink-0">
+        {% csrf_token %}
+        <button type="submit"
+                class="px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap {% if ad_placeholder_enabled %}bg-green-50 text-green-700 hover:bg-green-100{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            {% if ad_placeholder_enabled %}Placeholders: ON{% else %}Placeholders: OFF{% endif %}
+        </button>
+    </form>
+</div>
+
     <form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
         <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">Zone</label>

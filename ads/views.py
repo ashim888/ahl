@@ -13,7 +13,7 @@ from users.decorators import role_required
 from users.models import User
 
 from .forms import AdSlotForm
-from .models import AdEvent, AdSlot
+from .models import AdEvent, AdSettings, AdSlot
 from .services import record_click
 
 # House-ad management is editorial content work, same boundary as Article/
@@ -77,6 +77,7 @@ class AdSlotListView(ListView):
                 'ctr': round(clicks / impressions * 100, 2) if impressions else None,
             })
         context['zone_stats'] = zone_stats
+        context['ad_placeholder_enabled'] = AdSettings.get_solo().show_placeholder_when_empty
         return context
 
 
@@ -186,4 +187,19 @@ def adslot_toggle_active(request, pk):
     ad.is_active = not ad.is_active
     ad.save(update_fields=['is_active'])
     messages.success(request, f'"{ad.sponsor_name}" is now {"active" if ad.is_active else "inactive"}.')
+    return redirect('ads:manage_adslot_list')
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def ad_settings_toggle_placeholder(request):
+    """Site-wide switch (AdSettings, singleton) for what an unsold zone
+    shows a reader — an "Advertise Here" placeholder, or nothing (the
+    previous, still-default behavior). See ads_tags.py:ad_slot.
+    """
+    settings_row = AdSettings.get_solo()
+    settings_row.show_placeholder_when_empty = not settings_row.show_placeholder_when_empty
+    settings_row.save(update_fields=['show_placeholder_when_empty'])
+    state = 'on' if settings_row.show_placeholder_when_empty else 'off'
+    messages.success(request, f'"Advertise Here" placeholders for empty ad zones are now {state}.')
     return redirect('ads:manage_adslot_list')

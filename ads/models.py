@@ -155,3 +155,39 @@ class AdEvent(models.Model):
 
     def __str__(self):
         return f'{self.get_event_type_display()} on {self.ad_slot} at {self.occurred_at}'
+
+
+class AdSettings(models.Model):
+    """Singleton (always pk=1) — a site-wide switch for what an unsold ad
+    zone shows a reader, editable from /manage/ads/ without a deploy. Always
+    go through get_solo(), never AdSettings.objects.get(pk=1) directly —
+    get_solo() creates the row on first access, so there's no "run a data
+    migration / visit /admin/ once before this works" step.
+    """
+
+    show_placeholder_when_empty = models.BooleanField(
+        default=False,
+        help_text='When a zone has no active ad sold for it, show an "Advertise Here" placeholder box '
+                   'instead of hiding the space entirely. Never shown to a subscriber with ad-free '
+                   'reading, regardless of this setting — see ads/services.py:is_ad_free_reader.',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Ad settings'
+        verbose_name_plural = 'Ad settings'
+
+    def __str__(self):
+        return 'Ad settings'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass  # Singleton — deleting it would just mean the next get_solo() recreates it at defaults.
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

@@ -10,7 +10,7 @@ from PIL import Image
 from users.models import User
 
 from .forms import AdSlotForm
-from .models import AdEvent, AdSlot
+from .models import AdEvent, AdSettings, AdSlot
 from .services import get_ad_for_request, get_ad_for_zone, record_click, record_impression
 
 
@@ -279,3 +279,109 @@ class AdSlotTemplateTagTests(TestCase):
             email='no-ad-reader@example.com', password='pw', first_name='N', last_name='R',
         )
         self.assertIsNone(get_ad_for_request(request, AdSlot.Zone.MOBILE_ANCHOR))
+
+
+class AdPlaceholderTests(TestCase):
+    """AdSettings.show_placeholder_when_empty (default off) — an "Advertise
+    Here" box for an unsold zone instead of rendering nothing, toggled from
+    /manage/ads/. Never shown to an ad-free (subscriber) reader regardless
+    of the setting. Uses a real page render (Home, which has
+    header_leaderboard/mobile_anchor/mobile_large_banner/homepage_rectangle_1
+    zones with no AdSlot rows created in these tests) rather than calling
+    the tag directly, matching AdSlotTemplateTagTests' approach.
+    """
+
+    def setUp(self):
+        AdSettings.objects.all().delete()
+
+    def test_placeholder_hidden_by_default(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotContains(response, 'ADVERTISE HERE')
+
+    def test_placeholder_shown_when_enabled(self):
+        settings_row = AdSettings.get_solo()
+        settings_row.show_placeholder_when_empty = True
+        settings_row.save()
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'ADVERTISE HERE')
+        self.assertContains(response, 'Site Header — Leaderboard')
+
+    def test_placeholder_never_shown_to_ad_free_subscriber(self):
+        from billing.models import SubscriptionPlan, UserSubscription
+
+        settings_row = AdSettings.get_solo()
+        settings_row.show_placeholder_when_empty = True
+        settings_row.save()
+        reader = User.objects.create_user(
+            email='placeholder-subscriber@example.com', password='pw', first_name='S', last_name='R',
+        )
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotContains(response, 'ADVERTISE HERE')
+
+    def test_real_ad_takes_priority_over_placeholder(self):
+        settings_row = AdSettings.get_solo()
+        settings_row.show_placeholder_when_empty = True
+        settings_row.save()
+        make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Real Sponsor')
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'Real Sponsor')
+        # Header leaderboard zone is filled — no placeholder for that zone —
+        # but other empty zones on the same page should still show one.
+        self.assertContains(response, 'ADVERTISE HERE')
+
+    def test_get_solo_creates_row_on_first_access(self):
+        self.assertEqual(AdSettings.objects.count(), 0)
+        settings_row = AdSettings.get_solo()
+        self.assertFalse(settings_row.show_placeholder_when_empty)
+        self.assertEqual(AdSettings.objects.count(), 1)
+        self.assertEqual(AdSettings.get_solo().pk, settings_row.pk)
+
+
+class AdSettingsManageViewTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='ad-settings-editor@example.com', password='pw', first_name='E', last_name='D',
+            role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(
+            email='ad-settings-reader@example.com', password='pw', first_name='R', last_name='D',
+        )
+
+    def test_editor_can_toggle_placeholder_setting(self):
+        self.client.force_login(self.editor)
+        self.assertFalse(AdSettings.get_solo().show_placeholder_when_empty)
+        response = self.client.post(reverse('ads:manage_ad_settings_toggle_placeholder'), follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(AdSettings.get_solo().show_placeholder_when_empty)
+        # Toggling again flips it back off.
+        self.client.post(reverse('ads:manage_ad_settings_toggle_placeholder'))
+        self.assertFalse(AdSettings.get_solo().show_placeholder_when_empty)
+
+    def test_non_editor_cannot_toggle(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('ads:manage_ad_settings_toggle_placeholder'))
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(AdSettings.get_solo().show_placeholder_when_empty)
+
+    def test_get_request_not_allowed(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ad_settings_toggle_placeholder'))
+        self.assertEqual(response.status_code, 405)
+
+    def test_toggle_button_shown_on_manage_list_page(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        self.assertContains(response, 'Placeholders: OFF')
+        settings_row = AdSettings.get_solo()
+        settings_row.show_placeholder_when_empty = True
+        settings_row.save()
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        self.assertContains(response, 'Placeholders: ON')

@@ -10,14 +10,24 @@ from billing.access import user_has_active_subscription
 from .models import AdEvent, AdSlot
 
 
-def get_ad_for_request(request, zone):
-    """None for a reader with an active subscription — "ad-free reading" is
-    a promised subscriber perk (billing app) — otherwise picks and records
-    one impression for `zone`. Deliberately never cached: subscription
-    status is per-request, and an impression must be counted on every real
-    view, not once per cache TTL.
+def is_ad_free_reader(request):
+    """True for a reader with an active subscription — "ad-free reading" is
+    a promised subscriber perk (billing app). Split out from
+    get_ad_for_request so the `ad_slot` tag can tell "no ad sold for this
+    zone" (may show an "Advertise Here" placeholder, see AdSettings) apart
+    from "this reader never sees ads at all" (never a placeholder either —
+    a placeholder is still an ad-shaped thing occupying the page).
     """
-    if request.user.is_authenticated and user_has_active_subscription(request.user):
+    return request.user.is_authenticated and user_has_active_subscription(request.user)
+
+
+def get_ad_for_request(request, zone):
+    """None for an ad-free reader — otherwise picks and records one
+    impression for `zone`. Deliberately never cached: subscription status
+    is per-request, and an impression must be counted on every real view,
+    not once per cache TTL.
+    """
+    if is_ad_free_reader(request):
         return None
     ad = get_ad_for_zone(zone)
     if ad:
