@@ -78,12 +78,12 @@
                 {{ article.title }}
             </h1>
 
-            {% if article.keywords %}
+            {% if keyword_list %}
                 <div class="flex flex-wrap gap-2 mb-6">
-                    {% for tag in article.keywords|split_comma %}
-                        <a href="{% url 'articles:article_list' %}?keyword={{ tag|urlencode }}"
+                    {% for kw in keyword_list %}
+                        <a href="{% url 'articles:article_list' %}?keyword={{ kw.slug }}"
                            class="font-mono-editorial text-[0.65rem] tracking-wider uppercase bg-secondary text-muted-foreground px-2.5 py-1 rounded-full hover:bg-foreground hover:text-primary-foreground transition-colors">
-                            {{ tag }}
+                            {{ kw.name }}
                         </a>
                     {% endfor %}
                 </div>
@@ -194,12 +194,12 @@
                 </div>
             {% endif %}
 
-            {% if article.keywords %}
+            {% if keyword_list %}
                 <div class="flex flex-wrap gap-2 mt-12 pt-8 border-t border-border">
-                    {% for tag in article.keywords|split_comma %}
-                        <a href="{% url 'articles:article_list' %}?keyword={{ tag|urlencode }}"
+                    {% for kw in keyword_list %}
+                        <a href="{% url 'articles:article_list' %}?keyword={{ kw.slug }}"
                            class="font-mono-editorial text-xs border border-border px-3 py-1 hover:border-foreground hover:text-accent transition-colors">
-                            {{ tag }}
+                            {{ kw.name }}
                         </a>
                     {% endfor %}
                 </div>

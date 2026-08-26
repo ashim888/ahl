@@ -16,6 +16,7 @@ urlpatterns = [
     path('index/', views.HomeView.as_view(), name='home'),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
     path('search/', views.SearchView.as_view(), name='search'),
+    path('keywords/autocomplete/', views.keyword_autocomplete, name='keyword_autocomplete'),
     path('feed/', LatestArticlesFeed(), name='latest_feed'),
     path('feed/atom/', LatestArticlesAtomFeed(), name='latest_feed_atom'),
     # Must come before <slug:slug> below — a bare short code (e.g. "3f2a4")

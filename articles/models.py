@@ -30,6 +30,34 @@ def generate_short_code():
     return ''.join(secrets.choice(SHORT_CODE_ALPHABET) for _ in range(SHORT_CODE_LENGTH))
 
 
+class Keyword(models.Model):
+    """A normalized tag, replacing what used to be a raw comma-separated
+    string on Article.keywords (August 2026) — the free-text version let
+    the same concept fragment into several different spellings ("Diabetes"/
+    "diabetes"/"Type 2 Diabetes"), which made keyword search a fragile
+    substring match on a joined blob instead of a real lookup. `slug` (not
+    `name`) is the actual identity for dedup/lookup purposes — case and
+    punctuation differences in `name` fold to the same slug via
+    Article.keyword_tags's get_or_create in articles/forms.py, so an editor
+    typing "Diabetes" when "diabetes" already exists reuses the same row
+    rather than creating a near-duplicate.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
 class Article(models.Model):
     """A published (or in-production) piece of content.
 
@@ -74,7 +102,12 @@ class Article(models.Model):
         help_text='Auto-generated permalink code — also reachable at /articles/<code>/.',
     )
     abstract = models.TextField()
-    keywords = models.CharField(max_length=500, null=True, blank=True)
+    # Was a flat comma-separated CharField (pre-August 2026) — replaced with
+    # a real M2M to Keyword so the same concept doesn't fragment into near-
+    # duplicate spellings, and so keyword search/filter can do an exact tag
+    # lookup instead of an icontains substring match on a joined string. See
+    # Keyword's docstring above and articles/forms.py's TagifyKeywordsField.
+    keyword_tags = models.ManyToManyField(Keyword, blank=True, related_name='articles')
     article_type = models.CharField(max_length=30, choices=ArticleType.choices)
     # A per-article editorial/business call, independent of article_type —
     # see ROADMAP.md Phase 7 "Business model (revised — three access tiers)".

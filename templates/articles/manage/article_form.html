@@ -2,7 +2,18 @@
 
 {% block title %}{% if is_create %}New Article{% else %}Edit Article{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}{% if is_create %}New Article{% else %}Edit Article{% endif %}{% endblock %}
-{% block extra_head %}{{ form.media }}{% endblock %}
+{% block extra_head %}
+    {{ form.media }}
+    {% comment %}
+    Tagify — vanilla JS tag input, no build step (matches this project's
+    CDN-only JS approach elsewhere, e.g. D3.js for article charts). Turns
+    the keywords field's plain text input into chip-style tag entry, with
+    remote autocomplete against articles:keyword_autocomplete — see the
+    init script below and ArticleForm.TagifyKeywordsField.
+    {% endcomment %}
+    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+{% endblock %}
 
 {% block content %}
 <div class="">
@@ -348,6 +359,38 @@ document.addEventListener('DOMContentLoaded', function () {
         form.action = originalAction;
         form.target = originalTarget;
     });
+
+    // Keywords — Tagify progressively enhances the plain text input
+    // ArticleForm.TagifyKeywordsField renders (JS off still works: it's a
+    // real text input either way). enforceWhitelist is deliberately off —
+    // an editor can type a brand-new keyword, not just pick an existing
+    // one; TagifyKeywordsField.to_python() creates it on save. Suggestions
+    // come from articles:keyword_autocomplete, re-fetched on every
+    // keystroke and debounced by Tagify's own built-in input event.
+    var keywordsInput = document.getElementById('id_keywords');
+    if (keywordsInput && window.Tagify) {
+        var tagify = new Tagify(keywordsInput, {
+            enforceWhitelist: false,
+            dropdown: { enabled: 1, maxItems: 20, closeOnSelect: false },
+        });
+        var autocompleteController = null;
+        tagify.on('input', function (e) {
+            var query = e.detail.value;
+            if (autocompleteController) autocompleteController.abort();
+            autocompleteController = new AbortController();
+            fetch('{% url "articles:keyword_autocomplete" %}?q=' + encodeURIComponent(query), {
+                signal: autocompleteController.signal,
+            })
+                .then(function (response) { return response.json(); })
+                .then(function (suggestions) {
+                    tagify.whitelist = suggestions;
+                    tagify.dropdown.show.call(tagify, query);
+                })
+                .catch(function (error) {
+                    if (error.name !== 'AbortError') throw error;
+                });
+        });
+    }
 });
 </script>
 {% endblock %}

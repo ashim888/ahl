@@ -2,14 +2,27 @@
 
 {% block title %}Articles — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block extra_head %}
+    {% comment %}
+    Tagify — same library/CDN as the editorial article form (see
+    templates/articles/manage/article_form.html) — here in `mode: 'select'`
+    (pick one real, existing keyword to filter by; enforceWhitelist: true,
+    unlike the editorial form, since browsing has nothing sensible to
+    "create") rather than free multi-tag entry.
+    {% endcomment %}
+    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
     <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Articles</h1>
 
-    <form method="get" class="mt-6 flex items-center gap-2 max-w-sm">
+    <form method="get" class="mt-6 flex items-center gap-2 max-w-sm" id="keyword-search-form">
         {% if selected_type %}<input type="hidden" name="type" value="{{ selected_type }}">{% endif %}
-        <input type="text" name="keyword" value="{{ selected_keyword }}" placeholder="Search by keyword…"
+        <input type="hidden" name="keyword" id="keyword-slug-input" value="{{ selected_keyword }}">
+        <input type="text" id="keyword-search-input" value="{{ selected_keyword_json }}" placeholder="Search by keyword…"
                class="flex-1 border border-border px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-foreground">
         <button type="submit"
                 class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors whitespace-nowrap">
@@ -18,7 +31,7 @@
     </form>
     {% if selected_keyword %}
         <p class="mt-3 text-sm text-muted-foreground">
-            Tagged <span class="font-semibold text-foreground">{{ selected_keyword }}</span>
+            Tagged <span class="font-semibold text-foreground">{{ selected_keyword_label }}</span>
             <a href="{% url 'articles:article_list' %}{% if selected_type %}?type={{ selected_type }}{% endif %}" class="ml-2 underline hover:text-accent">Clear</a>
         </p>
     {% endif %}
@@ -80,4 +93,48 @@
 
     {% include 'includes/pagination_editorial.html' %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Reader-facing keyword browse/search — picks one *real, existing*
+    // keyword (enforceWhitelist: true; unlike the editorial form, there's
+    // nothing sensible to create here) and submits its slug via the hidden
+    // #keyword-slug-input, matching ArticleListView's exact-slug filter.
+    var searchInput = document.getElementById('keyword-search-input');
+    var slugInput = document.getElementById('keyword-slug-input');
+    var searchForm = document.getElementById('keyword-search-form');
+    if (searchInput && window.Tagify) {
+        var tagify = new Tagify(searchInput, {
+            mode: 'select',
+            enforceWhitelist: true,
+            dropdown: { enabled: 0, maxItems: 20, closeOnSelect: true },
+        });
+        var controller = null;
+        tagify.on('input', function (e) {
+            var query = e.detail.value;
+            if (controller) controller.abort();
+            controller = new AbortController();
+            fetch('{% url "articles:keyword_autocomplete" %}?q=' + encodeURIComponent(query), {
+                signal: controller.signal,
+            })
+                .then(function (response) { return response.json(); })
+                .then(function (suggestions) {
+                    tagify.whitelist = suggestions;
+                    tagify.dropdown.show.call(tagify, query);
+                })
+                .catch(function (error) {
+                    if (error.name !== 'AbortError') throw error;
+                });
+        });
+        tagify.on('add', function (e) {
+            slugInput.value = (e.detail.data && e.detail.data.slug) || '';
+            searchForm.submit();
+        });
+        tagify.on('remove', function () {
+            slugInput.value = '';
+            searchForm.submit();
+        });
+    }
+});
+</script>
 {% endblock %}

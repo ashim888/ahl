@@ -5,9 +5,10 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
+from django.utils.text import slugify
 
 from ads.models import AdSlot
-from articles.models import Article, ArticleAuthor, ArticleView
+from articles.models import Article, ArticleAuthor, ArticleView, Keyword
 from billing.models import PlanFeature, SubscriptionPlan
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
@@ -25,6 +26,25 @@ DEMO_PASSWORD = 'DemoPass123!'
 
 def demo_pdf(name):
     return ContentFile(f'%PDF-1.4 demo content for {name}'.encode(), name=name)
+
+
+def get_keywords_or_create(comma_separated):
+    """This command's own equivalent of ArticleForm.TagifyKeywordsField —
+    turns a plain comma-separated string (kept that way in this file only,
+    for readability of the demo specs below) into real Keyword rows,
+    deduped by slug the same way an editor's Tagify input is.
+    """
+    keywords = []
+    seen_slugs = set()
+    for raw_name in comma_separated.split(','):
+        name = raw_name.strip()
+        slug = slugify(name)
+        if not slug or slug in seen_slugs:
+            continue
+        seen_slugs.add(slug)
+        keyword, _created = Keyword.objects.get_or_create(slug=slug, defaults={'name': name})
+        keywords.append(keyword)
+    return keywords
 
 
 def demo_jpeg(name, size=(600, 200), color=(210, 210, 200)):
@@ -369,6 +389,12 @@ class Command(BaseCommand):
         for spec in specs:
             authors = spec.pop('authors')
             homepage_section = spec.pop('homepage_section', '')
+            # keywords is a plain comma-separated string here for readability
+            # in this file only — Article itself has no such field anymore
+            # (August 2026: replaced by the Keyword model + keyword_tags M2M,
+            # see articles/models.py). get_keywords_or_create below is this
+            # command's own equivalent of ArticleForm.TagifyKeywordsField.
+            keywords = spec.pop('keywords', '')
             article, created = Article.objects.get_or_create(slug=spec['slug'], defaults=spec)
             if created:
                 for order, (author, is_corresponding) in enumerate(authors):
@@ -384,6 +410,7 @@ class Command(BaseCommand):
             if article.homepage_section != homepage_section:
                 article.homepage_section = homepage_section
                 article.save(update_fields=['homepage_section'])
+            article.keyword_tags.set(get_keywords_or_create(keywords))
             articles[article.slug] = article
         self.stdout.write(f'  {len(articles)} articles ready.')
         return articles

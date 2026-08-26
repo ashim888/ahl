@@ -17,7 +17,7 @@
 
     {% if query %}
         <p class="mt-6 font-mono-editorial text-xs text-muted-foreground tracking-widest">
-            {{ page_obj.paginator.count|default:articles|length }} RESULT(S) FOR "{{ query }}"
+            {{ page_obj.paginator.count }} RESULT(S) FOR "{{ query }}"
         </p>
     {% endif %}
 

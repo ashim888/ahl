@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 
 from django.conf import settings
@@ -29,7 +30,7 @@ from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
-from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView
+from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Keyword
 from .seo import news_article_structured_data
 
 # Article types treated as "peer-reviewed research" for the homepage's
@@ -218,9 +219,10 @@ class ArticleListView(ListView):
     """All published articles, paginated by 10, optionally filtered by
     ?type=<article_type> (this also serves as the "News" section — pass
     type=news_commentary — per ROADMAP.md Phase 3 rather than a separate view)
-    and/or ?keyword=<value> (Article.keywords is a flat comma-separated
-    CharField, not a real tag model — see the split_comma template filter —
-    so this is an icontains match against it, not an exact-tag lookup).
+    and/or ?keyword=<slug> — an exact match against Keyword.slug via the
+    Article.keyword_tags M2M (August 2026: was an icontains substring match
+    against a flat comma-separated CharField; see Keyword's docstring in
+    articles/models.py for why that changed).
     """
 
     model = Article
@@ -237,14 +239,29 @@ class ArticleListView(ListView):
             queryset = queryset.filter(article_type=article_type)
         keyword = self.request.GET.get('keyword')
         if keyword:
-            queryset = queryset.filter(keywords__icontains=keyword)
+            queryset = queryset.filter(keyword_tags__slug=keyword)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['article_types'] = Article.ArticleType.choices
         context['selected_type'] = self.request.GET.get('type', '')
-        context['selected_keyword'] = self.request.GET.get('keyword', '')
+        selected_keyword_slug = self.request.GET.get('keyword', '')
+        context['selected_keyword'] = selected_keyword_slug
+        selected_keyword_label = (
+            Keyword.objects.filter(slug=selected_keyword_slug).values_list('name', flat=True).first() or ''
+            if selected_keyword_slug else ''
+        )
+        context['selected_keyword_label'] = selected_keyword_label
+        # Pre-fills the Tagify keyword-search box (article_list.html) in its
+        # expected format — same {"value", "slug"} shape keyword_autocomplete
+        # returns, so the same JS "add" handler that reads .data.slug works
+        # whether the tag came from a fresh autocomplete pick or this initial
+        # server-rendered state.
+        context['selected_keyword_json'] = (
+            json.dumps([{'value': selected_keyword_label, 'slug': selected_keyword_slug}])
+            if selected_keyword_label else '[]'
+        )
         return context
 
 
@@ -272,6 +289,7 @@ class ArticleDetailView(DetailView):
             (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
         )
         context['show_full_text'] = article_is_accessible(self.request.user, self.object)
+        context['keyword_list'] = list(self.object.keyword_tags.all())
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
         context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
         context['content_blocks'] = build_content_blocks(html_with_ids)
@@ -447,13 +465,15 @@ def _fulltext_boolean_query(raw_query):
 
 @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True), name='dispatch')
 class SearchView(ListView):
-    """Public search — backed by a MySQL FULLTEXT index on (title, abstract,
-    keywords) (see migration 0015) for real word-based matching, e.g. word
-    order doesn't matter and results aren't limited to a single contiguous
-    substring. The plain icontains scan is kept alongside it (not replaced)
-    for two reasons: author name isn't part of the FULLTEXT index, and short
-    tokens (under MySQL's ~3-char minimum, common for medical acronyms like
-    "TB"/"HIV"/"flu") would otherwise silently stop matching anything.
+    """Public search — backed by a MySQL FULLTEXT index on (title, abstract)
+    (see migration 0015, narrowed in 0021 when keywords moved off this table
+    onto Keyword/keyword_tags — see articles/models.py) for real word-based
+    matching, e.g. word order doesn't matter and results aren't limited to a
+    single contiguous substring. The plain icontains scan is kept alongside
+    it (not replaced) for three reasons: author name and keyword name aren't
+    part of the FULLTEXT index, and short tokens (under MySQL's ~3-char
+    minimum, common for medical acronyms like "TB"/"HIV"/"flu") would
+    otherwise silently stop matching anything.
     """
 
     model = Article
@@ -471,13 +491,13 @@ class SearchView(ListView):
             icontains_filter = (
                 Q(title__icontains=self.query)
                 | Q(abstract__icontains=self.query)
-                | Q(keywords__icontains=self.query)
+                | Q(keyword_tags__name__icontains=self.query)
                 | Q(authors__first_name__icontains=self.query)
                 | Q(authors__last_name__icontains=self.query)
             )
             if boolean_query:
                 relevance = RawSQL(
-                    'MATCH(articles_article.title, articles_article.abstract, articles_article.keywords) '
+                    'MATCH(articles_article.title, articles_article.abstract) '
                     'AGAINST (%s IN BOOLEAN MODE)',
                     (boolean_query,), output_field=FloatField(),
                 )
@@ -503,6 +523,21 @@ class SearchView(ListView):
         context = super().get_context_data(**kwargs)
         context['query'] = self.query
         return context
+
+
+@ratelimit(key='ip', rate='30/m', method='GET', block=True)
+def keyword_autocomplete(request):
+    """Suggests existing Keyword names for a Tagify input to autocomplete
+    from — shared by the editorial article form (ArticleForm's keywords
+    field) and the public keyword search box (templates/articles/article_list.html).
+    Public/unauthenticated on purpose: a reader typing into the public
+    keyword search needs the same suggestions an editor gets, and the
+    response is read-only (existing keyword names only, never creates one —
+    that only happens on an actual article save, see TagifyKeywordsField).
+    """
+    query = request.GET.get('q', '').strip()
+    keywords = Keyword.objects.filter(name__icontains=query)[:20] if query else Keyword.objects.all()[:20]
+    return JsonResponse([{'value': kw.name, 'slug': kw.slug} for kw in keywords], safe=False)
 
 
 # -- Editorial article management (CRUD, not public browsing) --------------
@@ -588,6 +623,7 @@ def article_autosave(request):
 
     try:
         article.save()
+        form.save_m2m()  # keyword_tags — see ArticleForm.save()'s commit=False contract
     except IntegrityError:
         return JsonResponse(
             {'ok': False, 'errors': {'__all__': ['Could not save — check the slug and DOI are unique.']}}, status=400,
@@ -735,6 +771,10 @@ def article_preview(request):
         'show_full_text': True,
         'preview_mode': True,
         'related_articles': [],
+        # article.keyword_tags can't be queried — this instance is never
+        # saved (see the view's docstring), so it has no pk. Pulled straight
+        # from cleaned_data instead of the unsaved instance's M2M.
+        'keyword_list': form.cleaned_data.get('keywords', []),
     }
     _html_with_ids, _toc_entries = extract_toc(linkify_citations(article.html_content))
     context['toc_entries'] = _toc_entries if len(_toc_entries) > MIN_HEADINGS_FOR_TOC else []

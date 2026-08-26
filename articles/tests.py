@@ -1,12 +1,15 @@
 import datetime
 
+from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
-from .models import Article
+from .forms import ArticleForm, TagifyKeywordsField
+from .models import Article, Keyword
 from .toc import extract_toc
 
 
@@ -199,40 +202,180 @@ class EngagementCounterTests(TestCase):
         self.assertEqual(article.download_count, 0)
 
 
+def make_keyword(name):
+    return Keyword.objects.create(name=name, slug=slugify(name))
+
+
 class KeywordBrowsingTests(TestCase):
+    """August 2026: Article.keywords (flat comma-separated CharField) was
+    replaced by Keyword + Article.keyword_tags (a real M2M) — see Keyword's
+    docstring in articles/models.py. ?keyword=<slug> is now an exact match,
+    not an icontains substring match against a joined string.
+    """
+
     def test_keyword_pill_links_to_filtered_list(self):
         article = Article.objects.create(
             title='Tagged Article', slug='tagged-article', abstract='Abstract',
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
-            keywords='tuberculosis, screening',
         )
+        article.keyword_tags.set([make_keyword('Tuberculosis'), make_keyword('Screening')])
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
         self.assertContains(response, '?keyword=tuberculosis')
 
     def test_article_list_filters_by_keyword(self):
+        tb_keyword = make_keyword('Tuberculosis')
         matching = Article.objects.create(
             title='TB Article', slug='tb-article', abstract='Abstract',
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
-            keywords='tuberculosis, screening',
         )
+        matching.keyword_tags.set([tb_keyword, make_keyword('Screening')])
         other = Article.objects.create(
             title='Unrelated Article', slug='unrelated-article', abstract='Abstract',
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
-            keywords='maternal health',
         )
-        response = self.client.get(reverse('articles:article_list'), {'keyword': 'tuberculosis'})
+        other.keyword_tags.set([make_keyword('Maternal Health')])
+        response = self.client.get(reverse('articles:article_list'), {'keyword': tb_keyword.slug})
         articles = list(response.context['articles'])
         self.assertIn(matching, articles)
         self.assertNotIn(other, articles)
         self.assertEqual(response.context['selected_keyword'], 'tuberculosis')
+        self.assertEqual(response.context['selected_keyword_label'], 'Tuberculosis')
 
     def test_keyword_search_box_prefills_current_keyword(self):
+        make_keyword('Tuberculosis')
         response = self.client.get(reverse('articles:article_list'), {'keyword': 'tuberculosis'})
-        self.assertContains(response, 'value="tuberculosis"')
+        self.assertContains(response, '&quot;value&quot;: &quot;Tuberculosis&quot;')
+        self.assertContains(response, '&quot;slug&quot;: &quot;tuberculosis&quot;')
 
     def test_type_pill_preserves_active_keyword_filter(self):
+        make_keyword('Tuberculosis')
         response = self.client.get(reverse('articles:article_list'), {'keyword': 'tuberculosis'})
         self.assertContains(response, '&keyword=tuberculosis')
+
+    def test_unknown_keyword_slug_returns_no_results_without_error(self):
+        Article.objects.create(
+            title='Some Article', slug='some-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        response = self.client.get(reverse('articles:article_list'), {'keyword': 'does-not-exist'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['articles']), [])
+        self.assertEqual(response.context['selected_keyword_label'], '')
+
+
+class KeywordModelTests(TestCase):
+    def test_slug_auto_generated_from_name(self):
+        keyword = Keyword.objects.create(name='Maternal Health')
+        self.assertEqual(keyword.slug, 'maternal-health')
+
+    def test_explicit_slug_is_not_overwritten(self):
+        keyword = Keyword.objects.create(name='Maternal Health', slug='custom-slug')
+        self.assertEqual(keyword.slug, 'custom-slug')
+
+    def test_name_is_unique(self):
+        Keyword.objects.create(name='Diabetes')
+        with self.assertRaises(IntegrityError):
+            Keyword.objects.create(name='Diabetes')
+
+
+class TagifyKeywordsFieldTests(TestCase):
+    def test_parses_tagify_json_format(self):
+        field = TagifyKeywordsField()
+        keywords = field.clean('[{"value": "Diabetes"}, {"value": "Cardiology"}]')
+        self.assertEqual([k.name for k in keywords], ['Diabetes', 'Cardiology'])
+        self.assertEqual(Keyword.objects.count(), 2)
+
+    def test_falls_back_to_comma_split_for_non_json_input(self):
+        field = TagifyKeywordsField()
+        keywords = field.clean('Diabetes, Cardiology')
+        self.assertEqual([k.name for k in keywords], ['Diabetes', 'Cardiology'])
+
+    def test_reuses_existing_keyword_by_slug_not_by_exact_casing(self):
+        existing = make_keyword('diabetes')
+        field = TagifyKeywordsField()
+        keywords = field.clean('[{"value": "Diabetes"}]')
+        self.assertEqual(keywords, [existing])
+        self.assertEqual(Keyword.objects.count(), 1)
+
+    def test_duplicate_tags_in_one_submission_are_deduped(self):
+        field = TagifyKeywordsField()
+        keywords = field.clean('[{"value": "Diabetes"}, {"value": "diabetes"}]')
+        self.assertEqual(len(keywords), 1)
+
+    def test_empty_value(self):
+        field = TagifyKeywordsField(required=False)
+        self.assertEqual(field.clean(''), [])
+
+
+class ArticleFormKeywordsTests(TestCase):
+    def _valid_data(self, **overrides):
+        data = {
+            'title': 'A New Article', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'abstract': 'An abstract.',
+        }
+        data.update(overrides)
+        return data
+
+    def test_save_creates_keyword_rows_and_links_them(self):
+        form = ArticleForm(data=self._valid_data(keywords='[{"value": "Diabetes"}, {"value": "Cardiology"}]'))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertEqual(sorted(k.name for k in article.keyword_tags.all()), ['Cardiology', 'Diabetes'])
+
+    def test_commit_false_defers_keywords_until_save_m2m(self):
+        form = ArticleForm(data=self._valid_data(keywords='[{"value": "Diabetes"}]'))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save(commit=False)
+        article.save()
+        self.assertEqual(article.keyword_tags.count(), 0)
+        form.save_m2m()
+        self.assertEqual(article.keyword_tags.count(), 1)
+
+    def test_editing_replaces_keyword_set(self):
+        article = Article.objects.create(
+            title='Existing', slug='existing-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
+        )
+        article.keyword_tags.set([make_keyword('Old Tag')])
+        form = ArticleForm(
+            data=self._valid_data(keywords='[{"value": "New Tag"}]'), instance=article,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.assertEqual([k.name for k in article.keyword_tags.all()], ['New Tag'])
+
+    def test_edit_form_prefills_existing_keywords_as_tagify_json(self):
+        article = Article.objects.create(
+            title='Existing', slug='existing-article-2', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
+        )
+        article.keyword_tags.set([make_keyword('Existing Tag')])
+        form = ArticleForm(instance=article)
+        self.assertIn('"value": "Existing Tag"', form.fields['keywords'].initial)
+
+
+class KeywordAutocompleteTests(TestCase):
+    def test_returns_matching_keywords(self):
+        make_keyword('Diabetes')
+        make_keyword('Cardiology')
+        response = self.client.get(reverse('articles:keyword_autocomplete'), {'q': 'diab'})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['value'], 'Diabetes')
+        self.assertEqual(data[0]['slug'], 'diabetes')
+
+    def test_empty_query_returns_a_sample_of_keywords(self):
+        make_keyword('Diabetes')
+        make_keyword('Cardiology')
+        response = self.client.get(reverse('articles:keyword_autocomplete'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 2)
+
+    def test_never_creates_a_keyword(self):
+        response = self.client.get(reverse('articles:keyword_autocomplete'), {'q': 'nonexistent-topic'})
+        self.assertEqual(response.json(), [])
+        self.assertEqual(Keyword.objects.count(), 0)
 
 
 class SearchRelevanceAndRateLimitTests(TestCase):
@@ -250,6 +393,20 @@ class SearchRelevanceAndRateLimitTests(TestCase):
         results = list(response.context['articles'])
         self.assertEqual(results.index(title_match), 0)
         self.assertLess(results.index(title_match), results.index(abstract_only_match))
+
+    def test_result_count_label_matches_actual_result_count(self):
+        # Regression test: `{{ page_obj.paginator.count|default:articles|length }}`
+        # chains left-to-right — default only substitutes on a falsy value, so a
+        # real (nonzero) count just passes through unchanged as an int, and
+        # |length on an int raises TypeError internally and silently returns 0.
+        # The label showed "0 RESULT(S)" for every non-empty search.
+        Article.objects.create(
+            title='Rare Disease Registry Update', slug='rare-disease-registry', abstract='A rare disease topic.',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        response = self.client.get(reverse('articles:search'), {'q': 'rare'})
+        self.assertContains(response, '1 RESULT(S)')
+        self.assertNotContains(response, '0 RESULT(S)')
 
     def test_excessive_search_requests_are_rate_limited(self):
         # No password hashing involved (unlike login/register — see
