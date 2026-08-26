@@ -1,13 +1,13 @@
 import datetime
 
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 
 from users.decorators import role_required
 from users.models import User
@@ -56,27 +56,6 @@ class AdSlotListView(ListView):
         context['zones'] = AdSlot.Zone.choices
         context['selected_zone'] = self.request.GET.get('zone', '')
         context['selected_active'] = self.request.GET.get('active', '')
-        # Zone-level totals — a single ad's CTR (shown per-row) doesn't
-        # answer "is the homepage or the sidebar performing better overall",
-        # which is the question that actually informs where to sell more
-        # sponsorships. Computed over all ads, not just this page, so
-        # pagination doesn't skew it.
-        zone_rows = AdSlot.objects.values('zone').annotate(
-            impressions=Count('events', filter=Q(events__event_type=AdEvent.EventType.IMPRESSION)),
-            clicks=Count('events', filter=Q(events__event_type=AdEvent.EventType.CLICK)),
-        )
-        zone_stats_by_value = {row['zone']: row for row in zone_rows}
-        zone_stats = []
-        for value, label in AdSlot.Zone.choices:
-            row = zone_stats_by_value.get(value, {'impressions': 0, 'clicks': 0})
-            impressions, clicks = row['impressions'], row['clicks']
-            zone_stats.append({
-                'label': label,
-                'impressions': impressions,
-                'clicks': clicks,
-                'ctr': round(clicks / impressions * 100, 2) if impressions else None,
-            })
-        context['zone_stats'] = zone_stats
         context['ad_placeholder_enabled'] = AdSettings.get_solo().show_placeholder_when_empty
         return context
 
@@ -129,15 +108,51 @@ class AdSlotUpdateView(AdSlotFormMixin, UpdateView):
         return super().form_valid(form)
 
 
+def _bucket_ad_events_by_day(events_queryset, window_days=30):
+    """Buckets an AdEvent queryset into a day-by-day impressions/clicks
+    series, pure Python — deliberately not a DB date-truncation query, see
+    admin_custom/views.py's identical `_daily_counts` pattern and its
+    comment on why `occurred_at__date=day` needs CONVERT_TZ() support this
+    project doesn't assume is configured on the MySQL server. Shared by
+    AdSlotAnalyticsView (one ad's events) and AdSlotAnalyticsOverviewView
+    (every ad's events) so the bucketing itself isn't duplicated between
+    a per-ad chart and a sitewide one.
+    """
+    today = timezone.localdate()
+    days = [today - datetime.timedelta(days=i) for i in range(window_days - 1, -1, -1)]
+    window_start = timezone.make_aware(datetime.datetime.combine(days[0], datetime.time.min))
+
+    counts_by_day = {day: {'impressions': 0, 'clicks': 0} for day in days}
+    events = events_queryset.filter(occurred_at__gte=window_start).only('event_type', 'occurred_at')
+    for event in events:
+        bucket = counts_by_day.get(timezone.localtime(event.occurred_at).date())
+        if bucket is None:
+            continue
+        if event.event_type == AdEvent.EventType.IMPRESSION:
+            bucket['impressions'] += 1
+        else:
+            bucket['clicks'] += 1
+
+    daily_stats = [{'label': day.strftime('%b %-d'), **counts_by_day[day]} for day in days]
+    max_daily = max([d['impressions'] for d in daily_stats] + [1])
+    for d in daily_stats:
+        d['impressions_pct'] = round(d['impressions'] / max_daily * 100)
+        d['clicks_pct'] = round(d['clicks'] / max_daily * 100)
+    return daily_stats
+
+
+def _window_totals(daily_stats):
+    impressions = sum(d['impressions'] for d in daily_stats)
+    clicks = sum(d['clicks'] for d in daily_stats)
+    ctr = round(clicks / impressions * 100, 2) if impressions else None
+    return {'window_impressions': impressions, 'window_clicks': clicks, 'window_ctr': ctr}
+
+
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
 class AdSlotAnalyticsView(DetailView):
     """Per-ad day-by-day impressions/clicks/CTR, last 30 days — the list
     page only shows lifetime totals, which can't answer whether a specific
     sponsorship is trending up or down, or which days it actually ran.
-    Bucketed in Python (not a DB date-truncation query) deliberately — see
-    admin_custom/views.py's identical daily_stats pattern and its comment on
-    why `occurred_at__date=day` needs CONVERT_TZ() support this project
-    doesn't assume is configured on the MySQL server.
     """
 
     model = AdSlot
@@ -148,35 +163,57 @@ class AdSlotAnalyticsView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        today = timezone.localdate()
-        days = [today - datetime.timedelta(days=i) for i in range(self.WINDOW_DAYS - 1, -1, -1)]
-        window_start = timezone.make_aware(datetime.datetime.combine(days[0], datetime.time.min))
-
-        counts_by_day = {day: {'impressions': 0, 'clicks': 0} for day in days}
-        events = self.object.events.filter(occurred_at__gte=window_start).only('event_type', 'occurred_at')
-        for event in events:
-            bucket = counts_by_day.get(timezone.localtime(event.occurred_at).date())
-            if bucket is None:
-                continue
-            if event.event_type == AdEvent.EventType.IMPRESSION:
-                bucket['impressions'] += 1
-            else:
-                bucket['clicks'] += 1
-
-        daily_stats = [
-            {'label': day.strftime('%b %-d'), **counts_by_day[day]} for day in days
-        ]
-        max_daily = max([d['impressions'] for d in daily_stats] + [1])
-        for d in daily_stats:
-            d['impressions_pct'] = round(d['impressions'] / max_daily * 100)
-            d['clicks_pct'] = round(d['clicks'] / max_daily * 100)
+        daily_stats = _bucket_ad_events_by_day(self.object.events.all(), self.WINDOW_DAYS)
         context['daily_stats'] = daily_stats
-        context['window_impressions'] = sum(d['impressions'] for d in daily_stats)
-        context['window_clicks'] = sum(d['clicks'] for d in daily_stats)
-        context['window_ctr'] = (
-            round(context['window_clicks'] / context['window_impressions'] * 100, 2)
-            if context['window_impressions'] else None
+        context.update(_window_totals(daily_stats))
+        return context
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class AdSlotAnalyticsOverviewView(TemplateView):
+    """Sitewide ad performance — split out from AdSlotListView, which used
+    to mix a zone-level summary grid into the same page as the searchable,
+    filterable, paginated ad list. Two different jobs ("what's the current
+    ad inventory" vs. "how is it performing"), now two different pages.
+    """
+
+    template_name = 'ads/manage/adslot_analytics_overview.html'
+    WINDOW_DAYS = 30
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Zone-level totals — a single ad's CTR doesn't answer "is the
+        # homepage or the sidebar performing better overall", which is the
+        # question that actually informs where to sell more sponsorships.
+        zone_rows = AdSlot.objects.values('zone').annotate(
+            impressions=Count('events', filter=Q(events__event_type=AdEvent.EventType.IMPRESSION)),
+            clicks=Count('events', filter=Q(events__event_type=AdEvent.EventType.CLICK)),
         )
+        zone_stats_by_value = {row['zone']: row for row in zone_rows}
+        zone_stats = []
+        for value, label in AdSlot.Zone.choices:
+            row = zone_stats_by_value.get(value, {'impressions': 0, 'clicks': 0})
+            impressions, clicks = row['impressions'], row['clicks']
+            zone_stats.append({
+                'label': label,
+                'impressions': impressions,
+                'clicks': clicks,
+                'ctr': round(clicks / impressions * 100, 2) if impressions else None,
+            })
+        context['zone_stats'] = zone_stats
+
+        daily_stats = _bucket_ad_events_by_day(AdEvent.objects.all(), self.WINDOW_DAYS)
+        context['daily_stats'] = daily_stats
+        context.update(_window_totals(daily_stats))
+
+        context['all_time_impressions'] = AdSlot.objects.aggregate(total=Sum('impression_count'))['total'] or 0
+        context['all_time_clicks'] = AdSlot.objects.aggregate(total=Sum('click_count'))['total'] or 0
+        context['all_time_ctr'] = (
+            round(context['all_time_clicks'] / context['all_time_impressions'] * 100, 2)
+            if context['all_time_impressions'] else None
+        )
+        context['top_ads'] = list(AdSlot.objects.order_by('-click_count', '-impression_count')[:5])
         return context
 
 

@@ -1,0 +1,97 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Ad Analytics — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Ad Analytics{% endblock %}
+{% block page_actions %}
+<a href="{% url 'ads:manage_adslot_list' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900">← All ads</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Impressions ({{ daily_stats|length }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_impressions }}</p>
+        <p class="mt-2 text-xs text-gray-400">{{ all_time_impressions }} all-time</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Clicks ({{ daily_stats|length }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_clicks }}</p>
+        <p class="mt-2 text-xs text-gray-400">{{ all_time_clicks }} all-time</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">CTR ({{ daily_stats|length }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{% if window_ctr is not None %}{{ window_ctr }}%{% else %}—{% endif %}</p>
+        <p class="mt-2 text-xs text-gray-400">
+            {% if all_time_ctr is not None %}{{ all_time_ctr }}% all-time{% else %}No impressions yet{% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <div class="flex items-start justify-between mb-6">
+        <h2 class="text-base font-semibold text-gray-900">Daily Impressions &amp; Clicks — All Ads</h2>
+        <div class="flex items-center gap-4 text-xs">
+            <span class="flex items-center gap-1.5 text-gray-500">
+                <span class="w-2.5 h-2.5 rounded-sm bg-sky-200"></span> Impressions
+            </span>
+            <span class="flex items-center gap-1.5 text-gray-500">
+                <span class="w-2.5 h-2.5 rounded-sm bg-sky-600"></span> Clicks
+            </span>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <div class="flex items-end justify-between gap-1.5 h-40 min-w-[640px]">
+            {% for d in daily_stats %}
+                <div class="flex-1 flex flex-col items-center h-full" title="{{ d.label }}: {{ d.impressions }} impressions, {{ d.clicks }} clicks">
+                    <div class="relative w-full max-w-6 h-full flex items-end justify-center">
+                        <div class="absolute bottom-0 w-full rounded-t-md bg-sky-200" style="height: {{ d.impressions_pct }}%; min-height: {% if d.impressions %}4px{% else %}0{% endif %};"></div>
+                        <div class="absolute bottom-0 w-1/2 rounded-t-md bg-sky-600" style="height: {{ d.clicks_pct }}%; min-height: {% if d.clicks %}4px{% else %}0{% endif %};"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="flex items-center justify-between gap-1.5 mt-2 min-w-[640px]">
+            {% for d in daily_stats %}
+                <span class="flex-1 text-center text-[0.6rem] text-gray-400">{{ d.label }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">By Zone</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for z in zone_stats %}
+                <div class="bg-white rounded-2xl border border-gray-100 p-5">
+                    <p class="text-sm text-gray-500">{{ z.label }}</p>
+                    <div class="mt-2 flex items-baseline gap-4">
+                        <span><span class="text-2xl font-bold text-gray-900">{{ z.impressions }}</span> <span class="text-xs text-gray-400">impressions</span></span>
+                        <span><span class="text-2xl font-bold text-gray-900">{{ z.clicks }}</span> <span class="text-xs text-gray-400">clicks</span></span>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-400">CTR: {% if z.ctr is not None %}{{ z.ctr }}%{% else %}—{% endif %}</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div>
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Top Ads (by clicks)</h2>
+        <div class="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
+            {% for ad in top_ads %}
+                <a href="{% url 'ads:manage_adslot_analytics' ad.pk %}" class="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ ad.sponsor_name }}</p>
+                        <p class="text-xs text-gray-400">{{ ad.get_zone_display }}</p>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900 shrink-0 ml-3">{{ ad.click_count }}</span>
+                </a>
+            {% empty %}
+                <p class="px-5 py-6 text-sm text-gray-500 text-center">No ads yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

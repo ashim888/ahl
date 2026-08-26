@@ -129,18 +129,9 @@ class AdSlotManageTests(TestCase):
         ad.refresh_from_db()
         self.assertFalse(ad.is_active)
 
-    def test_list_view_includes_zone_stats(self):
-        ad = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1)
-        record_impression(ad)
-        record_click(ad)
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_adslot_list'))
-        homepage_stats = next(
-            z for z in response.context['zone_stats'] if z['label'] == AdSlot.Zone.HOMEPAGE_RECTANGLE_1.label
-        )
-        self.assertEqual(homepage_stats['impressions'], 1)
-        self.assertEqual(homepage_stats['clicks'], 1)
-        self.assertEqual(homepage_stats['ctr'], 100.0)
+    # Zone-level impressions/clicks/CTR stats moved to the separate
+    # /manage/ads/analytics/ page (August 2026) — see
+    # AdSlotAnalyticsOverviewTests.test_zone_stats_and_window_totals.
 
 
 class AdSlotListFilterTests(TestCase):
@@ -168,6 +159,15 @@ class AdSlotListFilterTests(TestCase):
         self.assertEqual(len(ads), 1)
         self.assertEqual(ads[0].sponsor_name, 'Inactive Sponsor')
 
+    def test_list_page_has_no_zone_stats_or_chart(self):
+        # Split out to the dedicated Analytics page (AdSlotAnalyticsOverviewTests
+        # below) — the list page is just the searchable/filterable/paginated list.
+        make_ad()
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        self.assertNotIn('zone_stats', response.context)
+        self.assertNotContains(response, 'Daily Impressions')
+        self.assertContains(response, 'Analytics →')
+
 
 class AdSlotAnalyticsTests(TestCase):
     def setUp(self):
@@ -192,6 +192,69 @@ class AdSlotAnalyticsTests(TestCase):
         self.client.force_login(self.reader)
         response = self.client.get(reverse('ads:manage_adslot_analytics', args=[ad.pk]))
         self.assertEqual(response.status_code, 403)
+
+
+class AdSlotAnalyticsOverviewTests(TestCase):
+    """The sitewide /manage/ads/analytics/ page — zone-level totals, a
+    30-day chart aggregated across every ad, and a top-ads-by-clicks list.
+    Split out from AdSlotListView (AdSlotListFilterTests above), which used
+    to compute the same zone_stats inline on the list page.
+    """
+
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='ad-overview-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(
+            email='ad-overview-reader@example.com', password='pw', first_name='R', last_name='D',
+        )
+
+    def test_reader_cannot_view(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('ads:manage_ads_analytics'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_zone_stats_and_window_totals(self):
+        ad = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
+        other = make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Sidebar Sponsor')
+        record_impression(ad)
+        record_impression(ad)
+        record_click(ad)
+        record_impression(other)
+
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['window_impressions'], 3)
+        self.assertEqual(response.context['window_clicks'], 1)
+        self.assertEqual(response.context['all_time_impressions'], 3)
+        self.assertEqual(response.context['all_time_clicks'], 1)
+
+        zone_stats_by_label = {z['label']: z for z in response.context['zone_stats']}
+        leaderboard_stats = zone_stats_by_label[AdSlot.Zone.HEADER_LEADERBOARD.label]
+        self.assertEqual(leaderboard_stats['impressions'], 2)
+        self.assertEqual(leaderboard_stats['clicks'], 1)
+        self.assertEqual(leaderboard_stats['ctr'], 50.0)
+
+    def test_top_ads_ordered_by_clicks(self):
+        low = make_ad(sponsor_name='Low Clicks')
+        high = make_ad(sponsor_name='High Clicks')
+        record_click(low)
+        for _ in range(3):
+            record_click(high)
+
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'))
+        top_ads = list(response.context['top_ads'])
+        self.assertEqual(top_ads[0], high)
+        self.assertIn(low, top_ads)
+
+    def test_no_ads_yet_renders_without_error(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context['window_ctr'])
+        self.assertIsNone(response.context['all_time_ctr'])
 
 
 class AdSlotDimensionsTests(TestCase):

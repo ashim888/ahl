@@ -2,6 +2,9 @@
 
 {% block title %}Ads — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}Ads{% endblock %}
+{% block page_actions %}
+<a href="{% url 'ads:manage_ads_analytics' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900">Analytics →</a>
+{% endblock %}
 
 {% block content %}
 <div class="flex items-center justify-between">
@@ -53,21 +56,6 @@
             </select>
         </div>
     </form>
-
-{% if zone_stats %}
-<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-    {% for z in zone_stats %}
-        <div class="bg-white rounded-2xl border border-gray-100 p-5">
-            <p class="text-sm text-gray-500">{{ z.label }}</p>
-            <div class="mt-2 flex items-baseline gap-4">
-                <span><span class="text-2xl font-bold text-gray-900">{{ z.impressions }}</span> <span class="text-xs text-gray-400">impressions</span></span>
-                <span><span class="text-2xl font-bold text-gray-900">{{ z.clicks }}</span> <span class="text-xs text-gray-400">clicks</span></span>
-            </div>
-            <p class="mt-2 text-xs text-gray-400">CTR: {% if z.ctr is not None %}{{ z.ctr }}%{% else %}—{% endif %}</p>
-        </div>
-    {% endfor %}
-</div>
-{% endif %}
 
 <div class="mt-6 overflow-x-auto">
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
