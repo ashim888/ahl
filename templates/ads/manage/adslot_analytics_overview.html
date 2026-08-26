@@ -7,20 +7,29 @@
 {% endblock %}
 
 {% block content %}
+{% comment %}
+One <form> for every date-range/zone control on the page (the sitewide
+chart's chart_days, and the filter panel's filter_zone/filter_days) — each
+select auto-submits on change, and since they're all fields of the same
+form, submitting one carries every other field's current value along too,
+so picking a zone below doesn't reset the date range chosen for the chart
+above, or vice versa.
+{% endcomment %}
+<form method="get" id="analytics-filters">
 
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
-        <p class="text-sm text-gray-500">Impressions ({{ daily_stats|length }}d)</p>
+        <p class="text-sm text-gray-500">Impressions ({{ chart_days }}d)</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_impressions }}</p>
         <p class="mt-2 text-xs text-gray-400">{{ all_time_impressions }} all-time</p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
-        <p class="text-sm text-gray-500">Clicks ({{ daily_stats|length }}d)</p>
+        <p class="text-sm text-gray-500">Clicks ({{ chart_days }}d)</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_clicks }}</p>
         <p class="mt-2 text-xs text-gray-400">{{ all_time_clicks }} all-time</p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
-        <p class="text-sm text-gray-500">CTR ({{ daily_stats|length }}d)</p>
+        <p class="text-sm text-gray-500">CTR ({{ chart_days }}d)</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{% if window_ctr is not None %}{{ window_ctr }}%{% else %}—{% endif %}</p>
         <p class="mt-2 text-xs text-gray-400">
             {% if all_time_ctr is not None %}{{ all_time_ctr }}% all-time{% else %}No impressions yet{% endif %}
@@ -29,15 +38,22 @@
 </div>
 
 <div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
-    <div class="flex items-start justify-between mb-6">
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
         <h2 class="text-base font-semibold text-gray-900">Daily Impressions &amp; Clicks — All Ads</h2>
-        <div class="flex items-center gap-4 text-xs">
-            <span class="flex items-center gap-1.5 text-gray-500">
-                <span class="w-2.5 h-2.5 rounded-sm bg-sky-200"></span> Impressions
-            </span>
-            <span class="flex items-center gap-1.5 text-gray-500">
-                <span class="w-2.5 h-2.5 rounded-sm bg-sky-600"></span> Clicks
-            </span>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 text-xs">
+                <span class="flex items-center gap-1.5 text-gray-500">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-sky-200"></span> Impressions
+                </span>
+                <span class="flex items-center gap-1.5 text-gray-500">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-sky-600"></span> Clicks
+                </span>
+            </div>
+            <select name="chart_days" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-2.5 py-1 text-xs">
+                {% for choice in window_day_choices %}
+                    <option value="{{ choice }}" {% if choice == chart_days %}selected{% endif %}>Last {{ choice }} days</option>
+                {% endfor %}
+            </select>
         </div>
     </div>
     <div class="overflow-x-auto">
@@ -59,39 +75,77 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2">
-        <h2 class="text-base font-semibold text-gray-900 mb-4">By Zone</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {% for z in zone_stats %}
-                <div class="bg-white rounded-2xl border border-gray-100 p-5">
-                    <p class="text-sm text-gray-500">{{ z.label }}</p>
-                    <div class="mt-2 flex items-baseline gap-4">
-                        <span><span class="text-2xl font-bold text-gray-900">{{ z.impressions }}</span> <span class="text-xs text-gray-400">impressions</span></span>
-                        <span><span class="text-2xl font-bold text-gray-900">{{ z.clicks }}</span> <span class="text-xs text-gray-400">clicks</span></span>
-                    </div>
-                    <p class="mt-2 text-xs text-gray-400">CTR: {% if z.ctr is not None %}{{ z.ctr }}%{% else %}—{% endif %}</p>
-                </div>
-            {% endfor %}
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h2 class="text-base font-semibold text-gray-900">
+            {% if filter_zone %}Ads in {{ filter_zone_label }}{% else %}By Zone{% endif %}
+        </h2>
+        <div class="flex items-center gap-3">
+            <select name="filter_zone" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs">
+                <option value="">All zones</option>
+                {% for value, label in zones %}
+                    <option value="{{ value }}" {% if value == filter_zone %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select name="filter_days" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs">
+                {% for choice in window_day_choices %}
+                    <option value="{{ choice }}" {% if choice == filter_days %}selected{% endif %}>Last {{ choice }} days</option>
+                {% endfor %}
+            </select>
         </div>
     </div>
 
-    <div>
-        <h2 class="text-base font-semibold text-gray-900 mb-4">Top Ads (by clicks)</h2>
-        <div class="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
-            {% for ad in top_ads %}
-                <a href="{% url 'ads:manage_adslot_analytics' ad.pk %}" class="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50">
-                    <div class="min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">{{ ad.sponsor_name }}</p>
-                        <p class="text-xs text-gray-400">{{ ad.get_zone_display }}</p>
-                    </div>
-                    <span class="text-sm font-semibold text-gray-900 shrink-0 ml-3">{{ ad.click_count }}</span>
-                </a>
-            {% empty %}
-                <p class="px-5 py-6 text-sm text-gray-500 text-center">No ads yet.</p>
-            {% endfor %}
-        </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-100">
+                <tr>
+                    <th class="py-2 pr-4">{% if filter_zone %}Sponsor{% else %}Zone{% endif %}</th>
+                    <th class="py-2 pr-4">Impressions</th>
+                    <th class="py-2 pr-4">Clicks</th>
+                    <th class="py-2">CTR</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for row in performance_rows %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-2.5 pr-4">
+                            <a href="{{ row.url }}" class="font-medium text-gray-900 hover:text-gray-600">{{ row.label }}</a>
+                            {% if row.sub_label %}<span class="block text-xs text-gray-400">{{ row.sub_label }}</span>{% endif %}
+                        </td>
+                        <td class="py-2.5 pr-4 text-gray-600">{{ row.impressions }}</td>
+                        <td class="py-2.5 pr-4 text-gray-600">{{ row.clicks }}</td>
+                        <td class="py-2.5 text-gray-600">{% if row.ctr is not None %}{{ row.ctr }}%{% else %}—{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="py-6 text-center text-gray-500">No ads {% if filter_zone %}in this zone{% endif %} yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+
+    {% if filtered_daily_stats %}
+        <div class="mt-6 pt-6 border-t border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-900 mb-4">Daily Impressions &amp; Clicks — {{ filter_zone_label }}</h3>
+            <div class="overflow-x-auto">
+                <div class="flex items-end justify-between gap-1.5 h-32 min-w-[640px]">
+                    {% for d in filtered_daily_stats %}
+                        <div class="flex-1 flex flex-col items-center h-full" title="{{ d.label }}: {{ d.impressions }} impressions, {{ d.clicks }} clicks">
+                            <div class="relative w-full max-w-6 h-full flex items-end justify-center">
+                                <div class="absolute bottom-0 w-full rounded-t-md bg-sky-200" style="height: {{ d.impressions_pct }}%; min-height: {% if d.impressions %}4px{% else %}0{% endif %};"></div>
+                                <div class="absolute bottom-0 w-1/2 rounded-t-md bg-sky-600" style="height: {{ d.clicks_pct }}%; min-height: {% if d.clicks %}4px{% else %}0{% endif %};"></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="flex items-center justify-between gap-1.5 mt-2 min-w-[640px]">
+                    {% for d in filtered_daily_stats %}
+                        <span class="flex-1 text-center text-[0.6rem] text-gray-400">{{ d.label }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </div>
 
+</form>
 {% endblock %}

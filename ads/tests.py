@@ -195,10 +195,11 @@ class AdSlotAnalyticsTests(TestCase):
 
 
 class AdSlotAnalyticsOverviewTests(TestCase):
-    """The sitewide /manage/ads/analytics/ page — zone-level totals, a
-    30-day chart aggregated across every ad, and a top-ads-by-clicks list.
-    Split out from AdSlotListView (AdSlotListFilterTests above), which used
-    to compute the same zone_stats inline on the list page.
+    """The sitewide /manage/ads/analytics/ page — a top chart (every ad,
+    every zone) plus a filterable panel below it (all zones' totals by
+    default, or one zone's ads once picked). Split out from AdSlotListView
+    (AdSlotListFilterTests above), which used to compute the same zone
+    breakdown inline on the list page.
     """
 
     def setUp(self):
@@ -214,7 +215,25 @@ class AdSlotAnalyticsOverviewTests(TestCase):
         response = self.client.get(reverse('ads:manage_ads_analytics'))
         self.assertEqual(response.status_code, 403)
 
-    def test_zone_stats_and_window_totals(self):
+    def test_chart_defaults_to_7_days(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'))
+        self.assertEqual(response.context['chart_days'], 7)
+        self.assertEqual(len(response.context['daily_stats']), 7)
+        self.assertEqual(response.context['filter_days'], 7)
+
+    def test_chart_days_param_changes_window(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'), {'chart_days': 30})
+        self.assertEqual(response.context['chart_days'], 30)
+        self.assertEqual(len(response.context['daily_stats']), 30)
+
+    def test_invalid_chart_days_falls_back_to_default(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'), {'chart_days': 'not-a-number'})
+        self.assertEqual(response.context['chart_days'], 7)
+
+    def test_window_totals(self):
         ad = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
         other = make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Sidebar Sponsor')
         record_impression(ad)
@@ -230,24 +249,53 @@ class AdSlotAnalyticsOverviewTests(TestCase):
         self.assertEqual(response.context['all_time_impressions'], 3)
         self.assertEqual(response.context['all_time_clicks'], 1)
 
-        zone_stats_by_label = {z['label']: z for z in response.context['zone_stats']}
-        leaderboard_stats = zone_stats_by_label[AdSlot.Zone.HEADER_LEADERBOARD.label]
-        self.assertEqual(leaderboard_stats['impressions'], 2)
-        self.assertEqual(leaderboard_stats['clicks'], 1)
-        self.assertEqual(leaderboard_stats['ctr'], 50.0)
+    def test_default_view_shows_one_row_per_zone_no_chart(self):
+        ad = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
+        record_impression(ad)
+        record_impression(ad)
+        record_click(ad)
 
-    def test_top_ads_ordered_by_clicks(self):
-        low = make_ad(sponsor_name='Low Clicks')
-        high = make_ad(sponsor_name='High Clicks')
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'))
+        self.assertEqual(response.context['filter_zone'], '')
+        self.assertIsNone(response.context['filtered_daily_stats'])
+        rows_by_label = {r['label']: r for r in response.context['performance_rows']}
+        leaderboard_row = rows_by_label[AdSlot.Zone.HEADER_LEADERBOARD.label]
+        self.assertEqual(leaderboard_row['impressions'], 2)
+        self.assertEqual(leaderboard_row['clicks'], 1)
+        self.assertEqual(leaderboard_row['ctr'], 50.0)
+        # One row per zone in the choices list, not just zones with an ad.
+        self.assertEqual(len(response.context['performance_rows']), len(AdSlot.Zone.choices))
+
+    def test_filtering_by_zone_shows_ads_in_that_zone_and_a_chart(self):
+        low = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Low Clicks')
+        high = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='High Clicks')
+        make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Different Zone')
         record_click(low)
         for _ in range(3):
             record_click(high)
 
         self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'))
-        top_ads = list(response.context['top_ads'])
-        self.assertEqual(top_ads[0], high)
-        self.assertIn(low, top_ads)
+        response = self.client.get(reverse('ads:manage_ads_analytics'), {'filter_zone': AdSlot.Zone.HEADER_LEADERBOARD})
+        self.assertEqual(response.context['filter_zone'], AdSlot.Zone.HEADER_LEADERBOARD)
+        self.assertEqual(response.context['filter_zone_label'], AdSlot.Zone.HEADER_LEADERBOARD.label)
+        self.assertIsNotNone(response.context['filtered_daily_stats'])
+
+        rows = list(response.context['performance_rows'])
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]['label'], 'High Clicks')
+        self.assertEqual(rows[0]['clicks'], 3)
+        self.assertNotContains(response, 'Different Zone')
+
+    def test_filter_days_independent_of_chart_days(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            reverse('ads:manage_ads_analytics'), {'chart_days': 30, 'filter_zone': AdSlot.Zone.HEADER_LEADERBOARD, 'filter_days': 14},
+        )
+        self.assertEqual(response.context['chart_days'], 30)
+        self.assertEqual(response.context['filter_days'], 14)
+        self.assertEqual(len(response.context['daily_stats']), 30)
+        self.assertEqual(len(response.context['filtered_daily_stats']), 14)
 
     def test_no_ads_yet_renders_without_error(self):
         self.client.force_login(self.editor)
