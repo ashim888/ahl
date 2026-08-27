@@ -212,3 +212,32 @@ class CourseCheckoutTests(TestCase):
         response = self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Enrollment.objects.filter(user=self.reader, course=self.course).count(), 1)
+
+
+class CoursePublicPageMetaTagsTests(TestCase):
+    def test_course_list_has_a_specific_title(self):
+        response = self.client.get(reverse('training:course_list'))
+        self.assertContains(response, '<title>Training Programs')
+
+    def test_course_detail_title_and_description_reflect_the_course(self):
+        course = TrainingCourse.objects.create(
+            title='Clinical Data Analysis', description='Learn to analyze clinical trial data.',
+            price=50, duration='6 weeks', instructor='Dr. Shah',
+        )
+        response = self.client.get(reverse('training:course_detail', args=[course.pk]))
+        content = response.content.decode()
+        self.assertIn('<title>Clinical Data Analysis', content)
+        self.assertIn('Learn to analyze clinical trial data.', content)
+
+    def test_course_detail_has_course_structured_data(self):
+        course = TrainingCourse.objects.create(
+            title='Systematic Reviews 101', description='How to conduct a systematic review.',
+            price=75, duration='8 weeks', instructor='Dr. Bello',
+        )
+        response = self.client.get(reverse('training:course_detail', args=[course.pk]))
+        content = response.content.decode()
+        self.assertIn('"@type": "Course"', content)
+        self.assertIn('"name": "Systematic Reviews 101"', content)
+        self.assertIn('"price": "75.00"', content)
+        self.assertIn('"priceCurrency": "USD"', content)
+        self.assertIn('"@type": "BreadcrumbList"', content)

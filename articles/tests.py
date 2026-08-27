@@ -122,10 +122,131 @@ class SEOMetaTagsTests(TestCase):
         self.assertContains(response, '"@type": "NewsArticle"')
         self.assertContains(response, article.title)
 
+    def test_structured_data_marks_open_access_article_as_free(self):
+        article = make_article('open-access-structured-data', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, '"isAccessibleForFree": true')
+        # "News & Commentary" — the "&" survives ld_json's escaping as the
+        # unicode-escaped &, not a literal ampersand.
+        self.assertContains(response, '"articleSection": "News \\u0026 Commentary"')
+
+    def test_structured_data_marks_subscription_article_as_not_free(self):
+        article = make_article('subscription-structured-data', Article.ArticleType.NEWS_COMMENTARY)
+        article.access_type = Article.AccessType.SUBSCRIPTION
+        article.save()
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, '"isAccessibleForFree": false')
+
+    def test_structured_data_includes_keywords(self):
+        article = make_article('keyword-structured-data', Article.ArticleType.NEWS_COMMENTARY)
+        article.keyword_tags.set([
+            Keyword.objects.create(name='Diabetes'), Keyword.objects.create(name='Public Health'),
+        ])
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, '"keywords": "Diabetes, Public Health"')
+
+    def test_structured_data_omits_keywords_key_when_none_set(self):
+        article = make_article('no-keyword-structured-data', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(response, '"keywords"')
+
+    def test_home_page_has_a_specific_title_and_description(self):
+        response = self.client.get(reverse('articles:home'))
+        content = response.content.decode()
+        self.assertIn('<title>', content)
+        self.assertNotIn('<title></title>', content)
+        self.assertIn('name="description"', content)
+
+    def test_article_list_title_reflects_type_filter(self):
+        response = self.client.get(reverse('articles:article_list'), {'type': Article.ArticleType.NEWS_COMMENTARY})
+        self.assertContains(response, '<title>News &amp; Commentary')
+
+    def test_article_list_title_reflects_no_filter(self):
+        response = self.client.get(reverse('articles:article_list'))
+        self.assertContains(response, '<title>All Articles')
+
+    def test_search_results_page_has_query_in_title_and_is_noindex(self):
+        response = self.client.get(reverse('articles:search'), {'q': 'diabetes'})
+        content = response.content.decode()
+        self.assertIn('<title>Search results for &quot;diabetes&quot;', content)
+        self.assertIn('name="robots" content="noindex, follow"', content)
+
+    def test_search_page_with_no_query_is_still_noindex(self):
+        response = self.client.get(reverse('articles:search'))
+        self.assertContains(response, 'name="robots" content="noindex, follow"')
+
+    def test_non_search_page_defaults_to_indexable(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'name="robots" content="index, follow"')
+
+    def test_every_page_has_sitewide_organization_and_website_structured_data(self):
+        article = make_article('sitewide-schema-article', Article.ArticleType.NEWS_COMMENTARY)
+        for url in [reverse('articles:home'), reverse('articles:article_detail', args=[article.slug])]:
+            response = self.client.get(url)
+            self.assertContains(response, '"@type": "NewsMediaOrganization"')
+            self.assertContains(response, '"@type": "WebSite"')
+            self.assertContains(response, '"@type": "SearchAction"')
+
+    def test_article_page_has_breadcrumb_structured_data(self):
+        article = make_article('breadcrumb-article', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, '"@type": "BreadcrumbList"')
+        self.assertContains(response, article.title)
+
+    def test_author_page_has_person_structured_data(self):
+        from articles.models import ArticleAuthor
+        from users.models import User
+
+        author = User.objects.create_user(
+            email='schema-author@example.com', password='pw', first_name='Ada', last_name='Lovelace',
+            role=User.Role.VERIFIED_AUTHOR, affiliation='Analytical Engines Inc.', bio='Writes about computing.',
+        )
+        article = make_article('author-schema-article', Article.ArticleType.NEWS_COMMENTARY)
+        ArticleAuthor.objects.create(article=article, user=author, order=0, is_corresponding=True)
+
+        response = self.client.get(reverse('articles:author_detail', args=[author.pk]))
+        content = response.content.decode()
+        self.assertIn('<title>Ada Lovelace', content)
+        self.assertIn('Writes about computing.', content)
+        self.assertIn('"@type": "Person"', content)
+        self.assertIn('"name": "Ada Lovelace"', content)
+        self.assertIn('"Analytical Engines Inc."', content)
+
+    def test_author_page_person_schema_omits_sameas_when_no_profiles_set(self):
+        from articles.models import ArticleAuthor
+        from users.models import User
+
+        author = User.objects.create_user(
+            email='schema-author2@example.com', password='pw', first_name='Bare', last_name='Profile',
+            role=User.Role.VERIFIED_AUTHOR,
+        )
+        article = make_article('author-schema-article2', Article.ArticleType.NEWS_COMMENTARY)
+        ArticleAuthor.objects.create(article=article, user=author, order=0, is_corresponding=True)
+
+        response = self.client.get(reverse('articles:author_detail', args=[author.pk]))
+        self.assertNotContains(response, '"sameAs"')
+
     def test_non_article_page_falls_back_to_sitewide_defaults(self):
         response = self.client.get(reverse('articles:home'))
         content = response.content.decode()
         self.assertIn('property="og:type" content="website"', content)
+
+    def test_canonical_url_strips_querystring_on_a_page_with_no_explicit_canonical(self):
+        # Regression guard — the old fallback (request.build_absolute_uri
+        # with no args) self-canonicalized every filtered/paginated variant
+        # of a list page as its own indexable URL.
+        make_article('canonical-filter-article', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_list'), {'type': Article.ArticleType.NEWS_COMMENTARY})
+        content = response.content.decode()
+        self.assertIn(f'rel="canonical" href="http://testserver{reverse("articles:article_list")}"', content)
+        self.assertNotIn('?type=', content.split('rel="canonical"')[1][:200])
+
+    def test_article_detail_canonical_url_is_unaffected(self):
+        article = make_article('canonical-detail-article', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        content = response.content.decode()
+        expected = f'http://testserver{reverse("articles:article_detail", args=[article.slug])}'
+        self.assertIn(f'rel="canonical" href="{expected}"', content)
 
 
 class FeedSitemapRobotsTests(TestCase):

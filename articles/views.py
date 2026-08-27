@@ -31,7 +31,7 @@ from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
 from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Keyword
-from .seo import news_article_structured_data
+from .seo import breadcrumb_list_structured_data, news_article_structured_data, person_structured_data
 
 # Article types treated as "peer-reviewed research" for the homepage's
 # "From the Journal" section — everything except news/editorial/letters.
@@ -212,6 +212,7 @@ class HomeView(TemplateView):
                 user=self.request.user, status=Subscriber.Status.CONFIRMED,
             ).exists()
 
+        context['meta_description'] = f'{settings.JOURNAL_TAGLINE} — health news, research highlights, and commentary from {settings.JOURNAL_NAME}.'
         return context
 
 
@@ -262,6 +263,16 @@ class ArticleListView(ListView):
             json.dumps([{'value': selected_keyword_label, 'slug': selected_keyword_slug}])
             if selected_keyword_label else '[]'
         )
+        if selected_keyword_label:
+            context['meta_title'] = f'Articles tagged "{selected_keyword_label}" — {settings.JOURNAL_NAME}'
+            context['meta_description'] = f'Articles about {selected_keyword_label} from {settings.JOURNAL_NAME}.'
+        elif context['selected_type']:
+            type_label = dict(Article.ArticleType.choices).get(context['selected_type'], '')
+            context['meta_title'] = f'{type_label} — {settings.JOURNAL_NAME}'
+            context['meta_description'] = f'{type_label} articles from {settings.JOURNAL_NAME}.'
+        else:
+            context['meta_title'] = f'All Articles — {settings.JOURNAL_NAME}'
+            context['meta_description'] = f'Browse all published articles from {settings.JOURNAL_NAME}.'
         return context
 
 
@@ -326,8 +337,13 @@ class ArticleDetailView(DetailView):
         context['structured_data_json'] = news_article_structured_data(
             self.object, journal_name=settings.JOURNAL_NAME, canonical_url=context['canonical_url'],
             image_url=image_url, publisher_logo_url=self.request.build_absolute_uri(static('images/logo.png')),
-            authors=article_authors,
+            authors=article_authors, keywords=context['keyword_list'],
         )
+        context['breadcrumb_json'] = breadcrumb_list_structured_data([
+            ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
+            ('Articles', self.request.build_absolute_uri(reverse('articles:article_list'))),
+            (self.object.title, None),
+        ])
         return context
 
 
@@ -379,6 +395,15 @@ class AuthorDetailView(DetailView):
             status=Article.Status.PUBLISHED,
         ).order_by('-publication_date', '-created_at')
         context['board_membership'] = self.object.board_memberships.filter(is_active=True).first()
+        context['meta_title'] = f'{self.object.get_full_name()} — {settings.JOURNAL_NAME}'
+        byline = self.object.get_full_name()
+        if self.object.affiliation:
+            byline += f', {self.object.affiliation}'
+        context['meta_description'] = (self.object.bio or '')[:200] or f'{byline} — articles on {settings.JOURNAL_NAME}.'
+        image_url = self.request.build_absolute_uri(self.object.photo.url) if self.object.photo else None
+        if image_url:
+            context['meta_image_url'] = image_url
+        context['structured_data_json'] = person_structured_data(self.object, image_url=image_url)
         return context
 
 
@@ -522,6 +547,16 @@ class SearchView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['query'] = self.query
+        context['meta_title'] = (
+            f'Search results for "{self.query}" — {settings.JOURNAL_NAME}' if self.query
+            else f'Search — {settings.JOURNAL_NAME}'
+        )
+        context['meta_description'] = f'Search {settings.JOURNAL_NAME} for articles by title, abstract, author, or keyword.'
+        # Internal search-result pages are thin/near-duplicate content that
+        # shouldn't compete with the real article/list pages they surface —
+        # standard practice (Google's own crawling docs recommend it), not
+        # specific to this being a health-news site.
+        context['meta_robots'] = 'noindex, follow'
         return context
 
 

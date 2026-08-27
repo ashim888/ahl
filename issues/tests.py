@@ -24,3 +24,26 @@ class IssueManageListFilterTests(TestCase):
         issues = list(response.context['issues'])
         self.assertEqual(len(issues), 1)
         self.assertEqual(issues[0].title, 'Draft Issue')
+
+
+class IssuePublicPageMetaTagsTests(TestCase):
+    def test_issue_list_has_a_specific_title(self):
+        response = self.client.get(reverse('issues:issue_list'))
+        self.assertContains(response, '<title>Issues')
+
+    def test_issue_detail_title_and_description_reflect_the_issue(self):
+        issue = Issue.objects.create(
+            title='Tuberculosis Coverage', slug='tuberculosis-coverage', is_published=True,
+            editorial_note='Ongoing reporting on TB screening and treatment access.',
+        )
+        response = self.client.get(reverse('issues:issue_detail', args=[issue.slug]))
+        content = response.content.decode()
+        self.assertIn('<title>Tuberculosis Coverage', content)
+        self.assertIn('Ongoing reporting on TB screening', content)
+
+    def test_issue_detail_has_breadcrumb_structured_data(self):
+        issue = Issue.objects.create(title='Malaria Series', slug='malaria-series', is_published=True)
+        response = self.client.get(reverse('issues:issue_detail', args=[issue.slug]))
+        content = response.content.decode()
+        self.assertIn('"@type": "BreadcrumbList"', content)
+        self.assertIn('Malaria Series', content)

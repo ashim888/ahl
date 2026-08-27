@@ -10,6 +10,9 @@
     {% if structured_data_json %}
         <script type="application/ld+json">{{ structured_data_json }}</script>
     {% endif %}
+    {% if breadcrumb_json %}
+        <script type="application/ld+json">{{ breadcrumb_json }}</script>
+    {% endif %}
 {% endblock %}
 
 {% block content %}

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -8,12 +9,14 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from articles.seo import breadcrumb_list_structured_data
 from billing.gateway import get_gateway
 from users.decorators import role_required
 from users.models import User
 
 from .forms import TrainingCourseForm
 from .models import Enrollment, TrainingCourse
+from .seo import course_structured_data
 
 # Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
@@ -26,6 +29,12 @@ class CourseListView(ListView):
 
     def get_queryset(self):
         return TrainingCourse.objects.filter(is_active=True).order_by('title')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['meta_title'] = f'Training Programs — {settings.JOURNAL_NAME}'
+        context['meta_description'] = f'Professional training programs offered by {settings.JOURNAL_NAME}.'
+        return context
 
 
 class CourseDetailView(DetailView):
@@ -48,6 +57,14 @@ class CourseDetailView(DetailView):
             context['enrollment'] = Enrollment.objects.filter(
                 user=self.request.user, course=self.object,
             ).first()
+        context['meta_title'] = f'{self.object.title} — {settings.JOURNAL_NAME}'
+        context['meta_description'] = (self.object.description or '')[:200]
+        context['structured_data_json'] = course_structured_data(self.object, journal_name=settings.JOURNAL_NAME)
+        context['breadcrumb_json'] = breadcrumb_list_structured_data([
+            ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
+            ('Training Programs', self.request.build_absolute_uri(reverse('training:course_list'))),
+            (self.object.title, None),
+        ])
         return context
 
 

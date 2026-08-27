@@ -118,6 +118,10 @@ class EditorialBoardPublicView(TemplateView):
             ('Peer review', 'Conducted externally via OJS'),
             ('Access model', 'Hybrid — open access and subscription, by article type'),
         ]
+
+        tab_titles = {'about': 'About', 'board': 'Editorial Board', 'policies': 'Policies'}
+        context['meta_title'] = f'{tab_titles[context["active_tab"]]} — {settings.JOURNAL_NAME}'
+        context['meta_description'] = f'About {settings.JOURNAL_NAME} — editorial board, publication policies, and how to reach us.'
         return context
 
 

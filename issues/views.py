@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
@@ -5,6 +6,7 @@ from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from articles.models import Article
+from articles.seo import breadcrumb_list_structured_data
 from users.decorators import role_required
 from users.models import User
 
@@ -24,6 +26,12 @@ class IssueListView(ListView):
     def get_queryset(self):
         return Issue.objects.filter(is_published=True)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['meta_title'] = f'Issues — {settings.JOURNAL_NAME}'
+        context['meta_description'] = f'Curated story trails and ongoing coverage series from {settings.JOURNAL_NAME}.'
+        return context
+
 
 class IssueDetailView(DetailView):
     model = Issue
@@ -38,6 +46,18 @@ class IssueDetailView(DetailView):
         context['issue_articles'] = self.object.articles.filter(
             status=Article.Status.PUBLISHED,
         ).order_by('-created_at').prefetch_related('articleauthor_set__user')
+        context['meta_title'] = f'{self.object.title} — {settings.JOURNAL_NAME}'
+        context['meta_description'] = (
+            (self.object.editorial_note or '')[:200]
+            or f'"{self.object.title}" — a curated story trail from {settings.JOURNAL_NAME}.'
+        )
+        if self.object.cover_image:
+            context['meta_image_url'] = self.request.build_absolute_uri(self.object.cover_image.url)
+        context['breadcrumb_json'] = breadcrumb_list_structured_data([
+            ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
+            ('Issues', self.request.build_absolute_uri(reverse('issues:issue_list'))),
+            (self.object.title, None),
+        ])
         return context
 
 

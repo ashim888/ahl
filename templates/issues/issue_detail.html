@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ issue }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block extra_head %}
+    {% if breadcrumb_json %}
+        <script type="application/ld+json">{{ breadcrumb_json }}</script>
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-6 py-14">

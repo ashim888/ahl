@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ author.get_full_name }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{{ meta_title }}{% endblock %}
 {% block extra_head %}
-<meta name="description" content="{{ author.get_full_name }}{% if author.affiliation %}, {{ author.affiliation }}{% endif %} — articles on {{ JOURNAL_NAME }}.">
+    {% if structured_data_json %}
+        <script type="application/ld+json">{{ structured_data_json }}</script>
+    {% endif %}
 {% endblock %}
 
 {% block content %}

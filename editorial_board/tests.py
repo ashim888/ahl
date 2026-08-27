@@ -71,3 +71,17 @@ class BoardMemberMoveTests(TestCase):
         self.client.force_login(self.reader)
         response = self.client.post(reverse('editorial_board:manage_member_move', args=[self.first.pk, 'down']))
         self.assertEqual(response.status_code, 403)
+
+
+class PublicPageMetaTagsTests(TestCase):
+    def test_default_tab_title_is_about(self):
+        response = self.client.get(reverse('editorial_board:public_list'))
+        self.assertContains(response, '<title>About')
+
+    def test_board_tab_has_its_own_title(self):
+        response = self.client.get(reverse('editorial_board:public_list'), {'tab': 'board'})
+        self.assertContains(response, '<title>Editorial Board')
+
+    def test_policies_tab_has_its_own_title(self):
+        response = self.client.get(reverse('editorial_board:public_list'), {'tab': 'policies'})
+        self.assertContains(response, '<title>Policies')

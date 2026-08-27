@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% load ads_tags %}
 
+{% block title %}{{ JOURNAL_NAME }} — {{ JOURNAL_TAGLINE }}{% endblock %}
+
 {% block content %}
 
 {% if hero_article %}
