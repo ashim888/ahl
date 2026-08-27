@@ -558,12 +558,15 @@ class ArticleManageListView(ListView):
         status = self.request.GET.get('status')
         article_type = self.request.GET.get('type')
         homepage_section = self.request.GET.get('homepage_section')
+        q = self.request.GET.get('q')
         if status:
             queryset = queryset.filter(status=status)
         if article_type:
             queryset = queryset.filter(article_type=article_type)
         if homepage_section:
             queryset = queryset.filter(homepage_section=homepage_section)
+        if q:
+            queryset = queryset.filter(title__icontains=q)
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -574,6 +577,7 @@ class ArticleManageListView(ListView):
         context['selected_type'] = self.request.GET.get('type', '')
         context['selected_status'] = self.request.GET.get('status', '')
         context['selected_homepage_section'] = self.request.GET.get('homepage_section', '')
+        context['selected_q'] = self.request.GET.get('q', '')
         return context
 
 

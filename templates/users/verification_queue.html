@@ -4,45 +4,93 @@
 {% block page_title %}Verification Queue{% endblock %}
 
 {% block content %}
-<p class="text-sm text-gray-500">{{ pending_users|length }} user(s) awaiting review — registered readers requesting Verified Author access.</p>
+<p class="text-sm text-gray-500">{{ page_obj.paginator.count }} user(s) awaiting review — registered readers requesting Verified Author access.</p>
 
-<div class="mt-6 space-y-4">
-    {% for u in pending_users %}
-        <div class="border border-gray-200 rounded-lg p-5 bg-white">
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div class="min-w-0">
-                    <a href="{% url 'users:verification_detail' u.pk %}" class="font-semibold hover:underline">
-                        {{ u.get_full_name }} &lt;{{ u.email }}&gt;
-                    </a>
-                    <p class="text-sm text-gray-600 mt-1">
-                        {{ u.affiliation|default:"No affiliation given" }}
-                        {% if u.department %} — {{ u.department }}{% endif %}
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">Registered {{ u.date_joined|date:"M j, Y" }}</p>
-                    <a href="{% url 'users:verification_detail' u.pk %}" class="text-xs font-medium text-gray-500 hover:text-gray-900 underline mt-2 inline-block">
-                        View full details →
-                    </a>
-                </div>
-                <div class="flex gap-2 shrink-0">
-                    <form method="post" action="{% url 'users:verification_decide' u.pk 'approve' %}"
-                          onsubmit="return confirm('Approve {{ u.get_full_name|escapejs }}? They\'ll become a Verified Author.');">
-                        {% csrf_token %}
-                        <button type="submit" class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800">
+<form method="post" action="{% url 'users:verification_bulk_decide' %}" id="verification-bulk-form">
+    {% csrf_token %}
+
+    <div class="mt-4 flex items-center gap-3 sticky top-0 z-10 bg-white py-2">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+            <input type="checkbox" id="select-all-checkbox">
+            Select all
+        </label>
+        <button type="submit" name="decision" value="approve"
+                onclick="return confirm('Approve every selected user? They\'ll become Verified Authors.');"
+                class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                id="bulk-approve-btn" disabled>
+            Approve selected
+        </button>
+        <button type="submit" name="decision" value="reject"
+                onclick="return confirm('Reject every selected user? They can reapply after 30 days.');"
+                class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                id="bulk-reject-btn" disabled>
+            Reject selected
+        </button>
+    </div>
+
+    <div class="mt-4 space-y-4">
+        {% for u in pending_users %}
+            <div class="border border-gray-200 rounded-lg p-5 bg-white">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div class="min-w-0 flex gap-3">
+                        <input type="checkbox" name="pks" value="{{ u.pk }}" class="row-checkbox mt-1 shrink-0">
+                        <div class="min-w-0">
+                            <a href="{% url 'users:verification_detail' u.pk %}" class="font-semibold hover:underline">
+                                {{ u.get_full_name }} &lt;{{ u.email }}&gt;
+                            </a>
+                            <p class="text-sm text-gray-600 mt-1">
+                                {{ u.affiliation|default:"No affiliation given" }}
+                                {% if u.department %} — {{ u.department }}{% endif %}
+                            </p>
+                            <p class="text-xs text-gray-400 mt-1">Registered {{ u.date_joined|date:"M j, Y" }}</p>
+                            <a href="{% url 'users:verification_detail' u.pk %}" class="text-xs font-medium text-gray-500 hover:text-gray-900 underline mt-2 inline-block">
+                                View full details →
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button type="submit" formaction="{% url 'users:verification_decide' u.pk 'approve' %}"
+                                onclick="return confirm('Approve {{ u.get_full_name|escapejs }}? They\'ll become a Verified Author.');"
+                                class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800">
                             Approve
                         </button>
-                    </form>
-                    <form method="post" action="{% url 'users:verification_decide' u.pk 'reject' %}"
-                          onsubmit="return confirm('Reject {{ u.get_full_name|escapejs }}? They can reapply after 30 days.');">
-                        {% csrf_token %}
-                        <button type="submit" class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
+                        <button type="submit" formaction="{% url 'users:verification_decide' u.pk 'reject' %}"
+                                onclick="return confirm('Reject {{ u.get_full_name|escapejs }}? They can reapply after 30 days.');"
+                                class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
                             Reject
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
-        </div>
-    {% empty %}
-        <p class="text-gray-500">No pending verifications.</p>
-    {% endfor %}
-</div>
+        {% empty %}
+            <p class="text-gray-500">No pending verifications.</p>
+        {% endfor %}
+    </div>
+</form>
+
+<script>
+    (function () {
+        var selectAll = document.getElementById('select-all-checkbox');
+        var rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        var approveBtn = document.getElementById('bulk-approve-btn');
+        var rejectBtn = document.getElementById('bulk-reject-btn');
+        if (!selectAll || !rowCheckboxes.length) return;
+
+        function updateBulkButtons() {
+            var anyChecked = Array.prototype.some.call(rowCheckboxes, function (cb) { return cb.checked; });
+            approveBtn.disabled = !anyChecked;
+            rejectBtn.disabled = !anyChecked;
+        }
+
+        selectAll.addEventListener('change', function () {
+            rowCheckboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
+            updateBulkButtons();
+        });
+        rowCheckboxes.forEach(function (cb) {
+            cb.addEventListener('change', updateBulkButtons);
+        });
+    })();
+</script>
+
+{% include 'includes/pagination.html' %}
 {% endblock %}

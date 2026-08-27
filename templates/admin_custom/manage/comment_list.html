@@ -1,0 +1,66 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Comments — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Comments{% endblock %}
+
+{% block content %}
+<p class="text-sm text-gray-500">
+    Reader comments on articles are published immediately — this is where to remove an inappropriate one after the fact.
+</p>
+
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+        <select name="status" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All</option>
+            <option value="visible" {% if selected_status == 'visible' %}selected{% endif %}>Visible</option>
+            <option value="removed" {% if selected_status == 'removed' %}selected{% endif %}>Removed</option>
+        </select>
+    </div>
+</form>
+
+<div class="mt-6 space-y-4">
+    {% for comment in comments %}
+        <div class="border border-gray-200 rounded-lg p-5 bg-white {% if comment.is_removed %}opacity-60{% endif %}">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div class="min-w-0">
+                    <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ comment.comment }}</p>
+                    <p class="text-xs text-gray-400 mt-2">
+                        {{ comment.user.get_full_name|default:comment.user_name|default:"Anonymous" }}
+                        · {{ comment.submit_date|date:"M j, Y H:i" }}
+                        {% if comment.content_object %}
+                            · on <a href="{{ comment.content_object.get_absolute_url }}" class="underline hover:text-gray-700">{{ comment.content_object }}</a>
+                        {% endif %}
+                        {% if comment.is_removed %}
+                            · <span class="text-red-600 font-medium">Removed</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    {% if comment.is_removed %}
+                        <form method="post" action="{% url 'admin_custom:manage_comment_moderate' comment.pk 'restore' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="py-1.5 px-4 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">
+                                Restore
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'admin_custom:manage_comment_moderate' comment.pk 'remove' %}"
+                              onsubmit="return confirm('Remove this comment? It will no longer be visible on the article.');">
+                            {% csrf_token %}
+                            <button type="submit" class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
+                                Remove
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <p class="text-gray-500">No comments yet.</p>
+    {% endfor %}
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}

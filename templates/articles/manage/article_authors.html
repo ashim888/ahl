@@ -25,28 +25,28 @@
 
             <div class="space-y-5">
                 {% for form in formset %}
-                    <div class="grid grid-cols-12 gap-3 items-start pb-5 {% if not forloop.last %}border-b border-gray-100{% endif %}">
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-start pb-5 {% if not forloop.last %}border-b border-gray-100{% endif %}">
                         {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
-                        <div class="col-span-6">
-                            {% if forloop.first %}<label class="block text-xs font-medium text-gray-500 mb-1.5">Author</label>{% endif %}
+                        <div class="sm:col-span-6">
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5 {% if not forloop.first %}sm:hidden{% endif %}">Author</label>
                             {{ form.user }}
                             {% for error in form.user.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
                         </div>
-                        <div class="col-span-2">
-                            {% if forloop.first %}<label class="block text-xs font-medium text-gray-500 mb-1.5">Order</label>{% endif %}
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5 {% if not forloop.first %}sm:hidden{% endif %}">Order</label>
                             {{ form.order }}
                         </div>
-                        <div class="col-span-3 flex items-center h-full {% if forloop.first %}pt-6{% endif %}">
+                        <div class="sm:col-span-3 flex items-center sm:h-full {% if forloop.first %}sm:pt-6{% endif %}">
                             <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
                                 {{ form.is_corresponding }}
                                 Corresponding
                             </label>
                         </div>
-                        <div class="col-span-1 flex items-center h-full {% if forloop.first %}pt-6{% endif %}">
+                        <div class="sm:col-span-1 flex items-center sm:h-full {% if forloop.first %}sm:pt-6{% endif %}">
                             {% if form.instance.pk %}
                                 <label class="flex items-center gap-1 text-xs text-red-600 cursor-pointer select-none" title="Remove">
                                     {{ form.DELETE }}
-                                    ✕
+                                    Remove
                                 </label>
                             {% endif %}
                         </div>

@@ -1,0 +1,10 @@
+Hi,
+
+A new account is awaiting verification review:
+
+{{ user.get_full_name }} <{{ user.email }}>
+{% if user.affiliation %}{{ user.affiliation }}{% endif %}
+
+Review it in the verification queue: {{ verification_queue_url }}
+
+— Ajna Health Lens

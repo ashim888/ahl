@@ -29,7 +29,7 @@ cropped to fit the box instead of stretched/distorted.
 </div>
 {% elif placeholder %}
 {% comment %}
-ads/models.py:AdSettings.show_placeholder_when_empty, toggled at /manage/ads/ — never shown to an
+ads/models.py:AdSettings.placeholder_zones, set per zone at /manage/ads/ — never shown to an
 ad-free (subscriber) reader, see ads_tags.py; sized to the zone like a real ad would be.
 {% endcomment %}
 <div class="{{ wrapper_class }}">

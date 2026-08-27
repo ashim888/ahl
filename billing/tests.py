@@ -322,3 +322,70 @@ class SubscriptionListFilterTests(TestCase):
     def test_filters_by_plan(self):
         response = self.client.get(reverse('billing:manage_subscription_list'), {'plan': self.monthly.pk})
         self.assertEqual(list(response.context['subscriptions']), [self.active_sub])
+
+
+class SubscriptionExpiringSoonTests(TestCase):
+    def setUp(self):
+        self.eic = User.objects.create_user(
+            email='sub-expiring-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        self.client.force_login(self.eic)
+        self.reader = User.objects.create_user(email='sub-expiring-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=10, duration_days=30,
+        )
+        self.expiring_soon = UserSubscription.objects.create(
+            user=self.reader, plan=self.plan, status=UserSubscription.Status.ACTIVE,
+            start_date=timezone.localdate() - datetime.timedelta(days=27), end_date=timezone.localdate() + datetime.timedelta(days=3),
+        )
+        self.not_expiring_soon = UserSubscription.objects.create(
+            user=self.reader, plan=self.plan, status=UserSubscription.Status.ACTIVE,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+
+    def test_expiring_filter_shows_only_soon_to_expire_active_subscriptions(self):
+        response = self.client.get(reverse('billing:manage_subscription_list'), {'expiring': '1'})
+        self.assertEqual(list(response.context['subscriptions']), [self.expiring_soon])
+
+    def test_no_filter_shows_all(self):
+        response = self.client.get(reverse('billing:manage_subscription_list'))
+        self.assertEqual(set(response.context['subscriptions']), {self.expiring_soon, self.not_expiring_soon})
+
+    def test_expiring_badge_shown_on_the_list_page(self):
+        response = self.client.get(reverse('billing:manage_subscription_list'))
+        self.assertContains(response, 'Expiring soon')
+
+    def test_dashboard_shows_expiring_soon_count(self):
+        response = self.client.get(reverse('admin_custom:dashboard'))
+        self.assertEqual(response.context['expiring_soon_subscriptions'], 1)
+        self.assertContains(response, '1 expiring within 7 days')
+
+
+class PurchaseListFilterTests(TestCase):
+    def setUp(self):
+        self.eic = User.objects.create_user(
+            email='purchase-filter-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        self.client.force_login(self.eic)
+        self.reader = User.objects.create_user(email='purchase-filter-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.article_a = make_article(Article.AccessType.PAY_PER_ARTICLE, price=5)
+        self.article_b = Article.objects.create(
+            title='Other Article', slug='other-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY,
+            access_type=Article.AccessType.PAY_PER_ARTICLE, price=7, status=Article.Status.PUBLISHED,
+        )
+        self.purchase_a = ArticlePurchase.objects.create(user=self.reader, article=self.article_a, amount=5)
+        self.purchase_b = ArticlePurchase.objects.create(user=self.reader, article=self.article_b, amount=7)
+
+    def test_filters_by_article(self):
+        response = self.client.get(reverse('billing:manage_purchase_list'), {'article': self.article_b.pk})
+        self.assertEqual(list(response.context['purchases']), [self.purchase_b])
+
+    def test_no_filter_shows_all_purchases(self):
+        response = self.client.get(reverse('billing:manage_purchase_list'))
+        self.assertEqual(set(response.context['purchases']), {self.purchase_a, self.purchase_b})
+
+    def test_article_dropdown_only_lists_articles_with_purchases(self):
+        make_article(Article.AccessType.OPEN_ACCESS)
+        response = self.client.get(reverse('billing:manage_purchase_list'))
+        self.assertEqual(set(response.context['articles']), {self.article_a, self.article_b})

@@ -10,7 +10,7 @@
         Sends immediately to all {{ confirmed_subscriber_count }} confirmed subscriber{{ confirmed_subscriber_count|pluralize }}
         via a background worker — this page won't wait for every email to go out.
     </p>
-    <form method="post" onsubmit="return confirm('Send this issue to {{ confirmed_subscriber_count }} subscriber{{ confirmed_subscriber_count|pluralize }} now?');">
+    <form method="post" id="compose-form" onsubmit="return confirm('Send this issue to {{ confirmed_subscriber_count }} subscriber{{ confirmed_subscriber_count|pluralize }} now?');">
         {% csrf_token %}
         {% if form.non_field_errors %}
             <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
@@ -28,6 +28,10 @@
                     class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
                 Send now
             </button>
+            <button type="button" id="preview-btn"
+                    class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                Preview
+            </button>
             <a href="{% url 'newsletter:manage_issue_list' %}"
                class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancel
@@ -35,4 +39,23 @@
         </div>
     </form>
 </div>
+
+<script>
+    // Preview: submit the same form data to the preview endpoint in a new
+    // tab, then restore the form's normal action/target so Send still works
+    // here — same pattern as articles/manage/article_form.html's Preview.
+    (function () {
+        var form = document.getElementById('compose-form');
+        var previewBtn = document.getElementById('preview-btn');
+        previewBtn.addEventListener('click', function () {
+            var originalAction = form.action;
+            var originalTarget = form.target;
+            form.action = '{% url "newsletter:manage_issue_preview" %}';
+            form.target = 'newsletter-preview';
+            form.submit();
+            form.action = originalAction;
+            form.target = originalTarget;
+        });
+    })();
+</script>
 {% endblock %}

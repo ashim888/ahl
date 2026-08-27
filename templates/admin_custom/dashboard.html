@@ -48,7 +48,13 @@
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Active Subscriptions</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ active_subscriptions }}</p>
-        <a href="{% url 'billing:manage_subscription_list' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">View subscriptions →</a>
+        {% if expiring_soon_subscriptions %}
+            <a href="{% url 'billing:manage_subscription_list' %}?expiring=1" class="mt-2 inline-block text-xs font-medium text-amber-700 underline underline-offset-2">
+                {{ expiring_soon_subscriptions }} expiring within 7 days →
+            </a>
+        {% else %}
+            <a href="{% url 'billing:manage_subscription_list' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">View subscriptions →</a>
+        {% endif %}
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Newsletter Subscribers</p>

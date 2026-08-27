@@ -35,6 +35,10 @@
             {% endfor %}
         </select>
     </div>
+    <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none pb-1.5">
+        <input type="checkbox" name="expiring" value="1" onchange="this.form.submit()" {% if selected_expiring == '1' %}checked{% endif %}>
+        Expiring within {{ expiring_soon_window_days }} days
+    </label>
 </form>
 
 <div class="mt-6 overflow-x-auto">
@@ -59,7 +63,12 @@
                         {{ subscription.get_status_display }}
                         {% if subscription.is_currently_active %}<span class="text-green-600">●</span>{% endif %}
                     </td>
-                    <td class="px-4 py-3 text-gray-600">{{ subscription.start_date }} – {{ subscription.end_date }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {{ subscription.start_date }} – {{ subscription.end_date }}
+                        {% if subscription.is_currently_active and subscription.end_date <= expiring_soon_cutoff %}
+                            <span class="ml-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium whitespace-nowrap">Expiring soon</span>
+                        {% endif %}
+                    </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         {% if subscription.status == 'active' %}
                             <form method="post" action="{% url 'billing:manage_subscription_revoke' subscription.pk %}" class="inline"

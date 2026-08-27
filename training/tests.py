@@ -30,6 +30,22 @@ class CourseManageListFilterTests(TestCase):
         response = self.client.get(reverse('training:manage_course_list'), {'active': 'yes'})
         self.assertEqual(list(response.context['courses']), [active_course])
 
+    def test_search_filters_by_title_or_instructor(self):
+        match_by_title = TrainingCourse.objects.create(
+            title='Statistical Methods', description='...', price=10, duration='2 weeks', instructor='Dr. A',
+        )
+        match_by_instructor = TrainingCourse.objects.create(
+            title='Research Writing', description='...', price=10, duration='2 weeks', instructor='Dr. Zawadi',
+        )
+        TrainingCourse.objects.create(
+            title='Unrelated Course', description='...', price=10, duration='2 weeks', instructor='Dr. B',
+        )
+        response = self.client.get(reverse('training:manage_course_list'), {'q': 'statistical'})
+        self.assertEqual(list(response.context['courses']), [match_by_title])
+
+        response = self.client.get(reverse('training:manage_course_list'), {'q': 'zawadi'})
+        self.assertEqual(list(response.context['courses']), [match_by_instructor])
+
 
 @FAST_PASSWORD_HASHERS
 class CourseEnrollmentsListTests(TestCase):
@@ -58,6 +74,91 @@ class CourseEnrollmentsListTests(TestCase):
         self.assertTrue(response.context['is_paginated'])
         self.assertEqual(response.context['page_obj'].paginator.count, 35)
         self.assertEqual(len(response.context['page_obj']), 30)
+
+    def test_filters_by_status_and_payment_status(self):
+        active_paid = Enrollment.objects.create(
+            user=self.reader, course=self.course,
+            status=Enrollment.Status.ACTIVE, payment_status=Enrollment.PaymentStatus.PAID,
+        )
+        other_reader = User.objects.create_user(email='other-reader@example.com', password='pw', first_name='O', last_name='R')
+        Enrollment.objects.create(
+            user=other_reader, course=self.course,
+            status=Enrollment.Status.CANCELLED, payment_status=Enrollment.PaymentStatus.REFUNDED,
+        )
+        self.client.force_login(self.editor)
+
+        response = self.client.get(
+            reverse('training:manage_course_enrollments', args=[self.course.pk]), {'status': Enrollment.Status.ACTIVE},
+        )
+        self.assertEqual(list(response.context['enrollments']), [active_paid])
+
+        response = self.client.get(
+            reverse('training:manage_course_enrollments', args=[self.course.pk]),
+            {'payment_status': Enrollment.PaymentStatus.REFUNDED},
+        )
+        self.assertEqual(list(response.context['enrollments']), [Enrollment.objects.get(user=other_reader)])
+
+
+@FAST_PASSWORD_HASHERS
+class EnrollmentBulkUpdateTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='enrollment-bulk-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='enrollment-bulk-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.course = TrainingCourse.objects.create(
+            title='Bulk Course', description='...', price=10, duration='2 weeks', instructor='Dr. B',
+        )
+        self.other_course = TrainingCourse.objects.create(
+            title='Other Course', description='...', price=10, duration='2 weeks', instructor='Dr. C',
+        )
+        self.enrollment_a = Enrollment.objects.create(user=self.reader, course=self.course)
+        other_reader = User.objects.create_user(email='enrollment-bulk-reader2@example.com', password='pw', first_name='O', last_name='R')
+        self.enrollment_b = Enrollment.objects.create(user=other_reader, course=self.course)
+
+    def test_bulk_update_sets_status_for_all_selected(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('training:manage_enrollment_bulk_update', args=[self.course.pk]), {
+            'status': Enrollment.Status.COMPLETED, 'pks': [self.enrollment_a.pk, self.enrollment_b.pk],
+        })
+        self.enrollment_a.refresh_from_db()
+        self.enrollment_b.refresh_from_db()
+        self.assertEqual(self.enrollment_a.status, Enrollment.Status.COMPLETED)
+        self.assertEqual(self.enrollment_b.status, Enrollment.Status.COMPLETED)
+
+    def test_bulk_update_sets_payment_status_independently(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('training:manage_enrollment_bulk_update', args=[self.course.pk]), {
+            'payment_status': Enrollment.PaymentStatus.PAID, 'pks': [self.enrollment_a.pk],
+        })
+        self.enrollment_a.refresh_from_db()
+        self.assertEqual(self.enrollment_a.payment_status, Enrollment.PaymentStatus.PAID)
+        self.assertEqual(self.enrollment_a.status, Enrollment.Status.ACTIVE)
+
+    def test_bulk_update_ignores_enrollments_from_another_course(self):
+        other_enrollment = Enrollment.objects.create(user=self.reader, course=self.other_course)
+        self.client.force_login(self.editor)
+        self.client.post(reverse('training:manage_enrollment_bulk_update', args=[self.course.pk]), {
+            'status': Enrollment.Status.COMPLETED, 'pks': [other_enrollment.pk],
+        })
+        other_enrollment.refresh_from_db()
+        self.assertEqual(other_enrollment.status, Enrollment.Status.ACTIVE)
+
+    def test_no_change_when_neither_field_provided(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('training:manage_enrollment_bulk_update', args=[self.course.pk]), {
+            'pks': [self.enrollment_a.pk],
+        })
+        self.assertRedirects(response, reverse('training:manage_course_enrollments', args=[self.course.pk]))
+        self.enrollment_a.refresh_from_db()
+        self.assertEqual(self.enrollment_a.status, Enrollment.Status.ACTIVE)
+
+    def test_reader_cannot_bulk_update(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('training:manage_enrollment_bulk_update', args=[self.course.pk]), {
+            'status': Enrollment.Status.COMPLETED, 'pks': [self.enrollment_a.pk],
+        })
+        self.assertEqual(response.status_code, 403)
 
 
 class CourseCheckoutTests(TestCase):

@@ -11,6 +11,7 @@ urlpatterns = [
 
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
     path('manage/pitches/', views.PitchQueueListView.as_view(), name='manage_pitch_queue'),
+    path('manage/pitches/bulk-decide/', views.pitch_bulk_decide, name='manage_pitch_bulk_decide'),
     path('manage/pitches/<int:pk>/', views.pitch_detail, name='manage_pitch_detail'),
     path('manage/pitches/<int:pk>/<str:decision>/', views.pitch_decide, name='manage_pitch_decide'),
 ]

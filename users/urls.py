@@ -16,7 +16,8 @@ urlpatterns = [
     path('pending-verification/', views.pending_verification_view, name='pending_verification'),
     path('pending-verification/reapply/', views.reapply_verification, name='reapply_verification'),
 
-    path('verification-queue/', views.verification_queue, name='verification_queue'),
+    path('verification-queue/', views.VerificationQueueView.as_view(), name='verification_queue'),
+    path('verification-queue/bulk-decide/', views.verification_bulk_decide, name='verification_bulk_decide'),
     path('verification-queue/<int:pk>/', views.verification_detail, name='verification_detail'),
     path(
         'verification-queue/<int:pk>/<str:decision>/',

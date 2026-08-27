@@ -13,6 +13,7 @@
 </div>
 
     <form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+        {% include 'includes/search_field.html' with placeholder="Search title…" %}
         <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">Type</label>
             <select name="type" onchange="this.form.submit()"

@@ -129,6 +129,26 @@ class AdSlotManageTests(TestCase):
         ad.refresh_from_db()
         self.assertFalse(ad.is_active)
 
+    def test_reader_cannot_delete_ad(self):
+        ad = make_ad()
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('ads:manage_adslot_delete', args=[ad.pk]))
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(AdSlot.objects.filter(pk=ad.pk).exists())
+
+    def test_editor_can_delete_ad(self):
+        ad = make_ad()
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('ads:manage_adslot_delete', args=[ad.pk]))
+        self.assertRedirects(response, reverse('ads:manage_adslot_list'))
+        self.assertFalse(AdSlot.objects.filter(pk=ad.pk).exists())
+
+    def test_delete_confirmation_page_shows_sponsor_name(self):
+        ad = make_ad(sponsor_name='Acme Corp')
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('ads:manage_adslot_delete', args=[ad.pk]))
+        self.assertContains(response, 'Acme Corp')
+
     # Zone-level impressions/clicks/CTR stats moved to the separate
     # /manage/ads/analytics/ page (August 2026) — see
     # AdSlotAnalyticsOverviewTests.test_zone_stats_and_window_totals.
@@ -158,6 +178,12 @@ class AdSlotListFilterTests(TestCase):
         ads = list(response.context['ad_slots'])
         self.assertEqual(len(ads), 1)
         self.assertEqual(ads[0].sponsor_name, 'Inactive Sponsor')
+
+    def test_search_filters_by_sponsor_name(self):
+        match = make_ad(sponsor_name='Acme Pharma')
+        make_ad(sponsor_name='Unrelated Sponsor')
+        response = self.client.get(reverse('ads:manage_adslot_list'), {'q': 'acme'})
+        self.assertEqual(list(response.context['ad_slots']), [match])
 
     def test_list_page_has_no_zone_stats_or_chart(self):
         # Split out to the dedicated Analytics page (AdSlotAnalyticsOverviewTests
@@ -393,8 +419,8 @@ class AdSlotTemplateTagTests(TestCase):
 
 
 class AdPlaceholderTests(TestCase):
-    """AdSettings.show_placeholder_when_empty (default off) — an "Advertise
-    Here" box for an unsold zone instead of rendering nothing, toggled from
+    """AdSettings.placeholder_zones (default empty) — an "Advertise Here"
+    box for an unsold zone instead of rendering nothing, set per zone from
     /manage/ads/. Never shown to an ad-free (subscriber) reader regardless
     of the setting. Uses a real page render (Home, which has
     header_leaderboard/mobile_anchor/mobile_large_banner/homepage_rectangle_1
@@ -409,19 +435,26 @@ class AdPlaceholderTests(TestCase):
         response = self.client.get(reverse('articles:home'))
         self.assertNotContains(response, 'ADVERTISE HERE')
 
-    def test_placeholder_shown_when_enabled(self):
+    def test_placeholder_shown_for_an_enabled_zone(self):
         settings_row = AdSettings.get_solo()
-        settings_row.show_placeholder_when_empty = True
+        settings_row.placeholder_zones = [AdSlot.Zone.HEADER_LEADERBOARD]
         settings_row.save()
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, 'ADVERTISE HERE')
         self.assertContains(response, 'Site Header — Leaderboard')
 
+    def test_placeholder_not_shown_for_a_zone_not_enabled(self):
+        settings_row = AdSettings.get_solo()
+        settings_row.placeholder_zones = [AdSlot.Zone.MOBILE_ANCHOR]
+        settings_row.save()
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotContains(response, 'Site Header — Leaderboard')
+
     def test_placeholder_never_shown_to_ad_free_subscriber(self):
         from billing.models import SubscriptionPlan, UserSubscription
 
         settings_row = AdSettings.get_solo()
-        settings_row.show_placeholder_when_empty = True
+        settings_row.placeholder_zones = [AdSlot.Zone.HEADER_LEADERBOARD]
         settings_row.save()
         reader = User.objects.create_user(
             email='placeholder-subscriber@example.com', password='pw', first_name='S', last_name='R',
@@ -439,19 +472,17 @@ class AdPlaceholderTests(TestCase):
 
     def test_real_ad_takes_priority_over_placeholder(self):
         settings_row = AdSettings.get_solo()
-        settings_row.show_placeholder_when_empty = True
+        settings_row.placeholder_zones = [AdSlot.Zone.HEADER_LEADERBOARD]
         settings_row.save()
         make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Real Sponsor')
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, 'Real Sponsor')
-        # Header leaderboard zone is filled — no placeholder for that zone —
-        # but other empty zones on the same page should still show one.
-        self.assertContains(response, 'ADVERTISE HERE')
+        self.assertNotContains(response, 'ADVERTISE HERE')
 
     def test_get_solo_creates_row_on_first_access(self):
         self.assertEqual(AdSettings.objects.count(), 0)
         settings_row = AdSettings.get_solo()
-        self.assertFalse(settings_row.show_placeholder_when_empty)
+        self.assertEqual(settings_row.placeholder_zones, [])
         self.assertEqual(AdSettings.objects.count(), 1)
         self.assertEqual(AdSettings.get_solo().pk, settings_row.pk)
 
@@ -466,33 +497,40 @@ class AdSettingsManageViewTests(TestCase):
             email='ad-settings-reader@example.com', password='pw', first_name='R', last_name='D',
         )
 
-    def test_editor_can_toggle_placeholder_setting(self):
+    def test_editor_can_set_placeholder_zones(self):
         self.client.force_login(self.editor)
-        self.assertFalse(AdSettings.get_solo().show_placeholder_when_empty)
-        response = self.client.post(reverse('ads:manage_ad_settings_toggle_placeholder'), follow=True)
+        self.assertEqual(AdSettings.get_solo().placeholder_zones, [])
+        response = self.client.post(reverse('ads:manage_ad_settings_update_placeholder_zones'), {
+            'placeholder_zones': [AdSlot.Zone.HEADER_LEADERBOARD, AdSlot.Zone.MOBILE_ANCHOR],
+        }, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(AdSettings.get_solo().show_placeholder_when_empty)
-        # Toggling again flips it back off.
-        self.client.post(reverse('ads:manage_ad_settings_toggle_placeholder'))
-        self.assertFalse(AdSettings.get_solo().show_placeholder_when_empty)
+        self.assertEqual(
+            set(AdSettings.get_solo().placeholder_zones),
+            {AdSlot.Zone.HEADER_LEADERBOARD, AdSlot.Zone.MOBILE_ANCHOR},
+        )
 
-    def test_non_editor_cannot_toggle(self):
+    def test_unknown_zone_value_is_ignored(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('ads:manage_ad_settings_update_placeholder_zones'), {
+            'placeholder_zones': [AdSlot.Zone.HEADER_LEADERBOARD, 'not-a-real-zone'],
+        })
+        self.assertEqual(AdSettings.get_solo().placeholder_zones, [AdSlot.Zone.HEADER_LEADERBOARD])
+
+    def test_non_editor_cannot_update(self):
         self.client.force_login(self.reader)
-        response = self.client.post(reverse('ads:manage_ad_settings_toggle_placeholder'))
+        response = self.client.post(reverse('ads:manage_ad_settings_update_placeholder_zones'), {
+            'placeholder_zones': [AdSlot.Zone.HEADER_LEADERBOARD],
+        })
         self.assertEqual(response.status_code, 403)
-        self.assertFalse(AdSettings.get_solo().show_placeholder_when_empty)
+        self.assertEqual(AdSettings.get_solo().placeholder_zones, [])
 
     def test_get_request_not_allowed(self):
         self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ad_settings_toggle_placeholder'))
+        response = self.client.get(reverse('ads:manage_ad_settings_update_placeholder_zones'))
         self.assertEqual(response.status_code, 405)
 
-    def test_toggle_button_shown_on_manage_list_page(self):
+    def test_zone_checklist_shown_on_manage_list_page(self):
         self.client.force_login(self.editor)
         response = self.client.get(reverse('ads:manage_adslot_list'))
-        self.assertContains(response, 'Placeholders: OFF')
-        settings_row = AdSettings.get_solo()
-        settings_row.show_placeholder_when_empty = True
-        settings_row.save()
-        response = self.client.get(reverse('ads:manage_adslot_list'))
-        self.assertContains(response, 'Placeholders: ON')
+        self.assertContains(response, '"Advertise Here" placeholders')
+        self.assertContains(response, 'name="placeholder_zones"')

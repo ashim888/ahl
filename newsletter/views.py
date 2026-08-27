@@ -3,7 +3,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView
+from django_q.models import Task
 from django_q.tasks import async_task
 
 from users.decorators import role_required
@@ -12,6 +14,11 @@ from users.models import User
 from .emails import send_confirmation_email
 from .forms import NewsletterIssueForm, SubscribeForm
 from .models import NewsletterIssue, Subscriber
+
+# Placeholder shown in the preview instead of a real subscriber's one-click
+# link — send_newsletter_issue (tasks.py) builds the real, token-based URL
+# per recipient, which doesn't exist until an actual send happens.
+PREVIEW_UNSUBSCRIBE_URL = '#preview-unsubscribe-link-not-real'
 
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
@@ -74,10 +81,16 @@ class IssueListView(ListView):
     def get_queryset(self):
         queryset = NewsletterIssue.objects.order_by('-created_at')
         status = self.request.GET.get('status')
+        q = self.request.GET.get('q')
+        failed_task_ids = Task.objects.filter(success=False).values_list('id', flat=True)
         if status == 'sent':
             queryset = queryset.filter(sent_at__isnull=False)
+        elif status == 'failed':
+            queryset = queryset.filter(sent_at__isnull=True, task_id__in=failed_task_ids)
         elif status == 'sending':
-            queryset = queryset.filter(sent_at__isnull=True)
+            queryset = queryset.filter(sent_at__isnull=True).exclude(task_id__in=failed_task_ids)
+        if q:
+            queryset = queryset.filter(subject__icontains=q)
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -86,6 +99,7 @@ class IssueListView(ListView):
             status=Subscriber.Status.CONFIRMED,
         ).count()
         context['selected_status'] = self.request.GET.get('status', '')
+        context['selected_q'] = self.request.GET.get('q', '')
         return context
 
 
@@ -106,7 +120,9 @@ class IssueComposeView(CreateView):
         form.instance.created_by = self.request.user
         response = super().form_valid(form)
 
-        async_task('newsletter.tasks.send_newsletter_issue', self.object.pk)
+        task_id = async_task('newsletter.tasks.send_newsletter_issue', self.object.pk)
+        self.object.task_id = task_id
+        self.object.save(update_fields=['task_id'])
 
         messages.success(
             self.request,
@@ -117,3 +133,42 @@ class IssueComposeView(CreateView):
 
     def get_success_url(self):
         return reverse('newsletter:manage_issue_list')
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def issue_preview(request):
+    """Renders in-progress compose-form data the way send_newsletter_issue
+    (tasks.py) actually builds the email — subject + body_html + an
+    unsubscribe footer — without saving anything or sending anything.
+    Opened in a new tab from issue_compose.html, same pattern as
+    articles:manage_article_preview.
+    """
+    form = NewsletterIssueForm(request.POST)
+    if not form.is_valid():
+        return render(request, 'newsletter/manage/issue_preview_error.html', {'form': form}, status=400)
+
+    return render(request, 'newsletter/manage/issue_preview.html', {
+        'subject': form.cleaned_data['subject'],
+        'body_html': form.cleaned_data['body_html'],
+        'unsubscribe_url': PREVIEW_UNSUBSCRIBE_URL,
+    })
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def issue_retry(request, pk):
+    """Re-enqueues a failed send — the original task's failure is left in
+    django_q's own Task table as history; this just points the issue at a
+    fresh attempt.
+    """
+    issue = get_object_or_404(NewsletterIssue, pk=pk)
+    if issue.get_send_status() != NewsletterIssue.Status.FAILED:
+        messages.error(request, 'This issue is not in a failed state.')
+        return redirect('newsletter:manage_issue_list')
+
+    task_id = async_task('newsletter.tasks.send_newsletter_issue', issue.pk)
+    issue.task_id = task_id
+    issue.save(update_fields=['task_id'])
+    messages.success(request, f'Retrying "{issue.subject}".')
+    return redirect('newsletter:manage_issue_list')

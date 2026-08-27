@@ -42,7 +42,23 @@
             {% for member in members %}
                 <tr>
                     <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
-                    <td class="px-4 py-3 text-gray-500">{{ member.order }}</td>
+                    <td class="px-4 py-3 text-gray-500">
+                        <div class="flex items-center gap-1">
+                            <span>{{ member.order }}</span>
+                            <form method="post" action="{% url 'editorial_board:manage_member_move' member.pk 'up' %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="icon-action-btn" title="Move up" aria-label="Move up">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0-6 6m6-6 6 6"/></svg>
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'editorial_board:manage_member_move' member.pk 'down' %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="icon-action-btn" title="Move down" aria-label="Move down">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0 0 6-6m-6 6-6-6"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
                     <td class="px-4 py-3 font-medium text-gray-900">{{ member.name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ member.role_title }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ member.affiliation|default:"—" }}</td>

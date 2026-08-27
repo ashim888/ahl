@@ -68,6 +68,18 @@ class PitchSubmissionTests(TestCase):
         self.assertEqual(pitch.submitter, self.author)
         self.assertEqual(pitch.status, StoryPitch.Status.SUBMITTED)
 
+    def test_submitting_notifies_senior_editorial_staff(self):
+        eic = User.objects.create_user(
+            email='pitch-notify-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        mail.outbox = []
+        self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'A Notify-Worthy Pitch', 'summary': 'Why this matters now.', 'body': '',
+        })
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(eic.email, mail.outbox[0].to)
+        self.assertIn('A Notify-Worthy Pitch', mail.outbox[0].subject)
+
     def test_logged_in_submitter_is_not_asked_for_contact_info(self):
         response = self.client.get(reverse('pitches:pitch_create'))
         self.assertNotContains(response, 'name="submitter_name"')
@@ -187,6 +199,42 @@ class PitchQueueAccessTests(TestCase):
         self.assertIn(open_pitch, pitches)
         self.assertEqual(len(pitches), 1)
 
+    def test_open_pitches_show_direct_accept_reject_actions(self):
+        author = make_verified_author()
+        pitch = StoryPitch.objects.create(title='Open', summary='s', submitter=author, status=StoryPitch.Status.SUBMITTED)
+
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('pitches:manage_pitch_queue'))
+        self.assertContains(response, reverse('pitches:manage_pitch_decide', args=[pitch.pk, 'accept']))
+        self.assertContains(response, reverse('pitches:manage_pitch_decide', args=[pitch.pk, 'reject']))
+
+    def test_decided_pitches_hide_accept_reject_actions(self):
+        author = make_verified_author()
+        pitch = StoryPitch.objects.create(title='Rejected', summary='s', submitter=author, status=StoryPitch.Status.REJECTED)
+
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('pitches:manage_pitch_queue'), {'status': StoryPitch.Status.REJECTED})
+        self.assertNotContains(response, reverse('pitches:manage_pitch_decide', args=[pitch.pk, 'accept']))
+
+    def test_search_filters_by_title(self):
+        author = make_verified_author()
+        match = StoryPitch.objects.create(title='Vaccine Rollout Delays', summary='s', submitter=author)
+        StoryPitch.objects.create(title='Unrelated Pitch', summary='s', submitter=author)
+
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('pitches:manage_pitch_queue'), {'q': 'vaccine'})
+        self.assertEqual(list(response.context['pitches']), [match])
+
+    def test_search_filters_by_contact_email(self):
+        match = StoryPitch.objects.create(
+            title='Anon Pitch', summary='s', submitter_name='Guest', submitter_email='findme@example.com',
+        )
+        StoryPitch.objects.create(title='Other Pitch', summary='s', submitter_name='Guest', submitter_email='other@example.com')
+
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('pitches:manage_pitch_queue'), {'q': 'findme'})
+        self.assertEqual(list(response.context['pitches']), [match])
+
 
 @FAST_PASSWORD_HASHERS
 class PitchDecisionTests(TestCase):
@@ -256,6 +304,66 @@ class PitchDecisionTests(TestCase):
         self.client.post(reverse('pitches:manage_pitch_decide', args=[anon_pitch.pk, 'reject']))
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('guest-email@example.com', mail.outbox[0].to)
+
+
+@FAST_PASSWORD_HASHERS
+class PitchBulkDecisionTests(TestCase):
+    def setUp(self):
+        self.author = make_verified_author()
+        self.editor = make_editor()
+        self.pitch_a = StoryPitch.objects.create(title='Pitch A', summary='s', submitter=self.author)
+        self.pitch_b = StoryPitch.objects.create(title='Pitch B', summary='s', submitter=self.author)
+        self.client.force_login(self.editor)
+
+    def test_bulk_reject_rejects_all_selected(self):
+        self.client.post(reverse('pitches:manage_pitch_bulk_decide'), {
+            'decision': 'reject', 'pks': [self.pitch_a.pk, self.pitch_b.pk],
+        })
+        self.pitch_a.refresh_from_db()
+        self.pitch_b.refresh_from_db()
+        self.assertEqual(self.pitch_a.status, StoryPitch.Status.REJECTED)
+        self.assertEqual(self.pitch_b.status, StoryPitch.Status.REJECTED)
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_bulk_accept_creates_a_draft_article_per_pitch(self):
+        self.client.post(reverse('pitches:manage_pitch_bulk_decide'), {
+            'decision': 'accept', 'pks': [self.pitch_a.pk, self.pitch_b.pk],
+        })
+        self.pitch_a.refresh_from_db()
+        self.pitch_b.refresh_from_db()
+        self.assertEqual(self.pitch_a.status, StoryPitch.Status.ACCEPTED)
+        self.assertEqual(self.pitch_b.status, StoryPitch.Status.ACCEPTED)
+        self.assertIsNotNone(self.pitch_a.article)
+        self.assertIsNotNone(self.pitch_b.article)
+        self.assertNotEqual(self.pitch_a.article_id, self.pitch_b.article_id)
+
+    def test_already_decided_pitches_are_skipped(self):
+        self.pitch_a.status = StoryPitch.Status.REJECTED
+        self.pitch_a.save()
+        response = self.client.post(reverse('pitches:manage_pitch_bulk_decide'), {
+            'decision': 'accept', 'pks': [self.pitch_a.pk, self.pitch_b.pk],
+        })
+        self.assertRedirects(response, reverse('pitches:manage_pitch_queue'))
+        self.pitch_a.refresh_from_db()
+        self.pitch_b.refresh_from_db()
+        self.assertEqual(self.pitch_a.status, StoryPitch.Status.REJECTED)
+        self.assertIsNone(self.pitch_a.article)
+        self.assertEqual(self.pitch_b.status, StoryPitch.Status.ACCEPTED)
+
+    def test_invalid_decision_is_rejected(self):
+        response = self.client.post(reverse('pitches:manage_pitch_bulk_decide'), {
+            'decision': 'not-a-real-decision', 'pks': [self.pitch_a.pk],
+        })
+        self.assertEqual(response.status_code, 403)
+
+    def test_verified_author_cannot_bulk_decide(self):
+        self.client.force_login(self.author)
+        response = self.client.post(reverse('pitches:manage_pitch_bulk_decide'), {
+            'decision': 'reject', 'pks': [self.pitch_a.pk],
+        })
+        self.assertEqual(response.status_code, 403)
+        self.pitch_a.refresh_from_db()
+        self.assertEqual(self.pitch_a.status, StoryPitch.Status.SUBMITTED)
 
 
 @FAST_PASSWORD_HASHERS

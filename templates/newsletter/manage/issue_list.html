@@ -15,6 +15,7 @@
 </div>
 
 <form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    {% include 'includes/search_field.html' with placeholder="Search subject…" %}
     <div>
         <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
         <select name="status" onchange="this.form.submit()"
@@ -22,6 +23,7 @@
             <option value="">All</option>
             <option value="sent" {% if selected_status == 'sent' %}selected{% endif %}>Sent</option>
             <option value="sending" {% if selected_status == 'sending' %}selected{% endif %}>Sending…</option>
+            <option value="failed" {% if selected_status == 'failed' %}selected{% endif %}>Failed</option>
         </select>
     </div>
 </form>
@@ -35,21 +37,41 @@
                 <th class="px-4 py-3">Created</th>
                 <th class="px-4 py-3">Sent</th>
                 <th class="px-4 py-3">Recipients</th>
+                <th class="px-4 py-3"></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 bg-white">
             {% for issue in issues %}
+                {% with send_status=issue.get_send_status %}
                 <tr>
                     <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
                     <td class="px-4 py-3 font-medium text-gray-900">{{ issue.subject }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ issue.created_at|date:"M j, Y" }}</td>
                     <td class="px-4 py-3 text-gray-600">
-                        {% if issue.sent_at %}{{ issue.sent_at|date:"M j, Y H:i" }}{% else %}Sending…{% endif %}
+                        {% if send_status == 'sent' %}
+                            {{ issue.sent_at|date:"M j, Y H:i" }}
+                        {% elif send_status == 'failed' %}
+                            <span class="text-red-700 font-medium" title="{{ issue.get_failure_reason }}">Failed</span>
+                        {% else %}
+                            Sending…
+                        {% endif %}
                     </td>
                     <td class="px-4 py-3 text-gray-600">{{ issue.recipient_count }}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        {% if send_status == 'failed' %}
+                            <form method="post" action="{% url 'newsletter:manage_issue_retry' issue.pk %}" class="inline"
+                                  onsubmit="return confirm('Retry sending \'{{ issue.subject|escapejs }}\'?');">
+                                {% csrf_token %}
+                                <button type="submit" class="py-1 px-3 rounded-md bg-gray-900 text-white text-xs font-medium hover:bg-gray-700">
+                                    Retry
+                                </button>
+                            </form>
+                        {% endif %}
+                    </td>
                 </tr>
+                {% endwith %}
             {% empty %}
-                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No issues sent yet.</td></tr>
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No issues sent yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

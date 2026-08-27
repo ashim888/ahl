@@ -1,7 +1,10 @@
 from django.conf import settings
 from django.contrib import messages
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
 from articles.models import Article
@@ -138,6 +141,36 @@ class BoardMemberManageListView(ListView):
         context = super().get_context_data(**kwargs)
         context['selected_active'] = self.request.GET.get('active', '')
         return context
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def member_move(request, pk, direction):
+    """Swaps this member's display order with its neighbor. Orders start
+    out defaulting to 0 for every new member (see EditorialBoardMember.order),
+    which on its own gives no up/down to swap — so this also normalizes the
+    whole list to sequential values first, making every move have a visible
+    effect instead of silently no-opping on ties.
+    """
+    if direction not in ('up', 'down'):
+        raise Http404
+
+    members = list(EditorialBoardMember.objects.order_by('order', 'name', 'pk'))
+    for index, member in enumerate(members):
+        if member.order != index:
+            member.order = index
+            member.save(update_fields=['order'])
+
+    member = get_object_or_404(EditorialBoardMember, pk=pk)
+    current_index = member.order
+    target_index = current_index - 1 if direction == 'up' else current_index + 1
+    if 0 <= target_index < len(members):
+        neighbor = members[target_index]
+        member.order, neighbor.order = neighbor.order, member.order
+        member.save(update_fields=['order'])
+        neighbor.save(update_fields=['order'])
+
+    return redirect('editorial_board:manage_member_list')
 
 
 class BoardMemberFormMixin:

@@ -1,10 +1,15 @@
 import datetime
 from decimal import Decimal
 
+from django.contrib import messages
 from django.db.models import Count, Q, Sum
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView
+from django.views.decorators.http import require_POST
+from django.views.generic import ListView, TemplateView
+from django_comments_xtd.models import XtdComment
 
 from ads.models import AdEvent, AdSlot
 from articles.models import Article, ArticleView
@@ -119,6 +124,13 @@ class DashboardHomeView(TemplateView):
 
         context['active_subscriptions'] = UserSubscription.objects.filter(
             status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
+        ).count()
+        # No renewal-nudge workflow exists yet — this is just the first,
+        # proactive surface for it (see billing/views.py's matching
+        # EXPIRING_SOON_WINDOW_DAYS filter on the subscriptions manage list).
+        context['expiring_soon_subscriptions'] = UserSubscription.objects.filter(
+            status=UserSubscription.Status.ACTIVE,
+            end_date__gte=today, end_date__lte=today + datetime.timedelta(days=7),
         ).count()
         context['newsletter_subscribers'] = Subscriber.objects.filter(status=Subscriber.Status.CONFIRMED).count()
         context['open_pitches'] = StoryPitch.objects.filter(
@@ -353,3 +365,45 @@ class AnalyticsView(TemplateView):
         ).count()
 
         return context
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class CommentModerationListView(ListView):
+    """django_comments_xtd (see ajna_health_lens/settings.py) publishes
+    comments immediately — there's no moderation queue upstream, just
+    Django admin's generic changelist, which non-superuser editorial staff
+    (is_staff=False) can't reach. This is that missing surface, scoped to
+    the same role_required boundary as every other editorial screen.
+    """
+
+    model = XtdComment
+    template_name = 'admin_custom/manage/comment_list.html'
+    context_object_name = 'comments'
+    paginate_by = 30
+
+    def get_queryset(self):
+        queryset = XtdComment.objects.select_related('content_type', 'user').order_by('-submit_date')
+        status = self.request.GET.get('status')
+        if status == 'removed':
+            queryset = queryset.filter(is_removed=True)
+        elif status == 'visible':
+            queryset = queryset.filter(is_removed=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['selected_status'] = self.request.GET.get('status', '')
+        return context
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def comment_moderate(request, pk, action):
+    if action not in ('remove', 'restore'):
+        raise Http404
+
+    comment = get_object_or_404(XtdComment, pk=pk)
+    comment.is_removed = action == 'remove'
+    comment.save(update_fields=['is_removed'])
+    messages.success(request, f'Comment {"removed" if comment.is_removed else "restored"}.')
+    return redirect('admin_custom:manage_comment_list')

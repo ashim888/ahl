@@ -39,9 +39,9 @@
             <p class="text-xs font-medium text-gray-500 mb-2">Zone sizes — the uploaded image must exactly match:</p>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
-                    <tbody class="divide-y divide-gray-200 bg-gray-50">
-                        {% for label, width, height in zone_dimensions %}
-                            <tr>
+                    <tbody id="zone-dimensions-body" class="divide-y divide-gray-200 bg-gray-50">
+                        {% for value, label, width, height in zone_dimensions %}
+                            <tr data-zone="{{ value }}">
                                 <td class="px-3 py-2 text-gray-600">{{ label }}</td>
                                 <td class="px-3 py-2 text-gray-900 font-medium whitespace-nowrap">{{ width }}×{{ height }}px</td>
                             </tr>
@@ -50,6 +50,25 @@
                 </table>
             </div>
         </div>
+
+        <script>
+            (function () {
+                var zoneSelect = document.getElementById('{{ form.zone.id_for_label }}');
+                var rows = document.querySelectorAll('#zone-dimensions-body tr[data-zone]');
+                if (!zoneSelect || !rows.length) return;
+
+                function highlightSelectedZone() {
+                    rows.forEach(function (row) {
+                        var isSelected = row.dataset.zone === zoneSelect.value;
+                        row.classList.toggle('bg-indigo-50', isSelected);
+                        row.classList.toggle('font-medium', isSelected);
+                    });
+                }
+
+                zoneSelect.addEventListener('change', highlightSelectedZone);
+                highlightSelectedZone();
+            })();
+        </script>
 
         <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
             <button type="submit"

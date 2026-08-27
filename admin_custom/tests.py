@@ -127,3 +127,68 @@ class AnalyticsDataTests(TestCase):
         self.assertEqual(response.context['newsletter_total'], 2)
         self.assertEqual(response.context['newsletter_confirmed_count'], 1)
         self.assertEqual(sum(d['count'] for d in response.context['newsletter_confirmed_trend']), 1)
+
+
+def _comment_post_data(article, comment_text, **extra):
+    """Same helper as articles/tests.py's ArticleCommentsTests — builds
+    valid POST data (including the anti-spoofing content_type/object_pk/
+    timestamp/security_hash fields) for django_comments's post_comment view.
+    """
+    from django_comments_xtd.forms import XtdCommentForm
+
+    data = XtdCommentForm(article).initial.copy()
+    data.update({
+        'comment': comment_text, 'name': '', 'email': '', 'url': '',
+        'reply_to': 0, 'followup': False, 'honeypot': '',
+        'next': article.get_absolute_url(),
+    })
+    data.update(extra)
+    return data
+
+
+class CommentModerationTests(TestCase):
+    def setUp(self):
+        self.editor = make_editor(email='comment-mod-editor@example.com')
+        self.reader = make_reader(email='comment-mod-reader@example.com')
+        self.article = make_article(slug='commentable-for-moderation')
+        self.client.force_login(self.reader)
+        self.client.post(
+            reverse('comments-post-comment'), _comment_post_data(self.article, 'A moderation test comment.'), follow=True,
+        )
+        from django_comments_xtd.models import XtdComment
+        self.comment = XtdComment.objects.get(comment='A moderation test comment.')
+
+    def test_reader_cannot_access_moderation_queue(self):
+        response = self.client.get(reverse('admin_custom:manage_comment_list'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_editor_sees_comment_in_queue(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:manage_comment_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'A moderation test comment.')
+
+    def test_editor_can_remove_and_restore_a_comment(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('admin_custom:manage_comment_moderate', args=[self.comment.pk, 'remove']))
+        self.comment.refresh_from_db()
+        self.assertTrue(self.comment.is_removed)
+
+        self.client.post(reverse('admin_custom:manage_comment_moderate', args=[self.comment.pk, 'restore']))
+        self.comment.refresh_from_db()
+        self.assertFalse(self.comment.is_removed)
+
+    def test_reader_cannot_moderate(self):
+        response = self.client.post(reverse('admin_custom:manage_comment_moderate', args=[self.comment.pk, 'remove']))
+        self.assertEqual(response.status_code, 403)
+
+    def test_filters_by_removed_status(self):
+        self.comment.is_removed = True
+        self.comment.save(update_fields=['is_removed'])
+        self.client.force_login(self.editor)
+
+        response = self.client.get(reverse('admin_custom:manage_comment_list'), {'status': 'visible'})
+        self.assertEqual(list(response.context['comments']), [])
+
+        response = self.client.get(reverse('admin_custom:manage_comment_list'), {'status': 'removed'})
+        self.assertEqual(list(response.context['comments']), [self.comment])

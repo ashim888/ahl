@@ -1,7 +1,10 @@
+import datetime
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -21,6 +24,12 @@ from .services import record_purchase, start_subscription
 # senior staff (EiC/Admin), the same boundary StaffManage uses.
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 SENIOR_STAFF_ROLES = User.SENIOR_STAFF_ROLES
+
+# How soon "expiring soon" means, on the subscriptions manage list and the
+# dashboard KPI — no renewal reminder existed at all before this; a fixed
+# window is a reasonable start without adding a configurable setting no one
+# asked for yet.
+EXPIRING_SOON_WINDOW_DAYS = 7
 
 
 # -- Public — plan browsing & self-serve checkout ---------------------------
@@ -231,6 +240,12 @@ class SubscriptionListView(ListView):
             queryset = queryset.filter(status=status)
         if plan_id:
             queryset = queryset.filter(plan_id=plan_id)
+        if self.request.GET.get('expiring') == '1':
+            today = timezone.localdate()
+            queryset = queryset.filter(
+                status=UserSubscription.Status.ACTIVE,
+                end_date__gte=today, end_date__lte=today + datetime.timedelta(days=EXPIRING_SOON_WINDOW_DAYS),
+            )
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -239,6 +254,9 @@ class SubscriptionListView(ListView):
         context['plans'] = SubscriptionPlan.objects.order_by('name')
         context['selected_status'] = self.request.GET.get('status', '')
         context['selected_plan'] = self.request.GET.get('plan', '')
+        context['selected_expiring'] = self.request.GET.get('expiring', '')
+        context['expiring_soon_window_days'] = EXPIRING_SOON_WINDOW_DAYS
+        context['expiring_soon_cutoff'] = timezone.localdate() + datetime.timedelta(days=EXPIRING_SOON_WINDOW_DAYS)
         return context
 
 
@@ -281,7 +299,19 @@ class PurchaseListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return ArticlePurchase.objects.select_related('user', 'article').order_by('-purchased_at')
+        queryset = ArticlePurchase.objects.select_related('user', 'article').order_by('-purchased_at')
+        article_id = self.request.GET.get('article')
+        if article_id:
+            queryset = queryset.filter(article_id=article_id)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['articles'] = Article.objects.filter(
+            purchases__isnull=False,
+        ).distinct().order_by('title')
+        context['selected_article'] = self.request.GET.get('article', '')
+        return context
 
 
 @method_decorator(role_required(*SENIOR_STAFF_ROLES), name='dispatch')

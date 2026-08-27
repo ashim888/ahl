@@ -8,6 +8,7 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 from django.views.generic.detail import DetailView
 from django_ratelimit.decorators import ratelimit
@@ -130,12 +131,23 @@ def reapply_verification(request):
 # Verifying users is an Editor-in-Chief/Admin capability (ARCHITECTURE.md §6.3) —
 # deliberately not "is_staff", since Editors also have is_staff=True but aren't
 # meant to approve/reject verifications themselves.
-@role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
-def verification_queue(request):
-    pending_users = User.objects.filter(
-        verification_status=User.VerificationStatus.PENDING,
-    ).order_by('date_joined')
-    return render(request, 'users/verification_queue.html', {'pending_users': pending_users})
+@method_decorator(role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN), name='dispatch')
+class VerificationQueueView(ListView):
+    """Was a plain, unpaginated function view — the one queue in the
+    workspace with no pagination at all, unlike every structurally
+    identical one (pitches, articles, ads, training, staff). A registration
+    spike would have rendered the entire pending list on one page.
+    """
+
+    model = User
+    template_name = 'users/verification_queue.html'
+    context_object_name = 'pending_users'
+    paginate_by = 30
+
+    def get_queryset(self):
+        return User.objects.filter(
+            verification_status=User.VerificationStatus.PENDING,
+        ).order_by('date_joined')
 
 
 @role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
@@ -166,6 +178,31 @@ def verification_decide(request, pk, decision):
     return redirect('users:verification_queue')
 
 
+@role_required(User.Role.EDITOR_IN_CHIEF, User.Role.ADMIN)
+@require_POST
+def verification_bulk_decide(request):
+    """Same decision logic as verification_decide, applied to every checked
+    row at once — a registration spike previously meant clicking Approve/
+    Reject one account at a time with a full page reload each.
+    """
+    decision = request.POST.get('decision')
+    if decision not in ('approve', 'reject'):
+        raise PermissionDenied
+
+    pks = request.POST.getlist('pks')
+    applied_count = 0
+    for target in User.objects.filter(pk__in=pks):
+        applied = target.approve_verification() if decision == 'approve' else target.reject_verification()
+        if applied:
+            applied_count += 1
+
+    if applied_count:
+        messages.success(request, f'{applied_count} user(s) {decision}d.')
+    else:
+        messages.error(request, 'No eligible users were selected.')
+    return redirect('users:verification_queue')
+
+
 # -- Editorial author management (CRUD, not public browsing) ---------------
 # Scoped to User.VERIFICATION_QUEUE_ROLES (unverified, verified_author) — the
 # same "author-tier" accounts the verification queue governs. Editor/EiC/Admin
@@ -187,12 +224,18 @@ class AuthorManageListView(ListView):
             ),
         ).order_by('-date_joined')
         role = self.request.GET.get('role')
+        q = self.request.GET.get('q')
         if role:
             queryset = queryset.filter(role=role)
+        if q:
+            queryset = queryset.filter(
+                Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q) | Q(affiliation__icontains=q),
+            )
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['selected_q'] = self.request.GET.get('q', '')
         context['role_choices'] = [
             (value, label) for value, label in User.Role.choices if value in User.VERIFICATION_QUEUE_ROLES
         ]
@@ -272,14 +315,18 @@ class StaffManageListView(ListView):
         # defaulting to it.
         queryset = User.objects.filter(role__in=STAFF_ROLES).order_by('-date_joined')
         role = self.request.GET.get('role')
+        q = self.request.GET.get('q')
         if role:
             queryset = queryset.filter(role=role)
+        if q:
+            queryset = queryset.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q))
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['role_choices'] = [(v, l) for v, l in User.Role.choices if v in STAFF_ROLES]
         context['selected_role'] = self.request.GET.get('role', '')
+        context['selected_q'] = self.request.GET.get('q', '')
         return context
 
 

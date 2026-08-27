@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -98,16 +99,23 @@ class PitchQueueListView(ListView):
     def get_queryset(self):
         queryset = StoryPitch.objects.select_related('submitter').order_by('-created_at')
         status = self.request.GET.get('status')
+        q = self.request.GET.get('q')
         if status:
             queryset = queryset.filter(status=status)
         else:
             queryset = queryset.exclude(status__in=[StoryPitch.Status.ACCEPTED, StoryPitch.Status.REJECTED, StoryPitch.Status.PUBLISHED])
+        if q:
+            queryset = queryset.filter(
+                Q(title__icontains=q) | Q(submitter_name__icontains=q) | Q(submitter_email__icontains=q)
+                | Q(submitter__first_name__icontains=q) | Q(submitter__last_name__icontains=q) | Q(submitter__email__icontains=q),
+            )
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['statuses'] = StoryPitch.Status.choices
         context['selected_status'] = self.request.GET.get('status', '')
+        context['selected_q'] = self.request.GET.get('q', '')
         return context
 
 
@@ -167,3 +175,49 @@ def pitch_decide(request, pk, decision):
         return redirect('articles:manage_article_update', slug=article.slug)
 
     return redirect('pitches:manage_pitch_detail', pk=pitch.pk)
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def pitch_bulk_decide(request):
+    """Same accept/reject logic as pitch_decide, applied to every checked
+    row at once. Unlike the single-pitch accept (which redirects straight
+    into the new draft article), a bulk accept can create several articles
+    at once, so there's no single one to jump to — it redirects back to the
+    queue, same as bulk reject.
+    """
+    decision = request.POST.get('decision')
+    if decision not in ('accept', 'reject'):
+        raise PermissionDenied
+
+    pks = request.POST.getlist('pks')
+    pitches = StoryPitch.objects.filter(pk__in=pks).exclude(
+        status__in=[StoryPitch.Status.ACCEPTED, StoryPitch.Status.REJECTED, StoryPitch.Status.PUBLISHED],
+    )
+    decided_count = 0
+    for pitch in pitches:
+        if decision == 'reject':
+            pitch.status = StoryPitch.Status.REJECTED
+            pitch.reviewed_by = request.user
+            pitch.decided_at = timezone.now()
+            pitch.save()
+        elif decision == 'accept':
+            article = Article.objects.create(
+                title=pitch.title, abstract=pitch.summary,
+                article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
+                html_content=pitch.body or None,
+            )
+            if pitch.submitter:
+                ArticleAuthor.objects.create(article=article, user=pitch.submitter, order=0, is_corresponding=True)
+            pitch.article = article
+            pitch.status = StoryPitch.Status.ACCEPTED
+            pitch.reviewed_by = request.user
+            pitch.decided_at = timezone.now()
+            pitch.save()
+        decided_count += 1
+
+    if decided_count:
+        messages.success(request, f'{decided_count} pitch(es) {decision}ed.')
+    else:
+        messages.error(request, 'No eligible pitches were selected.')
+    return redirect('pitches:manage_pitch_queue')

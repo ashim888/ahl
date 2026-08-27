@@ -1,0 +1,17 @@
+{% comment %}
+Free-text search box for a GET-param filter form. Usage:
+    {% include 'includes/search_field.html' with placeholder="Search title…" %}
+Expects `selected_q` in context (the view sets context['selected_q'] = self.request.GET.get('q', '')).
+Must live inside the same <form method="get"> as any other filter selects, so submitting search
+doesn't reset them — see billing/manage/subscription_list.html for that shared-form pattern.
+{% endcomment %}
+<div>
+    <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+    <div class="flex gap-2">
+        <input type="text" name="q" value="{{ selected_q }}" placeholder="{{ placeholder|default:'Search…' }}"
+               class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+        <button type="submit" class="px-3 py-1.5 rounded-md border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 whitespace-nowrap">
+            Search
+        </button>
+    </div>
+</div>

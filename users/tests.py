@@ -1,3 +1,4 @@
+from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -109,6 +110,32 @@ class RegisterSuccessTests(TestCase):
         self.assertEqual(profile_response.context['profile_user'], user)
 
 
+class NewPendingVerificationNotificationTests(TestCase):
+    def setUp(self):
+        self.eic = User.objects.create_user(
+            email='notify-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+
+    def test_registering_emails_senior_staff(self):
+        mail.outbox = []
+        self.client.post(reverse('users:register'), {
+            'email': 'notify-target@example.com', 'first_name': 'New', 'last_name': 'Reader',
+            'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
+        })
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(self.eic.email, mail.outbox[0].to)
+        self.assertIn('notify-target@example.com', mail.outbox[0].body)
+
+    def test_no_email_when_no_senior_staff_exists(self):
+        self.eic.delete()
+        mail.outbox = []
+        self.client.post(reverse('users:register'), {
+            'email': 'notify-target2@example.com', 'first_name': 'New', 'last_name': 'Reader',
+            'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
+        })
+        self.assertEqual(len(mail.outbox), 0)
+
+
 def make_user(email, role, **extra):
     return User.objects.create_user(email=email, password='pw', first_name='F', last_name='L', role=role, **extra)
 
@@ -131,6 +158,22 @@ class VerificationQueueAccessTests(TestCase):
         self.client.force_login(self.eic)
         response = self.client.get(reverse('users:verification_queue'))
         self.assertEqual(response.status_code, 200)
+
+    def test_queue_is_paginated(self):
+        # Was the one queue in the workspace with no pagination at all —
+        # confirms it now behaves like every sibling queue (pitches,
+        # articles, ads, training, staff), 30/page. setUp's own eic/editor
+        # fixtures default to PENDING too (verification_status isn't tied to
+        # role), so the expected total is read back from the DB rather than
+        # hardcoded against just the 35 created here.
+        for i in range(35):
+            make_user(f'pending{i}@example.com', User.Role.UNVERIFIED, verification_status=User.VerificationStatus.PENDING)
+        expected_total = User.objects.filter(verification_status=User.VerificationStatus.PENDING).count()
+        self.client.force_login(self.eic)
+        response = self.client.get(reverse('users:verification_queue'))
+        self.assertTrue(response.context['is_paginated'])
+        self.assertEqual(len(response.context['pending_users']), 30)
+        self.assertEqual(response.context['page_obj'].paginator.count, expected_total)
 
     def test_plain_editor_cannot_view_queue(self):
         self.client.force_login(self.editor)
@@ -162,6 +205,48 @@ class VerificationQueueAccessTests(TestCase):
         self.pending.refresh_from_db()
         self.assertEqual(self.pending.role, User.Role.UNVERIFIED)
 
+    def test_bulk_approve_verifies_all_selected(self):
+        other_pending = make_user(
+            'pending-bulk@example.com', User.Role.UNVERIFIED, verification_status=User.VerificationStatus.PENDING,
+        )
+        self.client.force_login(self.eic)
+        self.client.post(reverse('users:verification_bulk_decide'), {
+            'decision': 'approve', 'pks': [self.pending.pk, other_pending.pk],
+        })
+        self.pending.refresh_from_db()
+        other_pending.refresh_from_db()
+        self.assertEqual(self.pending.role, User.Role.VERIFIED_AUTHOR)
+        self.assertEqual(other_pending.role, User.Role.VERIFIED_AUTHOR)
+
+    def test_bulk_reject_rejects_all_selected(self):
+        other_pending = make_user(
+            'pending-bulk2@example.com', User.Role.UNVERIFIED, verification_status=User.VerificationStatus.PENDING,
+        )
+        self.client.force_login(self.eic)
+        self.client.post(reverse('users:verification_bulk_decide'), {
+            'decision': 'reject', 'pks': [self.pending.pk, other_pending.pk],
+        })
+        self.pending.refresh_from_db()
+        other_pending.refresh_from_db()
+        self.assertEqual(self.pending.verification_status, User.VerificationStatus.REJECTED)
+        self.assertEqual(other_pending.verification_status, User.VerificationStatus.REJECTED)
+
+    def test_bulk_decide_invalid_decision_rejected(self):
+        self.client.force_login(self.eic)
+        response = self.client.post(reverse('users:verification_bulk_decide'), {
+            'decision': 'maybe', 'pks': [self.pending.pk],
+        })
+        self.assertEqual(response.status_code, 403)
+
+    def test_plain_editor_cannot_bulk_decide(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('users:verification_bulk_decide'), {
+            'decision': 'approve', 'pks': [self.pending.pk],
+        })
+        self.assertEqual(response.status_code, 403)
+        self.pending.refresh_from_db()
+        self.assertEqual(self.pending.role, User.Role.UNVERIFIED)
+
 
 @FAST_PASSWORD_HASHERS
 class AuthorManagementAccessTests(TestCase):
@@ -185,6 +270,12 @@ class AuthorManagementAccessTests(TestCase):
         self.author.refresh_from_db()
         self.assertFalse(self.author.is_active)
 
+    def test_search_filters_by_name_or_email(self):
+        other_author = make_user('findme-author@example.com', User.Role.VERIFIED_AUTHOR)
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('users:manage_author_list'), {'q': 'findme'})
+        self.assertEqual(list(response.context['authors']), [other_author])
+
 
 @FAST_PASSWORD_HASHERS
 class StaffManagementAccessTests(TestCase):
@@ -206,6 +297,12 @@ class StaffManagementAccessTests(TestCase):
         self.client.force_login(self.editor)
         response = self.client.get(reverse('users:manage_staff_list'))
         self.assertEqual(response.status_code, 403)
+
+    def test_search_filters_by_name_or_email(self):
+        other_staff = make_user('findme-staff@example.com', User.Role.EDITOR)
+        self.client.force_login(self.eic)
+        response = self.client.get(reverse('users:manage_staff_list'), {'q': 'findme'})
+        self.assertEqual(list(response.context['staff']), [other_staff])
 
     def test_staff_cannot_deactivate_own_account(self):
         self.client.force_login(self.eic)
@@ -389,3 +486,30 @@ class ProfileViewPitchesTests(TestCase):
         self.client.force_login(editor)
         response = self.client.get(reverse('users:profile'))
         self.assertContains(response, 'STORY PITCHES')
+
+
+class Custom403PageTests(TestCase):
+    """role_required (users/decorators.py) raises PermissionDenied for a
+    logged-in-but-wrong-role user — Django previously fell back to its own
+    bare default 403 page (no styling, no explanation) since this project
+    had no templates/403.html. Covers any role_required-gated view; ads is
+    just a convenient, already-existing example of one.
+    """
+
+    def test_wrong_role_sees_styled_403_with_their_role(self):
+        reader = make_user('403-reader@example.com', User.Role.VERIFIED_AUTHOR)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "don't have access", status_code=403)
+        self.assertContains(response, reader.get_full_name(), status_code=403)
+        self.assertContains(response, reader.get_role_display(), status_code=403)
+
+    def test_anonymous_visitor_sees_login_prompt_not_role_message(self):
+        # login_required (which role_required wraps) redirects an anonymous
+        # visitor to the login page before role_required's own check ever
+        # runs — this 403 page's "wrong role" copy is for a signed-in user
+        # only. Confirms the redirect still happens rather than a 403.
+        response = self.client.get(reverse('ads:manage_adslot_list'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)

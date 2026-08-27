@@ -6,52 +6,162 @@
 {% block content %}
 <a href="{% url 'training:manage_course_list' %}" class="text-sm underline">← Back to courses</a>
 
-<div class="mt-6 overflow-x-auto">
-    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-            <tr>
-                <th class="px-4 py-3">#</th>
-                <th class="px-4 py-3">User</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3">Payment</th>
-                <th class="px-4 py-3">Enrolled</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
-            {% for enrollment in enrollments %}
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+        <select name="status" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All statuses</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Payment</label>
+        <select name="payment_status" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All payment statuses</option>
+            {% for value, label in payment_status_choices %}
+                <option value="{{ value }}" {% if value == selected_payment_status %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<form method="post" action="{% url 'training:manage_enrollment_bulk_update' course.pk %}" id="enrollment-bulk-form">
+    {% csrf_token %}
+
+    <div class="mt-6 flex flex-wrap items-end gap-3 sticky top-0 z-10 bg-white py-2">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none pb-1.5">
+            <input type="checkbox" id="select-all-checkbox">
+            Select all
+        </label>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Set status to</label>
+            <select name="status" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                <option value="">— no change —</option>
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Set payment to</label>
+            <select name="payment_status" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                <option value="">— no change —</option>
+                {% for value, label in payment_status_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit"
+                onclick="return confirm('Apply these changes to every selected enrollment?');"
+                class="py-1.5 px-4 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                id="bulk-apply-btn" disabled>
+            Apply to selected
+        </button>
+    </div>
+
+    <div class="mt-4 overflow-x-auto">
+        <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                    <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
-                    <td class="px-4 py-3 font-medium text-gray-900">
-                        {{ enrollment.user.get_full_name }} &lt;{{ enrollment.user.email }}&gt;
-                    </td>
-                    <td class="px-4 py-3 text-gray-600">
-                        <form method="post" action="{% url 'training:manage_enrollment_update' enrollment.pk %}">
-                            {% csrf_token %}
-                            <select name="status" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-2 py-1 text-xs">
+                    <th class="px-4 py-3"></th>
+                    <th class="px-4 py-3">#</th>
+                    <th class="px-4 py-3">User</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Payment</th>
+                    <th class="px-4 py-3">Enrolled</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+                {% for enrollment in enrollments %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <input type="checkbox" name="pks" value="{{ enrollment.pk }}" class="row-checkbox">
+                        </td>
+                        <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-900">
+                            {{ enrollment.user.get_full_name }} &lt;{{ enrollment.user.email }}&gt;
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">
+                            <select name="row-status" data-enrollment-pk="{{ enrollment.pk }}"
+                                    class="row-status-select rounded-md border border-gray-300 px-2 py-1 text-xs">
                                 {% for value, label in status_choices %}
                                     <option value="{{ value }}" {% if value == enrollment.status %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
-                        </form>
-                    </td>
-                    <td class="px-4 py-3 text-gray-600">
-                        <form method="post" action="{% url 'training:manage_enrollment_update' enrollment.pk %}">
-                            {% csrf_token %}
-                            <select name="payment_status" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-2 py-1 text-xs">
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">
+                            <select name="row-payment-status" data-enrollment-pk="{{ enrollment.pk }}"
+                                    class="row-payment-select rounded-md border border-gray-300 px-2 py-1 text-xs">
                                 {% for value, label in payment_status_choices %}
                                     <option value="{{ value }}" {% if value == enrollment.payment_status %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
-                        </form>
-                    </td>
-                    <td class="px-4 py-3 text-gray-500">{{ enrollment.enrolled_at|date:"M j, Y" }}</td>
-                </tr>
-            {% empty %}
-                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No enrollments yet.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+                        </td>
+                        <td class="px-4 py-3 text-gray-500">{{ enrollment.enrolled_at|date:"M j, Y" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No enrollments yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<script>
+    // Per-row status/payment selects are quick single-row edits — since they
+    // now live inside the bulk form (checkboxes need one shared form), each
+    // one submits via its own small fetch-free trick: a hidden per-row form
+    // outside the bulk form, built on the fly, so picking one doesn't also
+    // submit the bulk form's other fields.
+    (function () {
+        function submitRowUpdate(enrollmentPk, field, value) {
+            var form = document.createElement('form');
+            form.method = 'post';
+            form.action = '{% url "training:manage_enrollment_update" 0 %}'.replace('0', enrollmentPk);
+            var csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrfmiddlewaretoken';
+            csrf.value = '{{ csrf_token }}';
+            form.appendChild(csrf);
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = field;
+            input.value = value;
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        document.querySelectorAll('.row-status-select').forEach(function (select) {
+            select.addEventListener('change', function () {
+                submitRowUpdate(select.dataset.enrollmentPk, 'status', select.value);
+            });
+        });
+        document.querySelectorAll('.row-payment-select').forEach(function (select) {
+            select.addEventListener('change', function () {
+                submitRowUpdate(select.dataset.enrollmentPk, 'payment_status', select.value);
+            });
+        });
+
+        var selectAll = document.getElementById('select-all-checkbox');
+        var rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        var applyBtn = document.getElementById('bulk-apply-btn');
+        if (selectAll && rowCheckboxes.length) {
+            function updateApplyButton() {
+                applyBtn.disabled = !Array.prototype.some.call(rowCheckboxes, function (cb) { return cb.checked; });
+            }
+            selectAll.addEventListener('change', function () {
+                rowCheckboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
+                updateApplyButton();
+            });
+            rowCheckboxes.forEach(function (cb) { cb.addEventListener('change', updateApplyButton); });
+        }
+    })();
+</script>
 
 {% include 'includes/pagination.html' %}
 {% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Access Denied — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-20 text-center">
+    <p class="section-label text-accent mb-4">403 — ACCESS DENIED</p>
+    <h1 class="font-display text-3xl font-bold mb-4" style="letter-spacing: -0.02em;">
+        You don't have access to this page
+    </h1>
+    {% if user.is_authenticated %}
+        <p class="text-muted-foreground leading-relaxed">
+            You're signed in as <span class="font-semibold text-foreground">{{ user.get_full_name }}</span>
+            ({{ user.get_role_display }}), and this page needs a different role. If you think this is a
+            mistake, or you need broader access for your work, reach out to an editor.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <a href="{% url 'articles:home' %}"
+               class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                BACK TO HOME
+            </a>
+            {% if JOURNAL_CONTACT_EMAIL %}
+                <a href="mailto:{{ JOURNAL_CONTACT_EMAIL }}"
+                   class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-6 py-3 hover:border-accent hover:text-accent transition-colors">
+                    REQUEST ACCESS
+                </a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p class="text-muted-foreground leading-relaxed">
+            This page requires an account with access you don't currently have — or you're not signed in at all.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <a href="{% url 'users:login' %}?next={{ request.path }}"
+               class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                LOG IN
+            </a>
+            <a href="{% url 'articles:home' %}"
+               class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-6 py-3 hover:border-accent hover:text-accent transition-colors">
+                BACK TO HOME
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

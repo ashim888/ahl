@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
-from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
 from users.decorators import role_required
 from users.models import User
@@ -43,12 +43,15 @@ class AdSlotListView(ListView):
         queryset = AdSlot.objects.order_by('-created_at')
         zone = self.request.GET.get('zone')
         active = self.request.GET.get('active')
+        q = self.request.GET.get('q')
         if zone:
             queryset = queryset.filter(zone=zone)
         if active == 'yes':
             queryset = queryset.filter(is_active=True)
         elif active == 'no':
             queryset = queryset.filter(is_active=False)
+        if q:
+            queryset = queryset.filter(sponsor_name__icontains=q)
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -56,7 +59,8 @@ class AdSlotListView(ListView):
         context['zones'] = AdSlot.Zone.choices
         context['selected_zone'] = self.request.GET.get('zone', '')
         context['selected_active'] = self.request.GET.get('active', '')
-        context['ad_placeholder_enabled'] = AdSettings.get_solo().show_placeholder_when_empty
+        context['selected_q'] = self.request.GET.get('q', '')
+        context['placeholder_zones'] = AdSettings.get_solo().placeholder_zones
         return context
 
 
@@ -71,7 +75,7 @@ class AdSlotFormMixin:
         # zone still needs to know it *before* choosing/cropping an image,
         # not just get an error after uploading the wrong size.
         context['zone_dimensions'] = [
-            (label, *AdSlot.ZONE_DIMENSIONS[value]) for value, label in AdSlot.Zone.choices
+            (value, label, *AdSlot.ZONE_DIMENSIONS[value]) for value, label in AdSlot.Zone.choices
         ]
         return context
 
@@ -105,6 +109,19 @@ class AdSlotUpdateView(AdSlotFormMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, f'"{form.instance.sponsor_name}" ad updated.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class AdSlotDeleteView(DeleteView):
+    model = AdSlot
+    template_name = 'ads/manage/adslot_confirm_delete.html'
+
+    def get_success_url(self):
+        return reverse('ads:manage_adslot_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{self.object.sponsor_name}" ad deleted.')
         return super().form_valid(form)
 
 
@@ -300,14 +317,15 @@ def adslot_toggle_active(request, pk):
 
 @role_required(*EDITORIAL_ROLES)
 @require_POST
-def ad_settings_toggle_placeholder(request):
-    """Site-wide switch (AdSettings, singleton) for what an unsold zone
-    shows a reader — an "Advertise Here" placeholder, or nothing (the
-    previous, still-default behavior). See ads_tags.py:ad_slot.
+def ad_settings_update_placeholder_zones(request):
+    """Per-zone switch (AdSettings.placeholder_zones) for what an unsold
+    zone shows a reader — an "Advertise Here" placeholder, or nothing (the
+    default). Was a single sitewide boolean; a chronically-unsold zone and
+    a reliably-sold one don't need the same treatment. See ads_tags.py:ad_slot.
     """
+    zones = [zone for zone in request.POST.getlist('placeholder_zones') if zone in AdSlot.Zone.values]
     settings_row = AdSettings.get_solo()
-    settings_row.show_placeholder_when_empty = not settings_row.show_placeholder_when_empty
-    settings_row.save(update_fields=['show_placeholder_when_empty'])
-    state = 'on' if settings_row.show_placeholder_when_empty else 'off'
-    messages.success(request, f'"Advertise Here" placeholders for empty ad zones are now {state}.')
+    settings_row.placeholder_zones = zones
+    settings_row.save(update_fields=['placeholder_zones'])
+    messages.success(request, f'"Advertise Here" placeholders updated for {len(zones)} zone(s).')
     return redirect('ads:manage_adslot_list')

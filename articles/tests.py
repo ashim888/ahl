@@ -1214,3 +1214,25 @@ class ArticleDetailTocRenderingTests(TestCase):
         article.save()
         response = self.client.get(article.get_absolute_url())
         self.assertNotContains(response, 'IN THIS ARTICLE')
+
+
+class ArticleManageListSearchTests(TestCase):
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='article-search-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def test_search_filters_by_title(self):
+        match = Article.objects.create(
+            title='Diabetes Breakthrough', slug='diabetes-breakthrough', abstract='...',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
+        )
+        Article.objects.create(
+            title='Unrelated Story', slug='unrelated-story', abstract='...',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
+        )
+        response = self.client.get(reverse('articles:manage_article_list'), {'q': 'diabetes'})
+        self.assertEqual(list(response.context['articles']), [match])

@@ -22,4 +22,4 @@ class AdSettingsAdmin(admin.ModelAdmin):
     # Singleton — always exactly one row (AdSettings.get_solo()). The
     # /manage/ads/ toggle button is the normal way to flip this; admin
     # registration is just a superuser fallback, same as any other model.
-    list_display = ['show_placeholder_when_empty', 'updated_at']
+    list_display = ['placeholder_zones', 'updated_at']

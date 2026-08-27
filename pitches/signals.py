@@ -1,9 +1,12 @@
+from django.conf import settings
 from django.core.mail import send_mail
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.template.loader import render_to_string
+from django.urls import reverse
 
 from articles.models import Article
+from users.models import User
 
 from .models import StoryPitch
 
@@ -40,6 +43,34 @@ def notify_on_status_change(sender, instance, **kwargs):
             from_email=None,
             recipient_list=[instance.contact_email],
         )
+
+
+@receiver(post_save, sender=StoryPitch)
+def notify_editorial_staff_of_new_pitch(sender, instance, created, **kwargs):
+    """Previously the only way an EiC/Admin learned about a new pitch was
+    by visiting the queue or the Dashboard home KPI row — invisible if they
+    landed anywhere else first. Pitches are open-submission with no login
+    required, so this is the only heads-up a busy queue gets.
+    """
+    if not created:
+        return
+
+    recipients = list(
+        User.objects.filter(role__in=User.SENIOR_STAFF_ROLES, is_active=True).values_list('email', flat=True),
+    )
+    if not recipients:
+        return
+
+    body = render_to_string('pitches/email/new_pitch_submitted.html', {
+        'pitch': instance,
+        'pitch_queue_url': f"{settings.SITE_BASE_URL}{reverse('pitches:manage_pitch_queue')}",
+    })
+    send_mail(
+        subject=f'New story pitch: "{instance.title}"',
+        message=body,
+        from_email=None,
+        recipient_list=recipients,
+    )
 
 
 @receiver(pre_save, sender=Article)

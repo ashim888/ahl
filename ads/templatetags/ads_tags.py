@@ -19,8 +19,8 @@ def ad_slot(context, zone, wrapper_class=''):
     placeholder, and only ad_slot.html's own `{% if %}` knows whether
     that's the case.
 
-    An unsold zone renders nothing by default — same as before — unless
-    AdSettings.get_solo().show_placeholder_when_empty is on, in which case
+    An unsold zone renders nothing by default — same as before — unless this
+    zone is listed in AdSettings.get_solo().placeholder_zones, in which case
     it shows an "Advertise Here" box sized to the zone, *except* for an
     ad-free reader (a subscriber), who never sees one regardless of this
     setting: a placeholder is still an ad-shaped thing occupying the page,
@@ -29,7 +29,7 @@ def ad_slot(context, zone, wrapper_class=''):
     request = context['request']
     ad = get_ad_for_request(request, zone)
     placeholder = None
-    if not ad and not is_ad_free_reader(request) and AdSettings.get_solo().show_placeholder_when_empty:
+    if not ad and not is_ad_free_reader(request) and AdSettings.get_solo().is_placeholder_enabled_for(zone):
         width, height = AdSlot.ZONE_DIMENSIONS[zone]
         placeholder = {
             'zone_label': AdSlot.Zone(zone).label,

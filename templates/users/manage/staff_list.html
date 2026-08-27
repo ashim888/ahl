@@ -16,6 +16,7 @@
 </div>
 
 <form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    {% include 'includes/search_field.html' with placeholder="Search name or email…" %}
     <div>
         <label class="block text-xs font-medium text-gray-500 mb-1">Role</label>
         <select name="role" onchange="this.form.submit()"

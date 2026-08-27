@@ -10,5 +10,6 @@ urlpatterns = [
     path('manage/editorial-board/', views.BoardMemberManageListView.as_view(), name='manage_member_list'),
     path('manage/editorial-board/new/', views.BoardMemberCreateView.as_view(), name='manage_member_create'),
     path('manage/editorial-board/<int:pk>/edit/', views.BoardMemberUpdateView.as_view(), name='manage_member_update'),
+    path('manage/editorial-board/<int:pk>/move/<str:direction>/', views.member_move, name='manage_member_move'),
     path('manage/editorial-board/<int:pk>/delete/', views.BoardMemberDeleteView.as_view(), name='manage_member_delete'),
 ]

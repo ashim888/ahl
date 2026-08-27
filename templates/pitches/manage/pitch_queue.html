@@ -8,7 +8,8 @@
     <p class="text-sm text-gray-500">
         {{ pitches|length }} pitch(es){% if not selected_status %} awaiting a decision{% endif %} — open submission, no account required.
     </p>
-    <form method="get" class="flex items-end gap-2">
+    <form method="get" class="flex flex-wrap items-end gap-2">
+        {% include 'includes/search_field.html' with placeholder="Search title or contact…" %}
         <select name="status" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
             <option value="">Open (submitted / in review)</option>
             {% for value, label in statuses %}
@@ -18,36 +19,100 @@
     </form>
 </div>
 
-<div class="mt-6 space-y-4">
-    {% for pitch in pitches %}
-        <div class="border border-gray-200 rounded-lg p-5 bg-white">
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div class="min-w-0 flex gap-3">
-                    <span class="text-xs text-gray-400 shrink-0 pt-0.5">{{ forloop.counter0|add:page_obj.start_index }}</span>
-                    <div class="min-w-0">
-                        <a href="{% url 'pitches:manage_pitch_detail' pitch.pk %}" class="font-semibold hover:underline">
-                            {{ pitch.title }}
+<form method="post" action="{% url 'pitches:manage_pitch_bulk_decide' %}" id="pitch-bulk-form">
+    {% csrf_token %}
+
+    <div class="mt-6 flex items-center gap-3 sticky top-0 z-10 bg-white py-2">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+            <input type="checkbox" id="select-all-checkbox">
+            Select all
+        </label>
+        <button type="submit" name="decision" value="accept"
+                onclick="return confirm('Accept every selected pitch? A draft article will be created from each.');"
+                class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                id="bulk-accept-btn" disabled>
+            Accept selected
+        </button>
+        <button type="submit" name="decision" value="reject"
+                onclick="return confirm('Reject every selected pitch?');"
+                class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                id="bulk-reject-btn" disabled>
+            Reject selected
+        </button>
+    </div>
+
+    <div class="mt-4 space-y-4">
+        {% for pitch in pitches %}
+            <div class="border border-gray-200 rounded-lg p-5 bg-white">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div class="min-w-0 flex gap-3">
+                        {% if pitch.status != 'accepted' and pitch.status != 'rejected' and pitch.status != 'published' %}
+                            <input type="checkbox" name="pks" value="{{ pitch.pk }}" class="row-checkbox mt-1 shrink-0">
+                        {% else %}
+                            <span class="w-4 shrink-0"></span>
+                        {% endif %}
+                        <span class="text-xs text-gray-400 shrink-0 pt-0.5">{{ forloop.counter0|add:page_obj.start_index }}</span>
+                        <div class="min-w-0">
+                            <a href="{% url 'pitches:manage_pitch_detail' pitch.pk %}" class="font-semibold hover:underline">
+                                {{ pitch.title }}
+                            </a>
+                            <p class="text-sm text-gray-600 mt-1">{{ pitch.summary|truncatewords:30 }}</p>
+                            <p class="text-xs text-gray-400 mt-1">
+                                {{ pitch.contact_name }} &lt;{{ pitch.contact_email }}&gt;
+                                {% if not pitch.submitter %}<span class="text-amber-600">· Guest</span>{% endif %}
+                                · Submitted {{ pitch.created_at|date:"M j, Y" }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{{ pitch.get_status_display }}</span>
+                        <a href="{% url 'pitches:manage_pitch_detail' pitch.pk %}" class="text-xs font-medium text-gray-500 hover:text-gray-900 underline">
+                            View full details
                         </a>
-                        <p class="text-sm text-gray-600 mt-1">{{ pitch.summary|truncatewords:30 }}</p>
-                        <p class="text-xs text-gray-400 mt-1">
-                            {{ pitch.contact_name }} &lt;{{ pitch.contact_email }}&gt;
-                            {% if not pitch.submitter %}<span class="text-amber-600">· Guest</span>{% endif %}
-                            · Submitted {{ pitch.created_at|date:"M j, Y" }}
-                        </p>
+                        {% if pitch.status != 'accepted' and pitch.status != 'rejected' and pitch.status != 'published' %}
+                            <button type="submit" formaction="{% url 'pitches:manage_pitch_decide' pitch.pk 'accept' %}"
+                                    onclick="return confirm('Accept &quot;{{ pitch.title|escapejs }}&quot;? A draft article will be created from it.');"
+                                    class="py-1.5 px-4 rounded-md bg-green-700 text-white text-sm font-medium hover:bg-green-800">
+                                Accept
+                            </button>
+                            <button type="submit" formaction="{% url 'pitches:manage_pitch_decide' pitch.pk 'reject' %}"
+                                    onclick="return confirm('Reject &quot;{{ pitch.title|escapejs }}&quot;?');"
+                                    class="py-1.5 px-4 rounded-md bg-red-700 text-white text-sm font-medium hover:bg-red-800">
+                                Reject
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">{{ pitch.get_status_display }}</span>
-                    <a href="{% url 'pitches:manage_pitch_detail' pitch.pk %}" class="icon-action-btn" title="Review" aria-label="Review">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </a>
-                </div>
             </div>
-        </div>
-    {% empty %}
-        <p class="text-gray-500">Nothing here right now.</p>
-    {% endfor %}
-</div>
+        {% empty %}
+            <p class="text-gray-500">Nothing here right now.</p>
+        {% endfor %}
+    </div>
+</form>
+
+<script>
+    (function () {
+        var selectAll = document.getElementById('select-all-checkbox');
+        var rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        var acceptBtn = document.getElementById('bulk-accept-btn');
+        var rejectBtn = document.getElementById('bulk-reject-btn');
+        if (!selectAll || !rowCheckboxes.length) return;
+
+        function updateBulkButtons() {
+            var anyChecked = Array.prototype.some.call(rowCheckboxes, function (cb) { return cb.checked; });
+            acceptBtn.disabled = !anyChecked;
+            rejectBtn.disabled = !anyChecked;
+        }
+
+        selectAll.addEventListener('change', function () {
+            rowCheckboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
+            updateBulkButtons();
+        });
+        rowCheckboxes.forEach(function (cb) {
+            cb.addEventListener('change', updateBulkButtons);
+        });
+    })();
+</script>
 
 {% include 'includes/pagination.html' %}
 {% endblock %}

@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
@@ -103,15 +103,19 @@ class CourseManageListView(ListView):
     def get_queryset(self):
         queryset = TrainingCourse.objects.annotate(enrollment_count=Count('enrollments')).order_by('-created_at')
         active = self.request.GET.get('active')
+        q = self.request.GET.get('q')
         if active == 'yes':
             queryset = queryset.filter(is_active=True)
         elif active == 'no':
             queryset = queryset.filter(is_active=False)
+        if q:
+            queryset = queryset.filter(Q(title__icontains=q) | Q(instructor__icontains=q))
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['selected_active'] = self.request.GET.get('active', '')
+        context['selected_q'] = self.request.GET.get('q', '')
         return context
 
 
@@ -167,6 +171,12 @@ class CourseDeleteView(DeleteView):
 def course_enrollments(request, pk):
     course = get_object_or_404(TrainingCourse, pk=pk)
     enrollments = course.enrollments.select_related('user').order_by('-enrolled_at')
+    status = request.GET.get('status')
+    payment_status = request.GET.get('payment_status')
+    if status in Enrollment.Status.values:
+        enrollments = enrollments.filter(status=status)
+    if payment_status in Enrollment.PaymentStatus.values:
+        enrollments = enrollments.filter(payment_status=payment_status)
     # A plain function view (not a ListView), so pagination is manual —
     # a popular course's enrollment list can run into the hundreds, and
     # this previously rendered every row with no pagination at all.
@@ -175,6 +185,8 @@ def course_enrollments(request, pk):
         'course': course, 'enrollments': page_obj, 'page_obj': page_obj, 'is_paginated': page_obj.has_other_pages(),
         'status_choices': Enrollment.Status.choices,
         'payment_status_choices': Enrollment.PaymentStatus.choices,
+        'selected_status': status or '',
+        'selected_payment_status': payment_status or '',
     })
 
 
@@ -194,3 +206,41 @@ def enrollment_update(request, pk):
     enrollment.save(update_fields=['status', 'payment_status'])
     messages.success(request, f'Enrollment for {enrollment.user.email} updated.')
     return redirect('training:manage_course_enrollments', pk=enrollment.course_id)
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def enrollment_bulk_update(request, pk):
+    """Same status/payment_status edit as enrollment_update, applied to
+    every checked row at once — previously only a one-<select>-per-row
+    inline edit, no way to update a batch of enrollments together.
+    Scoped to this course (via the pks queryset filter) so a crafted pks
+    list can't touch another course's enrollments.
+    """
+    course = get_object_or_404(TrainingCourse, pk=pk)
+    status = request.POST.get('status')
+    payment_status = request.POST.get('payment_status')
+    pks = request.POST.getlist('pks')
+
+    update_fields = []
+    if status in Enrollment.Status.values:
+        update_fields.append('status')
+    if payment_status in Enrollment.PaymentStatus.values:
+        update_fields.append('payment_status')
+
+    updated_count = 0
+    if update_fields:
+        enrollments = Enrollment.objects.filter(pk__in=pks, course=course)
+        for enrollment in enrollments:
+            if 'status' in update_fields:
+                enrollment.status = status
+            if 'payment_status' in update_fields:
+                enrollment.payment_status = payment_status
+            enrollment.save(update_fields=update_fields)
+            updated_count += 1
+
+    if updated_count:
+        messages.success(request, f'{updated_count} enrollment(s) updated.')
+    else:
+        messages.error(request, 'No eligible enrollments were selected.')
+    return redirect('training:manage_course_enrollments', pk=course.pk)

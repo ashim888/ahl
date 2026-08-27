@@ -12,6 +12,19 @@
     </a>
 </div>
 
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Article</label>
+        <select name="article" onchange="this.form.submit()"
+                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All articles</option>
+            {% for article in articles %}
+                <option value="{{ article.pk }}" {% if article.pk|stringformat:"s" == selected_article %}selected{% endif %}>{{ article.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
 <div class="mt-6 overflow-x-auto">
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">

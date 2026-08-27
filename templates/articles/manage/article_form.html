@@ -13,6 +13,47 @@
     {% endcomment %}
     <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css">
     <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+    {% comment %}
+    Overrides so the tag chips match this admin form's design system (indigo
+    accent, rounded-xl inputs — see admin_dashboard/base.html's "Admin form
+    design system" comment) instead of Tagify's stock blue/square look.
+    {% endcomment %}
+    <style>
+        .tagify {
+            --tags-border-color: #e5e7eb;
+            --tags-hover-border-color: #d1d5db;
+            --tags-focus-border-color: #6366f1;
+            --tag-bg: #eef2ff;
+            --tag-hover: #e0e7ff;
+            --tag-text-color: #3730a3;
+            --tag-text-color--edit: #111827;
+            --tag-remove-btn-color: #6366f1;
+            --tag-remove-btn-bg--hover: #c7d2fe;
+            --tag-inset-shadow-size: 1.1em;
+            --tag-pad: 0.3em 0.7em;
+            border-radius: 0.875rem;
+            font-size: 0.9375rem;
+            padding: 0.375rem 0.5rem;
+        }
+        .tagify.tagify--focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+        }
+        .tagify__tag > div { border-radius: 0.5rem; }
+        .tagify__tag__removeBtn { border-radius: 9999px; }
+        .tagify__dropdown__wrapper {
+            border-color: #e5e7eb;
+            border-radius: 0.875rem;
+            overflow: hidden;
+        }
+        .tagify__dropdown__item {
+            border-radius: 0.5rem;
+        }
+        .tagify__dropdown__item--active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
