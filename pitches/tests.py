@@ -274,6 +274,20 @@ class PitchDecisionTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_accepting_a_pitch_with_script_in_body_does_not_create_executable_html(self):
+        # pitch.body is public, low-trust input (any account, or anonymous —
+        # see StoryPitch's docstring); Article.html_content is documented as
+        # trusted HTML rendered unescaped. A malicious body must not survive
+        # the trip into html_content as a live <script> tag.
+        malicious_pitch = StoryPitch.objects.create(
+            title='Malicious Pitch', summary='s', submitter=self.author,
+            body='<script>alert(document.cookie)</script>',
+        )
+        self.client.post(reverse('pitches:manage_pitch_decide', args=[malicious_pitch.pk, 'accept']))
+        malicious_pitch.refresh_from_db()
+        self.assertNotIn('<script>', malicious_pitch.article.html_content)
+        self.assertIn('&lt;script&gt;', malicious_pitch.article.html_content)
+
     def test_invalid_decision_is_rejected(self):
         response = self.client.post(reverse('pitches:manage_pitch_decide', args=[self.pitch.pk, 'not-a-real-decision']))
         self.assertEqual(response.status_code, 403)
@@ -336,6 +350,18 @@ class PitchBulkDecisionTests(TestCase):
         self.assertIsNotNone(self.pitch_a.article)
         self.assertIsNotNone(self.pitch_b.article)
         self.assertNotEqual(self.pitch_a.article_id, self.pitch_b.article_id)
+
+    def test_bulk_accepting_a_pitch_with_script_in_body_does_not_create_executable_html(self):
+        malicious_pitch = StoryPitch.objects.create(
+            title='Malicious Pitch', summary='s', submitter=self.author,
+            body='<script>alert(document.cookie)</script>',
+        )
+        self.client.post(reverse('pitches:manage_pitch_bulk_decide'), {
+            'decision': 'accept', 'pks': [malicious_pitch.pk],
+        })
+        malicious_pitch.refresh_from_db()
+        self.assertNotIn('<script>', malicious_pitch.article.html_content)
+        self.assertIn('&lt;script&gt;', malicious_pitch.article.html_content)
 
     def test_already_decided_pitches_are_skipped(self):
         self.pitch_a.status = StoryPitch.Status.REJECTED

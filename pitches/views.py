@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.html import linebreaks
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView
 from django_ratelimit.decorators import ratelimit
@@ -155,10 +156,18 @@ def pitch_decide(request, pk, decision):
     elif decision == 'accept':
         # slug left blank — Article.save() generates one from the title
         # (plus a unique short_code) automatically.
+        # pitch.body is plain text from a public, low-trust submission form
+        # (any authenticated account, or anonymous — see StoryPitch's
+        # docstring) — Article.html_content is documented as trusted,
+        # editor-authored HTML rendered unescaped ({{ chunk|safe }} in
+        # article_detail.html). linebreaks() escapes it into safe paragraph
+        # HTML rather than pouring raw pitch text into that trust boundary,
+        # which would otherwise let a pitch submitter's <script> execute for
+        # the reviewing editor and, if published, every reader.
         article = Article.objects.create(
             title=pitch.title, abstract=pitch.summary,
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
-            html_content=pitch.body or None,
+            html_content=linebreaks(pitch.body, autoescape=True) if pitch.body else None,
         )
         # An anonymous pitch (no submitter account) can't get an automatic
         # byline — nobody to link. The editor adds authorship by hand (the
@@ -202,10 +211,13 @@ def pitch_bulk_decide(request):
             pitch.decided_at = timezone.now()
             pitch.save()
         elif decision == 'accept':
+            # See the matching comment in pitch_decide above — pitch.body is
+            # low-trust public input, escaped via linebreaks() before it can
+            # reach Article.html_content's "trusted HTML, rendered unescaped" field.
             article = Article.objects.create(
                 title=pitch.title, abstract=pitch.summary,
                 article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
-                html_content=pitch.body or None,
+                html_content=linebreaks(pitch.body, autoescape=True) if pitch.body else None,
             )
             if pitch.submitter:
                 ArticleAuthor.objects.create(article=article, user=pitch.submitter, order=0, is_corresponding=True)

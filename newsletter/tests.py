@@ -26,6 +26,28 @@ class SubscribeFlowTests(TestCase):
         self.assertFalse(Subscriber.objects.filter(email='bot@example.com').exists())
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_next_param_redirects_to_a_same_site_relative_url(self):
+        response = self.client.post(reverse('newsletter:subscribe'), {
+            'email': 'reader2@example.com', 'next': '/some/page/',
+        })
+        self.assertRedirects(response, '/some/page/', fetch_redirect_response=False)
+
+    def test_next_param_rejects_an_external_url(self):
+        # Open-redirect guard — `next` is attacker-controllable POST data on
+        # a public, unauthenticated endpoint, so an absolute external URL
+        # must fall back to the safe default instead of being honored.
+        response = self.client.post(reverse('newsletter:subscribe'), {
+            'email': 'reader3@example.com', 'next': 'https://evil.example/phishing',
+        })
+        self.assertRedirects(response, reverse('articles:home'))
+
+    def test_excessive_subscribe_attempts_are_rate_limited(self):
+        for i in range(10):
+            self.client.post(reverse('newsletter:subscribe'), {'email': f'burst{i}@example.com'})
+        response = self.client.post(reverse('newsletter:subscribe'), {'email': 'overflow@example.com'})
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Subscriber.objects.filter(email='overflow@example.com').exists())
+
     def test_confirm_marks_subscriber_confirmed(self):
         subscriber = Subscriber.objects.create(email='confirm@example.com')
         response = self.client.get(reverse('newsletter:confirm', args=[subscriber.confirm_token]))
