@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
-from articles.sitemaps import sitemaps
+from articles.sitemaps import NewsArticleSitemap, sitemaps
 from ajna_health_lens.ckeditor_views import ckeditor5_upload_file
 from ajna_health_lens.views import robots_txt
 
@@ -41,6 +41,10 @@ urlpatterns = [
     path('comments/', include('django_comments_xtd.urls')),
     path('editorial/', include('admin_custom.urls')),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
+    path(
+        'news-sitemap.xml', sitemap, {'sitemaps': {'news': NewsArticleSitemap}, 'template_name': 'sitemaps/news_sitemap.xml'},
+        name='news_sitemap',
+    ),
     path('robots.txt', robots_txt, name='robots_txt'),
     re_path(
         r'^media/(?P<path>.*)$',

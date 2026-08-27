@@ -281,6 +281,45 @@ class FeedSitemapRobotsTests(TestCase):
         self.assertIn('Sitemap:', content)
         self.assertIn('/sitemap.xml', content)
 
+    def test_robots_txt_also_points_to_news_sitemap(self):
+        response = self.client.get(reverse('robots_txt'))
+        self.assertContains(response, '/news-sitemap.xml')
+
+
+class NewsSitemapTests(TestCase):
+    def test_recent_published_article_is_included(self):
+        article = make_article(
+            'news-sitemap-recent', Article.ArticleType.NEWS_COMMENTARY, publication_date=timezone.localdate(),
+        )
+        response = self.client.get(reverse('news_sitemap'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn(article.title, content)
+        self.assertIn('<news:news>', content)
+        self.assertIn('<news:name>Ajna Health Lens</news:name>', content)
+        self.assertIn('<news:language>en</news:language>', content)
+        self.assertIn(f'<news:publication_date>{timezone.localdate().isoformat()}</news:publication_date>', content)
+
+    def test_article_older_than_two_days_is_excluded(self):
+        old_article = make_article(
+            'news-sitemap-old', Article.ArticleType.NEWS_COMMENTARY,
+            publication_date=timezone.localdate() - datetime.timedelta(days=5),
+        )
+        response = self.client.get(reverse('news_sitemap'))
+        self.assertNotIn(old_article.title, response.content.decode())
+
+    def test_draft_article_is_excluded_even_if_recent(self):
+        draft = make_article(
+            'news-sitemap-draft', Article.ArticleType.NEWS_COMMENTARY,
+            status=Article.Status.DRAFT, publication_date=timezone.localdate(),
+        )
+        response = self.client.get(reverse('news_sitemap'))
+        self.assertNotIn(draft.title, response.content.decode())
+
+    def test_content_type_is_xml(self):
+        response = self.client.get(reverse('news_sitemap'))
+        self.assertIn('xml', response['Content-Type'])
+
 
 class EngagementCounterTests(TestCase):
     """citation_count/download_count were migrated fields that nothing ever
