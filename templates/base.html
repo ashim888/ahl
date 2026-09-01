@@ -1,6 +1,6 @@
-{% load static ads_tags %}
+{% load static ads_tags i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -244,7 +244,7 @@
 
                 <div class="hidden md:flex flex-1">
                     <form method="get" action="{% url 'articles:search' %}" class="flex items-center border border-border max-w-[220px]">
-                        <input type="text" name="q" placeholder="Search…"
+                        <input type="text" name="q" placeholder="{% trans 'Search…' %}"
                                class="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0 !w-auto">
                     </form>
                 </div>
@@ -260,6 +260,15 @@
                 </a>
 
                 <div class="flex-1 flex justify-end items-center gap-4">
+                    <form action="{% url 'set_language' %}" method="post" class="hidden md:block">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <select name="language" onchange="this.form.submit()" aria-label="Language"
+                                class="font-mono-editorial text-xs tracking-widest bg-transparent border-0 outline-none cursor-pointer text-muted-foreground hover:text-foreground">
+                            <option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
+                            <option value="ne" {% if request.LANGUAGE_CODE == 'ne' %}selected{% endif %}>नेपाली</option>
+                        </select>
+                    </form>
                     <a href="{% url 'articles:search' %}" aria-label="Search" class="md:hidden p-2 -mr-2 text-foreground">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
@@ -296,7 +305,7 @@
                                 <form method="post" action="{% url 'users:logout' %}">
                                     {% csrf_token %}
                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-secondary">
-                                        Log out
+                                        {% trans 'Log out' %}
                                     </button>
                                 </form>
                             </div>
@@ -328,17 +337,10 @@
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' or path == '/index/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     HOME
                 </a>
+                {% include 'includes/main_nav.html' with mobile=False %}
                 <a href="{% url 'articles:article_list' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/articles/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     ARTICLES
-                </a>
-                <a href="{% url 'issues:issue_list' %}"
-                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/issues/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
-                    ISSUES
-                </a>
-                <a href="{% url 'training:course_list' %}"
-                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/training/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
-                    TRAINING
                 </a>
                 <a href="{% url 'editorial_board:public_list' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/about/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
@@ -353,14 +355,13 @@
 
         <div id="mobile-menu-dropdown" class="hidden md:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
             <form method="get" action="{% url 'articles:search' %}" class="flex items-center border border-border mx-4 mt-4">
-                <input type="text" name="q" placeholder="Search…"
+                <input type="text" name="q" placeholder="{% trans 'Search…' %}"
                        class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
             </form>
             <nav class="px-4 py-4 space-y-1">
                 <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' or path == '/index/' %}text-accent{% endif %}">HOME</a>
+                {% include 'includes/main_nav.html' with mobile=True %}
                 <a href="{% url 'articles:article_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">ARTICLES</a>
-                <a href="{% url 'issues:issue_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/issues/' in path %}text-accent{% endif %}">ISSUES</a>
-                <a href="{% url 'training:course_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/training/' in path %}text-accent{% endif %}">TRAINING</a>
                 <a href="{% url 'editorial_board:public_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">ABOUT</a>
                 <a href="{% url 'pitches:pitch_create' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/pitches/' in path %}text-accent{% endif %}">PITCH A STORY</a>
             </nav>
@@ -374,12 +375,21 @@
                     <a href="{% url 'users:profile' %}" class="block py-2 text-sm">Profile</a>
                     <form method="post" action="{% url 'users:logout' %}">
                         {% csrf_token %}
-                        <button type="submit" class="w-full text-left py-2 text-sm">Log out</button>
+                        <button type="submit" class="w-full text-left py-2 text-sm">{% trans 'Log out' %}</button>
                     </form>
                 {% else %}
                     <a href="{% url 'users:login' %}" class="block py-2 text-sm">Login</a>
                     <a href="{% url 'users:register' %}" class="block py-2 text-sm font-semibold">Register</a>
                 {% endif %}
+                <form action="{% url 'set_language' %}" method="post" class="mt-3 pt-3 border-t border-border">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <select name="language" onchange="this.form.submit()" aria-label="Language"
+                            class="font-mono-editorial text-xs tracking-widest bg-transparent border border-border px-2 py-1.5 outline-none cursor-pointer">
+                        <option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
+                        <option value="ne" {% if request.LANGUAGE_CODE == 'ne' %}selected{% endif %}>नेपाली</option>
+                    </select>
+                </form>
             </div>
         </div>
     </header>
@@ -409,7 +419,7 @@
         <div class="max-w-7xl mx-auto px-6 py-10">
             <div class="border-b border-white/10 pb-8 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-1">NEWSLETTER</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-1">{% trans 'NEWSLETTER' %}</p>
                     <p class="text-sm opacity-70">Free — the latest articles and news, straight to your inbox.</p>
                 </div>
                 <form method="post" action="{% url 'newsletter:subscribe' %}" class="flex gap-2 w-full md:w-auto">
@@ -420,27 +430,27 @@
                            class="flex-1 md:w-64 px-3 py-2 text-sm bg-white/10 border border-white/20 text-primary-foreground placeholder-white/40 focus:outline-none focus:border-white/50">
                     <button type="submit"
                             class="font-mono-editorial text-xs tracking-widest bg-primary-foreground text-foreground px-4 py-2 hover:opacity-80 transition-opacity whitespace-nowrap">
-                        SUBSCRIBE
+                        {% trans 'SUBSCRIBE' %}
                     </button>
                 </form>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">SECTIONS</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'SECTIONS' %}</p>
                     <a href="{% url 'articles:home' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Home</a>
-                    <a href="{% url 'articles:article_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Articles</a>
-                    <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Issues</a>
-                    <a href="{% url 'training:course_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Training</a>
+                    {% for section in nav_sections %}
+                        <a href="{{ section.nav_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ section.name }}</a>
+                    {% endfor %}
                     <a href="{% url 'billing:plan_browse' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Subscribe</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">JOURNAL</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'JOURNAL' %}</p>
                     <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Issue Archive</a>
                     <a href="{% url 'articles:article_list' %}?type=original_research" class="block text-sm opacity-60 hover:opacity-100 mb-2">Research</a>
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">Editorial Policy</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">ABOUT</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'ABOUT' %}</p>
                     <a href="{% url 'editorial_board:public_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Editorial Board</a>
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">Policies</a>
                     <a href="{% url 'users:register' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Register</a>

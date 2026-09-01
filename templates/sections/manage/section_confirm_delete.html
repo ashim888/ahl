@@ -1,0 +1,27 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Delete Section — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Delete Section{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+    <p class="text-gray-700">
+        Delete "<strong>{{ section.name }}</strong>"?
+        {% if child_count %}
+            This also deletes its {{ child_count }} sub-section{{ child_count|pluralize }}.
+        {% endif %}
+        Any articles assigned to it are unaffected — they just lose that section assignment.
+        This cannot be undone. If you just want to hide it from navigation, edit it and uncheck
+        "Active" instead.
+    </p>
+
+    <form method="post" class="mt-8 flex gap-3">
+        {% csrf_token %}
+        <button type="submit" class="py-2.5 px-6 rounded-md bg-red-700 text-white font-medium hover:bg-red-800">
+            Delete permanently
+        </button>
+        <a href="{% url 'sections:manage_section_list' %}"
+           class="py-2.5 px-6 rounded-md border border-gray-300 font-medium hover:bg-gray-50">Cancel</a>
+    </form>
+</div>
+{% endblock %}

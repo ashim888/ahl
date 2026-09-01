@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-14">
+    <div class="rule-editorial mb-6"></div>
+    {% if section.parent %}
+        <a href="{{ section.parent.nav_url }}" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">
+            ← {{ section.parent.name|upper }}
+        </a>
+    {% endif %}
+    <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">{{ section.name }}</h1>
+
+    {% if section.children.all %}
+        <div class="mt-6 flex flex-wrap gap-2">
+            {% for child in section.children.all %}
+                <a href="{{ child.nav_url }}"
+                   class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border border-border text-muted-foreground hover:border-foreground hover:text-foreground">
+                    {{ child.name|upper }}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="mt-10 divide-y divide-border">
+        {% for article in articles %}
+            <article class="article-link py-6 flex gap-6">
+                <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 hidden sm:block" style="width: 160px; height: 110px;">
+                    {% if article.featured_image %}
+                        <img src="{{ article.featured_image.url }}" alt="{{ article.title }}"
+                             class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                    {% else %}
+                        <div class="w-full h-full bg-secondary"></div>
+                    {% endif %}
+                </a>
+                <div class="flex-1 min-w-0">
+                    <span class="section-label text-muted-foreground">
+                        {% if article.is_pinned %}<span class="text-accent">PINNED ·</span> {% endif %}
+                        {{ article.get_article_type_display }} · {{ article.get_access_type_display }}
+                    </span>
+                    <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
+                        <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
+                    </h2>
+                    <p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ article.abstract }}</p>
+                    <div class="flex items-center gap-2 mt-3">
+                        {% with a=article.articleauthor_set.all|first %}
+                            {% if a %}
+                                <a href="{% url 'articles:author_detail' a.user.pk %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.user.get_full_name }}</a>
+                            {% else %}
+                                <span class="text-xs text-muted-foreground font-medium">Editorial staff</span>
+                            {% endif %}
+                        {% endwith %}
+                        <span class="text-border text-xs">·</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">
+                            {% if article.publication_date %}{{ article.publication_date|date:"M j, Y" }}{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <p class="text-muted-foreground py-10">No articles in this section yet.</p>
+        {% endfor %}
+    </div>
+
+    {% include 'includes/pagination_editorial.html' %}
+</div>
+{% endblock %}

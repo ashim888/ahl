@@ -5,6 +5,7 @@ from django.forms import inlineformset_factory
 from django.utils.text import slugify
 from django_ckeditor_5.widgets import CKEditor5Widget
 
+from sections.models import Section
 from users.models import User
 
 from .models import Article, ArticleAuthor, Keyword
@@ -76,7 +77,7 @@ class ArticleForm(forms.ModelForm):
         # the moment status becomes Published (see articles/models.py).
         fields = [
             'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned', 'homepage_section',
-            'abstract', 'issue', 'volume', 'page_numbers', 'doi',
+            'abstract', 'issue', 'section', 'volume', 'page_numbers', 'doi',
             'html_content', 'references', 'featured_image', 'pdf_file',
         ]
         widgets = {
@@ -93,6 +94,26 @@ class ArticleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['homepage_section'].choices = [('', "Auto (don't feature)")] + list(Article.HomepageSection.choices)
+        self.fields['section'].required = False
+        # Grouped <optgroup> choices, not a plain flat list — visually
+        # matches the two-level hierarchy an editor is actually picking
+        # from. Overriding .choices on a ModelChoiceField only changes what
+        # renders; validation still resolves the submitted pk against
+        # self.queryset (Django's ModelChoiceField.clean() doesn't consult
+        # .choices at all), so this is safe.
+        # Link-override sections (Training, Issues — see Section.link_url_name)
+        # are excluded: an article assigned there would never actually be
+        # reachable, since that nav entry just redirects to the existing
+        # feature's own page instead of rendering a section landing page.
+        section_choices = [('', '— No section —')]
+        top_sections = Section.objects.filter(
+            parent__isnull=True, link_url_name='',
+        ).order_by('order', 'name').prefetch_related('children')
+        for top in top_sections:
+            options = [(top.pk, f'{top.name} (general)')]
+            options += [(child.pk, child.name) for child in top.children.order_by('order', 'name')]
+            section_choices.append((top.name, options))
+        self.fields['section'].choices = section_choices
         # Pre-fill Tagify's expected format for an existing article's
         # current keywords — a JSON array of {"value": "..."} objects, the
         # same shape TagifyKeywordsField.to_python() parses back out of the

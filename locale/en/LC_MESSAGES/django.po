@@ -1,0 +1,77 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-01 11:46+0545\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+msgid "Search…"
+msgstr ""
+
+msgid "Log out"
+msgstr ""
+
+msgid "NEWSLETTER"
+msgstr ""
+
+msgid "SUBSCRIBE"
+msgstr ""
+
+msgid "SECTIONS"
+msgstr ""
+
+msgid "JOURNAL"
+msgstr ""
+
+msgid "ABOUT"
+msgstr ""
+
+msgid "Comment"
+msgstr ""
+
+msgid "Post Comment"
+msgstr ""
+
+msgid "Confirm your comment"
+msgstr ""
+
+msgid "Almost there"
+msgstr ""
+
+msgid ""
+"We've sent a confirmation link to your email address — click it to publish "
+"your comment."
+msgstr ""
+
+msgid "Back to"
+msgstr ""
+
+msgid "STAFF"
+msgstr ""
+
+msgid "ago"
+msgstr ""
+
+msgid "This comment has been removed."
+msgstr ""
+
+msgid "REPLY"
+msgstr ""
+
+msgid "REMOVE"
+msgstr ""
+
+msgid "Reply to comment"
+msgstr ""

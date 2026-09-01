@@ -31,6 +31,7 @@ urlpatterns = [
     # link to it — see ROADMAP.md Risk Register (August 2026 audit resolved
     # this as "unroute", not "leave reachable by accident").
     path('', include('editorial_board.urls')),
+    path('', include('sections.urls')),
     path('', include('training.urls')),
     path('', include('billing.urls')),
     path('', include('newsletter.urls')),
@@ -46,6 +47,10 @@ urlpatterns = [
         name='news_sitemap',
     ),
     path('robots.txt', robots_txt, name='robots_txt'),
+    # Django's built-in set_language view — POST-only, sets the
+    # django_language cookie LocaleMiddleware reads (see settings.py), then
+    # redirects to ?next=. Powers the language switcher in base.html.
+    path('i18n/', include('django.conf.urls.i18n')),
     re_path(
         r'^media/(?P<path>.*)$',
         serve,

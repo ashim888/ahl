@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import models
 from django.templatetags.static import static
 from django.urls import reverse
 
@@ -7,6 +8,7 @@ def journal_settings(request):
     from issues.models import Issue  # local import: avoids a project->app import at module load time
 
     from articles.seo import sitewide_structured_data
+    from sections.models import Section
 
     default_og_image_url = request.build_absolute_uri(static('images/logo.png'))
 
@@ -38,5 +40,15 @@ def journal_settings(request):
         'sitewide_structured_data_json': sitewide_structured_data(
             journal_name=settings.JOURNAL_NAME, logo_url=default_og_image_url,
             site_url=request.build_absolute_uri('/'), search_url=request.build_absolute_uri(reverse('articles:search')),
+        ),
+        # Primary public nav — top-level sections (Journal, Policy & Economy,
+        # etc., plus Training/Issues as link-override entries) with their
+        # children prefetched, so templates/base.html's nav loop never
+        # issues a query per section. Unused on /manage/ pages (they extend
+        # admin_dashboard/base.html instead) but this context processor
+        # already runs unconditionally on every request (see `latest_issue`
+        # above) — same existing tradeoff, not a new one.
+        'nav_sections': Section.objects.filter(parent__isnull=True, is_active=True).order_by('order', 'name').prefetch_related(
+            models.Prefetch('children', queryset=Section.objects.filter(is_active=True).order_by('order', 'name')),
         ),
     }

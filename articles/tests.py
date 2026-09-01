@@ -514,6 +514,54 @@ class ArticleFormKeywordsTests(TestCase):
         self.assertIn('"value": "Existing Tag"', form.fields['keywords'].initial)
 
 
+class ArticleFormSectionFieldTests(TestCase):
+    def _valid_data(self, **overrides):
+        data = {
+            'title': 'A New Article', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'abstract': 'An abstract.',
+        }
+        data.update(overrides)
+        return data
+
+    def test_section_is_optional(self):
+        form = ArticleForm(data=self._valid_data())
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_can_save_with_a_leaf_section(self):
+        from sections.models import Section
+
+        top = Section.objects.create(name_en='Test Top', slug='form-test-top')
+        child = Section.objects.create(name_en='Test Child', slug='form-test-child', parent=top)
+        form = ArticleForm(data=self._valid_data(section=child.pk))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertEqual(article.section, child)
+
+    def test_can_save_with_a_top_level_section(self):
+        from sections.models import Section
+
+        top = Section.objects.create(name_en='Test Top', slug='form-test-top2')
+        form = ArticleForm(data=self._valid_data(section=top.pk))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertEqual(article.section, top)
+
+    def test_link_override_sections_are_excluded_from_choices(self):
+        from sections.models import Section
+
+        Section.objects.create(name_en='Test Training', slug='form-test-training', link_url_name='training:course_list')
+        form = ArticleForm()
+        flat_choice_values = []
+        for group_or_choice in form.fields['section'].choices:
+            key, value = group_or_choice
+            if isinstance(value, list):
+                flat_choice_values.extend(v for v, _label in value)
+            else:
+                flat_choice_values.append(key)
+        section = Section.objects.get(slug='form-test-training')
+        self.assertNotIn(section.pk, flat_choice_values)
+
+
 class KeywordAutocompleteTests(TestCase):
     def test_returns_matching_keywords(self):
         make_keyword('Diabetes')
@@ -1396,3 +1444,44 @@ class ArticleManageListSearchTests(TestCase):
         )
         response = self.client.get(reverse('articles:manage_article_list'), {'q': 'diabetes'})
         self.assertEqual(list(response.context['articles']), [match])
+
+
+class LanguageSwitcherTests(TestCase):
+    """Cookie/session-based i18n (LocaleMiddleware + set_language) — nav/UI
+    chrome only (templates/base.html), not article content. See ROADMAP.md
+    Phase 7 and the Section/nav plan for the scope decision.
+    """
+
+    def test_default_language_is_english(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, '<html lang="en">')
+        self.assertContains(response, 'SUBSCRIBE')
+
+    def test_switching_to_nepali_translates_a_tagged_chrome_string(self):
+        self.client.post(reverse('set_language'), {'language': 'ne', 'next': reverse('articles:home')})
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, '<html lang="ne">')
+        self.assertContains(response, 'सदस्यता लिनुहोस्')  # SUBSCRIBE, translated
+
+    def test_language_choice_persists_via_cookie_across_requests(self):
+        post_response = self.client.post(reverse('set_language'), {'language': 'ne', 'next': reverse('articles:home')})
+        self.assertEqual(self.client.cookies['django_language'].value, 'ne')
+        self.assertRedirects(post_response, reverse('articles:home'))
+        # A second, independent request (no language re-selected) still gets
+        # Nepali — proving the cookie, not just the redirect response, is
+        # what carries the choice forward.
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, '<html lang="ne">')
+
+    def test_switching_back_to_english_restores_default(self):
+        self.client.post(reverse('set_language'), {'language': 'ne', 'next': reverse('articles:home')})
+        self.client.post(reverse('set_language'), {'language': 'en', 'next': reverse('articles:home')})
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, '<html lang="en">')
+        self.assertContains(response, 'SUBSCRIBE')
+
+    def test_article_content_is_not_translated(self):
+        article = make_article('nepali-chrome-scope-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.client.post(reverse('set_language'), {'language': 'ne', 'next': reverse('articles:home')})
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, article.title)

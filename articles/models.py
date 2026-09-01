@@ -176,6 +176,12 @@ class Article(models.Model):
         'issues.Issue', on_delete=models.SET_NULL, null=True, blank=True, related_name='articles',
         help_text='Optional story trail / issue this article belongs to.',
     )
+    section = models.ForeignKey(
+        'sections.Section', on_delete=models.SET_NULL, null=True, blank=True, related_name='articles',
+        help_text='Optional subject-taxonomy placement (see the sections app) — independent of '
+                   'article_type (format) and keyword_tags (free tags). Drives the public '
+                   'primary-nav landing pages, not the homepage curation slots above.',
+    )
 
     volume = models.CharField(max_length=10, null=True, blank=True)
     page_numbers = models.CharField(max_length=20, null=True, blank=True)

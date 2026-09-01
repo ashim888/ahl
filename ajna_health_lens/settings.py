@@ -60,6 +60,9 @@ X_FRAME_OPTIONS = os.environ.get('X_FRAME_OPTIONS', 'DENY')
 # Application definition
 
 INSTALLED_APPS = [
+    # Must come before django.contrib.admin — it patches the admin to add
+    # per-language fields for any model registered in a translation.py.
+    'modeltranslation',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -81,6 +84,7 @@ INSTALLED_APPS = [
     'submissions',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
     'peer_review',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
     'issues',
+    'sections',
     'admin_custom',
     'training',
     'editorial_board',
@@ -93,6 +97,12 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # Must sit after SessionMiddleware, before CommonMiddleware (Django's
+    # documented ordering) — reads the django_language cookie/session key set
+    # by the set_language view (see urls.py) and activates it for the
+    # request. Cookie/session-based, not URL-prefixed, since public and
+    # /manage/ routes are interleaved in one urls.py per app.
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -127,6 +137,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',
                 'ajna_health_lens.context_processors.journal_settings',
             ],
         },
@@ -212,11 +223,34 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
+# Nav/UI-chrome translation only for now (see ROADMAP.md) — article content
+# stays single-language. Needed here (not just at the LocaleMiddleware/
+# set_language wiring, further down this file) because django-modeltranslation
+# reads LANGUAGES at app-loading time to decide which per-language columns
+# (e.g. Section.name_en/name_ne) to generate.
+LANGUAGES = [
+    ('en', 'English'),
+    ('ne', 'नेपाली'),
+]
+
 TIME_ZONE = 'Asia/Kathmandu'
+
+# Where makemessages/compilemessages read and write .po/.mo catalogs (see
+# locale/en/LC_MESSAGES/django.po, locale/ne/LC_MESSAGES/django.po) —
+# project-level, not per-app, since the tagged strings are only in shared
+# templates (base.html and its includes), not app-specific templates.
+LOCALE_PATHS = [BASE_DIR / 'locale']
 
 USE_I18N = True
 
 USE_TZ = True
+
+# django-modeltranslation — powers per-language fields on registered models
+# (see e.g. sections/translation.py). Kept next to LANGUAGES/USE_I18N since
+# it's part of the same i18n story, even though the rest of the request-time
+# language machinery (LocaleMiddleware, set_language) lives further down.
+MODELTRANSLATION_DEFAULT_LANGUAGE = 'en'
+MODELTRANSLATION_LANGUAGES = ('en', 'ne')
 
 
 # Static files (CSS, JavaScript, Images)
