@@ -332,13 +332,13 @@
             </div>
             </div>
 
-            <nav class="hidden md:flex items-center justify-between gap-0 overflow-x-auto">
+            <nav class="hidden md:flex flex-wrap items-center justify-center gap-x-1">
                 <a href="{% url 'articles:home' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' or path == '/index/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     HOME
                 </a>
                 {% include 'includes/main_nav.html' with mobile=False %}
-                <a href="{% url 'articles:article_list' %}"
+                {% comment %} <a href="{% url 'articles:article_list' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/articles/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     ARTICLES
                 </a>
@@ -349,7 +349,7 @@
                 <a href="{% url 'pitches:pitch_create' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/pitches/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     PITCH A STORY
-                </a>
+                </a> {% endcomment %}
             </nav>
         </div>
 

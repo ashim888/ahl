@@ -1,34 +1,54 @@
 {% comment %}
 Shared primary-nav loop over `nav_sections` (see journal_settings context
 processor) — included once for desktop, once for mobile, with `mobile`
-toggling markup/classes. A section with children renders as <details> so it
-opens on click/tap (not hover-only — hover never fires on touch devices),
-and stays keyboard/focus accessible for free since <details> is a native
-disclosure widget. A childless section (Training, Issues via link_url_name)
-renders as a plain link.
+toggling markup/classes. A childless section (Training, Issues via
+link_url_name) renders as a plain link on both. A section with children
+renders differently per viewport:
+- Desktop: a plain hover-triggered dropdown (group/group-hover, plus
+  group-focus-within so keyboard tabbing still reveals it).
+- Mobile: <details> — hover never fires on touch devices, so this opens
+  on tap instead, and gets keyboard/focus accessibility for free since
+  <details> is a native disclosure widget.
 {% endcomment %}
 {% for section in nav_sections %}
     {% with active=section.nav_url %}
     {% if section.children.all %}
-        <details class="nav-section-dropdown {% if mobile %}block{% else %}relative inline-block{% endif %}">
-            <summary class="cursor-pointer list-none flex items-center gap-1 select-none
-                             {% if mobile %}py-2 font-mono-editorial text-xs tracking-widest{% else %}font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap{% endif %}
-                             {% if active in path %}{% if mobile %}text-accent{% else %}border-accent text-accent{% endif %}{% else %}{% if not mobile %}border-transparent hover:text-accent{% else %}hover:text-accent{% endif %}{% endif %}">
-                <a href="{{ section.nav_url }}">{{ section.name|upper }}</a>
-                <svg class="w-2.5 h-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
-                </svg>
-            </summary>
-            <div class="{% if mobile %}pl-4 pb-2 space-y-1{% else %}absolute left-0 top-full bg-background border border-border shadow-lg min-w-[220px] z-30 py-1{% endif %}">
-                {% for child in section.children.all %}
-                    <a href="{{ child.nav_url }}"
-                       class="block font-mono-editorial text-xs tracking-widest
-                              {% if mobile %}py-1.5 opacity-70{% else %}px-4 py-2.5 hover:bg-secondary{% endif %}">
-                        {{ child.name|upper }}
-                    </a>
-                {% endfor %}
+        {% if mobile %}
+            <details class="nav-section-dropdown block">
+                <summary class="cursor-pointer list-none flex items-center gap-1 select-none py-2 font-mono-editorial text-xs tracking-widest
+                                 {% if active in path %}text-accent{% else %}hover:text-accent{% endif %}">
+                    <a href="{{ section.nav_url }}">{{ section.name|upper }}</a>
+                    <svg class="w-2.5 h-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
+                    </svg>
+                </summary>
+                <div class="pl-4 pb-2 space-y-1">
+                    {% for child in section.children.all %}
+                        <a href="{{ child.nav_url }}" class="block font-mono-editorial text-xs tracking-widest py-1.5 opacity-70">
+                            {{ child.name|upper }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </details>
+        {% else %}
+            <div class="nav-section-dropdown relative inline-block group">
+                <a href="{{ section.nav_url }}"
+                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap flex items-center gap-1
+                          {% if active in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
+                    {{ section.name|upper }}
+                    <svg class="w-2.5 h-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
+                    </svg>
+                </a>
+                <div class="hidden group-hover:block group-focus-within:block absolute left-0 top-full bg-background border border-border shadow-lg min-w-[220px] z-30 py-1">
+                    {% for child in section.children.all %}
+                        <a href="{{ child.nav_url }}" class="block font-mono-editorial text-xs tracking-widest px-4 py-2.5 hover:bg-secondary">
+                            {{ child.name|upper }}
+                        </a>
+                    {% endfor %}
+                </div>
             </div>
-        </details>
+        {% endif %}
     {% else %}
         <a href="{{ section.nav_url }}"
            class="{% if mobile %}block py-2 font-mono-editorial text-xs tracking-widest {% if active in path %}text-accent{% endif %}
