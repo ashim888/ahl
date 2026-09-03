@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 
+from ajna_health_lens.validators import validate_document_content
+
 # See ARCHITECTURE.md §7.1 "Manuscript PDF/Word" — 50 MB, .pdf/.doc/.docx
 manuscript_extension_validator = FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])
 

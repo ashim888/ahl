@@ -299,6 +299,19 @@ class SectionDetailViewTests(TestCase):
         response = self.client.get(reverse('sections:section_detail', args=['test-top']))
         self.assertContains(response, '<title>Test Top')
 
+    def test_top_level_section_has_two_level_breadcrumb(self):
+        response = self.client.get(reverse('sections:section_detail', args=['test-top']))
+        content = response.content.decode()
+        self.assertIn('"@type": "BreadcrumbList"', content)
+        self.assertIn('Test Top', content)
+
+    def test_child_section_breadcrumb_includes_parent(self):
+        response = self.client.get(reverse('sections:section_detail', args=['test-child']))
+        content = response.content.decode()
+        self.assertIn('"@type": "BreadcrumbList"', content)
+        self.assertIn('Test Top', content)
+        self.assertIn('Test Child', content)
+
 
 class PrimaryNavRenderingTests(TestCase):
     """`nav_sections` (journal_settings context processor) drives the shared
@@ -343,3 +356,28 @@ class PrimaryNavRenderingTests(TestCase):
         section = Section.objects.create(name_en='Test Nav Landing', slug='test-nav-landing', order=999)
         response = self.client.get(self.home_url)
         self.assertContains(response, reverse('sections:section_detail', args=[section.slug]))
+
+
+class SectionSitemapTests(TestCase):
+    def test_active_section_with_a_landing_page_is_included(self):
+        section = Section.objects.create(name_en='Test Sitemap Section', slug='test-sitemap-section')
+        response = self.client.get(reverse('sitemap'))
+        self.assertContains(response, f'/sections/{section.slug}/')
+
+    def test_inactive_section_is_excluded(self):
+        section = Section.objects.create(name_en='Test Sitemap Inactive', slug='test-sitemap-inactive', is_active=False)
+        response = self.client.get(reverse('sitemap'))
+        self.assertNotContains(response, f'/sections/{section.slug}/')
+
+    def test_link_override_section_is_excluded(self):
+        Section.objects.create(
+            name_en='Test Sitemap Training', slug='test-sitemap-training', link_url_name='training:course_list',
+        )
+        response = self.client.get(reverse('sitemap'))
+        self.assertNotContains(response, 'test-sitemap-training')
+
+    def test_child_section_is_included(self):
+        top = Section.objects.create(name_en='Test Sitemap Parent', slug='test-sitemap-parent')
+        child = Section.objects.create(name_en='Test Sitemap Child', slug='test-sitemap-child', parent=top)
+        response = self.client.get(reverse('sitemap'))
+        self.assertContains(response, f'/sections/{child.slug}/')

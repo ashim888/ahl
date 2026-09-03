@@ -562,6 +562,56 @@ class ArticleFormSectionFieldTests(TestCase):
         self.assertNotIn(section.pk, flat_choice_values)
 
 
+class ArticleFormSanitizationTests(TestCase):
+    """html_content is sanitized on save (articles/sanitize.py) — defense
+    in depth on top of the EDITORIAL_ROLES-only write access this field
+    already relies on. <script> stays allowed (D3.js chart embeds, see
+    ROADMAP.md's WYSIWYG section), but only inline or from the one CDN this
+    project preloads.
+    """
+
+    def _valid_data(self, **overrides):
+        data = {
+            'title': 'A New Article', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'abstract': 'An abstract.',
+        }
+        data.update(overrides)
+        return data
+
+    def test_script_with_onerror_style_attribute_is_stripped(self):
+        form = ArticleForm(data=self._valid_data(html_content='<img src="x" onerror="alert(1)">'))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertNotIn('onerror', article.html_content)
+
+    def test_script_from_untrusted_src_is_stripped_to_empty(self):
+        form = ArticleForm(data=self._valid_data(html_content='<script src="https://evil.example/x.js"></script>'))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertNotIn('evil.example', article.html_content)
+
+    def test_inline_script_for_d3_embed_is_preserved(self):
+        html = '<div id="chart"></div><script>d3.select("#chart").append("svg");</script>'
+        form = ArticleForm(data=self._valid_data(html_content=html))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertIn('<script>d3.select', article.html_content)
+
+    def test_trusted_cdn_script_src_is_preserved(self):
+        html = '<script src="https://d3js.org/d3.v7.min.js"></script>'
+        form = ArticleForm(data=self._valid_data(html_content=html))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertIn('https://d3js.org/d3.v7.min.js', article.html_content)
+
+    def test_normal_rich_content_is_preserved(self):
+        html = '<h2>Title</h2><p>Some <strong>bold</strong> text.</p>'
+        form = ArticleForm(data=self._valid_data(html_content=html))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertEqual(article.html_content, html)
+
+
 class KeywordAutocompleteTests(TestCase):
     def test_returns_matching_keywords(self):
         make_keyword('Diabetes')
@@ -1252,6 +1302,28 @@ class ArticleCommentsTests(TestCase):
             _comment_post_data(self.article, 'Spam comment.', honeypot='filled-in-by-a-bot'),
         )
         self.assertFalse(XtdComment.objects.filter(comment='Spam comment.').exists())
+
+
+class CommentRateLimitTests(TestCase):
+    """comments-post-comment is overridden in ajna_health_lens/urls.py with
+    a rate-limited wrapper (see comments_views.py) — the package's own view
+    has no throttle, and email confirmation alone doesn't stop a POST flood
+    of unconfirmed rows/confirmation emails.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.article = make_article('rate-limited-commentable-article', Article.ArticleType.NEWS_COMMENTARY)
+
+    def test_excessive_comment_posts_are_rate_limited(self):
+        # Limit is 10/m by IP — the 11th POST in the same window should be
+        # blocked rather than processed.
+        for i in range(10):
+            self.client.post(reverse('comments-post-comment'), _comment_post_data(self.article, f'Comment {i}.'))
+        response = self.client.post(reverse('comments-post-comment'), _comment_post_data(self.article, 'Overflow comment.'))
+        self.assertEqual(response.status_code, 403)
 
 
 def _paragraphs(n):

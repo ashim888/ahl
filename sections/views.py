@@ -39,6 +39,7 @@ class SectionDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         from articles.models import Article
+        from articles.seo import breadcrumb_list_structured_data
 
         context = super().get_context_data(**kwargs)
         section_ids = [self.object.pk] + list(self.object.children.values_list('pk', flat=True))
@@ -51,6 +52,14 @@ class SectionDetailView(DetailView):
         context['is_paginated'] = page_obj.has_other_pages()
         context['meta_title'] = f'{self.object.name} — {settings.JOURNAL_NAME}'
         context['meta_description'] = f'{self.object.name} coverage from {settings.JOURNAL_NAME}.'
+
+        breadcrumb_items = [('Home', self.request.build_absolute_uri(reverse('articles:home')))]
+        if self.object.parent:
+            breadcrumb_items.append(
+                (self.object.parent.name, self.request.build_absolute_uri(self.object.parent.nav_url)),
+            )
+        breadcrumb_items.append((self.object.name, None))
+        context['breadcrumb_json'] = breadcrumb_list_structured_data(breadcrumb_items)
         return context
 
 

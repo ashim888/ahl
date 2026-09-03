@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 
+from ajna_health_lens.validators import validate_document_content
+
 # See ARCHITECTURE.md §7.1 "Author CV" — media/profiles/cvs/, 10 MB, .pdf/.doc/.docx
 cv_extension_validator = FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])
 

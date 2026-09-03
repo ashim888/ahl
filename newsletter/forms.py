@@ -1,6 +1,8 @@
 from django import forms
 from django_ckeditor_5.widgets import CKEditor5Widget
 
+from articles.sanitize import sanitize_editorial_html
+
 from .models import NewsletterIssue
 
 
@@ -32,3 +34,8 @@ class NewsletterIssueForm(forms.ModelForm):
             # for editors who need to drop into raw HTML.
             'body_html': CKEditor5Widget(config_name='articles'),
         }
+
+    def clean_body_html(self):
+        # See articles/sanitize.py — same "trusted, editor-authored HTML"
+        # field, same defense-in-depth treatment as Article.html_content.
+        return sanitize_editorial_html(self.cleaned_data.get('body_html'))

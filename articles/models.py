@@ -10,7 +10,7 @@ from django.utils.text import slugify
 
 from .validators import (
     article_image_extension_validator, article_pdf_extension_validator,
-    validate_article_pdf_size, validate_featured_image_size,
+    validate_article_pdf_size, validate_document_content, validate_featured_image_size,
 )
 
 # Shared with articles/views.py HomeView, which caches under this key —
@@ -149,7 +149,7 @@ class Article(models.Model):
     doi = models.CharField(max_length=100, unique=True, null=True, blank=True)
     pdf_file = models.FileField(
         upload_to='articles/%Y/%m/', null=True, blank=True,
-        validators=[article_pdf_extension_validator, validate_article_pdf_size],
+        validators=[article_pdf_extension_validator, validate_article_pdf_size, validate_document_content],
         help_text='PDF only, up to 100 MB.',
     )
     featured_image = models.ImageField(

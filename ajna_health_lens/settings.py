@@ -8,6 +8,7 @@ import datetime
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,11 +21,23 @@ def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
+_INSECURE_DEFAULT_SECRET_KEY = 'django-insecure-dev-only-change-me'
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-only-change-me')
+SECRET_KEY = os.environ.get('SECRET_KEY', _INSECURE_DEFAULT_SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool('DEBUG', True)
+
+# The fallback above exists only so a fresh dev checkout runs with zero
+# setup — silently reusing it in production would mean every deployment
+# that forgets to set SECRET_KEY shares one publicly-visible key (it's
+# committed to this file's git history), defeating session/CSRF-token
+# signing and password-reset tokens. Fail loudly instead of booting insecure.
+if not DEBUG and SECRET_KEY == _INSECURE_DEFAULT_SECRET_KEY:
+    raise ImproperlyConfigured(
+        'SECRET_KEY is not set. Set a real, random SECRET_KEY in the environment before running with DEBUG=False.',
+    )
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 if DEBUG:
@@ -347,6 +360,17 @@ CKEDITOR_5_FILE_UPLOAD_PERMISSION = 'authenticated'
 # the sites migration creates by default.
 SITE_ID = 1
 COMMENTS_APP = 'django_comments_xtd'
+
+# rest_framework is installed only for django_comments_xtd's own comment API
+# (see api/views.py), which sets its own permission_classes explicitly on
+# every view (AllowAny where it means to be public, IsAuthenticatedOrReadOnly
+# elsewhere) — this doesn't change that. It only closes the gap for any DRF
+# view added to this project later without setting permission_classes
+# itself, which would otherwise silently fall back to DRF's own default of
+# AllowAny.
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+}
 
 # Nesting depth for replies (0 = flat, no replies at all). 3 matches what
 # most news/blog comment sections use in practice — deep enough for a real

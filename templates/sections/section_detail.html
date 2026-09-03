@@ -2,6 +2,12 @@
 
 {% block title %}{{ meta_title }}{% endblock %}
 
+{% block extra_head %}
+    {% if breadcrumb_json %}
+        <script type="application/ld+json">{{ breadcrumb_json }}</script>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>

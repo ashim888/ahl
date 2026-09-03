@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from .validators import (
     cv_extension_validator, photo_extension_validator,
-    validate_cv_file_size, validate_photo_size,
+    validate_cv_file_size, validate_document_content, validate_photo_size,
 )
 
 
@@ -96,7 +96,7 @@ class User(AbstractUser):
     )
     cv_file = models.FileField(
         upload_to='profiles/cvs/', null=True, blank=True,
-        validators=[cv_extension_validator, validate_cv_file_size],
+        validators=[cv_extension_validator, validate_cv_file_size, validate_document_content],
         help_text='PDF, DOC, or DOCX, up to 10 MB.',
     )
     research_interests = models.TextField(null=True, blank=True)

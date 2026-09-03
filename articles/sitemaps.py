@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from issues.models import Issue
+from sections.sitemaps import SectionSitemap
 
 from .models import Article
 
@@ -81,5 +82,6 @@ class StaticViewSitemap(Sitemap):
 sitemaps = {
     'articles': ArticleSitemap,
     'issues': IssueSitemap,
+    'sections': SectionSitemap,
     'pages': StaticViewSitemap,
 }

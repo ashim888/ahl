@@ -8,6 +8,7 @@ from django.urls import include, path
 
 from articles.sitemaps import NewsArticleSitemap, sitemaps
 from ajna_health_lens.ckeditor_views import ckeditor5_upload_file
+from ajna_health_lens.comments_views import rate_limited_post_comment
 from ajna_health_lens.views import robots_txt
 
 
@@ -37,8 +38,13 @@ urlpatterns = [
     path('', include('newsletter.urls')),
     path('', include('ads.urls')),
     path('', include('pitches.urls')),
-    # django_comments_xtd.urls also includes django_comments.urls (the
-    # actual post/delete/flag endpoints) under this same prefix.
+    # Overrides django_comments' own 'comments-post-comment' URL with a
+    # rate-limited wrapper (see comments_views.py) — must come before the
+    # django_comments_xtd include below, since Django resolves URLs in
+    # list order and the first match wins. django_comments_xtd.urls also
+    # includes django_comments.urls (the actual post/delete/flag endpoints)
+    # under this same prefix.
+    path('comments/post/', rate_limited_post_comment, name='comments-post-comment'),
     path('comments/', include('django_comments_xtd.urls')),
     path('editorial/', include('admin_custom.urls')),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),

@@ -9,6 +9,7 @@ from sections.models import Section
 from users.models import User
 
 from .models import Article, ArticleAuthor, Keyword
+from .sanitize import sanitize_editorial_html
 
 
 class TagifyKeywordsField(forms.CharField):
@@ -134,6 +135,11 @@ class ArticleForm(forms.ModelForm):
         if cleaned_data.get('access_type') == Article.AccessType.PAY_PER_ARTICLE and not cleaned_data.get('price'):
             self.add_error('price', 'Set a price for pay-per-article articles.')
         return cleaned_data
+
+    def clean_html_content(self):
+        # See articles/sanitize.py — defense in depth on top of the
+        # EDITORIAL_ROLES-only write access this field already relies on.
+        return sanitize_editorial_html(self.cleaned_data.get('html_content'))
 
     def save(self, commit=True):
         # keyword_tags is a real M2M but keywords isn't a Meta.field (it's

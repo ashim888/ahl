@@ -112,6 +112,18 @@ class ComposeViewTests(TestCase):
         })
         self.assertEqual(response.status_code, 403)
 
+    @patch('newsletter.views.async_task')
+    def test_compose_sanitizes_body_html(self, mock_async_task):
+        # Same "trusted, editor-authored HTML" field/treatment as
+        # Article.html_content — see articles/sanitize.py.
+        mock_async_task.return_value = 'fake-task-id'
+        self.client.force_login(self.editor)
+        self.client.post(reverse('newsletter:manage_issue_compose'), {
+            'subject': 'Hello', 'body_html': '<p>Hi</p><img src="x" onerror="alert(1)">',
+        })
+        issue = NewsletterIssue.objects.get(subject='Hello')
+        self.assertNotIn('onerror', issue.body_html)
+
 
 class IssuePreviewViewTests(TestCase):
     def setUp(self):

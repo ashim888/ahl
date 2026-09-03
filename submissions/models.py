@@ -3,7 +3,7 @@ from django.db import models
 
 from articles.models import Article
 
-from .validators import manuscript_extension_validator, validate_manuscript_file_size
+from .validators import manuscript_extension_validator, validate_document_content, validate_manuscript_file_size
 
 
 class Submission(models.Model):
@@ -62,7 +62,7 @@ class ManuscriptFile(models.Model):
     )
     file = models.FileField(
         upload_to='manuscripts/%Y/%m/',
-        validators=[manuscript_extension_validator, validate_manuscript_file_size],
+        validators=[manuscript_extension_validator, validate_manuscript_file_size, validate_document_content],
         help_text='PDF, DOC, or DOCX, up to 50 MB.',
     )
     file_type = models.CharField(max_length=10, choices=FileType.choices)
