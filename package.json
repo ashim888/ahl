@@ -1,0 +1,13 @@
+{
+  "name": "ajna-health-lens-css",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Tailwind CSS build for templates/ — replaces the cdn.tailwindcss.com Play CDN, which Tailwind's own docs say not to use in production (ships the full JIT compiler to the browser and recompiles CSS on every page load).",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/src/input.css -o ./static/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./static/src/input.css -o ./static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

@@ -30,34 +30,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        background: '#fafaf8',
-                        foreground: '#111110',
-                        card: '#ffffff',
-                        'card-foreground': '#111110',
-                        primary: '#111110',
-                        'primary-foreground': '#fafaf8',
-                        secondary: '#f0ede8',
-                        'secondary-foreground': '#111110',
-                        muted: '#e8e5e0',
-                        'muted-foreground': '#6b6860',
-                        accent: '#c0392b',
-                        'accent-foreground': '#ffffff',
-                        border: '#d4d0cb',
-                    },
-                    fontFamily: {
-                        display: ['"Playfair Display"', 'Georgia', 'serif'],
-                        'mono-editorial': ['"Space Mono"', 'monospace'],
-                    },
-                },
-            },
-        };
-    </script>
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <style>
         /* Editorial design system — sharp corners throughout (no Tailwind
            rounded-* utilities used in these templates, except rounded-full
@@ -288,8 +261,9 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
                                 </svg>
                             </button>
+                            
                             <div id="profile-menu-dropdown"
-                                 class="hidden absolute right-0 mt-2 w-52 bg-card border border-border shadow-lg py-1 z-20">
+                                 class="hidden fixed w-52 bg-card border border-border shadow-lg py-1 z-50">
                                 <div class="px-4 py-2 border-b border-border">
                                     <p class="font-medium text-sm truncate">{{ user.get_full_name }}</p>
                                     <p class="font-mono-editorial text-xs text-muted-foreground">{{ user.get_role_display }}</p>
@@ -477,8 +451,20 @@
         var btn = document.getElementById('profile-menu-button');
         var dropdown = document.getElementById('profile-menu-dropdown');
         if (btn && dropdown) {
+            // dropdown is `position: fixed` (see the template comment above
+            // it) precisely so it isn't clipped by header-top-collapse-inner's
+            // overflow:hidden — that means it's no longer positioned relative
+            // to the button via right-0/mt-2, so its top/right get computed
+            // from the button's actual screen position here, each time it opens.
+            function positionDropdown() {
+                var rect = btn.getBoundingClientRect();
+                dropdown.style.top = (rect.bottom + 8) + 'px';
+                dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+            }
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
+                var willShow = dropdown.classList.contains('hidden');
+                if (willShow) positionDropdown();
                 dropdown.classList.toggle('hidden');
             });
             document.addEventListener('click', function (e) {

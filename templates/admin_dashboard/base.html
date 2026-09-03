@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Editorial Dashboard — {{ JOURNAL_NAME }}{% endblock %}</title>
     <link rel="icon" href="{% static 'images/logo.png' %}">
-    <script src="https://cdn.tailwindcss.com"></script>
+    {# Compiled by Tailwind CLI (tailwind.config.js) — see templates/base.html's matching comment. No custom theme extension needed here (see the note below), so the same compiled file covers this dashboard's default-palette utility classes too. #}
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <style>
         /* Admin form design system — minimal, single accent (indigo), generous
            padding/rounding. Scoped to this file (not ajna_health_lens/forms.py's

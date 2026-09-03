@@ -28,3 +28,8 @@ ROADMAP.md
 CLAUDE.md
 ARCHITECTURE.md
 frontend/
+
+# Tailwind CLI build (package.json/tailwind.config.js at project root) —
+# static/css/tailwind.css (the compiled output) IS committed, same as any
+# other static/ asset; only the regenerable install directory is ignored.
+node_modules/
