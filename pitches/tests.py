@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.conf import settings
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -70,6 +71,15 @@ class PitchSubmissionTests(TestCase):
         self.assertEqual(pitch.submitter, self.author)
         self.assertEqual(pitch.status, StoryPitch.Status.SUBMITTED)
 
+    def test_submitting_sends_confirmation_email_to_submitter(self):
+        mail.outbox = []
+        self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'A Story About Confirmation Emails', 'summary': 'Why this matters now.', 'body': '',
+        })
+        confirmation = next(m for m in mail.outbox if self.author.email in m.to)
+        self.assertIn('We received your story pitch', confirmation.subject)
+        self.assertEqual(confirmation.from_email, settings.JOURNAL_CONTACT_EMAIL)
+
     def test_submitting_notifies_senior_editorial_staff(self):
         eic = User.objects.create_user(
             email='pitch-notify-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
@@ -78,9 +88,16 @@ class PitchSubmissionTests(TestCase):
         self.client.post(reverse('pitches:pitch_create'), {
             'title': 'A Notify-Worthy Pitch', 'summary': 'Why this matters now.', 'body': '',
         })
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn(eic.email, mail.outbox[0].to)
-        self.assertIn('A Notify-Worthy Pitch', mail.outbox[0].subject)
+        # Two separate emails fire on submission: the staff heads-up
+        # (notify_editorial_staff_of_new_pitch) and the submitter's own
+        # confirmation (notify_submitter_of_pitch_received) — this test only
+        # cares about the former, so pick it out rather than assume ordering.
+        self.assertEqual(len(mail.outbox), 2)
+        staff_email = next(m for m in mail.outbox if eic.email in m.to)
+        self.assertIn('A Notify-Worthy Pitch', staff_email.subject)
+        submitter_email = next(m for m in mail.outbox if self.author.email in m.to)
+        self.assertIn('We received your story pitch', submitter_email.subject)
+        self.assertEqual(submitter_email.from_email, settings.JOURNAL_CONTACT_EMAIL)
 
     def test_submission_succeeds_even_if_the_staff_notification_email_fails(self):
         # Fault injection: notify_editorial_staff_of_new_pitch is a
@@ -262,6 +279,11 @@ class PitchDecisionTests(TestCase):
             title='A Story Worth Telling', summary='The pitch.', submitter=self.author,
         )
         self.client.force_login(self.editor)
+        # Creating self.pitch above fires notify_submitter_of_pitch_received
+        # (pitches/signals.py) — clear it so each test's own mail.outbox
+        # assertions are about the decision it's actually testing, not this
+        # fixture's creation.
+        mail.outbox = []
 
     def test_start_review_updates_status_and_sends_email(self):
         self.client.post(reverse('pitches:manage_pitch_decide', args=[self.pitch.pk, 'start_review']))
@@ -270,6 +292,14 @@ class PitchDecisionTests(TestCase):
         self.assertEqual(self.pitch.reviewed_by, self.editor)
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(self.author.email, mail.outbox[0].to)
+
+    def test_status_change_email_sent_from_monitored_contact_address(self):
+        # Not the default no-reply address: an anonymous submitter has no
+        # account to log into, so "reply to this email" (see
+        # pitches/email/pitch_feedback.html) only works if the FROM address
+        # is a real, staff-monitored inbox.
+        self.client.post(reverse('pitches:manage_pitch_decide', args=[self.pitch.pk, 'start_review']))
+        self.assertEqual(mail.outbox[0].from_email, settings.JOURNAL_CONTACT_EMAIL)
 
     def test_status_change_succeeds_even_if_the_notification_email_fails(self):
         # Fault injection: notify_on_status_change (pitches/signals.py) is a
@@ -344,9 +374,68 @@ class PitchDecisionTests(TestCase):
         anon_pitch = StoryPitch.objects.create(
             title='Guest Idea', summary='s', submitter_name='Guest', submitter_email='guest-email@example.com',
         )
+        mail.outbox = []  # clear the creation-confirmation email, not under test here
         self.client.post(reverse('pitches:manage_pitch_decide', args=[anon_pitch.pk, 'reject']))
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('guest-email@example.com', mail.outbox[0].to)
+
+
+@FAST_PASSWORD_HASHERS
+class PitchFeedbackEmailTests(TestCase):
+    """pitch_detail's standalone 'Save feedback' form never touches status,
+    so it can't rely on the status-change signal (pitches/signals.py) to
+    notify the submitter — the view itself has to detect the change and
+    send it (pitches/views.py:pitch_detail).
+    """
+
+    def setUp(self):
+        self.author = make_verified_author()
+        self.editor = make_editor()
+        self.pitch = StoryPitch.objects.create(
+            title='A Story Worth Telling', summary='The pitch.', submitter=self.author,
+        )
+        self.client.force_login(self.editor)
+        mail.outbox = []
+
+    def test_saving_feedback_emails_the_submitter(self):
+        response = self.client.post(
+            reverse('pitches:manage_pitch_detail', args=[self.pitch.pk]),
+            {'editor_feedback': 'Great angle — can you get a source from the district hospital?'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(mail.outbox), 1)
+        sent = mail.outbox[0]
+        self.assertIn(self.author.email, sent.to)
+        self.assertEqual(sent.from_email, settings.JOURNAL_CONTACT_EMAIL)
+        self.assertIn('district hospital', sent.body)
+
+    def test_resaving_unchanged_feedback_does_not_resend_email(self):
+        self.pitch.editor_feedback = 'Already told them this.'
+        self.pitch.save(update_fields=['editor_feedback'])
+        mail.outbox = []
+        self.client.post(
+            reverse('pitches:manage_pitch_detail', args=[self.pitch.pk]),
+            {'editor_feedback': 'Already told them this.'},
+        )
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_saving_blank_feedback_does_not_send_email(self):
+        self.client.post(reverse('pitches:manage_pitch_detail', args=[self.pitch.pk]), {'editor_feedback': ''})
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_feedback_email_not_sent_when_pitch_has_no_contact_email(self):
+        # Shouldn't happen in practice (every pitch has either an account or
+        # submitter_email — see StoryPitch.contact_email), but the view's
+        # guard is there, so cover it directly rather than only indirectly.
+        self.pitch.submitter = None
+        self.pitch.submitter_email = ''
+        self.pitch.save()
+        mail.outbox = []
+        self.client.post(
+            reverse('pitches:manage_pitch_detail', args=[self.pitch.pk]),
+            {'editor_feedback': 'Feedback nobody can receive.'},
+        )
+        self.assertEqual(len(mail.outbox), 0)
 
 
 @FAST_PASSWORD_HASHERS
@@ -357,6 +446,10 @@ class PitchBulkDecisionTests(TestCase):
         self.pitch_a = StoryPitch.objects.create(title='Pitch A', summary='s', submitter=self.author)
         self.pitch_b = StoryPitch.objects.create(title='Pitch B', summary='s', submitter=self.author)
         self.client.force_login(self.editor)
+        # Creating pitch_a/pitch_b above each fire notify_submitter_of_pitch_received
+        # (pitches/signals.py) — clear it so each test's own mail.outbox assertions
+        # are about the decision it's actually testing, not this fixture's creation.
+        mail.outbox = []
 
     def test_bulk_reject_rejects_all_selected(self):
         self.client.post(reverse('pitches:manage_pitch_bulk_decide'), {

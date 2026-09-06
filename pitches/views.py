@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -12,12 +13,14 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView
 from django_ratelimit.decorators import ratelimit
 
+from ajna_health_lens.mail import send_notification_email
 from articles.models import Article, ArticleAuthor
 from users.decorators import role_required
 from users.models import User
 
 from .forms import PitchDecisionForm, StoryPitchForm
 from .models import StoryPitch
+from .signals import SUBMITTER_FROM_EMAIL
 
 # Revised (August 2026, twice): first opened from verified_author-only to
 # any authenticated account, then dropped the login requirement entirely —
@@ -124,9 +127,25 @@ class PitchQueueListView(ListView):
 def pitch_detail(request, pk):
     pitch = get_object_or_404(StoryPitch.objects.select_related('submitter', 'article'), pk=pk)
     if request.method == 'POST':
+        previous_feedback = pitch.editor_feedback
         form = PitchDecisionForm(request.POST, instance=pitch)
         if form.is_valid():
             form.save()
+            # This form only ever changes editor_feedback, not status — the
+            # pre_save status-change signal (pitches/signals.py) never fires
+            # for it, so without this, feedback left here (independent of
+            # an accept/reject/in-review decision — see pitch_detail.html's
+            # separate "Save feedback" form) went completely unnotified.
+            # Only fires on an actual change, not every re-save of the same
+            # text, and only if there's something to actually tell them.
+            if pitch.editor_feedback and pitch.editor_feedback != previous_feedback and pitch.contact_email:
+                body = render_to_string('pitches/email/pitch_feedback.html', {'pitch': pitch})
+                send_notification_email(
+                    subject=f'A note on your story pitch: "{pitch.title}"',
+                    message=body,
+                    recipient_list=[pitch.contact_email],
+                    from_email=SUBMITTER_FROM_EMAIL,
+                )
             messages.success(request, 'Feedback saved.')
             return redirect('pitches:manage_pitch_detail', pk=pitch.pk)
     else:

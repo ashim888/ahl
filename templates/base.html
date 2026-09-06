@@ -29,19 +29,37 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    {# Noto Sans/Serif Devanagari — Playfair Display/Inter/Space Mono have
+       zero Devanagari (Nepali) glyph coverage; without an explicit font
+       here, rendering Nepali text depends entirely on the browser/OS's own
+       fallback font substitution, which is inconsistent (missing entirely
+       on some older Windows setups, ugly conjunct rendering on others).
+       Pinned into the fontFamily fallback chains in tailwind.config.js. #}
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <style>
         /* Editorial design system — sharp corners throughout (no Tailwind
            rounded-* utilities used in these templates, except rounded-full
            on small circular byline avatars, which is intentional). */
-        body { font-family: 'Inter', sans-serif; background-color: #fafaf8; color: #111110; -webkit-font-smoothing: antialiased; }
-        .font-display { font-family: 'Playfair Display', Georgia, serif; }
-        .font-mono-editorial { font-family: 'Space Mono', monospace; }
+        {% comment %} Noto Sans/Serif Devanagari sits before the Latin display
+        fonts' own fallback (Georgia/monospace/sans-serif) in every stack
+        below — none of Playfair Display/Space Mono/Inter have any Devanagari
+        glyphs at all, so without an explicit, loaded font here, Nepali text
+        depended entirely on the browser/OS's own substitution, which is
+        inconsistent across platforms. These declarations — not
+        tailwind.config.js's matching fontFamily.display/mono-editorial
+        extension — are what actually wins: this <style> block is later in
+        the cascade than the compiled Tailwind stylesheet linked above, and
+        an equal-specificity class rule later in document order overrides an
+        earlier one. Kept in sync with tailwind.config.js anyway so the two
+        don't silently drift apart. {% endcomment %}
+        body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; background-color: #fafaf8; color: #111110; -webkit-font-smoothing: antialiased; }
+        .font-display { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; }
+        .font-mono-editorial { font-family: 'Space Mono', 'Noto Sans Devanagari', monospace; }
         .rule-editorial { border-top: 2px solid #111110; }
         .rule-thin { border-top: 1px solid #d4d0cb; }
-        .section-label { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; }
-        .drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.5rem; font-weight: 700; float: left; line-height: 0.8; margin-right: 0.08em; margin-top: 0.06em; }
+        .section-label { font-family: 'Space Mono', 'Noto Sans Devanagari', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; }
+        .drop-cap::first-letter { font-family: 'Playfair Display', 'Noto Serif Devanagari', serif; font-size: 4.5rem; font-weight: 700; float: left; line-height: 0.8; margin-right: 0.08em; margin-top: 0.06em; }
         .article-link:hover .article-title { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
         /* Article sidebar "In This Article" nav — .is-active toggled by
            IntersectionObserver (article_detail.html) as each heading it

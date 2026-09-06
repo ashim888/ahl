@@ -19,8 +19,13 @@ module.exports = {
         border: '#d4d0cb',
       },
       fontFamily: {
-        display: ['"Playfair Display"', 'Georgia', 'serif'],
-        'mono-editorial': ['"Space Mono"', 'monospace'],
+        // Noto Sans/Serif Devanagari before the Latin fallback — Playfair
+        // Display/Space Mono have no Devanagari glyphs at all. Kept in
+        // sync with the matching (and, in the browser, actually-winning —
+        // see the <style> block's own comment) declarations in
+        // templates/base.html.
+        display: ['"Playfair Display"', '"Noto Serif Devanagari"', 'Georgia', 'serif'],
+        'mono-editorial': ['"Space Mono"', '"Noto Sans Devanagari"', 'monospace'],
       },
     },
   },

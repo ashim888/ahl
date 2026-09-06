@@ -10,15 +10,39 @@ from users.models import User
 
 from .models import StoryPitch
 
-# Same pattern as users/signals.py — SUBMITTED has no template (that's the
-# state a pitch is created in, not transitioned into) and PUBLISHED is set
-# by the Article-side signal below, not an editor decision, so no email for
-# it either — the ACCEPTED email already told the submitter what's happening.
+# PUBLISHED is set by the Article-side signal below, not an editor
+# decision, so no email for it — the ACCEPTED email already told the
+# submitter what's happening. SUBMITTED has its own handler below instead
+# of living in this table, since it fires on creation (post_save), not a
+# status transition (pre_save) — a brand-new pitch has no "previous status"
+# to compare against.
 EMAIL_TEMPLATES = {
     StoryPitch.Status.IN_REVIEW: 'pitches/email/pitch_in_review.html',
     StoryPitch.Status.ACCEPTED: 'pitches/email/pitch_accepted.html',
     StoryPitch.Status.REJECTED: 'pitches/email/pitch_rejected.html',
 }
+
+# Every submitter-facing pitch email (this file's, plus pitches/views.py's
+# feedback-saved one) sends from the real, monitored editorial inbox rather
+# than the site's default no-reply address — an anonymous submitter has no
+# account/login to check for a response, so "just reply to this email"
+# needs to actually reach someone. Staff-facing notifications (new-pitch
+# alert below) don't need this — staff use the pitch queue UI, not email
+# reply, to respond.
+SUBMITTER_FROM_EMAIL = settings.JOURNAL_CONTACT_EMAIL
+
+
+@receiver(post_save, sender=StoryPitch)
+def notify_submitter_of_pitch_received(sender, instance, created, **kwargs):
+    if not created or not instance.contact_email:
+        return
+    body = render_to_string('pitches/email/pitch_submitted.html', {'pitch': instance})
+    send_notification_email(
+        subject=f'We received your story pitch: "{instance.title}"',
+        message=body,
+        recipient_list=[instance.contact_email],
+        from_email=SUBMITTER_FROM_EMAIL,
+    )
 
 
 @receiver(pre_save, sender=StoryPitch)
@@ -41,6 +65,7 @@ def notify_on_status_change(sender, instance, **kwargs):
             subject=f'Update on your story pitch: "{instance.title}"',
             message=body,
             recipient_list=[instance.contact_email],
+            from_email=SUBMITTER_FROM_EMAIL,
         )
 
 
