@@ -29,6 +29,12 @@ EDITORIAL_ROLES = User.EDITORIAL_ROLES
 # descending count so the biggest slice always gets the first color.
 TYPE_CHART_COLORS = ['#7c6fea', '#34d399', '#fbbf24', '#60a5fa', '#f87171', '#22d3ee', '#f472b6', '#a3a3a3']
 
+# Revenue events (enrollments, subscriptions, purchases) are much sparser
+# than page views — a 14-day window (AnalyticsView.TREND_DAYS) would show
+# mostly zeros for a smaller site. 30 days is the more standard window for
+# financial reporting anyway.
+REVENUE_TREND_DAYS = 30
+
 
 def _daily_counts(queryset, date_field, days):
     """Buckets `queryset` row counts into local-midnight-to-midnight ranges
@@ -44,6 +50,22 @@ def _daily_counts(queryset, date_field, days):
         day_end = day_start + datetime.timedelta(days=1)
         counts.append(queryset.filter(**{f'{date_field}__gte': day_start, f'{date_field}__lt': day_end}).count())
     return counts
+
+
+def _daily_sums(queryset, date_field, sum_field, days):
+    """Same day-bucketing as _daily_counts, but Sum(sum_field) per day
+    instead of a row count — used for revenue trends (RevenueTrainingView/
+    RevenueSubscriptionsView/RevenueOverviewView below).
+    """
+    sums = []
+    for day in days:
+        day_start = timezone.make_aware(datetime.datetime.combine(day, datetime.time.min))
+        day_end = day_start + datetime.timedelta(days=1)
+        total = queryset.filter(
+            **{f'{date_field}__gte': day_start, f'{date_field}__lt': day_end},
+        ).aggregate(total=Sum(sum_field))['total'] or 0
+        sums.append(total)
+    return sums
 
 
 def _trend_bars(day_labels, counts):
@@ -225,15 +247,57 @@ class DashboardHomeView(TemplateView):
         return context
 
 
+def _training_revenue_trend(days, day_labels):
+    """Daily 'collected' revenue (PAID enrollments, priced at course.price,
+    bucketed by enrolled_at) — used by both RevenueTrainingView and
+    RevenueOverviewView, which is why it's a standalone function rather than
+    inlined in one view's get_context_data.
+    """
+    paid_enrollments = Enrollment.objects.filter(payment_status=Enrollment.PaymentStatus.PAID)
+    sums = _daily_sums(paid_enrollments, 'enrolled_at', 'course__price', days)
+    return _trend_bars(day_labels, sums), sums
+
+
+def _subscription_purchase_revenue_trend(days, day_labels):
+    """Daily subscription + purchase revenue, used by both
+    RevenueSubscriptionsView and RevenueOverviewView. Subscription revenue
+    here is the plan price at the moment a subscription is *created*
+    (bucketed by created_at) — a proxy for the initial payment, not a full
+    ledger of recurring renewals, since UserSubscription only tracks the
+    current period rather than a payment history (see its docstring —
+    renewals will need a real gateway's webhook events to track properly).
+    Purchase revenue is exact: ArticlePurchase.amount is a real one-time
+    transaction, bucketed by purchased_at.
+    """
+    sub_sums = _daily_sums(UserSubscription.objects.all(), 'created_at', 'plan__price', days)
+    purchase_sums = _daily_sums(ArticlePurchase.objects.all(), 'purchased_at', 'amount', days)
+    combined = [s + p for s, p in zip(sub_sums, purchase_sums)]
+    return _trend_bars(day_labels, combined), combined
+
+
+def _mrr_estimate(active_subs):
+    """Approximate monthly-recurring-revenue value of currently active
+    subscriptions — normalizes each plan's price to a 30-day cycle (e.g. an
+    annual plan counts at 1/12th its price) so mixed monthly/annual/
+    institutional plans combine into one comparable number. Shared by
+    AnalyticsView and RevenueSubscriptionsView/RevenueOverviewView below.
+    """
+    if not active_subs:
+        return Decimal('0')
+    return round(
+        sum((sub.plan.price / (Decimal(sub.plan.duration_days) / Decimal(30))) for sub in active_subs), 2,
+    )
+
+
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
-class RevenueView(TemplateView):
-    """Read-only revenue summary from Training's Enrollment.payment_status.
-    Subscription/purchase revenue (billing app) and ad performance live on
-    AnalyticsView below instead — this page stays scoped to training, its
-    original purpose, rather than growing into a second BI page.
+class RevenueTrainingView(TemplateView):
+    """Training course revenue only, from Enrollment.payment_status — see
+    RevenueOverviewView for the combined picture across training,
+    subscriptions, and article purchases, and RevenueSubscriptionsView for
+    the subscription/purchase side specifically.
     """
 
-    template_name = 'admin_custom/revenue.html'
+    template_name = 'admin_custom/revenue_training.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -247,6 +311,11 @@ class RevenueView(TemplateView):
         context['pending_total'] = total_for(Enrollment.PaymentStatus.PENDING)
         context['refunded_total'] = total_for(Enrollment.PaymentStatus.REFUNDED)
         context['enrollment_total'] = Enrollment.objects.count()
+
+        today = timezone.localdate()
+        days = [today - datetime.timedelta(days=i) for i in range(REVENUE_TREND_DAYS - 1, -1, -1)]
+        day_labels = [d.strftime('%b %-d') for d in days]
+        context['revenue_trend'], _ = _training_revenue_trend(days, day_labels)
 
         courses = TrainingCourse.objects.annotate(
             paid_count=Count('enrollments', filter=Q(enrollments__payment_status=Enrollment.PaymentStatus.PAID)),
@@ -262,11 +331,107 @@ class RevenueView(TemplateView):
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class RevenueSubscriptionsView(TemplateView):
+    """Subscription + article-purchase revenue — the billing-app side of
+    the picture RevenueTrainingView doesn't cover. See RevenueOverviewView
+    for training and subscriptions combined into one summary.
+    """
+
+    template_name = 'admin_custom/revenue_subscriptions.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+
+        active_subs = list(
+            UserSubscription.objects.filter(
+                status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
+            ).select_related('plan'),
+        )
+        context['active_subscription_count'] = len(active_subs)
+        context['mrr_estimate'] = _mrr_estimate(active_subs)
+        context['cancelled_subscription_count'] = UserSubscription.objects.filter(
+            status=UserSubscription.Status.CANCELLED,
+        ).count()
+
+        # Per-plan breakdown — active count (current) and lifetime revenue
+        # (every subscription ever created on this plan × its price, a
+        # proxy for total realized payments — see _subscription_purchase_
+        # revenue_trend's docstring on why this isn't a full renewal ledger).
+        plans = SubscriptionPlan.objects.annotate(
+            active_count=Count('subscriptions', filter=Q(
+                subscriptions__status=UserSubscription.Status.ACTIVE,
+                subscriptions__start_date__lte=today, subscriptions__end_date__gte=today,
+            )),
+            lifetime_count=Count('subscriptions'),
+        ).order_by('-lifetime_count')
+        for plan in plans:
+            plan.lifetime_revenue = plan.lifetime_count * plan.price
+        context['plans'] = plans
+
+        context['purchase_count'] = ArticlePurchase.objects.count()
+        context['purchase_revenue'] = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+
+        days = [today - datetime.timedelta(days=i) for i in range(REVENUE_TREND_DAYS - 1, -1, -1)]
+        day_labels = [d.strftime('%b %-d') for d in days]
+        context['revenue_trend'], _ = _subscription_purchase_revenue_trend(days, day_labels)
+
+        return context
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class RevenueOverviewView(TemplateView):
+    """Combined revenue across training, subscriptions, and article
+    purchases — one headline number and trend, with drill-down links to
+    RevenueTrainingView and RevenueSubscriptionsView for the detail. MRR is
+    shown separately, not folded into "Total Revenue": it's a forward-
+    looking projection from currently active subscriptions, not money
+    actually collected, so combining it with the other (realized) totals
+    would overstate the number.
+    """
+
+    template_name = 'admin_custom/revenue_overview.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+
+        training_total = Enrollment.objects.filter(
+            payment_status=Enrollment.PaymentStatus.PAID,
+        ).aggregate(total=Sum('course__price'))['total'] or 0
+        subscription_total = UserSubscription.objects.aggregate(
+            total=Sum('plan__price'),
+        )['total'] or 0
+        purchase_total = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+
+        context['training_total'] = training_total
+        context['subscription_total'] = subscription_total
+        context['purchase_total'] = purchase_total
+        context['total_revenue'] = training_total + subscription_total + purchase_total
+
+        active_subs = list(
+            UserSubscription.objects.filter(
+                status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
+            ).select_related('plan'),
+        )
+        context['mrr_estimate'] = _mrr_estimate(active_subs)
+
+        days = [today - datetime.timedelta(days=i) for i in range(REVENUE_TREND_DAYS - 1, -1, -1)]
+        day_labels = [d.strftime('%b %-d') for d in days]
+        _, training_sums = _training_revenue_trend(days, day_labels)
+        _, sub_purchase_sums = _subscription_purchase_revenue_trend(days, day_labels)
+        combined_sums = [t + s for t, s in zip(training_sums, sub_purchase_sums)]
+        context['revenue_trend'] = _trend_bars(day_labels, combined_sums)
+
+        return context
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
 class AnalyticsView(TemplateView):
     """Cross-domain BI overview: article readership, subscription/purchase
     revenue, ad performance, and newsletter growth in one place — a level
     above DashboardHomeView's day-to-day KPIs (today's counts) and
-    RevenueView's training-only numbers. Read-only in the browser; see
+    RevenueOverviewView's revenue-specific detail pages. Read-only in the browser; see
     analytics_csv_export below for the downloadable version.
     """
 
@@ -311,15 +476,7 @@ class AnalyticsView(TemplateView):
         context['subscription_breakdown'] = subscription_breakdown
         context['subscription_gradient'] = subscription_gradient
         context['active_subscription_count'] = active_subscription_count
-
-        # Approximate monthly-recurring-revenue value of currently active
-        # subscriptions — normalizes each plan's price to a 30-day cycle
-        # (e.g. an annual plan counts at 1/12th its price) so mixed
-        # monthly/annual/institutional plans combine into one comparable number.
-        mrr_estimate = sum(
-            (sub.plan.price / (Decimal(sub.plan.duration_days) / Decimal(30))) for sub in active_subs
-        ) if active_subs else Decimal('0')
-        context['mrr_estimate'] = round(mrr_estimate, 2)
+        context['mrr_estimate'] = _mrr_estimate(active_subs)
 
         new_subs_counts = _daily_counts(UserSubscription.objects.all(), 'created_at', days)
         context['new_subscriptions_trend'] = _trend_bars(day_labels, new_subs_counts)
@@ -422,11 +579,8 @@ def analytics_csv_export(request):
         writer.writerow([label, plan_type_counts.get(plan_type, 0)])
     writer.writerow([])
 
-    mrr_estimate = sum(
-        (sub.plan.price / (Decimal(sub.plan.duration_days) / Decimal(30))) for sub in active_subs
-    ) if active_subs else Decimal('0')
     writer.writerow(['Total active subscriptions', len(active_subs)])
-    writer.writerow(['Approximate MRR', round(mrr_estimate, 2)])
+    writer.writerow(['Approximate MRR', _mrr_estimate(active_subs)])
     writer.writerow([
         'Cancelled subscriptions (lifetime)',
         UserSubscription.objects.filter(status=UserSubscription.Status.CANCELLED).count(),

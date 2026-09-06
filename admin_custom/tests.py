@@ -10,8 +10,9 @@ from PIL import Image
 from ads.models import AdSlot
 from ads.services import record_click, record_impression
 from articles.models import Article, ArticleView
-from billing.models import SubscriptionPlan, UserSubscription
+from billing.models import ArticlePurchase, SubscriptionPlan, UserSubscription
 from newsletter.models import Subscriber
+from training.models import Enrollment, TrainingCourse
 from users.models import User
 
 
@@ -168,6 +169,144 @@ class AnalyticsDataTests(TestCase):
         self.assertEqual(response.context['newsletter_total'], 2)
         self.assertEqual(response.context['newsletter_confirmed_count'], 1)
         self.assertEqual(sum(d['count'] for d in response.context['newsletter_confirmed_trend']), 1)
+
+
+class RevenueAccessTests(TestCase):
+    """access control is identical across all three revenue pages — one
+    parametrized-by-hand class rather than three near-duplicate ones.
+    """
+
+    def test_editorial_staff_can_view_all_three_pages(self):
+        self.client.force_login(make_editor())
+        for name in ['admin_custom:revenue', 'admin_custom:revenue_training', 'admin_custom:revenue_subscriptions']:
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 200, name)
+
+    def test_reader_cannot_view_any_revenue_page(self):
+        self.client.force_login(make_reader())
+        for name in ['admin_custom:revenue', 'admin_custom:revenue_training', 'admin_custom:revenue_subscriptions']:
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 403, name)
+
+    def test_anonymous_redirected_to_login_on_all_three_pages(self):
+        for name in ['admin_custom:revenue', 'admin_custom:revenue_training', 'admin_custom:revenue_subscriptions']:
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 302, name)
+
+
+class RevenueTrainingViewTests(TestCase):
+    def setUp(self):
+        self.client.force_login(make_editor())
+
+    def test_collected_pending_refunded_totals(self):
+        course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')
+        Enrollment.objects.create(user=make_reader('a@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PAID)
+        Enrollment.objects.create(user=make_reader('b@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PENDING)
+        Enrollment.objects.create(user=make_reader('c@example.com'), course=course, payment_status=Enrollment.PaymentStatus.REFUNDED)
+
+        response = self.client.get(reverse('admin_custom:revenue_training'))
+        self.assertEqual(response.context['collected_total'], 50)
+        self.assertEqual(response.context['pending_total'], 50)
+        self.assertEqual(response.context['refunded_total'], 50)
+        self.assertEqual(response.context['enrollment_total'], 3)
+
+    def test_revenue_trend_reflects_paid_enrollment_today(self):
+        course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')
+        Enrollment.objects.create(user=make_reader('a@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PAID)
+
+        response = self.client.get(reverse('admin_custom:revenue_training'))
+        self.assertEqual(sum(d['count'] for d in response.context['revenue_trend']), 50)
+
+
+class RevenueSubscriptionsViewTests(TestCase):
+    def setUp(self):
+        self.client.force_login(make_editor())
+
+    def test_per_plan_breakdown_and_active_count(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=30, duration_days=30,
+        )
+        UserSubscription.objects.create(
+            user=make_reader('sub1@example.com'), plan=plan, status=UserSubscription.Status.ACTIVE,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+        UserSubscription.objects.create(
+            user=make_reader('sub2@example.com'), plan=plan, status=UserSubscription.Status.CANCELLED,
+            start_date=timezone.localdate() - datetime.timedelta(days=40),
+            end_date=timezone.localdate() - datetime.timedelta(days=10),
+        )
+
+        response = self.client.get(reverse('admin_custom:revenue_subscriptions'))
+        self.assertEqual(response.context['active_subscription_count'], 1)
+        self.assertEqual(response.context['cancelled_subscription_count'], 1)
+        plans = list(response.context['plans'])
+        self.assertEqual(len(plans), 1)
+        self.assertEqual(plans[0].active_count, 1)
+        self.assertEqual(plans[0].lifetime_count, 2)
+        self.assertEqual(plans[0].lifetime_revenue, 60)
+
+    def test_purchase_revenue_totals(self):
+        article = Article.objects.create(
+            title='Special', slug='special-article', abstract='A', article_type=Article.ArticleType.ORIGINAL_RESEARCH,
+            status=Article.Status.PUBLISHED,
+        )
+        ArticlePurchase.objects.create(user=make_reader('buyer@example.com'), article=article, amount=5)
+
+        response = self.client.get(reverse('admin_custom:revenue_subscriptions'))
+        self.assertEqual(response.context['purchase_count'], 1)
+        self.assertEqual(response.context['purchase_revenue'], 5)
+
+    def test_revenue_trend_combines_subscriptions_and_purchases(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=30, duration_days=30,
+        )
+        UserSubscription.objects.create(
+            user=make_reader('sub@example.com'), plan=plan, status=UserSubscription.Status.ACTIVE,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+        article = Article.objects.create(
+            title='Special', slug='special-article-2', abstract='A', article_type=Article.ArticleType.ORIGINAL_RESEARCH,
+            status=Article.Status.PUBLISHED,
+        )
+        ArticlePurchase.objects.create(user=make_reader('buyer2@example.com'), article=article, amount=5)
+
+        response = self.client.get(reverse('admin_custom:revenue_subscriptions'))
+        self.assertEqual(sum(d['count'] for d in response.context['revenue_trend']), 35)
+
+
+class RevenueOverviewViewTests(TestCase):
+    def setUp(self):
+        self.client.force_login(make_editor())
+
+    def test_totals_combine_training_subscriptions_and_purchases(self):
+        course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')
+        Enrollment.objects.create(user=make_reader('a@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PAID)
+
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=30, duration_days=30,
+        )
+        UserSubscription.objects.create(
+            user=make_reader('sub@example.com'), plan=plan, status=UserSubscription.Status.ACTIVE,
+            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+        article = Article.objects.create(
+            title='Special', slug='special-article-3', abstract='A', article_type=Article.ArticleType.ORIGINAL_RESEARCH,
+            status=Article.Status.PUBLISHED,
+        )
+        ArticlePurchase.objects.create(user=make_reader('buyer3@example.com'), article=article, amount=5)
+
+        response = self.client.get(reverse('admin_custom:revenue'))
+        self.assertEqual(response.context['training_total'], 50)
+        self.assertEqual(response.context['subscription_total'], 30)
+        self.assertEqual(response.context['purchase_total'], 5)
+        self.assertEqual(response.context['total_revenue'], 85)
+        # 30-day plan at price 30 normalizes to exactly 30/month.
+        self.assertEqual(response.context['mrr_estimate'], 30)
+
+    def test_zero_state_does_not_error(self):
+        response = self.client.get(reverse('admin_custom:revenue'))
+        self.assertEqual(response.context['total_revenue'], 0)
+        self.assertEqual(response.context['mrr_estimate'], 0)
 
 
 def _comment_post_data(article, comment_text, **extra):

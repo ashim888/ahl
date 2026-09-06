@@ -1,12 +1,20 @@
 {% extends 'admin_dashboard/base.html' %}
 
-{% block title %}Revenue — {{ JOURNAL_NAME }}{% endblock %}
-{% block page_title %}Revenue{% endblock %}
+{% block title %}Training Revenue — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Revenue — Training{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center gap-4 text-sm font-medium">
+    <a href="{% url 'admin_custom:revenue' %}" class="text-gray-500 hover:text-gray-900">← Overview</a>
+    <a href="{% url 'admin_custom:revenue_subscriptions' %}" class="text-gray-500 hover:text-gray-900">Subscriptions →</a>
+</div>
+{% endblock %}
 
 {% block content %}
 
 <p class="text-sm text-gray-500 -mt-4 mb-6">
-    Training course payments only — this platform has no subscription/APC billing yet (Roadmap Phase 7).
+    Training course payments only — see <a href="{% url 'admin_custom:revenue_subscriptions' %}" class="underline">Subscriptions</a>
+    for the billing-app side, or <a href="{% url 'admin_custom:revenue' %}" class="underline">Overview</a> for both combined.
     Figures reflect <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">Enrollment.payment_status</code>, not a real payment gateway.
 </p>
 
@@ -30,6 +38,19 @@
         <p class="text-sm text-gray-500">Total Enrollments</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ enrollment_total }}</p>
         <p class="mt-2 text-xs text-gray-400">Across all courses</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <div class="flex items-start justify-between mb-6">
+        <h3 class="text-base font-semibold text-gray-900">Collected Revenue ({{ revenue_trend|length }}d)</h3>
+    </div>
+    <div class="flex items-end justify-between gap-0.5 h-28">
+        {% for d in revenue_trend %}
+            <div class="flex-1 h-full flex items-end" title="{{ d.label }}: ${{ d.count }}">
+                <div class="w-full rounded-t-sm bg-violet-500" style="height: {{ d.pct }}%; min-height: {% if d.count %}3px{% else %}0{% endif %};"></div>
+            </div>
+        {% endfor %}
     </div>
 </div>
 

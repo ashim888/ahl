@@ -1,0 +1,87 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Subscription Revenue — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Revenue — Subscriptions{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center gap-4 text-sm font-medium">
+    <a href="{% url 'admin_custom:revenue' %}" class="text-gray-500 hover:text-gray-900">← Overview</a>
+    <a href="{% url 'admin_custom:revenue_training' %}" class="text-gray-500 hover:text-gray-900">Training →</a>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<p class="text-sm text-gray-500 -mt-4 mb-6">
+    Subscriptions and article purchases (`billing` app) — see <a href="{% url 'admin_custom:revenue_training' %}" class="underline">Training</a>
+    for course payments, or <a href="{% url 'admin_custom:revenue' %}" class="underline">Overview</a> for both combined.
+    No real payment gateway is wired in yet (`StubGateway`) — these figures reflect subscriptions/purchases granted through the platform, not actual money movement.
+</p>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Active Subscriptions</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ active_subscription_count }}</p>
+        <p class="mt-2 text-xs text-gray-400">Currently in an active period</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Approx. MRR</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">${{ mrr_estimate }}</p>
+        <p class="mt-2 text-xs text-gray-400">Normalized to a 30-day cycle</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Purchase Revenue</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">${{ purchase_revenue }}</p>
+        <p class="mt-2 text-xs text-gray-400">{{ purchase_count }} article purchase{{ purchase_count|pluralize }}</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Cancelled</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ cancelled_subscription_count }}</p>
+        <p class="mt-2 text-xs text-gray-400">Lifetime cancellations</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <div class="flex items-start justify-between mb-6">
+        <h3 class="text-base font-semibold text-gray-900">Subscription + Purchase Revenue ({{ revenue_trend|length }}d)</h3>
+    </div>
+    <div class="flex items-end justify-between gap-0.5 h-28">
+        {% for d in revenue_trend %}
+            <div class="flex-1 h-full flex items-end" title="{{ d.label }}: ${{ d.count }}">
+                <div class="w-full rounded-t-sm bg-emerald-500" style="height: {{ d.pct }}%; min-height: {% if d.count %}3px{% else %}0{% endif %};"></div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">By Plan</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-100">
+                <tr>
+                    <th class="py-2.5 pr-4">Plan</th>
+                    <th class="py-2.5 pr-4">Price</th>
+                    <th class="py-2.5 pr-4">Active</th>
+                    <th class="py-2.5 pr-4">Lifetime Subscriptions</th>
+                    <th class="py-2.5">Lifetime Revenue</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for plan in plans %}
+                    <tr>
+                        <td class="py-3 pr-4 font-medium text-gray-900">{{ plan.name }}</td>
+                        <td class="py-3 pr-4 text-gray-600">${{ plan.price }}</td>
+                        <td class="py-3 pr-4 text-gray-600">{{ plan.active_count }}</td>
+                        <td class="py-3 pr-4 text-gray-600">{{ plan.lifetime_count }}</td>
+                        <td class="py-3 font-semibold text-gray-900">${{ plan.lifetime_revenue }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="py-6 text-center text-gray-400">No subscription plans yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -85,6 +85,33 @@ class SendNewsletterIssueTaskTests(TestCase):
         self.assertIsNotNone(issue.sent_at)
         self.assertEqual(issue.recipient_count, 1)
 
+    def test_message_carries_an_html_alternative(self):
+        # EmailMultiAlternatives + attach_alternative, not send_mail's
+        # html_message= shortcut (see tasks.py) — same end result, worth
+        # confirming the switch didn't silently drop the HTML part.
+        Subscriber.objects.create(email='confirmed@example.com', status=Subscriber.Status.CONFIRMED)
+        issue = NewsletterIssue.objects.create(subject='Weekly Digest', body_html='<p>News</p>')
+
+        send_newsletter_issue(issue.pk)
+
+        sent_message = mail.outbox[0]
+        self.assertEqual(len(sent_message.alternatives), 1)
+        html_body, mimetype = sent_message.alternatives[0]
+        self.assertEqual(mimetype, 'text/html')
+        self.assertIn('<p>News</p>', html_body)
+        self.assertIn('Unsubscribe', html_body)
+
+    def test_no_confirmed_subscribers_sends_nothing_without_error(self):
+        Subscriber.objects.create(email='pending@example.com', status=Subscriber.Status.PENDING)
+        issue = NewsletterIssue.objects.create(subject='Weekly Digest', body_html='<p>News</p>')
+
+        sent = send_newsletter_issue(issue.pk)
+
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+        issue.refresh_from_db()
+        self.assertIsNotNone(issue.sent_at)
+
 
 class ComposeViewTests(TestCase):
     def setUp(self):

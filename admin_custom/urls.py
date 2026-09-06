@@ -6,7 +6,9 @@ app_name = 'admin_custom'
 
 urlpatterns = [
     path('', views.DashboardHomeView.as_view(), name='dashboard'),
-    path('revenue/', views.RevenueView.as_view(), name='revenue'),
+    path('revenue/', views.RevenueOverviewView.as_view(), name='revenue'),
+    path('revenue/training/', views.RevenueTrainingView.as_view(), name='revenue_training'),
+    path('revenue/subscriptions/', views.RevenueSubscriptionsView.as_view(), name='revenue_subscriptions'),
     path('analytics/', views.AnalyticsView.as_view(), name='analytics'),
     path('analytics/export/', views.analytics_csv_export, name='analytics_csv_export'),
     path('comments/', views.CommentModerationListView.as_view(), name='manage_comment_list'),
