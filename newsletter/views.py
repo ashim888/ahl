@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.core.mail import EmailMultiAlternatives
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -13,7 +15,8 @@ from django_ratelimit.decorators import ratelimit
 from users.decorators import role_required
 from users.models import User
 
-from .emails import send_confirmation_email
+from .content_templates import WEEKLY_DIGEST_TEMPLATE
+from .emails import issue_email_text_body, render_issue_email, send_confirmation_email
 from .forms import NewsletterIssueForm, SubscribeForm
 from .models import NewsletterIssue, Subscriber
 
@@ -123,6 +126,7 @@ class IssueComposeView(CreateView):
         context['confirmed_subscriber_count'] = Subscriber.objects.filter(
             status=Subscriber.Status.CONFIRMED,
         ).count()
+        context['content_template'] = WEEKLY_DIGEST_TEMPLATE
         return context
 
     def form_valid(self, form):
@@ -147,21 +151,52 @@ class IssueComposeView(CreateView):
 @role_required(*EDITORIAL_ROLES)
 @require_POST
 def issue_preview(request):
-    """Renders in-progress compose-form data the way send_newsletter_issue
-    (tasks.py) actually builds the email — subject + body_html + an
-    unsubscribe footer — without saving anything or sending anything.
-    Opened in a new tab from issue_compose.html, same pattern as
+    """Renders in-progress compose-form data through the exact same
+    template send_newsletter_issue (tasks.py) sends — render_issue_email,
+    see newsletter/emails.py — without saving or sending anything. Opened
+    in a new tab from issue_compose.html, same pattern as
     articles:manage_article_preview.
     """
     form = NewsletterIssueForm(request.POST)
     if not form.is_valid():
         return render(request, 'newsletter/manage/issue_preview_error.html', {'form': form}, status=400)
 
-    return render(request, 'newsletter/manage/issue_preview.html', {
-        'subject': form.cleaned_data['subject'],
-        'body_html': form.cleaned_data['body_html'],
-        'unsubscribe_url': PREVIEW_UNSUBSCRIBE_URL,
-    })
+    html = render_issue_email(
+        form.cleaned_data['subject'], form.cleaned_data['body_html'], PREVIEW_UNSUBSCRIBE_URL, is_preview=True,
+    )
+    return HttpResponse(html)
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def issue_test_send(request):
+    """Sends the in-progress compose-form content as one real email to the
+    logged-in editor's own address — through the exact same render_issue_
+    email template and EmailMultiAlternatives path as a real subscriber
+    send, but synchronous (a single recipient doesn't need the async
+    queue) and without touching NewsletterIssue/Subscriber at all. Lets an
+    editor check how an issue actually renders in their own inbox — a real
+    client, not just this admin page's preview tab — before committing to
+    a send that can't be recalled.
+    """
+    form = NewsletterIssueForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+
+    if not request.user.email:
+        return JsonResponse({'ok': False, 'error': 'Your account has no email address on file.'}, status=400)
+
+    subject = form.cleaned_data['subject']
+    body_html = form.cleaned_data['body_html']
+    html_body = render_issue_email(subject, body_html, PREVIEW_UNSUBSCRIBE_URL)
+    text_body = issue_email_text_body(subject, body_html, PREVIEW_UNSUBSCRIBE_URL)
+    message = EmailMultiAlternatives(
+        subject=f'[TEST] {subject}', body=text_body, to=[request.user.email],
+    )
+    message.attach_alternative(html_body, 'text/html')
+    message.send()
+
+    return JsonResponse({'ok': True, 'sent_to': request.user.email})
 
 
 @role_required(*EDITORIAL_ROLES)

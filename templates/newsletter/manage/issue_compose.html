@@ -9,6 +9,7 @@
     <p class="text-sm text-gray-500 mb-6">
         Sends immediately to all {{ confirmed_subscriber_count }} confirmed subscriber{{ confirmed_subscriber_count|pluralize }}
         via a background worker — this page won't wait for every email to go out.
+        Use <strong>Send test to myself</strong> first to see exactly how it'll look in a real inbox.
     </p>
     <form method="post" id="compose-form" onsubmit="return confirm('Send this issue to {{ confirmed_subscriber_count }} subscriber{{ confirmed_subscriber_count|pluralize }} now?');">
         {% csrf_token %}
@@ -20,10 +21,26 @@
 
         <div class="space-y-5">
             {% include 'admin_dashboard/includes/form_field.html' with field=form.subject %}
-            {% include 'admin_dashboard/includes/form_field.html' with field=form.body_html %}
+
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-sm font-medium text-gray-700" for="{{ form.body_html.id_for_label }}">
+                        {{ form.body_html.label }}
+                    </label>
+                    <button type="button" id="insert-template-btn"
+                            class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">
+                        Insert starting template
+                    </button>
+                </div>
+                {{ form.body_html }}
+                {% if form.body_html.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.body_html.help_text }}</p>{% endif %}
+                {% for error in form.body_html.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
         </div>
 
-        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+        <div id="test-send-status" class="hidden mt-6 rounded-xl px-4 py-3 text-sm"></div>
+
+        <div class="mt-8 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
             <button type="submit"
                     class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
                 Send now
@@ -31,6 +48,10 @@
             <button type="button" id="preview-btn"
                     class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
                 Preview
+            </button>
+            <button type="button" id="test-send-btn"
+                    class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                Send test to myself
             </button>
             <a href="{% url 'newsletter:manage_issue_list' %}"
                class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
@@ -40,12 +61,14 @@
     </form>
 </div>
 
+{{ content_template|json_script:"content-template-data" }}
 <script>
+    var form = document.getElementById('compose-form');
+
     // Preview: submit the same form data to the preview endpoint in a new
     // tab, then restore the form's normal action/target so Send still works
     // here — same pattern as articles/manage/article_form.html's Preview.
     (function () {
-        var form = document.getElementById('compose-form');
         var previewBtn = document.getElementById('preview-btn');
         previewBtn.addEventListener('click', function () {
             var originalAction = form.action;
@@ -55,6 +78,75 @@
             form.submit();
             form.action = originalAction;
             form.target = originalTarget;
+        });
+    })();
+
+    // Insert starting template — same setData()-via-window.editors pattern
+    // as article_form.html's "Insert template" button (CKEditor5 only reads
+    // the textarea at creation time, so setting .value alone wouldn't
+    // update what's on screen).
+    (function () {
+        var template = JSON.parse(document.getElementById('content-template-data').textContent);
+        var contentField = document.getElementById('id_body_html');
+        var insertBtn = document.getElementById('insert-template-btn');
+        if (!contentField || !insertBtn) return;
+
+        function setContentFieldValue(value) {
+            var editor = window.editors && window.editors[contentField.id];
+            if (editor) {
+                editor.setData(value);
+            } else if (window.ckeditorRegisterCallback) {
+                contentField.value = value;
+                window.ckeditorRegisterCallback(contentField.id, function (ed) { ed.setData(value); });
+            } else {
+                contentField.value = value;
+            }
+        }
+
+        insertBtn.addEventListener('click', function () {
+            if (contentField.value.trim() && !confirm('Replace the current body with the starting template?')) {
+                return;
+            }
+            setContentFieldValue(template);
+        });
+    })();
+
+    // Send test to myself — fetch() to a JSON endpoint rather than a normal
+    // form submit, specifically so the page never reloads and the editor's
+    // in-progress subject/body aren't lost (a real submit-and-redirect
+    // would need to round-trip the whole form to survive that).
+    (function () {
+        var testSendBtn = document.getElementById('test-send-btn');
+        var statusBox = document.getElementById('test-send-status');
+
+        function showStatus(message, isError) {
+            statusBox.textContent = message;
+            statusBox.classList.remove('hidden', 'bg-red-50', 'border', 'border-red-100', 'text-red-700', 'bg-emerald-50', 'border-emerald-100', 'text-emerald-700');
+            statusBox.classList.add('border', isError ? 'bg-red-50' : 'bg-emerald-50', isError ? 'border-red-100' : 'border-emerald-100', isError ? 'text-red-700' : 'text-emerald-700');
+        }
+
+        testSendBtn.addEventListener('click', function () {
+            testSendBtn.disabled = true;
+            testSendBtn.textContent = 'Sending…';
+            var formData = new FormData(form);
+            fetch('{% url "newsletter:manage_issue_test_send" %}', { method: 'POST', body: formData })
+                .then(function (resp) { return resp.json().then(function (data) { return { status: resp.status, data: data }; }); })
+                .then(function (result) {
+                    if (result.data.ok) {
+                        showStatus('Test email sent to ' + result.data.sent_to + ' — check your inbox.', false);
+                    } else if (result.data.errors) {
+                        showStatus('Fix the highlighted field(s) above before sending a test.', true);
+                    } else {
+                        showStatus(result.data.error || 'Could not send the test email.', true);
+                    }
+                })
+                .catch(function () {
+                    showStatus('Could not reach the server — try again.', true);
+                })
+                .finally(function () {
+                    testSendBtn.disabled = false;
+                    testSendBtn.textContent = 'Send test to myself';
+                });
         });
     })();
 </script>

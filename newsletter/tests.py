@@ -100,6 +100,9 @@ class SendNewsletterIssueTaskTests(TestCase):
         self.assertEqual(mimetype, 'text/html')
         self.assertIn('<p>News</p>', html_body)
         self.assertIn('Unsubscribe', html_body)
+        # render_issue_email's branded template (newsletter/emails.py), not
+        # a bare body_html + unsubscribe-line concatenation.
+        self.assertIn('AJNA HEALTH LENS', html_body)
 
     def test_no_confirmed_subscribers_sends_nothing_without_error(self):
         Subscriber.objects.create(email='pending@example.com', status=Subscriber.Status.PENDING)
@@ -183,6 +186,63 @@ class IssuePreviewViewTests(TestCase):
             'subject': 'Hello', 'body_html': '<p>Hi</p>',
         })
         self.assertEqual(response.status_code, 403)
+
+    def test_preview_uses_the_real_branded_template(self):
+        # Same render_issue_email() the real send uses (newsletter/emails.py)
+        # — a subscriber's inbox and this preview can't drift apart.
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('newsletter:manage_issue_preview'), {
+            'subject': 'Preview Subject', 'body_html': '<p>Preview body content</p>',
+        })
+        self.assertContains(response, 'AJNA HEALTH LENS')
+        self.assertContains(response, 'Illuminating Health Research')
+        self.assertContains(response, 'Unsubscribe')
+
+
+class IssueTestSendViewTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='newsletter-testsend-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='newsletter-testsend-reader@example.com', password='pw', first_name='R', last_name='D')
+
+    def test_sends_one_real_email_to_the_editor_without_touching_the_db(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('newsletter:manage_issue_test_send'), {
+            'subject': 'Draft Subject', 'body_html': '<p>Draft body content</p>',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'ok': True, 'sent_to': self.editor.email})
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.editor.email])
+        self.assertIn('[TEST]', mail.outbox[0].subject)
+        self.assertFalse(NewsletterIssue.objects.exists())
+        self.assertFalse(Subscriber.objects.exists())
+
+    def test_test_email_carries_the_branded_html_alternative(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('newsletter:manage_issue_test_send'), {
+            'subject': 'Draft Subject', 'body_html': '<p>Draft body content</p>',
+        })
+        html_body, mimetype = mail.outbox[0].alternatives[0]
+        self.assertEqual(mimetype, 'text/html')
+        self.assertIn('AJNA HEALTH LENS', html_body)
+        self.assertIn('Draft body content', html_body)
+
+    def test_invalid_form_returns_errors_and_sends_nothing(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('newsletter:manage_issue_test_send'), {'subject': '', 'body_html': ''})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('errors', response.json())
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_non_editorial_cannot_send_a_test(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('newsletter:manage_issue_test_send'), {
+            'subject': 'Hello', 'body_html': '<p>Hi</p>',
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class IssueListFilterTests(TestCase):

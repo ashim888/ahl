@@ -8,6 +8,7 @@ from django.core.mail import EmailMultiAlternatives, get_connection
 from django.urls import reverse
 from django.utils import timezone
 
+from .emails import issue_email_text_body, render_issue_email
 from .models import NewsletterIssue, Subscriber
 
 
@@ -29,11 +30,11 @@ def send_newsletter_issue(issue_id):
     try:
         for subscriber in subscribers.iterator():
             unsubscribe_url = f"{settings.SITE_BASE_URL}{reverse('newsletter:unsubscribe', args=[subscriber.unsubscribe_token])}"
-            text_body = f'{issue.body_html}\n\n---\nUnsubscribe: {unsubscribe_url}'
-            html_body = (
-                f'{issue.body_html}<p style="font-size:12px;color:#888;">'
-                f'<a href="{unsubscribe_url}">Unsubscribe</a></p>'
-            )
+            # render_issue_email is the same branded template the editor
+            # saw in the compose-page preview (newsletter/emails.py) — a
+            # subscriber's inbox and that preview can't drift apart.
+            html_body = render_issue_email(issue.subject, issue.body_html, unsubscribe_url)
+            text_body = issue_email_text_body(issue.subject, issue.body_html, unsubscribe_url)
             message = EmailMultiAlternatives(
                 subject=issue.subject, body=text_body, to=[subscriber.email], connection=connection,
             )
