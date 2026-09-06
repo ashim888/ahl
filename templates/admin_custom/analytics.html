@@ -3,6 +3,10 @@
 {% block title %}Analytics — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}Analytics{% endblock %}
 
+{% block page_actions %}
+<a href="{% url 'admin_custom:analytics_csv_export' %}" class="text-sm font-medium text-gray-500 hover:text-gray-900">Export CSV ↓</a>
+{% endblock %}
+
 {% block content %}
 
 <!-- Articles -->

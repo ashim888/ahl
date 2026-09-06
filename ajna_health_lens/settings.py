@@ -92,10 +92,12 @@ INSTALLED_APPS = [
     'django_comments_xtd',
 
     # Ajna Health Lens apps
+    # submissions/peer_review (academic manuscript submission + peer review)
+    # were removed September 2026 — OJS owns that externally, and pitches
+    # (below) never depended on them. See CLAUDE.md's SCOPE NOTE and
+    # ROADMAP.md "Scope Pivot" / the Risk Register.
     'users',
     'articles',
-    'submissions',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
-    'peer_review',   # dormant — see ARCHITECTURE.md §4.4 / ROADMAP.md "Scope Pivot"
     'issues',
     'sections',
     'admin_custom',

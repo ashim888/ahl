@@ -12,20 +12,14 @@ from articles.models import Article, ArticleAuthor, ArticleView, Keyword
 from billing.models import PlanFeature, SubscriptionPlan
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
-from peer_review.models import Review
-from submissions.models import ManuscriptFile, Submission
 from training.models import TrainingCourse
 from users.models import User
 
 # Model apps an Editor needs view/add/change access to in /admin/ — matches
-# ARCHITECTURE.md §6.3 (Editor: assign reviewers, make decisions; not verify users).
-EDITOR_PERMISSION_APPS = ['submissions', 'peer_review', 'articles', 'issues', 'training']
+# ARCHITECTURE.md §6.3 (Editor: make decisions; not verify users).
+EDITOR_PERMISSION_APPS = ['articles', 'issues', 'training']
 
 DEMO_PASSWORD = 'DemoPass123!'
-
-
-def demo_pdf(name):
-    return ContentFile(f'%PDF-1.4 demo content for {name}'.encode(), name=name)
 
 
 def get_keywords_or_create(comma_separated):
@@ -183,7 +177,7 @@ Thapa B, Karki S. A case series of viral myocarditis mimicking acute coronary sy
 
 
 class Command(BaseCommand):
-    help = ('Seed realistic demo data (users, issues, articles, submissions, reviews, training courses, '
+    help = ('Seed realistic demo data (users, issues, articles, training courses, '
             'subscription plans) for local development.')
 
     def handle(self, *args, **options):
@@ -191,7 +185,6 @@ class Command(BaseCommand):
             users = self.seed_users()
             issues = self.seed_issues()
             articles = self.seed_articles(users, issues)
-            self.seed_submissions(users, articles)
             self.seed_training()
             self.seed_editorial_board()
             self.seed_subscription_plans()
@@ -414,92 +407,6 @@ class Command(BaseCommand):
             articles[article.slug] = article
         self.stdout.write(f'  {len(articles)} articles ready.')
         return articles
-
-    # -- Submissions & reviews ------------------------------------------
-
-    def seed_submissions(self, users, articles):
-        self.stdout.write('Seeding submissions...')
-        sharma, thapa, karki = users['author.sharma@example.com'], users['author.thapa@example.com'], users['author.karki@example.com']
-        gurung = users['editor.gurung@ajnahealthlens.example']
-        koirala, basnet = users['reviewer.koirala@example.com'], users['reviewer.basnet@example.com']
-
-        specs = [
-            dict(title='Antibiotic Resistance Patterns in Urban Nepal',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='A cross-sectional study of antibiotic resistance patterns across three urban hospitals.',
-                 submitter=karki, status=Submission.Status.SUBMITTED),
-            dict(title='Vaccine Hesitancy Among Rural Caregivers',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='A qualitative study exploring the drivers of vaccine hesitancy among rural caregivers.',
-                 submitter=sharma, status=Submission.Status.UNDER_SCREENING, editor_assigned=gurung,
-                 screening_notes='Scope and format check in progress.'),
-            dict(title='Telemedicine Adoption in Remote Districts',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='An evaluation of telemedicine adoption rates across five remote districts post-rollout.',
-                 submitter=thapa, status=Submission.Status.UNDER_REVIEW, editor_assigned=gurung,
-                 screening_notes='Passed screening, sent to review.',
-                 reviews=[(koirala, Review.Status.ACCEPTED), (basnet, Review.Status.INVITED)]),
-            dict(title='Dietary Patterns and Anemia in Adolescent Girls',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='A survey-based study of dietary patterns and anemia prevalence among adolescent girls.',
-                 submitter=sharma, status=Submission.Status.MINOR_REVISION, editor_assigned=gurung,
-                 revision_round=1, decision='minor_revision', decision_date=timezone.now() - datetime.timedelta(days=3)),
-            dict(title='Surgical Site Infection Rates: A Multi-Center Study',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='A multi-center study of surgical site infection rates and contributing risk factors.',
-                 submitter=karki, status=Submission.Status.MAJOR_REVISION, editor_assigned=gurung,
-                 revision_round=1, decision='major_revision', decision_date=timezone.now() - datetime.timedelta(days=10)),
-            dict(title='Community Health Worker Retention Strategies',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='An analysis of retention strategies for community health workers in hill districts.',
-                 submitter=thapa, status=Submission.Status.ACCEPTED, editor_assigned=gurung,
-                 decision='accept', decision_date=timezone.now() - datetime.timedelta(days=2)),
-            dict(title='A Flawed Study of Herbal Remedies for Hypertension',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='A study of herbal remedies for hypertension management with significant methodological concerns.',
-                 submitter=karki, status=Submission.Status.REJECTED, editor_assigned=gurung,
-                 decision='reject', decision_date=timezone.now() - datetime.timedelta(days=7),
-                 screening_notes='Rejected after review: insufficient sample size, no control group.'),
-            dict(title='Air Pollution Exposure and Pediatric Asthma in Kathmandu Valley',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='A cohort study linking air pollution exposure to pediatric asthma incidence in Kathmandu Valley.',
-                 submitter=sharma, status=Submission.Status.IN_PRODUCTION, editor_assigned=gurung,
-                 decision='accept', decision_date=timezone.now() - datetime.timedelta(days=14)),
-            dict(title='Maternal Health Outcomes in Rural Nepal: A Retrospective Cohort Study',
-                 article_type=Article.ArticleType.ORIGINAL_RESEARCH,
-                 abstract='This retrospective cohort study examines maternal health outcomes across rural '
-                          'health posts in Nepal between 2020 and 2025, identifying key gaps in antenatal care access.',
-                 submitter=sharma, status=Submission.Status.PUBLISHED, editor_assigned=gurung,
-                 decision='accept', decision_date=timezone.now() - datetime.timedelta(days=30),
-                 promote_to='maternal-health-outcomes-rural-nepal'),
-        ]
-
-        count = 0
-        for spec in specs:
-            reviews = spec.pop('reviews', [])
-            promote_to = spec.pop('promote_to', None)
-            submission, created = Submission.objects.get_or_create(
-                title=spec['title'], submitter=spec['submitter'], defaults=spec,
-            )
-            if created:
-                count += 1
-                filename = f'{submission.pk}_manuscript_v1.pdf'
-                ManuscriptFile.objects.create(
-                    submission=submission, file_type=ManuscriptFile.FileType.PDF, version=1,
-                    file=demo_pdf(filename),
-                )
-                for reviewer, status in reviews:
-                    Review.objects.get_or_create(
-                        submission=submission, reviewer=reviewer,
-                        defaults=dict(status=status, due_date=datetime.date.today() + datetime.timedelta(days=21)),
-                    )
-                if promote_to:
-                    article = Article.objects.filter(slug=promote_to).first()
-                    if article and not article.submission_id:
-                        article.submission = submission
-                        article.save(update_fields=['submission'])
-
-        self.stdout.write(f'  {count} submissions created.')
 
     # -- Training ------------------------------------------------------
 

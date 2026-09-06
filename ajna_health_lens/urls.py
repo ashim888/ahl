@@ -23,14 +23,6 @@ urlpatterns = [
     path('', include('articles.urls')),
     path('', include('issues.urls')),
     path('', include('users.urls')),
-    # submissions.urls deliberately NOT included — OJS owns manuscript
-    # submission now (CLAUDE.md SCOPE NOTE / ARCHITECTURE.md §4.4). The app
-    # stays in INSTALLED_APPS (models/admin/migrations kept for a possible
-    # future OJS integration), but its views are unrouted: they were only
-    # ever guarded by @verification_required, so any verified_author could
-    # still reach the old 3-step academic wizard by URL even with no nav
-    # link to it — see ROADMAP.md Risk Register (August 2026 audit resolved
-    # this as "unroute", not "leave reachable by accident").
     path('', include('editorial_board.urls')),
     path('', include('sections.urls')),
     path('', include('training.urls')),

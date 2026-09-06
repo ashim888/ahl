@@ -10,15 +10,17 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('articles', '0001_initial'),
-        ('submissions', '0001_initial'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='article',
-            name='submission',
-            field=models.OneToOneField(blank=True, help_text='Source submission this article was promoted from, if any.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='article', to='submissions.submission'),
-        ),
+        # Originally also added Article.submission (a OneToOneField to the
+        # since-removed submissions.Submission — see CLAUDE.md's SCOPE NOTE)
+        # here. Dropped from this historical migration entirely, not just
+        # unapplied forward, because a field referencing a model that no
+        # longer exists anywhere in the migration graph can't be resolved
+        # when Django replays history from scratch (e.g. building a fresh
+        # test database) — even though the field's own AddField/RemoveField
+        # pair would otherwise cancel out at the current end state.
         migrations.AddField(
             model_name='articleauthor',
             name='article',

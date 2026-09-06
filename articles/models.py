@@ -59,11 +59,11 @@ class Keyword(models.Model):
 
 
 class Article(models.Model):
-    """A published (or in-production) piece of content.
-
-    Created by promoting an accepted Submission — see `submission` below —
-    or, for non-peer-reviewed content (editorials, news), created directly
-    by an editor.
+    """A published (or in-production) piece of content, created directly by
+    an editor. (Previously also created by promoting an accepted academic
+    Submission — that flow, and the submissions/peer_review apps it lived
+    in, were removed once OJS took over real manuscript submission; see
+    CLAUDE.md's SCOPE NOTE and ROADMAP.md.)
     """
 
     class ArticleType(models.TextChoices):
@@ -132,12 +132,6 @@ class Article(models.Model):
         help_text='Feature this article in a specific homepage section, regardless of its article '
                    'type. Leave blank to let that section auto-fill from recent articles of the '
                    'matching type instead — see articles/views.py HomeView.',
-    )
-
-    submission = models.OneToOneField(
-        'submissions.Submission', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='article',
-        help_text='Source submission this article was promoted from, if any.',
     )
 
     # Fully automatic, not editor-facing: created_at (below) already records

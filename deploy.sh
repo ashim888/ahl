@@ -18,20 +18,34 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "==> [1/5] Installing/updating Python dependencies"
+echo "==> [1/6] Installing/updating Python dependencies"
 pip install -r requirements.txt
 
-echo "==> [2/5] Applying database migrations"
+echo "==> [2/6] Applying database migrations"
 python manage.py migrate
 
-echo "==> [3/5] Compiling i18n message catalogs (locale/*.po -> *.mo)"
+# One-time cleanup left over from the September 2026 submissions/peer_review
+# removal (see ARCHITECTURE.md §4.4/§9.7) — migrate only manages apps
+# currently in INSTALLED_APPS, so it can't drop tables for an app that's
+# been deleted outright. IF EXISTS / a WHERE clause on an already-empty
+# result make both statements safe to run on every deploy forever, not just
+# once: a no-op after the first successful run.
+echo "==> [3/6] One-time cleanup of orphaned submissions/peer_review tables"
+python manage.py dbshell << 'EOSQL'
+DROP TABLE IF EXISTS peer_review_review;
+DROP TABLE IF EXISTS submissions_manuscriptfile;
+DROP TABLE IF EXISTS submissions_submission;
+DELETE FROM django_migrations WHERE app IN ('submissions', 'peer_review');
+EOSQL
+
+echo "==> [4/6] Compiling i18n message catalogs (locale/*.po -> *.mo)"
 # --locale + --ignore restrict this to just this project's own locale/ dir —
 # compilemessages otherwise walks the whole working directory recursively,
 # needlessly recompiling every installed package's own locale files too
 # (django.contrib.*, django-comments-xtd, etc.) on every single deploy.
 python manage.py compilemessages --locale=en --locale=ne --ignore=".venv/*"
 
-echo "==> [4/5] Collecting static files (incl. the compiled Tailwind CSS)"
+echo "==> [5/6] Collecting static files (incl. the compiled Tailwind CSS)"
 if command -v npm >/dev/null 2>&1; then
     echo "    npm found — rebuilding Tailwind CSS as a safety net (should normally be a no-op; the compiled file is committed)"
     npm install --silent
@@ -41,7 +55,7 @@ else
 fi
 python manage.py collectstatic --noinput
 
-echo "==> [5/5] Production settings sanity check"
+echo "==> [6/6] Production settings sanity check"
 python manage.py check --deploy || echo "    (warnings above are informational — see ARCHITECTURE.md §9.1 for what each one means)"
 
 # Phusion Passenger's standard restart convention (cPanel "Setup Python App"

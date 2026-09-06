@@ -1,9 +1,10 @@
+import csv
 import datetime
 from decimal import Decimal
 
 from django.contrib import messages
 from django.db.models import Count, Q, Sum
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -265,7 +266,8 @@ class AnalyticsView(TemplateView):
     """Cross-domain BI overview: article readership, subscription/purchase
     revenue, ad performance, and newsletter growth in one place — a level
     above DashboardHomeView's day-to-day KPIs (today's counts) and
-    RevenueView's training-only numbers. Read-only; no CSV export yet.
+    RevenueView's training-only numbers. Read-only in the browser; see
+    analytics_csv_export below for the downloadable version.
     """
 
     template_name = 'admin_custom/analytics.html'
@@ -365,6 +367,122 @@ class AnalyticsView(TemplateView):
         ).count()
 
         return context
+
+
+@role_required(*EDITORIAL_ROLES)
+def analytics_csv_export(request):
+    """CSV export of the /editorial/analytics/ page's numbers — same
+    underlying queries as AnalyticsView, reshaped as plain rows instead of
+    chart-ready structures (trend bars, donut gradients). One combined file
+    with a section per table, matching how the page itself presents
+    everything as one dashboard rather than several separate ones.
+    """
+    today = timezone.localdate()
+    days = [today - datetime.timedelta(days=i) for i in range(AnalyticsView.TREND_DAYS - 1, -1, -1)]
+    window_start = timezone.make_aware(datetime.datetime.combine(days[0], datetime.time.min))
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="analytics-{today.isoformat()}.csv"'
+    writer = csv.writer(response)
+
+    # -- Articles ----------------------------------------------------------
+    writer.writerow([f'Article Views (last {AnalyticsView.TREND_DAYS} days)'])
+    writer.writerow(['Date', 'Views'])
+    views_counts = _daily_counts(ArticleView.objects.all(), 'viewed_at', days)
+    for day, count in zip(days, views_counts):
+        writer.writerow([day.isoformat(), count])
+    writer.writerow([])
+
+    writer.writerow([f'Top Articles (by views in the last {AnalyticsView.TREND_DAYS} days)'])
+    writer.writerow(['Title', 'Recent Views', 'Lifetime Downloads', 'Lifetime Citations'])
+    top_articles = (
+        Article.objects.filter(status=Article.Status.PUBLISHED)
+        .annotate(recent_views=Count('page_views', filter=Q(page_views__viewed_at__gte=window_start)))
+        .order_by('-recent_views', '-download_count', '-citation_count')[:10]
+    )
+    for article in top_articles:
+        writer.writerow([article.title, article.recent_views, article.download_count, article.citation_count])
+    writer.writerow([])
+    writer.writerow(['Lifetime downloads (all articles)', Article.objects.aggregate(total=Sum('download_count'))['total'] or 0])
+    writer.writerow(['Lifetime citations (all articles)', Article.objects.aggregate(total=Sum('citation_count'))['total'] or 0])
+    writer.writerow([])
+
+    # -- Subscriptions / revenue --------------------------------------------
+    active_subs = list(
+        UserSubscription.objects.filter(
+            status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
+        ).select_related('plan'),
+    )
+    plan_type_counts = {}
+    for sub in active_subs:
+        plan_type_counts[sub.plan.plan_type] = plan_type_counts.get(sub.plan.plan_type, 0) + 1
+    writer.writerow(['Active Subscriptions by Plan Type'])
+    writer.writerow(['Plan Type', 'Active Count'])
+    for plan_type, label in SubscriptionPlan.PlanType.choices:
+        writer.writerow([label, plan_type_counts.get(plan_type, 0)])
+    writer.writerow([])
+
+    mrr_estimate = sum(
+        (sub.plan.price / (Decimal(sub.plan.duration_days) / Decimal(30))) for sub in active_subs
+    ) if active_subs else Decimal('0')
+    writer.writerow(['Total active subscriptions', len(active_subs)])
+    writer.writerow(['Approximate MRR', round(mrr_estimate, 2)])
+    writer.writerow([
+        'Cancelled subscriptions (lifetime)',
+        UserSubscription.objects.filter(status=UserSubscription.Status.CANCELLED).count(),
+    ])
+    writer.writerow(['Article purchases (lifetime count)', ArticlePurchase.objects.count()])
+    writer.writerow([
+        'Article purchase revenue (lifetime)',
+        ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0,
+    ])
+    writer.writerow([])
+
+    # -- Ads -----------------------------------------------------------------
+    ads_all_time_impressions = AdSlot.objects.aggregate(total=Sum('impression_count'))['total'] or 0
+    ads_all_time_clicks = AdSlot.objects.aggregate(total=Sum('click_count'))['total'] or 0
+    writer.writerow(['Ads — All-Time'])
+    writer.writerow(['Impressions', ads_all_time_impressions])
+    writer.writerow(['Clicks', ads_all_time_clicks])
+    writer.writerow([
+        'CTR (%)',
+        round(ads_all_time_clicks / ads_all_time_impressions * 100, 2) if ads_all_time_impressions else '',
+    ])
+    writer.writerow([])
+
+    recent_ad_events = AdEvent.objects.filter(occurred_at__gte=window_start)
+    writer.writerow([f'Ads — Last {AnalyticsView.TREND_DAYS} Days'])
+    writer.writerow(['Impressions', recent_ad_events.filter(event_type=AdEvent.EventType.IMPRESSION).count()])
+    writer.writerow(['Clicks', recent_ad_events.filter(event_type=AdEvent.EventType.CLICK).count()])
+    writer.writerow([])
+
+    writer.writerow(['Top Ads (by clicks)'])
+    writer.writerow(['Sponsor', 'Zone', 'Impressions', 'Clicks'])
+    for ad in AdSlot.objects.order_by('-click_count', '-impression_count')[:5]:
+        writer.writerow([ad.sponsor_name, ad.get_zone_display(), ad.impression_count, ad.click_count])
+    writer.writerow([])
+
+    # -- Newsletter ------------------------------------------------------------
+    subscriber_counts = dict(Subscriber.objects.values_list('status').annotate(count=Count('id')).order_by())
+    writer.writerow(['Newsletter Subscribers by Status'])
+    writer.writerow(['Status', 'Count'])
+    for status, label in Subscriber.Status.choices:
+        writer.writerow([label, subscriber_counts.get(status, 0)])
+    writer.writerow([])
+    writer.writerow(['Newsletter issues sent (lifetime)', NewsletterIssue.objects.filter(sent_at__isnull=False).count()])
+    writer.writerow([
+        'Newsletter total recipients (lifetime)',
+        NewsletterIssue.objects.aggregate(total=Sum('recipient_count'))['total'] or 0,
+    ])
+    writer.writerow([])
+
+    # -- Pitches -----------------------------------------------------------
+    writer.writerow([
+        'Open story pitches (submitted or in review)',
+        StoryPitch.objects.filter(status__in=[StoryPitch.Status.SUBMITTED, StoryPitch.Status.IN_REVIEW]).count(),
+    ])
+
+    return response
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')

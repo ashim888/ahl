@@ -1,5 +1,5 @@
 """Shared file-content validators. FileExtensionValidator (used throughout
-users/articles/submissions/editorial_board/issues/ads validators.py) only
+users/articles/editorial_board/issues/ads validators.py) only
 ever looks at the filename — a file renamed from `payload.html` to
 `resume.pdf` sails through it untouched. This adds a lightweight magic-byte
 check for the document types this project actually accepts uploads of

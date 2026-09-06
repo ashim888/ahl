@@ -53,6 +53,47 @@ class AnalyticsAccessTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
 
+class AnalyticsCSVExportTests(TestCase):
+    def test_editorial_staff_can_download_csv(self):
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('admin_custom:analytics_csv_export'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn('attachment; filename="analytics-', response['Content-Disposition'])
+
+    def test_reader_cannot_download_csv(self):
+        self.client.force_login(make_reader())
+        response = self.client.get(reverse('admin_custom:analytics_csv_export'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_anonymous_redirected_to_login(self):
+        response = self.client.get(reverse('admin_custom:analytics_csv_export'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_csv_reflects_the_same_underlying_data_as_the_html_page(self):
+        article = make_article()
+        ArticleView.objects.create(article=article)
+        ArticleView.objects.create(article=article)
+
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('admin_custom:analytics_csv_export'))
+        content = response.content.decode()
+        self.assertIn('Article Views (last 14 days)', content)
+        self.assertIn(article.title, content)
+        # download_count=2, citation_count=1 from make_article()
+        self.assertIn(f'{article.title},2,2,1', content)
+
+    def test_csv_is_valid_and_parses_into_rows(self):
+        import csv
+        import io
+
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('admin_custom:analytics_csv_export'))
+        rows = list(csv.reader(io.StringIO(response.content.decode())))
+        self.assertGreater(len(rows), 10)
+        self.assertEqual(rows[0], ['Article Views (last 14 days)'])
+
+
 class AnalyticsDataTests(TestCase):
     def setUp(self):
         self.client.force_login(make_editor())
