@@ -29,12 +29,6 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {# Noto Sans/Serif Devanagari — Playfair Display/Inter/Space Mono have
-       zero Devanagari (Nepali) glyph coverage; without an explicit font
-       here, rendering Nepali text depends entirely on the browser/OS's own
-       fallback font substitution, which is inconsistent (missing entirely
-       on some older Windows setups, ugly conjunct rendering on others).
-       Pinned into the fontFamily fallback chains in tailwind.config.js. #}
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <style>
