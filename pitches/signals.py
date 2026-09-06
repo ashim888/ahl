@@ -1,10 +1,10 @@
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.template.loader import render_to_string
 from django.urls import reverse
 
+from ajna_health_lens.mail import send_notification_email
 from articles.models import Article
 from users.models import User
 
@@ -37,10 +37,9 @@ def notify_on_status_change(sender, instance, **kwargs):
     # present at the DB level the way an account's email is.
     if template and instance.contact_email:
         body = render_to_string(template, {'pitch': instance})
-        send_mail(
+        send_notification_email(
             subject=f'Update on your story pitch: "{instance.title}"',
             message=body,
-            from_email=None,
             recipient_list=[instance.contact_email],
         )
 
@@ -65,10 +64,9 @@ def notify_editorial_staff_of_new_pitch(sender, instance, created, **kwargs):
         'pitch': instance,
         'pitch_queue_url': f"{settings.SITE_BASE_URL}{reverse('pitches:manage_pitch_queue')}",
     })
-    send_mail(
+    send_notification_email(
         subject=f'New story pitch: "{instance.title}"',
         message=body,
-        from_email=None,
         recipient_list=recipients,
     )
 

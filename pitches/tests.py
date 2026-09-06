@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -79,6 +81,21 @@ class PitchSubmissionTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(eic.email, mail.outbox[0].to)
         self.assertIn('A Notify-Worthy Pitch', mail.outbox[0].subject)
+
+    def test_submission_succeeds_even_if_the_staff_notification_email_fails(self):
+        # Fault injection: notify_editorial_staff_of_new_pitch is a
+        # post_save signal — the StoryPitch row is already committed by
+        # the time it fires, so a transient SMTP failure here shouldn't
+        # turn a successful submission into a 500 for the submitter.
+        User.objects.create_user(
+            email='pitch-notify-eic2@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        with patch('ajna_health_lens.mail.send_mail', side_effect=OSError('SMTP unreachable')):
+            response = self.client.post(reverse('pitches:pitch_create'), {
+                'title': 'A Pitch Despite SMTP Trouble', 'summary': 'Why this matters now.', 'body': '',
+            })
+        self.assertNotEqual(response.status_code, 500)
+        self.assertTrue(StoryPitch.objects.filter(title='A Pitch Despite SMTP Trouble').exists())
 
     def test_logged_in_submitter_is_not_asked_for_contact_info(self):
         response = self.client.get(reverse('pitches:pitch_create'))
@@ -253,6 +270,18 @@ class PitchDecisionTests(TestCase):
         self.assertEqual(self.pitch.reviewed_by, self.editor)
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(self.author.email, mail.outbox[0].to)
+
+    def test_status_change_succeeds_even_if_the_notification_email_fails(self):
+        # Fault injection: notify_on_status_change (pitches/signals.py) is a
+        # pre_save signal — before the safe-mail wrapper, an exception here
+        # aborted the save() call entirely, meaning an editor couldn't move
+        # a pitch to "in review" at all while the mail server was down.
+        with patch('ajna_health_lens.mail.send_mail', side_effect=OSError('SMTP unreachable')):
+            response = self.client.post(reverse('pitches:manage_pitch_decide', args=[self.pitch.pk, 'start_review']))
+        self.assertNotEqual(response.status_code, 500)
+        self.pitch.refresh_from_db()
+        self.assertEqual(self.pitch.status, StoryPitch.Status.IN_REVIEW)
+        self.assertEqual(self.pitch.reviewed_by, self.editor)
 
     def test_reject_updates_status_and_sends_email(self):
         self.client.post(reverse('pitches:manage_pitch_decide', args=[self.pitch.pk, 'reject']))
@@ -479,6 +508,34 @@ class VerifyTurnstileTests(TestCase):
         from .captcha import verify_turnstile
 
         with patch('pitches.captcha.urllib.request.urlopen', side_effect=urllib.error.URLError('boom')):
+            self.assertFalse(verify_turnstile('a-token'))
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_fails_closed_on_timeout(self):
+        # A distinct except clause from URLError in captcha.py (socket
+        # timeouts surface as bare TimeoutError, not urllib.error.URLError)
+        # — worth its own case since it's easy for a future edit to that
+        # except tuple to silently drop coverage of this one.
+        from unittest.mock import patch
+
+        from .captcha import verify_turnstile
+
+        with patch('pitches.captcha.urllib.request.urlopen', side_effect=TimeoutError('timed out')):
+            self.assertFalse(verify_turnstile('a-token'))
+
+    @override_settings(TURNSTILE_SECRET_KEY='test-secret')
+    def test_fails_closed_on_malformed_json_response(self):
+        # Cloudflare returning something that isn't valid JSON (a 502 HTML
+        # error page from an upstream proxy, a truncated response, etc.) —
+        # json.loads raises ValueError, caught alongside URLError/TimeoutError.
+        from unittest.mock import MagicMock, patch
+
+        from .captcha import verify_turnstile
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = b'<html>502 Bad Gateway</html>'
+        mock_response.__enter__.return_value = mock_response
+        with patch('pitches.captcha.urllib.request.urlopen', return_value=mock_response):
             self.assertFalse(verify_turnstile('a-token'))
 
 

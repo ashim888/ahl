@@ -1,4 +1,5 @@
 import datetime
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
@@ -8,6 +9,7 @@ from articles.models import Article
 from users.models import User
 
 from .access import article_is_accessible
+from .gateway import PaymentResult
 from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
 from .views import build_comparison_matrix
 
@@ -215,6 +217,59 @@ class SelfServeCheckoutTests(TestCase):
         purchase = ArticlePurchase.objects.get(user=self.reader, article=article)
         self.assertTrue(purchase.payment_reference.startswith('stub-'))
         self.assertTrue(article_is_accessible(self.reader, article))
+
+    def test_declined_subscribe_charge_shows_error_and_creates_nothing(self):
+        # Fault injection: StubGateway always succeeds today, so this branch
+        # (billing/views.py's `if result.success: ... ; messages.error(...)`
+        # else-path) is currently unreachable in production and has never
+        # actually run — worth confirming it behaves correctly before a
+        # real gateway starts returning real declines.
+        self.client.force_login(self.reader)
+        with patch('billing.gateway.get_gateway') as mock_get_gateway:
+            mock_get_gateway.return_value.charge.return_value = PaymentResult(
+                success=False, reference='', error='Card declined',
+            )
+            response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Card declined')
+        self.assertFalse(UserSubscription.objects.filter(user=self.reader).exists())
+
+    def test_gateway_exception_on_subscribe_is_treated_as_a_decline(self):
+        # Fault injection: a real gateway integration is a network call and
+        # can raise (timeout, connection reset, provider outage) rather
+        # than cleanly returning success=False. charge_safely()
+        # (billing/gateway.py) catches that and converts it into the exact
+        # same declined-payment path — no 500, no subscription created.
+        self.client.force_login(self.reader)
+        with patch('billing.gateway.get_gateway') as mock_get_gateway:
+            mock_get_gateway.return_value.charge.side_effect = ConnectionError('Gateway unreachable')
+            response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Payment failed')
+        self.assertFalse(UserSubscription.objects.filter(user=self.reader).exists())
+
+    def test_declined_purchase_charge_shows_error_and_creates_nothing(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=3)
+        self.client.force_login(self.reader)
+        with patch('billing.gateway.get_gateway') as mock_get_gateway:
+            mock_get_gateway.return_value.charge.return_value = PaymentResult(
+                success=False, reference='', error='Card declined',
+            )
+            response = self.client.post(reverse('billing:purchase_checkout', args=[article.slug]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Card declined')
+        self.assertFalse(ArticlePurchase.objects.filter(user=self.reader, article=article).exists())
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_gateway_exception_on_purchase_is_treated_as_a_decline(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=3)
+        self.client.force_login(self.reader)
+        with patch('billing.gateway.get_gateway') as mock_get_gateway:
+            mock_get_gateway.return_value.charge.side_effect = ConnectionError('Gateway unreachable')
+            response = self.client.post(reverse('billing:purchase_checkout', args=[article.slug]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Payment failed')
+        self.assertFalse(ArticlePurchase.objects.filter(user=self.reader, article=article).exists())
 
 
 class PlanDetailAndComparisonTests(TestCase):

@@ -1,8 +1,9 @@
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.html import strip_tags
+
+from ajna_health_lens.mail import send_notification_email
 
 
 def render_issue_email(subject, body_html, unsubscribe_url, is_preview=False):
@@ -39,15 +40,17 @@ def issue_email_text_body(subject, body_html, unsubscribe_url):
 def send_confirmation_email(subscriber):
     """Single recipient, sent synchronously at signup time — same pattern as
     users/signals.py's verification-status email. Only the bulk send
-    (newsletter/tasks.py) needs the async queue.
+    (newsletter/tasks.py) needs the async queue. Uses the safe wrapper since
+    this runs inline in the public subscribe() view — the Subscriber row is
+    already created by the time this is called, so a transient SMTP failure
+    here shouldn't turn a successful signup into a 500.
     """
     confirm_url = f"{settings.SITE_BASE_URL}{reverse('newsletter:confirm', args=[subscriber.confirm_token])}"
-    send_mail(
+    send_notification_email(
         subject=f'Confirm your {settings.JOURNAL_NAME} newsletter subscription',
         message=(
             f'Confirm your subscription by visiting:\n{confirm_url}\n\n'
             "If you didn't request this, you can ignore this email."
         ),
-        from_email=None,
         recipient_list=[subscriber.email],
     )

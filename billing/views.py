@@ -15,7 +15,7 @@ from users.models import User
 
 from .access import user_has_active_subscription, user_has_purchased_article
 from .forms import GrantPurchaseForm, GrantSubscriptionForm, SubscriptionPlanForm
-from .gateway import get_gateway
+from .gateway import charge_safely
 from .models import ArticlePurchase, SubscriptionPlan, UserSubscription
 from .services import record_purchase, start_subscription
 
@@ -112,7 +112,7 @@ def subscribe_checkout(request, pk):
         return redirect('billing:plan_browse')
 
     if request.method == 'POST':
-        result = get_gateway().charge(
+        result = charge_safely(
             request.user, plan.price, f'Subscription — {plan.name}',
         )
         if result.success:
@@ -134,7 +134,7 @@ def purchase_checkout(request, slug):
         return redirect('articles:article_detail', slug=article.slug)
 
     if request.method == 'POST':
-        result = get_gateway().charge(request.user, article.price, f'Article — {article.title}')
+        result = charge_safely(request.user, article.price, f'Article — {article.title}')
         if result.success:
             record_purchase(request.user, article, article.price, payment_reference=result.reference)
             messages.success(request, f'Purchased "{article.title}".')

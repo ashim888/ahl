@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase, override_settings
@@ -135,6 +137,22 @@ class NewPendingVerificationNotificationTests(TestCase):
         })
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_registration_succeeds_even_if_the_notification_email_fails(self):
+        # Fault injection: users/signals.py's post_save handler calls
+        # send_notification_email (ajna_health_lens/mail.py), which
+        # swallows a send_mail failure — this confirms that isolation
+        # actually holds end-to-end, not just at the wrapper's own unit
+        # tests. Before that wrapper existed, an SMTP outage here turned a
+        # successful registration into a 500, even though the User row was
+        # already committed by the time the notification email is sent.
+        with patch('ajna_health_lens.mail.send_mail', side_effect=OSError('SMTP unreachable')):
+            response = self.client.post(reverse('users:register'), {
+                'email': 'notify-target3@example.com', 'first_name': 'New', 'last_name': 'Reader',
+                'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
+            })
+        self.assertNotEqual(response.status_code, 500)
+        self.assertTrue(User.objects.filter(email='notify-target3@example.com').exists())
+
 
 def make_user(email, role, **extra):
     return User.objects.create_user(email=email, password='pw', first_name='F', last_name='L', role=role, **extra)
@@ -183,6 +201,21 @@ class VerificationQueueAccessTests(TestCase):
     def test_approve_verifies_user(self):
         self.client.force_login(self.eic)
         self.client.post(reverse('users:verification_decide', args=[self.pending.pk, 'approve']))
+        self.pending.refresh_from_db()
+        self.assertEqual(self.pending.role, User.Role.VERIFIED_AUTHOR)
+        self.assertTrue(self.pending.is_verified)
+
+    def test_approve_succeeds_even_if_the_notification_email_fails(self):
+        # Fault injection: stamp_and_notify_verification_status_change
+        # (users/signals.py) is a pre_save signal — before the safe-mail
+        # wrapper, an exception here didn't just fail to notify the user,
+        # it aborted the save() call entirely, meaning an EiC/Admin
+        # literally could not approve/reject anyone while the mail server
+        # was unreachable, and the DB write never happened either.
+        with patch('ajna_health_lens.mail.send_mail', side_effect=OSError('SMTP unreachable')):
+            self.client.force_login(self.eic)
+            response = self.client.post(reverse('users:verification_decide', args=[self.pending.pk, 'approve']))
+        self.assertNotEqual(response.status_code, 500)
         self.pending.refresh_from_db()
         self.assertEqual(self.pending.role, User.Role.VERIFIED_AUTHOR)
         self.assertTrue(self.pending.is_verified)

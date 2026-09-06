@@ -21,6 +21,16 @@ class SubscribeFlowTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(subscriber.confirm_token, mail.outbox[0].body)
 
+    def test_subscribe_succeeds_even_if_the_confirmation_email_fails(self):
+        # Fault injection: send_confirmation_email (newsletter/emails.py)
+        # runs inline in this public, unauthenticated view — before the
+        # safe-mail wrapper, an SMTP outage here would 500 a real visitor's
+        # signup even though the Subscriber row was already created.
+        with patch('ajna_health_lens.mail.send_mail', side_effect=OSError('SMTP unreachable')):
+            response = self.client.post(reverse('newsletter:subscribe'), {'email': 'resilient@example.com'})
+        self.assertNotEqual(response.status_code, 500)
+        self.assertTrue(Subscriber.objects.filter(email='resilient@example.com').exists())
+
     def test_honeypot_blocks_without_creating_subscriber(self):
         self.client.post(reverse('newsletter:subscribe'), {'email': 'bot@example.com', 'website': 'http://spam.example'})
         self.assertFalse(Subscriber.objects.filter(email='bot@example.com').exists())
@@ -112,8 +122,61 @@ class SendNewsletterIssueTaskTests(TestCase):
 
         self.assertEqual(sent, 0)
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_one_bad_recipient_does_not_sink_the_rest_of_the_batch(self):
+        # Fault injection: a rejected mailbox or a one-off provider hiccup
+        # on a single message shouldn't stop everyone after it in the list
+        # from getting their copy.
+        from django.core.mail import EmailMultiAlternatives
+
+        Subscriber.objects.create(email='good1@example.com', status=Subscriber.Status.CONFIRMED)
+        Subscriber.objects.create(email='bad@example.com', status=Subscriber.Status.CONFIRMED)
+        Subscriber.objects.create(email='good2@example.com', status=Subscriber.Status.CONFIRMED)
+        issue = NewsletterIssue.objects.create(subject='Weekly Digest', body_html='<p>News</p>')
+
+        def fake_send(message_self, *args, **kwargs):
+            if 'bad@example.com' in message_self.to:
+                raise OSError('Mailbox rejected')
+            mail.outbox.append(message_self)
+            return 1
+
+        with patch.object(EmailMultiAlternatives, 'send', autospec=True, side_effect=fake_send):
+            sent = send_newsletter_issue(issue.pk)
+
+        self.assertEqual(sent, 2)
+        sent_to = {m.to[0] for m in mail.outbox}
+        self.assertEqual(sent_to, {'good1@example.com', 'good2@example.com'})
         issue.refresh_from_db()
         self.assertIsNotNone(issue.sent_at)
+        self.assertEqual(issue.recipient_count, 2)
+
+    def test_total_failure_raises_and_does_not_mark_the_issue_sent(self):
+        # Fault injection: if literally every send attempt fails (bad
+        # credentials, provider outage), the issue must not end up showing
+        # as "Sent" — get_send_status() checks sent_at before the task's
+        # own success flag, so sent_at has to stay unset for a total
+        # failure to be visible at all in the editorial list.
+        from django.core.mail import EmailMultiAlternatives
+
+        Subscriber.objects.create(email='a@example.com', status=Subscriber.Status.CONFIRMED)
+        Subscriber.objects.create(email='b@example.com', status=Subscriber.Status.CONFIRMED)
+        issue = NewsletterIssue.objects.create(subject='Weekly Digest', body_html='<p>News</p>')
+
+        with patch.object(EmailMultiAlternatives, 'send', autospec=True, side_effect=OSError('Provider outage')):
+            with self.assertRaises(RuntimeError):
+                send_newsletter_issue(issue.pk)
+
+        issue.refresh_from_db()
+        self.assertIsNone(issue.sent_at)
+        self.assertEqual(issue.recipient_count, 0)
+        # Calling the task function directly (as this test does, same as
+        # every other test in this class) means there's no real django_q
+        # Task row backing get_send_status()'s FAILED branch — that part is
+        # django_q's job once this actually runs via async_task(). What
+        # matters here, and is fully verifiable without that machinery, is
+        # that sent_at stayed unset — the one thing that would otherwise
+        # make get_send_status() report SENT regardless of the Task.
+        self.assertNotEqual(issue.get_send_status(), NewsletterIssue.Status.SENT)
 
 
 class ComposeViewTests(TestCase):

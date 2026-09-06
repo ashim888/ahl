@@ -1,6 +1,9 @@
+from unittest.mock import patch
+
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from billing.gateway import PaymentResult
 from users.models import User
 
 from .models import Enrollment, TrainingCourse
@@ -212,6 +215,32 @@ class CourseCheckoutTests(TestCase):
         response = self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Enrollment.objects.filter(user=self.reader, course=self.course).count(), 1)
+
+    def test_declined_charge_shows_error_and_creates_no_enrollment(self):
+        # Fault injection: StubGateway always succeeds today, so this
+        # branch has never actually run — confirm it behaves correctly
+        # before a real gateway starts returning real declines.
+        self.client.force_login(self.reader)
+        with patch('billing.gateway.get_gateway') as mock_get_gateway:
+            mock_get_gateway.return_value.charge.return_value = PaymentResult(
+                success=False, reference='', error='Card declined',
+            )
+            response = self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Card declined')
+        self.assertFalse(Enrollment.objects.filter(user=self.reader, course=self.course).exists())
+
+    def test_gateway_exception_is_treated_as_a_decline(self):
+        # charge_safely() (billing/gateway.py) catches a raised exception
+        # from the gateway call and converts it into the same declined-
+        # payment path — no 500, no enrollment created.
+        self.client.force_login(self.reader)
+        with patch('billing.gateway.get_gateway') as mock_get_gateway:
+            mock_get_gateway.return_value.charge.side_effect = ConnectionError('Gateway unreachable')
+            response = self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Payment failed')
+        self.assertFalse(Enrollment.objects.filter(user=self.reader, course=self.course).exists())
 
 
 class CoursePublicPageMetaTagsTests(TestCase):

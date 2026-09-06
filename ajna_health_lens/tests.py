@@ -1,8 +1,38 @@
+from unittest.mock import patch
+
+from django.core import mail
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
+from .mail import send_notification_email
 from .validators import validate_document_content
+
+
+class SendNotificationEmailTests(TestCase):
+    """Fault injection on the shared best-effort mail wrapper (see
+    ajna_health_lens/mail.py's docstring) — every caller (users/signals.py,
+    pitches/signals.py, newsletter's confirmation email) depends on this
+    never raising, regardless of what the underlying send_mail() does.
+    """
+
+    def test_successful_send_returns_true(self):
+        result = send_notification_email(subject='Hi', message='Body', recipient_list=['a@example.com'])
+        self.assertTrue(result)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_smtp_failure_is_swallowed_and_returns_false(self):
+        with patch('ajna_health_lens.mail.send_mail', side_effect=OSError('SMTP server unreachable')):
+            result = send_notification_email(subject='Hi', message='Body', recipient_list=['a@example.com'])
+        self.assertFalse(result)
+
+    def test_unexpected_exception_type_is_still_swallowed(self):
+        # Deliberately not an email-specific exception — the point of the
+        # broad except in mail.py is that *any* failure mode here should
+        # degrade the same way, not just the ones we thought to name.
+        with patch('ajna_health_lens.mail.send_mail', side_effect=ValueError('unexpected')):
+            result = send_notification_email(subject='Hi', message='Body', recipient_list=['a@example.com'])
+        self.assertFalse(result)
 
 
 class DocumentContentValidatorTests(TestCase):

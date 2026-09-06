@@ -1,10 +1,11 @@
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
+
+from ajna_health_lens.mail import send_notification_email
 
 from .models import User
 
@@ -32,10 +33,9 @@ def stamp_and_notify_verification_status_change(sender, instance, **kwargs):
     template = EMAIL_TEMPLATES.get(instance.verification_status)
     if template:
         body = render_to_string(template, {'user': instance})
-        send_mail(
+        send_notification_email(
             subject=f'Your {instance.verification_status} verification status — Ajna Health Lens',
             message=body,
-            from_email=None,
             recipient_list=[instance.email],
         )
 
@@ -61,9 +61,8 @@ def notify_editorial_staff_of_new_pending_verification(sender, instance, created
         'user': instance,
         'verification_queue_url': f"{settings.SITE_BASE_URL}{reverse('users:verification_queue')}",
     })
-    send_mail(
+    send_notification_email(
         subject=f'New pending verification: {instance.email}',
         message=body,
-        from_email=None,
         recipient_list=recipients,
     )
