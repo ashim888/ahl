@@ -137,6 +137,20 @@
 
             {% ad_slot 'article_in_content' wrapper_class='hidden md:flex md:justify-center my-8' %}
 
+            {% if free_sample_notice %}
+                <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm text-muted-foreground">
+                        You've read <strong class="text-foreground">{{ free_sample_notice.used }}</strong> of your
+                        <strong class="text-foreground">{{ free_sample_notice.limit }}</strong> free subscription
+                        articles this month.
+                    </p>
+                    <a href="{% url 'billing:plan_browse' %}"
+                       class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-2 hover:border-accent hover:text-accent transition-colors whitespace-nowrap">
+                        SUBSCRIBE FOR UNLIMITED
+                    </a>
+                </div>
+            {% endif %}
+
             {% if show_full_text %}
                 {% if article.html_content %}
                     <div class="prose-article leading-relaxed text-foreground">

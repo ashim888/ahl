@@ -351,8 +351,16 @@ class EngagementCounterTests(TestCase):
     def test_download_blocked_by_paywall_does_not_increment(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
 
+        # pay_per_article, not subscription — subscription-tier downloads
+        # are now covered by the metered free-sample allowance (see
+        # billing/tests.py:MeteredPaywallViewTests), so a fresh anonymous
+        # reader's first request there succeeds rather than 404ing.
+        # pay_per_article stays a hard, unmetered paywall, which is what
+        # this test actually means to exercise: a genuinely blocked
+        # download must not increment download_count as a side effect.
         article = make_article('gated-downloadable', Article.ArticleType.ORIGINAL_RESEARCH)
-        article.access_type = Article.AccessType.SUBSCRIPTION
+        article.access_type = Article.AccessType.PAY_PER_ARTICLE
+        article.price = 2
         article.pdf_file = SimpleUploadedFile('test.pdf', b'%PDF-1.4 fake', content_type='application/pdf')
         article.save()
 

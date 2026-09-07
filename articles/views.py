@@ -18,7 +18,10 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django_ratelimit.decorators import ratelimit
 
-from billing.access import article_is_accessible
+from billing.access import (
+    FREE_SAMPLE_LIMIT_PER_MONTH, METERED_ACCESS_TYPES, article_is_accessible, consume_free_sample,
+    free_sample_reads_used,
+)
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from newsletter.models import Subscriber
@@ -299,7 +302,19 @@ class ArticleDetailView(DetailView):
         context['featured_author'] = next(
             (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
         )
-        context['show_full_text'] = article_is_accessible(self.request.user, self.object)
+        show_full_text = article_is_accessible(self.request.user, self.object)
+        context['free_sample_notice'] = None
+        if not show_full_text and self.object.access_type in METERED_ACCESS_TYPES:
+            # Metering is a separate, stateful concern from the real
+            # entitlement check above — see billing.access.consume_free_sample's
+            # own docstring for why the two aren't merged into one function.
+            if consume_free_sample(self.request, self.object):
+                show_full_text = True
+                context['free_sample_notice'] = {
+                    'used': free_sample_reads_used(self.request),
+                    'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
+                }
+        context['show_full_text'] = show_full_text
         context['keyword_list'] = list(self.object.keyword_tags.all())
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
         context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
@@ -457,7 +472,16 @@ def article_download(request, slug):
     2026 gap audit). Same paywall gate as the article page itself.
     """
     article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
-    if not article.pdf_file or not article_is_accessible(request.user, article):
+    # Same combined check as ArticleDetailView — a reader who reached this
+    # article's page via a consumed free sample (article_is_accessible alone
+    # is False, but the metered quota granted access) must be able to
+    # download its PDF too, not just read the on-page text. Re-consuming is
+    # a no-op here: consume_free_sample already treats a re-read of the same
+    # article within the same period as free, not a second charge.
+    accessible = article_is_accessible(request.user, article) or (
+        article.access_type in METERED_ACCESS_TYPES and consume_free_sample(request, article)
+    )
+    if not article.pdf_file or not accessible:
         raise Http404
     Article.objects.filter(pk=article.pk).update(download_count=F('download_count') + 1)
     return redirect(article.pdf_file.url)

@@ -42,6 +42,23 @@ class SubscriptionPlan(models.Model):
         PlanFeature, blank=True, related_name='plans',
         help_text='What a subscriber on this plan gets — shown on the plan detail page and the pricing comparison table.',
     )
+    # Real, enforced access — distinct from `features` above, which is a
+    # free-text marketing list only ever rendered, never checked. Before
+    # these existed, billing.access.article_is_accessible and
+    # ads.services.is_ad_free_reader both granted the same access to every
+    # active subscription regardless of plan/price, so the pricing page's
+    # comparison table was promising differentiation the backend didn't
+    # enforce. Default True on both so every existing/seeded plan keeps
+    # today's behavior unchanged; a future lower/limited tier can flip
+    # either off per plan, from this same manage screen, no code change.
+    grants_ad_free_reading = models.BooleanField(
+        default=True, help_text='Subscribers on this plan never see ads (billing.access/ads.services).',
+    )
+    grants_unlimited_articles = models.BooleanField(
+        default=True,
+        help_text='Subscribers on this plan bypass both the subscription-tier paywall and the metered '
+                   'free-sample limit entirely (billing.access.article_is_accessible).',
+    )
     is_featured = models.BooleanField(
         default=False, help_text='Highlight as "Most Popular" on the pricing page.',
     )
@@ -113,3 +130,40 @@ class ArticlePurchase(models.Model):
 
     def __str__(self):
         return f'{self.user} bought {self.article}'
+
+
+class MeteredArticleRead(models.Model):
+    """One row per (reader, article, calendar-month) — records a free-sample
+    consumption against the metered-paywall quota (see
+    billing.access.consume_free_sample). Distinct from
+    articles.ArticleView, which records every page view for the homepage's
+    Trending widget regardless of tier/quota and de-duplicates on a 30-minute
+    window, not a calendar month — the two models serve different purposes
+    and are deliberately not merged.
+
+    `user` is set for an authenticated reader, `session_key` for an
+    anonymous one — never both, matching the split already used by
+    articles.views._record_article_view for the same reason (an anonymous
+    reader has no account to key on). A reader re-reading the same article
+    within the same period doesn't consume a second slot — see
+    consume_free_sample's own idempotency check before creating a row here.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name='metered_reads',
+    )
+    session_key = models.CharField(max_length=40, blank=True)
+    article = models.ForeignKey('articles.Article', on_delete=models.CASCADE, related_name='metered_reads')
+    period = models.CharField(max_length=7, help_text='Calendar-month bucket, e.g. "2026-09".')
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-read_at']
+        indexes = [
+            models.Index(fields=['user', 'period']),
+            models.Index(fields=['session_key', 'period']),
+        ]
+
+    def __str__(self):
+        reader = self.user or f'session {self.session_key[:8]}'
+        return f'{reader} read {self.article} free ({self.period})'

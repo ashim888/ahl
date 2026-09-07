@@ -5,20 +5,23 @@ ad (if any) fills a zone, so every zone picks and counts consistently.
 from django.db.models import F, Q
 from django.utils import timezone
 
-from billing.access import user_has_active_subscription
+from billing.access import user_has_perk
 
 from .models import AdEvent, AdSlot
 
 
 def is_ad_free_reader(request):
-    """True for a reader with an active subscription — "ad-free reading" is
-    a promised subscriber perk (billing app). Split out from
-    get_ad_for_request so the `ad_slot` tag can tell "no ad sold for this
-    zone" (may show an "Advertise Here" placeholder, see AdSettings) apart
-    from "this reader never sees ads at all" (never a placeholder either —
-    a placeholder is still an ad-shaped thing occupying the page).
+    """True for a reader whose active plan grants ad-free reading — a
+    per-plan check (SubscriptionPlan.grants_ad_free_reading), not just "has
+    any active subscription": every plan defaults that flag to True, so
+    behavior is unchanged until an editor configures a plan without it.
+    Split out from get_ad_for_request so the `ad_slot` tag can tell "no ad
+    sold for this zone" (may show an "Advertise Here" placeholder, see
+    AdSettings) apart from "this reader never sees ads at all" (never a
+    placeholder either — a placeholder is still an ad-shaped thing occupying
+    the page).
     """
-    return request.user.is_authenticated and user_has_active_subscription(request.user)
+    return request.user.is_authenticated and user_has_perk(request.user, 'grants_ad_free_reading')
 
 
 def get_ad_for_request(request, zone):

@@ -1,22 +1,22 @@
 import datetime
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from articles.models import Article
 from users.models import User
 
-from .access import article_is_accessible
+from .access import FREE_SAMPLE_LIMIT_PER_MONTH, article_is_accessible, consume_free_sample, free_sample_reads_used
 from .gateway import PaymentResult
 from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
 from .views import build_comparison_matrix
 
 
-def make_article(access_type, price=None, status=Article.Status.PUBLISHED):
+def make_article(access_type, price=None, status=Article.Status.PUBLISHED, slug_suffix=''):
     return Article.objects.create(
-        title='Test Article', slug=f'test-article-{access_type}', abstract='Abstract',
+        title='Test Article', slug=f'test-article-{access_type}{slug_suffix}', abstract='Abstract',
         article_type=Article.ArticleType.NEWS_COMMENTARY, access_type=access_type, price=price, status=status,
     )
 
@@ -104,8 +104,13 @@ class ArticleAccessGateTests(TestCase):
 class ArticleDetailPaywallViewTests(TestCase):
     """End-to-end: the public article detail view actually applies the gate."""
 
-    def test_subscription_article_hides_full_text_from_anonymous_reader(self):
-        article = make_article(Article.AccessType.SUBSCRIPTION)
+    def test_pay_per_article_hides_full_text_from_anonymous_reader(self):
+        # pay_per_article, not subscription — subscription-tier articles are
+        # now metered (MeteredPaywallViewTests below covers that gate
+        # specifically); pay_per_article stays a hard, unmetered paywall, so
+        # it's the cleaner case for "the real entitlement gate itself blocks
+        # a reader with no grant at all," independent of free-sample state.
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
         article.html_content = 'Secret full text'
         article.save()
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
@@ -127,6 +132,171 @@ class ArticleDetailPaywallViewTests(TestCase):
         self.client.force_login(reader)
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
         self.assertContains(response, 'Secret full text')
+
+
+class PlanPerkEnforcementTests(TestCase):
+    """SubscriptionPlan.grants_unlimited_articles/grants_ad_free_reading —
+    the perk fields article_is_accessible/is_ad_free_reader actually check
+    now, replacing the old "has any active subscription" blanket check that
+    made every plan grant identical access regardless of price/type.
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='perk-reader@example.com', password='pw', first_name='P', last_name='R',
+        )
+
+    def _subscribe(self, **plan_kwargs):
+        plan = SubscriptionPlan.objects.create(
+            name='Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+            **plan_kwargs,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        return plan
+
+    def test_plan_without_unlimited_articles_perk_does_not_unlock_subscription_articles(self):
+        self._subscribe(grants_unlimited_articles=False)
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_plan_without_unlimited_articles_perk_still_allows_a_separate_purchase(self):
+        # grants_unlimited_articles only covers the subscription-tier
+        # bypass — an ArticlePurchase is a distinct, per-article grant and
+        # must keep working regardless of what the reader's plan enforces.
+        self._subscribe(grants_unlimited_articles=False)
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
+        ArticlePurchase.objects.create(user=self.reader, article=article, amount=2)
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+    def test_default_plan_still_grants_unlimited_articles(self):
+        # Behavior-preserving default: every plan defaults both perk fields
+        # to True, so existing/seeded plans keep today's access unchanged.
+        self._subscribe()
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+
+class MeteredPaywallTests(TestCase):
+    """billing.access.consume_free_sample/free_sample_reads_used — the "N
+    free subscription articles a month" allowance for readers without a
+    real subscription. Authenticated-reader path only here (no session
+    needed); the anonymous/session-based path is covered end-to-end in
+    MeteredPaywallViewTests below via the real test Client, which manages a
+    real session the way RequestFactory doesn't.
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='meter-reader@example.com', password='pw', first_name='M', last_name='R',
+        )
+
+    def _request(self):
+        request = RequestFactory().get('/')
+        request.user = self.reader
+        return request
+
+    def test_grants_access_up_to_the_monthly_limit(self):
+        request = self._request()
+        articles = [
+            make_article(Article.AccessType.SUBSCRIPTION, slug_suffix=f'-{n}')
+            for n in range(FREE_SAMPLE_LIMIT_PER_MONTH)
+        ]
+        for article in articles:
+            self.assertTrue(consume_free_sample(request, article))
+
+    def test_denies_access_past_the_monthly_limit(self):
+        request = self._request()
+        for n in range(FREE_SAMPLE_LIMIT_PER_MONTH):
+            consume_free_sample(request, make_article(Article.AccessType.SUBSCRIPTION, slug_suffix=f'-{n}'))
+        one_too_many = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-overflow')
+        self.assertFalse(consume_free_sample(request, one_too_many))
+
+    def test_rereading_the_same_article_does_not_consume_a_second_slot(self):
+        request = self._request()
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        for _ in range(FREE_SAMPLE_LIMIT_PER_MONTH + 2):
+            self.assertTrue(consume_free_sample(request, article))
+        self.assertEqual(free_sample_reads_used(request), 1)
+
+    def test_pay_per_article_is_never_metered(self):
+        request = self._request()
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
+        self.assertFalse(consume_free_sample(request, article))
+
+    def test_free_sample_reads_used_counts_distinct_articles(self):
+        request = self._request()
+        for n in range(3):
+            consume_free_sample(request, make_article(Article.AccessType.SUBSCRIPTION, slug_suffix=f'-{n}'))
+        self.assertEqual(free_sample_reads_used(request), 3)
+
+
+class MeteredPaywallViewTests(TestCase):
+    """End-to-end via the real article detail page and PDF download — the
+    anonymous/session-based counting path RequestFactory can't exercise
+    (no session middleware), plus proof the metering is actually wired into
+    the view, not just the access.py functions in isolation.
+    """
+
+    def _subscription_article(self, n):
+        article = make_article(Article.AccessType.SUBSCRIPTION)
+        article.slug = f'metered-article-{n}'
+        article.html_content = f'Secret text {n}'
+        article.save()
+        return article
+
+    def test_anonymous_reader_gets_full_text_up_to_the_monthly_limit(self):
+        for n in range(FREE_SAMPLE_LIMIT_PER_MONTH):
+            article = self._subscription_article(n)
+            response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+            self.assertContains(response, f'Secret text {n}')
+
+    def test_anonymous_reader_is_gated_past_the_monthly_limit(self):
+        for n in range(FREE_SAMPLE_LIMIT_PER_MONTH):
+            article = self._subscription_article(n)
+            self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        one_too_many = self._subscription_article(FREE_SAMPLE_LIMIT_PER_MONTH)
+        response = self.client.get(reverse('articles:article_detail', args=[one_too_many.slug]))
+        self.assertNotContains(response, f'Secret text {FREE_SAMPLE_LIMIT_PER_MONTH}')
+
+    def test_free_sample_notice_shown_with_correct_count(self):
+        article = self._subscription_article(0)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'of your')
+        self.assertContains(response, str(FREE_SAMPLE_LIMIT_PER_MONTH))
+
+    def test_revisiting_the_same_article_does_not_use_a_second_slot(self):
+        article = self._subscription_article(0)
+        url = reverse('articles:article_detail', args=[article.slug])
+        for _ in range(FREE_SAMPLE_LIMIT_PER_MONTH + 2):
+            response = self.client.get(url)
+            self.assertContains(response, 'Secret text 0')
+
+    def test_pdf_download_works_for_a_free_sample_grant(self):
+        article = self._subscription_article(0)
+        article.pdf_file = 'articles/2026/09/test.pdf'
+        article.save()
+        self.client.get(reverse('articles:article_detail', args=[article.slug]))  # consumes the free sample
+        response = self.client.get(reverse('articles:article_download', args=[article.slug]))
+        self.assertEqual(response.status_code, 302)  # redirects to the file — see article_download
+
+    def test_subscriber_is_never_metered(self):
+        reader = User.objects.create_user(email='unmetered@example.com', password='pw', first_name='U', last_name='M')
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.client.force_login(reader)
+        for n in range(FREE_SAMPLE_LIMIT_PER_MONTH + 3):
+            article = self._subscription_article(n)
+            response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+            self.assertContains(response, f'Secret text {n}')
+            self.assertNotContains(response, 'of your')  # no free-sample notice — real access, not metered
 
 
 class GrantSubscriptionViewTests(TestCase):

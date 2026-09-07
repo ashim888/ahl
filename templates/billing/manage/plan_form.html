@@ -37,6 +37,15 @@
                 {% for error in form.features.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
             </div>
 
+            <div>
+                <p class="block text-sm font-medium text-gray-700 mb-2">Access actually granted (enforced, not just displayed)</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 border border-gray-200 rounded-lg p-4">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.grants_ad_free_reading %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.grants_unlimited_articles %}
+                </div>
+                <p class="mt-1.5 text-xs text-gray-400">Unlike the features list above, these two actually control what a subscriber on this plan can access.</p>
+            </div>
+
             <div class="flex items-center gap-8">
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_featured %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_active %}

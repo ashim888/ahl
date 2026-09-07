@@ -408,6 +408,27 @@ class AdSlotTemplateTagTests(TestCase):
         response = self.client.get(reverse('articles:home'))
         self.assertNotContains(response, 'Leaderboard Sponsor')
 
+    def test_subscriber_on_a_plan_without_ad_free_perk_still_sees_ads(self):
+        # is_ad_free_reader checks the reader's actual plan
+        # (grants_ad_free_reading), not just "has any active subscription" —
+        # this is the case that check now catches that a blanket "any
+        # subscription" check couldn't.
+        from billing.models import SubscriptionPlan, UserSubscription
+
+        make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
+        reader = User.objects.create_user(email='ad-tag-reader-2@example.com', password='pw', first_name='R', last_name='D')
+        plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+            grants_ad_free_reading=False,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'Leaderboard Sponsor')
+
     def test_get_ad_for_request_returns_none_with_no_active_ad(self):
         from django.test import RequestFactory
 
