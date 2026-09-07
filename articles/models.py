@@ -197,6 +197,14 @@ class Article(models.Model):
             text += ' ' + self.html_content
         return max(1, round(len(text.split()) / 200))
 
+    class Meta:
+        # status is filtered on in nearly every public-facing query in this
+        # app (HomeView, ArticleListView, SearchView, ArticleDetailView,
+        # both feeds, both sitemaps, IssueDetailView's article listing) —
+        # without an index, that's a full-table-scan on the busiest table in
+        # the schema for nearly every page view.
+        indexes = [models.Index(fields=['status'])]
+
     def save(self, *args, **kwargs):
         # short_code first — a blank slug is built from it below, so it must
         # already exist by the time that runs. Applies regardless of how the

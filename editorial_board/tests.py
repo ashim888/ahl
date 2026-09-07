@@ -73,6 +73,67 @@ class BoardMemberMoveTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
 
+class BoardMemberManageCRUDTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='board-crud-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='board-crud-reader@example.com', password='pw', first_name='R', last_name='D')
+
+    def test_editor_can_create_a_member(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('editorial_board:manage_member_create'), {
+            'name': 'Dr. Sabita Rai', 'role_title': 'Associate Editor, Cardiology', 'order': 0, 'is_active': 'on',
+        })
+        self.assertRedirects(response, reverse('editorial_board:manage_member_list'))
+        member = EditorialBoardMember.objects.get(name='Dr. Sabita Rai')
+        self.assertEqual(member.role_title, 'Associate Editor, Cardiology')
+        self.assertTrue(member.is_active)
+
+    def test_editor_can_update_a_member(self):
+        member = EditorialBoardMember.objects.create(name='Original Name', role_title='Editor')
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('editorial_board:manage_member_update', args=[member.pk]), {
+            'name': 'Updated Name', 'role_title': 'Senior Editor', 'order': 0, 'is_active': 'on',
+        })
+        self.assertRedirects(response, reverse('editorial_board:manage_member_list'))
+        member.refresh_from_db()
+        self.assertEqual(member.name, 'Updated Name')
+        self.assertEqual(member.role_title, 'Senior Editor')
+
+    def test_editor_can_delete_a_member(self):
+        member = EditorialBoardMember.objects.create(name='To Delete', role_title='Editor')
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('editorial_board:manage_member_delete', args=[member.pk]))
+        self.assertRedirects(response, reverse('editorial_board:manage_member_list'))
+        self.assertFalse(EditorialBoardMember.objects.filter(pk=member.pk).exists())
+
+    def test_reader_cannot_create_a_member(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('editorial_board:manage_member_create'), {
+            'name': 'Should Not Exist', 'role_title': 'Editor', 'order': 0,
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(EditorialBoardMember.objects.filter(name='Should Not Exist').exists())
+
+    def test_reader_cannot_update_a_member(self):
+        member = EditorialBoardMember.objects.create(name='Protected Name', role_title='Editor')
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('editorial_board:manage_member_update', args=[member.pk]), {
+            'name': 'Hacked Name', 'role_title': 'Editor', 'order': 0,
+        })
+        self.assertEqual(response.status_code, 403)
+        member.refresh_from_db()
+        self.assertEqual(member.name, 'Protected Name')
+
+    def test_reader_cannot_delete_a_member(self):
+        member = EditorialBoardMember.objects.create(name='Safe From Deletion', role_title='Editor')
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('editorial_board:manage_member_delete', args=[member.pk]))
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(EditorialBoardMember.objects.filter(pk=member.pk).exists())
+
+
 class PublicPageMetaTagsTests(TestCase):
     def test_default_tab_title_is_about(self):
         response = self.client.get(reverse('editorial_board:public_list'))

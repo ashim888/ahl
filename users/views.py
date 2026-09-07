@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetConfirmView, PasswordResetView
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -67,6 +67,42 @@ class EmailLoginView(LoginView):
 
     template_name = 'users/login.html'
     redirect_authenticated_user = True
+
+
+@method_decorator(ratelimit(key='ip', rate='5/h', method='POST', block=True), name='dispatch')
+class RateLimitedPasswordResetView(PasswordResetView):
+    """Rate-limited by IP on POST only — every other public form-POST
+    endpoint in this app already has this (login, registration, comments,
+    pitches, newsletter signup); the reset request form was the one gap,
+    and it's a real one: unthrottled, it's both an email-enumeration probe
+    (a reset email only sends for an address that exists) and a flood
+    vector against a real inbox.
+    """
+
+    template_name = 'users/password_reset_form.html'
+    # Django's own default (`reverse_lazy('password_reset_done')`, no
+    # namespace) 404s here — users/urls.py is included with app_name='users',
+    # so every URL name in it only resolves under the 'users:' namespace.
+    # Pre-existing bug, not introduced by this rate limiting — a real
+    # submission of the un-rate-limited stock view would have crashed with
+    # NoReverseMatch too; caught while adding this class's own tests.
+    success_url = reverse_lazy('users:password_reset_done')
+
+
+@method_decorator(ratelimit(key='ip', rate='10/h', method='POST', block=True), name='dispatch')
+class RateLimitedPasswordResetConfirmView(PasswordResetConfirmView):
+    """Rate-limited by IP on POST only — the token in the URL is already
+    hard to guess, but an unthrottled confirm endpoint still lets an
+    attacker brute-force it at whatever rate they like. Slightly looser
+    than the request form above since a legitimate user can genuinely need
+    a couple of attempts here (password confirmation mismatch, validator
+    rejection).
+    """
+
+    template_name = 'users/password_reset_confirm.html'
+    # Same namespace fix as RateLimitedPasswordResetView.success_url above —
+    # the stock default reverses an unnamespaced 'password_reset_complete'.
+    success_url = reverse_lazy('users:password_reset_complete')
 
 
 class ProfileView(DetailView):

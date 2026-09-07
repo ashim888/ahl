@@ -89,6 +89,41 @@ class RegisterRateLimitTests(TestCase):
 
 
 @FAST_PASSWORD_HASHERS
+class PasswordResetRateLimitTests(TestCase):
+    """Same per-IP throttle pattern as login/registration above — this was
+    the one public form-POST endpoint in the app without it (see
+    ROADMAP.md's gap-analysis entry): unthrottled, the reset-request form
+    is both an email-enumeration probe and a flood vector against a real
+    inbox, and the confirm form is a brute-forceable token check.
+    """
+
+    def setUp(self):
+        cache.clear()
+
+    def test_normal_reset_request_is_not_blocked(self):
+        response = self.client.post(reverse('users:password_reset'), {'email': 'nobody@example.com'})
+        self.assertEqual(response.status_code, 302)
+
+    def test_excessive_reset_requests_are_rate_limited(self):
+        # Limit is 5/h (users/views.py RateLimitedPasswordResetView).
+        for _ in range(5):
+            self.client.post(reverse('users:password_reset'), {'email': 'nobody@example.com'})
+        response = self.client.post(reverse('users:password_reset'), {'email': 'nobody@example.com'})
+        self.assertEqual(response.status_code, 403)
+
+    def test_excessive_reset_confirm_attempts_are_rate_limited(self):
+        # Limit is 10/h (users/views.py RateLimitedPasswordResetConfirmView).
+        # The uidb64/token in the URL don't need to be valid — the rate
+        # limiter's method_decorator wraps dispatch() itself, before the
+        # view gets a chance to validate either.
+        url = reverse('users:password_reset_confirm', args=['invalid-uid', 'invalid-token'])
+        for _ in range(10):
+            self.client.post(url, {'new_password1': 'x', 'new_password2': 'x'})
+        response = self.client.post(url, {'new_password1': 'x', 'new_password2': 'x'})
+        self.assertEqual(response.status_code, 403)
+
+
+@FAST_PASSWORD_HASHERS
 class RegisterSuccessTests(TestCase):
     """A *valid* submission — RegisterRateLimitTests above deliberately posts
     incomplete data, which never reaches form_valid()/login(), so it can't

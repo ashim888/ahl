@@ -425,6 +425,61 @@ EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@ajnahealthlens.example')
 
 
+# Error visibility — previously nothing at all: no LOGGING config, no ADMINS,
+# no error tracker. Django's own AdminEmailHandler already exists to email
+# ADMINS on an unhandled 500, but it's a silent no-op with ADMINS unset
+# (django.core.mail.mail_admins() returns immediately if ADMINS is empty) —
+# blank by default so dev/CI never tries to send anything; a deployment sets
+# ADMIN_EMAILS to actually receive these.
+ADMINS = [('Admin', e.strip()) for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()]
+MANAGERS = ADMINS
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {'()': 'django.utils.log.RequireDebugFalse'},
+    },
+    'formatters': {
+        'verbose': {'format': '{levelname} {asctime} {name} {message}', 'style': '{'},
+    },
+    'handlers': {
+        # Always on, not gated to DEBUG (Django's own default console
+        # handler for the 'django' logger only fires when DEBUG=True) — a
+        # host like cPanel/Passenger (see ARCHITECTURE.md §9.7) captures
+        # stdout/stderr to its own log file, so this is the baseline trail
+        # even before ADMIN_EMAILS is set.
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'django.utils.log.AdminEmailHandler',
+        },
+    },
+    # Catches this app's own best-effort loggers — ajna_health_lens/mail.py,
+    # billing/gateway.py, newsletter/tasks.py (the fault-injection wrappers
+    # that log-and-swallow an exception instead of raising, see
+    # ROADMAP.md's fault-injection entry) — none of which live under the
+    # 'django' logger namespace, so they'd otherwise reach console only via
+    # Python's own logging "handler of last resort", never ADMINS.
+    'root': {
+        'handlers': ['console', 'mail_admins'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        # Explicit and propagate=False so a django.request 500 is handled
+        # once here, not again via root (it would otherwise double up:
+        # Django's own default 'django' logger config always propagates).
+        'django': {
+            'handlers': ['console', 'mail_admins'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+
 # Cache — DB-backed (django_cache_table, via `manage.py createcachetable`),
 # not Redis/Memcached, matching the project's no-extra-infra pattern (see
 # Q_CLUSTER above — same reasoning). LocMemCache (Django's default) is

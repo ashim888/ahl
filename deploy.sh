@@ -18,11 +18,21 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "==> [1/6] Installing/updating Python dependencies"
+echo "==> [1/7] Installing/updating Python dependencies"
 pip install -r requirements.txt
 
-echo "==> [2/6] Applying database migrations"
+echo "==> [2/7] Applying database migrations"
 python manage.py migrate
+
+# createcachetable is a management command, not a migration — `migrate`
+# above never creates this table. Cache is DB-backed (see CACHES in
+# settings.py), and django-ratelimit (login/registration/search/comments/
+# pitches/newsletter signup) reads and writes through that same cache, so
+# skipping this step doesn't just break the homepage's section cache — it
+# 500s every rate-limited endpoint on a fresh environment. --noinput or
+# already-exists both make this a safe no-op after the first successful run.
+echo "==> [3/7] Ensuring the DB-backed cache table exists"
+python manage.py createcachetable
 
 # One-time cleanup left over from the September 2026 submissions/peer_review
 # removal (see ARCHITECTURE.md §4.4/§9.7) — migrate only manages apps
@@ -30,7 +40,7 @@ python manage.py migrate
 # been deleted outright. IF EXISTS / a WHERE clause on an already-empty
 # result make both statements safe to run on every deploy forever, not just
 # once: a no-op after the first successful run.
-echo "==> [3/6] One-time cleanup of orphaned submissions/peer_review tables"
+echo "==> [4/7] One-time cleanup of orphaned submissions/peer_review tables"
 python manage.py dbshell << 'EOSQL'
 DROP TABLE IF EXISTS peer_review_review;
 DROP TABLE IF EXISTS submissions_manuscriptfile;
@@ -38,14 +48,14 @@ DROP TABLE IF EXISTS submissions_submission;
 DELETE FROM django_migrations WHERE app IN ('submissions', 'peer_review');
 EOSQL
 
-echo "==> [4/6] Compiling i18n message catalogs (locale/*.po -> *.mo)"
+echo "==> [5/7] Compiling i18n message catalogs (locale/*.po -> *.mo)"
 # --locale + --ignore restrict this to just this project's own locale/ dir —
 # compilemessages otherwise walks the whole working directory recursively,
 # needlessly recompiling every installed package's own locale files too
 # (django.contrib.*, django-comments-xtd, etc.) on every single deploy.
 python manage.py compilemessages --locale=en --locale=ne --ignore=".venv/*"
 
-echo "==> [5/6] Collecting static files (incl. the compiled Tailwind CSS)"
+echo "==> [6/7] Collecting static files (incl. the compiled Tailwind CSS)"
 if command -v npm >/dev/null 2>&1; then
     echo "    npm found — rebuilding Tailwind CSS as a safety net (should normally be a no-op; the compiled file is committed)"
     npm install --silent
@@ -55,7 +65,7 @@ else
 fi
 python manage.py collectstatic --noinput
 
-echo "==> [6/6] Production settings sanity check"
+echo "==> [7/7] Production settings sanity check"
 python manage.py check --deploy || echo "    (warnings above are informational — see ARCHITECTURE.md §9.1 for what each one means)"
 
 # Phusion Passenger's standard restart convention (cPanel "Setup Python App"

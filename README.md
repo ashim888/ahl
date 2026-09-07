@@ -5,8 +5,9 @@ taxonomy (Sections), training courses, a subscription/paywall, reader comments, 
 house ads, and a full editorial dashboard for staff to run all of it.
 
 Manuscript submission and peer review are handled externally by OJS (Open Journal Systems) —
-this platform's own `submissions`/`peer_review` apps are dormant, kept in the codebase but
-unrouted. See `CLAUDE.md`'s SCOPE NOTE.
+this platform never builds that itself. The `submissions`/`peer_review` apps it started with were
+removed from the codebase entirely in September 2026, once OJS took over. See `CLAUDE.md`'s SCOPE
+NOTE.
 
 ## Stack
 
@@ -114,12 +115,14 @@ Each Django app owns one concern:
 | `ads` | House-sold ad zones, impressions/clicks |
 | `pitches` | Public story-pitch intake → editorial review queue |
 | `admin_custom` | The editorial dashboard (KPIs, BI analytics) |
-| `submissions`, `peer_review` | Dormant — see the SCOPE NOTE in `CLAUDE.md` |
 
 ## Deployment
 
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.
+
+Database and media backups are handled by `backup.sh` — not part of `deploy.sh`, meant to run on
+its own schedule (a cron entry, e.g. nightly). See `ARCHITECTURE.md` §9.7a.
 
 ## Documentation map
 

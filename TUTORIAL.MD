@@ -31,15 +31,16 @@ Jump to the section that matches what you're trying to do:
 - [§5 — The editorial dashboard](#5-the-editorial-dashboard) (Editor and above)
 - [§6 — Managing articles](#6-managing-articles) (Editor and above)
 - [§7 — Managing issues](#7-managing-issues) (Editor and above)
-- [§8 — The pitch queue](#8-the-pitch-queue) (Editor and above)
-- [§9 — The editorial board page](#9-the-editorial-board-page) (Editor and above)
-- [§10 — Training programs](#10-training-programs) (Editor and above)
-- [§11 — Ads](#11-ads) (Editor and above)
-- [§12 — Newsletter](#12-newsletter) (Editor and above)
-- [§13 — Comment moderation](#13-comment-moderation) (Editor and above)
-- [§14 — Verification queue](#14-verification-queue) (Editor-in-Chief, Admin)
-- [§15 — Subscriptions & purchases](#15-subscriptions--purchases) (Editor-in-Chief, Admin)
-- [§16 — Staff accounts & permissions](#16-staff-accounts--permissions) (Editor-in-Chief, Admin)
+- [§8 — Managing sections (site navigation)](#8-managing-sections-site-navigation) (Editor and above)
+- [§9 — The pitch queue](#9-the-pitch-queue) (Editor and above)
+- [§10 — The editorial board page](#10-the-editorial-board-page) (Editor and above)
+- [§11 — Training programs](#11-training-programs) (Editor and above)
+- [§12 — Ads](#12-ads) (Editor and above)
+- [§13 — Newsletter](#13-newsletter) (Editor and above)
+- [§14 — Comment moderation](#14-comment-moderation) (Editor and above)
+- [§15 — Verification queue](#15-verification-queue) (Editor-in-Chief, Admin)
+- [§16 — Subscriptions & purchases](#16-subscriptions--purchases) (Editor-in-Chief, Admin)
+- [§17 — Staff accounts & permissions](#17-staff-accounts--permissions) (Editor-in-Chief, Admin)
 
 ---
 
@@ -52,8 +53,12 @@ No account needed for any of this.
 - **Search** from the box in the header, or go to `/search/` directly. Search matches title,
   abstract, keywords, and author names — short medical acronyms (e.g. "TB", "HIV") work too.
 - **Browse issues** (curated story trails/coverage series) at `/issues/`.
+- **Browse by topic** using the primary nav (e.g. "Policy & Economy" → "Health Insurance (NHIP)")
+  or directly at `/sections/<slug>/` — this is the editorial subject taxonomy, separate from an
+  article's type/format. Nav labels switch between English and Nepali via the language switcher
+  in the header.
 - **Read an article.** Free (open-access) articles show full text immediately. Subscription or
-  pay-per-article ("special") pieces show the abstract plus a paywall prompt — see §15 for how an
+  pay-per-article ("special") pieces show the abstract plus a paywall prompt — see §16 for how an
   editor can grant access manually, or use the self-serve checkout links on the article page.
 - **Cite an article** — every article page has BibTeX/RIS/plain-text export links.
 - **Comment** — sign in to comment immediately, or comment as a guest (you'll get a one-click
@@ -78,7 +83,7 @@ No account needed for any of this.
    author on published articles and having a public author page.
 3. To request verification, fill out your profile (`/profile/edit/`) with your affiliation, bio,
    ORCID, publication history, etc., then submit for review from the "pending verification" page.
-4. An Editor-in-Chief or Admin reviews your request (§14). You'll get an email either way. If
+4. An Editor-in-Chief or Admin reviews your request (§15). You'll get an email either way. If
    rejected, you can reapply after 30 days.
 5. Once approved, your role becomes **Verified Author** and you can be added as a byline on
    articles.
@@ -113,7 +118,11 @@ Everything from here down requires an Editor (or higher) account. The dashboard 
   newsletter subscribers, open pitches) and activity charts.
 - **Analytics** (`/editorial/analytics/`) — article readership, subscription/ad/newsletter
   trends, cross-domain BI view.
-- **Revenue** (`/editorial/revenue/`) — training program revenue snapshot.
+- **Revenue** (`/editorial/revenue/`) — combined training + subscriptions + purchases total, with
+  MRR shown separately since it's a forward-looking projection, not money already collected.
+  Cross-links to two focused pages: **Training** (`/editorial/revenue/training/`, collected-revenue
+  trend) and **Subscriptions** (`/editorial/revenue/subscriptions/`, per-plan active count and
+  lifetime revenue, MRR, purchase revenue).
 - The sidebar shows a **badge count** next to Pitch Queue and Verification Queue whenever there's
   something waiting on you, visible from anywhere in the workspace, not just the dashboard home.
 - Every list screen in the workspace (articles, pitches, ads, training, staff, newsletter issues,
@@ -151,10 +160,11 @@ filterable by type/status/homepage section.
 - **Delete** — permanent, with a confirmation page. If you just want to stop showing an article,
   unpublish it (set to Draft or Archived) instead.
 
-**Issue assignment**, **DOI**, **volume/page numbers**, and **homepage section** (Hero, Latest
-News, Opinion, Research Highlights) are all set on the same article form — homepage placement is
-editor-curated first, falling back to automatic recency-based fill for any section you leave
-blank.
+**Issue assignment**, **Section** (subject-taxonomy placement — see §8, independent of the article
+type/format and of homepage curation below), **DOI**, **volume/page numbers**, and **homepage
+section** (Hero, Latest News, Opinion, Research Highlights) are all set on the same article form —
+homepage placement is editor-curated first, falling back to automatic recency-based fill for any
+slot you leave blank.
 
 ---
 
@@ -170,7 +180,34 @@ trails (e.g. ongoing coverage of one topic), not formal journal volumes.
 
 ---
 
-## 8. The pitch queue
+## 8. Managing sections (site navigation)
+
+`/manage/sections/` — Sections are the subject-taxonomy topics that drive the site's primary
+navigation (e.g. "Policy & Economy" with sub-topics like "Health Insurance (NHIP)"), separate from
+an article's type (format) and keywords (free tags).
+
+1. Create a **top-level** section (leave Parent blank) for a new nav header, or a **child**
+   section (pick a top-level Parent) for a sub-topic under it — only two levels are supported, so
+   a child can't have its own children.
+2. **Name (English)** and **Name (Nepali)** are both required — the primary nav is bilingual, and
+   this is the one place on the site where that's true today (article content itself stays
+   single-language). The language switcher in the site header swaps between the two.
+3. **Link override**: leave blank for a normal section (it gets its own public landing page at
+   `/sections/<slug>/`, listing published articles assigned to it). Set it only for a top-level,
+   childless entry that should instead link straight to an existing feature's own page — this is
+   how "Training" and "Issues" sit in the same nav list as real content sections without needing
+   their own article-aggregation page.
+4. **Reorder** using the up/down arrows next to each row, same pattern as the editorial board
+   page (§10) — this reorders within the section's own level (top-level sections among
+   themselves, or a section's children among each other), not across the whole list.
+5. Toggle **Active** to hide a section from the public nav without deleting it — deleting a
+   top-level section also deletes its children, and you'll see exactly how many before confirming.
+6. To actually place an article in a section, set it on the **article's own edit form** (§6) — same
+   pattern as issue assignment, no separate "add articles" screen here either.
+
+---
+
+## 9. The pitch queue
 
 `/manage/pitches/` — defaults to showing only open pitches (Submitted / In Review); use the
 status filter to see everything, including already-decided ones.
@@ -189,7 +226,7 @@ busy queue. Already-decided pitches are automatically skipped if accidentally in
 
 ---
 
-## 9. The editorial board page
+## 10. The editorial board page
 
 `/manage/editorial-board/` manages what shows publicly at `/about/editorial-board/` (Board tab).
 
@@ -201,7 +238,7 @@ busy queue. Already-decided pitches are automatically skipped if accidentally in
 
 ---
 
-## 10. Training programs
+## 11. Training programs
 
 `/manage/training/` — manage the courses shown publicly at `/training/`.
 
@@ -215,7 +252,7 @@ busy queue. Already-decided pitches are automatically skipped if accidentally in
 
 ---
 
-## 11. Ads
+## 12. Ads
 
 `/manage/ads/` — house/direct-sold ad creatives, not an ad-network integration.
 
@@ -233,22 +270,30 @@ busy queue. Already-decided pitches are automatically skipped if accidentally in
 
 ---
 
-## 12. Newsletter
+## 13. Newsletter
 
 `/manage/newsletter/` — compose-and-send issues to confirmed subscribers.
 
-1. **Compose** (`+ Compose & Send`): write a subject and HTML body.
-2. **Preview** before sending — opens in a new tab showing approximately what a subscriber will
-   receive, including the unsubscribe footer. Nothing is sent or saved by previewing.
-3. **Send** — goes out asynchronously (a background worker, not the request itself), to every
+1. **Compose** (`+ Compose & Send`): write a subject and body in the same rich-text editor used
+   for articles. Starting from scratch? Click **Insert starting template** for a ready-made
+   weekly-roundup skeleton (Top Story / Also This Week / From the Editors) instead of a blank
+   editor.
+2. **Send test to myself** — sends the in-progress issue, exactly as it'll really look (same
+   branded template, subject line, and body), to your own account's email address only. Doesn't
+   touch subscribers or save anything — use this to check an issue in a real inbox before
+   committing to a real send.
+3. **Preview** before sending — opens in a new tab showing exactly what a subscriber will
+   receive, including the branded header/footer and unsubscribe link. Nothing is sent or saved by
+   previewing.
+4. **Send** — goes out asynchronously (a background worker, not the request itself), to every
    currently-confirmed subscriber. You'll see a running subscriber count on this screen.
-4. The issue list shows each send's status: **Sending…**, **Sent** (with timestamp and recipient
+5. The issue list shows each send's status: **Sending…**, **Sent** (with timestamp and recipient
    count), or **Failed** — a failed send shows the error on hover and has a one-click **Retry**
    button.
 
 ---
 
-## 13. Comment moderation
+## 14. Comment moderation
 
 `/editorial/comments/` — reader comments post immediately (no pre-moderation queue), so this is
 where to remove one after the fact.
@@ -259,7 +304,7 @@ where to remove one after the fact.
 
 ---
 
-## 14. Verification queue
+## 15. Verification queue
 
 Editor-in-Chief and Admin only. `/verification-queue/` — every account with a pending
 verification request (from filling out their profile and submitting for review, see §3).
@@ -268,11 +313,11 @@ verification request (from filling out their profile and submitting for review, 
 - **Reject** — the applicant can reapply after 30 days.
 - **View full details** — see their full profile (bio, affiliation, ORCID, publication history)
   before deciding.
-- **Bulk approve/reject**: same checkbox-and-toolbar pattern as the pitch queue (§8).
+- **Bulk approve/reject**: same checkbox-and-toolbar pattern as the pitch queue (§9).
 
 ---
 
-## 15. Subscriptions & purchases
+## 16. Subscriptions & purchases
 
 Editor-in-Chief and Admin only — this is the money-sensitive tier, one level above general
 editorial access.
@@ -292,7 +337,7 @@ payment provider is integrated).
 
 ---
 
-## 16. Staff accounts & permissions
+## 17. Staff accounts & permissions
 
 Editor-in-Chief and Admin only, with one carve-out noted below.
 

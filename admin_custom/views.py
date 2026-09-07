@@ -100,7 +100,7 @@ def _donut_breakdown(counts_by_value, choices):
 class DashboardHomeView(TemplateView):
     """Editorial Command Center — KPIs and activity charts for the news site
     + editorial workspace (see CLAUDE.md SCOPE NOTE). Deliberately has no
-    submission/peer-review metrics — those apps are dormant post-OJS-pivot.
+    submission/peer-review metrics — those apps were removed post-OJS-pivot.
     """
 
     template_name = 'admin_custom/dashboard.html'
