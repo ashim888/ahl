@@ -11,14 +11,15 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .emails import issue_email_text_body, render_issue_email
-from .models import NewsletterIssue, Subscriber
+from .models import NewsletterIssue
+from .recipients import confirmed_recipients
 
 logger = logging.getLogger(__name__)
 
 
 def send_newsletter_issue(issue_id):
     issue = NewsletterIssue.objects.get(pk=issue_id)
-    subscribers = list(Subscriber.objects.filter(status=Subscriber.Status.CONFIRMED))
+    subscribers = list(confirmed_recipients(issue.audience))
 
     # One SMTP connection for the whole run, not one per recipient —
     # send_mail() (the previous approach) opens and closes a fresh

@@ -1,3 +1,4 @@
+import datetime
 from unittest.mock import patch
 
 from django.core import mail
@@ -6,9 +7,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django_q.models import Task
 
+from billing.models import SubscriptionPlan, UserSubscription
 from users.models import User
 
 from .models import NewsletterIssue, Subscriber
+from .recipients import confirmed_recipients
 from .tasks import send_newsletter_issue
 
 
@@ -179,6 +182,74 @@ class SendNewsletterIssueTaskTests(TestCase):
         self.assertNotEqual(issue.get_send_status(), NewsletterIssue.Status.SENT)
 
 
+class PremiumAudienceTests(TestCase):
+    """newsletter.recipients.confirmed_recipients — the "Premium subscribers
+    only" audience (NewsletterIssue.Audience.PREMIUM), gated on
+    SubscriptionPlan.grants_premium_newsletter (Session 2, September 2026).
+    """
+
+    def setUp(self):
+        self.premium_reader = User.objects.create_user(
+            email='premium@example.com', password='pw', first_name='P', last_name='R',
+        )
+        self.basic_reader = User.objects.create_user(
+            email='basic@example.com', password='pw', first_name='B', last_name='R',
+        )
+
+    def _subscribe(self, user, **plan_kwargs):
+        plan = SubscriptionPlan.objects.create(
+            name='Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+            **plan_kwargs,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=user, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+
+    def test_all_audience_is_unchanged_default_behavior(self):
+        Subscriber.objects.create(email='reader1@example.com', status=Subscriber.Status.CONFIRMED)
+        Subscriber.objects.create(email='reader2@example.com', status=Subscriber.Status.CONFIRMED, user=self.premium_reader)
+        self.assertEqual(confirmed_recipients(NewsletterIssue.Audience.ALL).count(), 2)
+
+    def test_premium_audience_includes_subscriber_with_premium_perk(self):
+        self._subscribe(self.premium_reader, grants_premium_newsletter=True)
+        Subscriber.objects.create(email='premium@example.com', status=Subscriber.Status.CONFIRMED, user=self.premium_reader)
+        recipients = confirmed_recipients(NewsletterIssue.Audience.PREMIUM)
+        self.assertEqual(list(recipients), [Subscriber.objects.get(email='premium@example.com')])
+
+    def test_premium_audience_excludes_subscriber_without_premium_perk(self):
+        self._subscribe(self.basic_reader, grants_premium_newsletter=False)
+        Subscriber.objects.create(email='basic@example.com', status=Subscriber.Status.CONFIRMED, user=self.basic_reader)
+        self.assertEqual(confirmed_recipients(NewsletterIssue.Audience.PREMIUM).count(), 0)
+
+    def test_premium_audience_excludes_bare_email_subscriber(self):
+        # No linked account at all — there's no plan to check, regardless
+        # of whether that email happens to also be a paying subscriber
+        # under a different address.
+        Subscriber.objects.create(email='no-account@example.com', status=Subscriber.Status.CONFIRMED)
+        self.assertEqual(confirmed_recipients(NewsletterIssue.Audience.PREMIUM).count(), 0)
+
+    def test_premium_audience_excludes_unconfirmed_subscriber(self):
+        self._subscribe(self.premium_reader, grants_premium_newsletter=True)
+        Subscriber.objects.create(
+            email='pending-premium@example.com', status=Subscriber.Status.PENDING, user=self.premium_reader,
+        )
+        self.assertEqual(confirmed_recipients(NewsletterIssue.Audience.PREMIUM).count(), 0)
+
+    def test_send_newsletter_issue_honors_premium_audience(self):
+        self._subscribe(self.premium_reader, grants_premium_newsletter=True)
+        Subscriber.objects.create(email='premium-send@example.com', status=Subscriber.Status.CONFIRMED, user=self.premium_reader)
+        Subscriber.objects.create(email='regular-send@example.com', status=Subscriber.Status.CONFIRMED)
+        issue = NewsletterIssue.objects.create(
+            subject='Premium Digest', body_html='<p>Exclusive</p>', audience=NewsletterIssue.Audience.PREMIUM,
+        )
+
+        sent = send_newsletter_issue(issue.pk)
+
+        self.assertEqual(sent, 1)
+        self.assertEqual(mail.outbox[0].to, ['premium-send@example.com'])
+
+
 class ComposeViewTests(TestCase):
     def setUp(self):
         self.editor = User.objects.create_user(
@@ -190,12 +261,22 @@ class ComposeViewTests(TestCase):
         mock_async_task.return_value = 'fake-task-id'
         self.client.force_login(self.editor)
         response = self.client.post(reverse('newsletter:manage_issue_compose'), {
-            'subject': 'Hello', 'body_html': '<p>Hi</p>',
+            'subject': 'Hello', 'body_html': '<p>Hi</p>', 'audience': NewsletterIssue.Audience.ALL,
         })
         self.assertEqual(response.status_code, 302)
         issue = NewsletterIssue.objects.get(subject='Hello')
         mock_async_task.assert_called_once_with('newsletter.tasks.send_newsletter_issue', issue.pk)
         self.assertEqual(issue.task_id, 'fake-task-id')
+
+    @patch('newsletter.views.async_task')
+    def test_compose_saves_the_selected_audience(self, mock_async_task):
+        mock_async_task.return_value = 'fake-task-id'
+        self.client.force_login(self.editor)
+        self.client.post(reverse('newsletter:manage_issue_compose'), {
+            'subject': 'Premium Issue', 'body_html': '<p>Hi</p>', 'audience': NewsletterIssue.Audience.PREMIUM,
+        })
+        issue = NewsletterIssue.objects.get(subject='Premium Issue')
+        self.assertEqual(issue.audience, NewsletterIssue.Audience.PREMIUM)
 
     def test_non_editorial_cannot_compose(self):
         reader = User.objects.create_user(email='reader3@example.com', password='pw', first_name='R', last_name='D')
@@ -213,6 +294,7 @@ class ComposeViewTests(TestCase):
         self.client.force_login(self.editor)
         self.client.post(reverse('newsletter:manage_issue_compose'), {
             'subject': 'Hello', 'body_html': '<p>Hi</p><img src="x" onerror="alert(1)">',
+            'audience': NewsletterIssue.Audience.ALL,
         })
         issue = NewsletterIssue.objects.get(subject='Hello')
         self.assertNotIn('onerror', issue.body_html)
@@ -229,6 +311,7 @@ class IssuePreviewViewTests(TestCase):
         self.client.force_login(self.editor)
         response = self.client.post(reverse('newsletter:manage_issue_preview'), {
             'subject': 'Preview Subject', 'body_html': '<p>Preview body content</p>',
+            'audience': NewsletterIssue.Audience.ALL,
         })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Preview Subject')
@@ -256,6 +339,7 @@ class IssuePreviewViewTests(TestCase):
         self.client.force_login(self.editor)
         response = self.client.post(reverse('newsletter:manage_issue_preview'), {
             'subject': 'Preview Subject', 'body_html': '<p>Preview body content</p>',
+            'audience': NewsletterIssue.Audience.ALL,
         })
         self.assertContains(response, 'AJNA HEALTH LENS')
         self.assertContains(response, 'Illuminating Health Research')
@@ -273,6 +357,7 @@ class IssueTestSendViewTests(TestCase):
         self.client.force_login(self.editor)
         response = self.client.post(reverse('newsletter:manage_issue_test_send'), {
             'subject': 'Draft Subject', 'body_html': '<p>Draft body content</p>',
+            'audience': NewsletterIssue.Audience.ALL,
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'ok': True, 'sent_to': self.editor.email})
@@ -286,6 +371,7 @@ class IssueTestSendViewTests(TestCase):
         self.client.force_login(self.editor)
         self.client.post(reverse('newsletter:manage_issue_test_send'), {
             'subject': 'Draft Subject', 'body_html': '<p>Draft body content</p>',
+            'audience': NewsletterIssue.Audience.ALL,
         })
         html_body, mimetype = mail.outbox[0].alternatives[0]
         self.assertEqual(mimetype, 'text/html')

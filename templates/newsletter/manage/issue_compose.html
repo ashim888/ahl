@@ -7,11 +7,10 @@
 {% block content %}
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
     <p class="text-sm text-gray-500 mb-6">
-        Sends immediately to all {{ confirmed_subscriber_count }} confirmed subscriber{{ confirmed_subscriber_count|pluralize }}
-        via a background worker — this page won't wait for every email to go out.
+        Sends via a background worker — this page won't wait for every email to go out.
         Use <strong>Send test to myself</strong> first to see exactly how it'll look in a real inbox.
     </p>
-    <form method="post" id="compose-form" onsubmit="return confirm('Send this issue to {{ confirmed_subscriber_count }} subscriber{{ confirmed_subscriber_count|pluralize }} now?');">
+    <form method="post" id="compose-form" onsubmit="return confirm('Send this issue to ' + currentRecipientCount() + ' subscriber(s) now?');">
         {% csrf_token %}
         {% if form.non_field_errors %}
             <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
@@ -21,6 +20,11 @@
 
         <div class="space-y-5">
             {% include 'admin_dashboard/includes/form_field.html' with field=form.subject %}
+
+            <div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.audience %}
+                <p id="audience-count-line" class="mt-1.5 text-xs text-gray-500"></p>
+            </div>
 
             <div>
                 <div class="flex items-center justify-between mb-1.5">
@@ -64,6 +68,35 @@
 {{ content_template|json_script:"content-template-data" }}
 <script>
     var form = document.getElementById('compose-form');
+
+    // Recipient count next to the Audience field, and the confirm() dialog
+    // on submit — both read the same two counts computed server-side
+    // (newsletter.recipients.confirmed_recipients), so this is display
+    // only, never its own source of truth for who actually gets sent to.
+    var RECIPIENT_COUNTS = {
+        all: {{ confirmed_subscriber_count }},
+        premium: {{ premium_confirmed_count }},
+    };
+
+    function currentRecipientCount() {
+        var audienceField = document.getElementById('id_audience');
+        var audience = audienceField ? audienceField.value : 'all';
+        return RECIPIENT_COUNTS[audience] !== undefined ? RECIPIENT_COUNTS[audience] : RECIPIENT_COUNTS.all;
+    }
+
+    (function () {
+        var audienceField = document.getElementById('id_audience');
+        var countLine = document.getElementById('audience-count-line');
+        if (!audienceField || !countLine) return;
+
+        function updateCountLine() {
+            var count = currentRecipientCount();
+            countLine.textContent = 'Reaches ' + count + ' subscriber' + (count === 1 ? '' : 's') + ' right now.';
+        }
+
+        audienceField.addEventListener('change', updateCountLine);
+        updateCountLine();
+    })();
 
     // Preview: submit the same form data to the preview endpoint in a new
     // tab, then restore the form's normal action/target so Send still works

@@ -50,8 +50,18 @@ class NewsletterIssue(models.Model):
         FAILED = 'failed', 'Failed'
         SENDING = 'sending', 'Sending…'
 
+    class Audience(models.TextChoices):
+        ALL = 'all', 'All confirmed subscribers'
+        PREMIUM = 'premium', 'Premium subscribers only'
+
     subject = models.CharField(max_length=255)
     body_html = models.TextField(help_text='Trusted, editor-authored HTML — same trust model as Article.html_content.')
+    audience = models.CharField(
+        max_length=10, choices=Audience.choices, default=Audience.ALL,
+        help_text='Premium subscribers only reaches confirmed subscribers whose account has an active plan '
+                   'granting the premium-newsletter perk (see billing.SubscriptionPlan.grants_premium_newsletter) '
+                   '— see newsletter.recipients.confirmed_recipients for exactly who that is.',
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='newsletter_issues',
     )

@@ -19,6 +19,7 @@ from .content_templates import WEEKLY_DIGEST_TEMPLATE
 from .emails import issue_email_text_body, render_issue_email, send_confirmation_email
 from .forms import NewsletterIssueForm, SubscribeForm
 from .models import NewsletterIssue, Subscriber
+from .recipients import confirmed_recipients
 
 # Placeholder shown in the preview instead of a real subscriber's one-click
 # link — send_newsletter_issue (tasks.py) builds the real, token-based URL
@@ -126,6 +127,7 @@ class IssueComposeView(CreateView):
         context['confirmed_subscriber_count'] = Subscriber.objects.filter(
             status=Subscriber.Status.CONFIRMED,
         ).count()
+        context['premium_confirmed_count'] = confirmed_recipients(NewsletterIssue.Audience.PREMIUM).count()
         context['content_template'] = WEEKLY_DIGEST_TEMPLATE
         return context
 
@@ -140,7 +142,7 @@ class IssueComposeView(CreateView):
         messages.success(
             self.request,
             f'"{self.object.subject}" is sending to '
-            f'{Subscriber.objects.filter(status=Subscriber.Status.CONFIRMED).count()} subscribers.',
+            f'{confirmed_recipients(self.object.audience).count()} subscribers.',
         )
         return response
 

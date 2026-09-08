@@ -59,6 +59,15 @@ class SubscriptionPlan(models.Model):
         help_text='Subscribers on this plan bypass both the subscription-tier paywall and the metered '
                    'free-sample limit entirely (billing.access.article_is_accessible).',
     )
+    # Default False, unlike the two perks above — this is a brand-new
+    # capability (newsletter/models.py:NewsletterIssue.Audience.PREMIUM),
+    # not a pre-existing behavior to preserve. No plan claims to grant it
+    # until an editor deliberately opts one in.
+    grants_premium_newsletter = models.BooleanField(
+        default=False,
+        help_text='Subscribers on this plan receive newsletter issues sent to "Premium subscribers only" '
+                   '(newsletter.recipients.confirmed_recipients), in addition to every regular issue.',
+    )
     is_featured = models.BooleanField(
         default=False, help_text='Highlight as "Most Popular" on the pricing page.',
     )

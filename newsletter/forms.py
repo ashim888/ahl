@@ -26,7 +26,7 @@ class SubscribeForm(forms.Form):
 class NewsletterIssueForm(forms.ModelForm):
     class Meta:
         model = NewsletterIssue
-        fields = ['subject', 'body_html']
+        fields = ['subject', 'body_html', 'audience']
         widgets = {
             # Same "trusted, editor-authored HTML" pattern as
             # Article.html_content (see NewsletterIssue's docstring) — same
