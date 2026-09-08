@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from articles.models import Article
+from articles.models import Article, Keyword, KeywordFollow
 from users.models import User
 
 from .digest import send_topic_digests
@@ -408,6 +408,25 @@ class TopicDigestTests(TestCase):
         make_article('test-digest-draft', section=self.section, status=Article.Status.DRAFT)
         sent = send_topic_digests()
         self.assertEqual(sent, 0)
+
+    def test_keyword_follower_with_a_recent_article_gets_a_digest(self):
+        keyword = Keyword.objects.create(name='Digest Keyword', slug='digest-keyword')
+        KeywordFollow.objects.create(user=self.reader, keyword=keyword)
+        article = make_article('test-digest-keyword-recent')
+        article.keyword_tags.add(keyword)
+        sent = send_topic_digests()
+        self.assertEqual(sent, 1)
+        self.assertIn(article.title, mail.outbox[0].body)
+
+    def test_article_matching_both_followed_section_and_keyword_listed_once(self):
+        keyword = Keyword.objects.create(name='Digest Dedup Keyword', slug='digest-dedup-keyword')
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        KeywordFollow.objects.create(user=self.reader, keyword=keyword)
+        article = make_article('test-digest-dedup', section=self.section)
+        article.keyword_tags.add(keyword)
+        sent = send_topic_digests()
+        self.assertEqual(sent, 1)
+        self.assertEqual(mail.outbox[0].body.count(article.title), 1)
 
 
 class PrimaryNavRenderingTests(TestCase):

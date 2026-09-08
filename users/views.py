@@ -13,7 +13,7 @@ from django.views.generic import CreateView, DeleteView, ListView, TemplateView,
 from django.views.generic.detail import DetailView
 from django_ratelimit.decorators import ratelimit
 
-from articles.models import Article
+from articles.models import Article, Bookmark, KeywordFollow
 from pitches.models import StoryPitch
 from sections.models import Section
 from training.models import Enrollment
@@ -128,6 +128,12 @@ class ProfileView(DetailView):
         context['followed_sections'] = Section.objects.filter(
             followers__user=self.request.user,
         ).order_by('name')
+        context['saved_articles'] = Bookmark.objects.filter(
+            user=self.request.user,
+        ).select_related('article')[:5]
+        context['followed_keywords'] = KeywordFollow.objects.filter(
+            user=self.request.user,
+        ).select_related('keyword')
         return context
 
 

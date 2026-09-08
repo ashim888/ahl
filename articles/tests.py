@@ -11,7 +11,7 @@ from sections.models import Section, SectionFollow
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .forms import ArticleForm, TagifyKeywordsField
-from .models import Article, Keyword
+from .models import Article, Bookmark, Keyword, KeywordFollow
 from .toc import extract_toc
 
 
@@ -1607,7 +1607,7 @@ class ForYouViewTests(TestCase):
         self.client.force_login(self.reader)
         response = self.client.get(reverse('articles:for_you'))
         self.assertFalse(response.context['has_follows'])
-        self.assertContains(response, 'not following any sections yet')
+        self.assertContains(response, 'not following any sections or keywords yet')
 
     def test_empty_state_differs_when_following_something_with_no_new_articles(self):
         SectionFollow.objects.create(user=self.reader, section=self.section)
@@ -1615,3 +1615,239 @@ class ForYouViewTests(TestCase):
         response = self.client.get(reverse('articles:for_you'))
         self.assertTrue(response.context['has_follows'])
         self.assertContains(response, 'check back soon')
+
+
+class BookmarkToggleTests(TestCase):
+    """articles:article_bookmark_toggle — one endpoint handles both
+    directions, keyed off whether a Bookmark row already exists (same
+    shape as sections:section_follow_toggle, ROADMAP.md Phase 10 deferred
+    list — bookmarks/read-later).
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.article = make_article('bookmark-toggle-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.reader = User.objects.create_user(
+            email='bookmark-reader@example.com', password='pw', first_name='B', last_name='R',
+        )
+
+    def test_saving_an_article_creates_a_bookmark(self):
+        self.client.force_login(self.reader)
+        self.client.post(reverse('articles:article_bookmark_toggle', args=[self.article.slug]))
+        self.assertTrue(Bookmark.objects.filter(user=self.reader, article=self.article).exists())
+
+    def test_toggling_again_removes_the_bookmark(self):
+        Bookmark.objects.create(user=self.reader, article=self.article)
+        self.client.force_login(self.reader)
+        self.client.post(reverse('articles:article_bookmark_toggle', args=[self.article.slug]))
+        self.assertFalse(Bookmark.objects.filter(user=self.reader, article=self.article).exists())
+
+    def test_anonymous_visitor_is_redirected_to_login(self):
+        response = self.client.post(reverse('articles:article_bookmark_toggle', args=[self.article.slug]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('users:login'), response.url)
+
+    def test_article_detail_reflects_bookmark_state(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertFalse(response.context['is_bookmarked'])
+        Bookmark.objects.create(user=self.reader, article=self.article)
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertTrue(response.context['is_bookmarked'])
+
+    def test_subscription_article_can_be_bookmarked_without_access(self):
+        # Deliberately not paywall-gated — a reader should be able to save
+        # something for later before they've subscribed to read it.
+        gated_article = make_article('bookmark-gated-article', Article.ArticleType.NEWS_COMMENTARY)
+        gated_article.access_type = Article.AccessType.SUBSCRIPTION
+        gated_article.save(update_fields=['access_type'])
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('articles:article_bookmark_toggle', args=[gated_article.slug]))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Bookmark.objects.filter(user=self.reader, article=gated_article).exists())
+
+
+class ReadingListViewTests(TestCase):
+    """articles:reading_list — a reader's saved articles, most recently
+    saved first.
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.reader = User.objects.create_user(
+            email='reading-list-reader@example.com', password='pw', first_name='R', last_name='L',
+        )
+
+    def test_anonymous_visitor_is_redirected_to_login(self):
+        response = self.client.get(reverse('articles:reading_list'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('users:login'), response.url)
+
+    def test_shows_only_this_readers_bookmarks(self):
+        from users.models import User
+
+        other_reader = User.objects.create_user(
+            email='reading-list-other@example.com', password='pw', first_name='O', last_name='R',
+        )
+        own_article = make_article('reading-list-own', Article.ArticleType.NEWS_COMMENTARY)
+        other_article = make_article('reading-list-other-article', Article.ArticleType.NEWS_COMMENTARY)
+        Bookmark.objects.create(user=self.reader, article=own_article)
+        Bookmark.objects.create(user=other_reader, article=other_article)
+
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:reading_list'))
+        articles = list(response.context['articles'])
+        self.assertIn(own_article, articles)
+        self.assertNotIn(other_article, articles)
+
+    def test_most_recently_saved_appears_first(self):
+        first_saved = make_article('reading-list-first', Article.ArticleType.NEWS_COMMENTARY)
+        second_saved = make_article('reading-list-second', Article.ArticleType.NEWS_COMMENTARY)
+        Bookmark.objects.create(user=self.reader, article=first_saved)
+        Bookmark.objects.create(user=self.reader, article=second_saved)
+
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:reading_list'))
+        articles = list(response.context['articles'])
+        self.assertEqual(articles, [second_saved, first_saved])
+
+    def test_empty_state_when_nothing_saved(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:reading_list'))
+        self.assertContains(response, 'Nothing saved yet')
+
+    def test_removing_a_bookmark_from_the_reading_list(self):
+        article = make_article('reading-list-remove', Article.ArticleType.NEWS_COMMENTARY)
+        Bookmark.objects.create(user=self.reader, article=article)
+        self.client.force_login(self.reader)
+        self.client.post(reverse('articles:article_bookmark_toggle', args=[article.slug]))
+        self.assertFalse(Bookmark.objects.filter(user=self.reader, article=article).exists())
+
+
+class KeywordFollowToggleTests(TestCase):
+    """articles:keyword_follow_toggle — same one-endpoint shape as
+    sections:section_follow_toggle, but gated on keyword usage
+    (ROADMAP.md Phase 10 Session 5: a keyword used on one article or fewer
+    has nothing meaningful to follow).
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.reader = User.objects.create_user(
+            email='keyword-follow-reader@example.com', password='pw', first_name='K', last_name='F',
+        )
+
+    def _eligible_keyword(self, name='eligible-keyword'):
+        keyword = make_keyword(name)
+        make_article(f'{name}-article-1', Article.ArticleType.NEWS_COMMENTARY).keyword_tags.add(keyword)
+        make_article(f'{name}-article-2', Article.ArticleType.NEWS_COMMENTARY).keyword_tags.add(keyword)
+        return keyword
+
+    def test_following_an_eligible_keyword_creates_a_follow(self):
+        keyword = self._eligible_keyword()
+        self.client.force_login(self.reader)
+        self.client.post(reverse('articles:keyword_follow_toggle', args=[keyword.slug]))
+        self.assertTrue(KeywordFollow.objects.filter(user=self.reader, keyword=keyword).exists())
+
+    def test_toggling_again_removes_the_follow(self):
+        keyword = self._eligible_keyword()
+        KeywordFollow.objects.create(user=self.reader, keyword=keyword)
+        self.client.force_login(self.reader)
+        self.client.post(reverse('articles:keyword_follow_toggle', args=[keyword.slug]))
+        self.assertFalse(KeywordFollow.objects.filter(user=self.reader, keyword=keyword).exists())
+
+    def test_anonymous_visitor_is_redirected_to_login(self):
+        keyword = self._eligible_keyword()
+        response = self.client.post(reverse('articles:keyword_follow_toggle', args=[keyword.slug]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('users:login'), response.url)
+
+    def test_keyword_used_once_cannot_be_followed(self):
+        keyword = make_keyword('single-use-keyword')
+        make_article('single-use-keyword-article', Article.ArticleType.NEWS_COMMENTARY).keyword_tags.add(keyword)
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('articles:keyword_follow_toggle', args=[keyword.slug]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_unused_keyword_cannot_be_followed(self):
+        keyword = make_keyword('unused-keyword')
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('articles:keyword_follow_toggle', args=[keyword.slug]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_existing_follow_can_be_removed_even_below_the_threshold(self):
+        # A keyword that drops back to/below KEYWORD_FOLLOW_MIN_ARTICLES
+        # after a follow already exists (e.g. an article unpublished) must
+        # still be unfollowable — only *creating* a new follow is
+        # eligibility-gated, per KeywordFollow's own docstring.
+        keyword = make_keyword('now-unused-keyword')
+        KeywordFollow.objects.create(user=self.reader, keyword=keyword)
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('articles:keyword_follow_toggle', args=[keyword.slug]))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(KeywordFollow.objects.filter(user=self.reader, keyword=keyword).exists())
+
+    def test_article_list_shows_follow_button_only_when_eligible(self):
+        eligible = self._eligible_keyword('shown-keyword')
+        ineligible = make_keyword('hidden-keyword')
+        make_article('hidden-keyword-article', Article.ArticleType.NEWS_COMMENTARY).keyword_tags.add(ineligible)
+        self.client.force_login(self.reader)
+
+        response = self.client.get(reverse('articles:article_list'), {'keyword': eligible.slug})
+        self.assertTrue(response.context['keyword_follow_eligible'])
+
+        response = self.client.get(reverse('articles:article_list'), {'keyword': ineligible.slug})
+        self.assertFalse(response.context['keyword_follow_eligible'])
+        self.assertNotContains(response, reverse('articles:keyword_follow_toggle', args=[ineligible.slug]))
+
+    def test_article_list_reflects_follow_state(self):
+        keyword = self._eligible_keyword()
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:article_list'), {'keyword': keyword.slug})
+        self.assertFalse(response.context['is_following_keyword'])
+        KeywordFollow.objects.create(user=self.reader, keyword=keyword)
+        response = self.client.get(reverse('articles:article_list'), {'keyword': keyword.slug})
+        self.assertTrue(response.context['is_following_keyword'])
+
+
+class ForYouKeywordFollowTests(TestCase):
+    """ForYouView combines Section- and Keyword-followed articles into one
+    de-duplicated feed (ROADMAP.md Phase 10 Session 5).
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.reader = User.objects.create_user(
+            email='for-you-keyword-reader@example.com', password='pw', first_name='F', last_name='K',
+        )
+        self.keyword = make_keyword('for-you-followed-keyword')
+
+    def test_shows_articles_matching_a_followed_keyword(self):
+        KeywordFollow.objects.create(user=self.reader, keyword=self.keyword)
+        matching = make_article('for-you-keyword-match', Article.ArticleType.NEWS_COMMENTARY)
+        matching.keyword_tags.add(self.keyword)
+        unrelated = make_article('for-you-keyword-unrelated', Article.ArticleType.NEWS_COMMENTARY)
+
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:for_you'))
+        articles = list(response.context['articles'])
+        self.assertIn(matching, articles)
+        self.assertNotIn(unrelated, articles)
+
+    def test_article_matching_both_a_followed_section_and_keyword_appears_once(self):
+        section = Section.objects.create(name_en='For You Dedup Section', slug='for-you-dedup-section')
+        SectionFollow.objects.create(user=self.reader, section=section)
+        KeywordFollow.objects.create(user=self.reader, keyword=self.keyword)
+        article = make_article('for-you-dedup-article', Article.ArticleType.NEWS_COMMENTARY)
+        article.section = section
+        article.save(update_fields=['section'])
+        article.keyword_tags.add(self.keyword)
+
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:for_you'))
+        articles = list(response.context['articles'])
+        self.assertEqual(articles.count(article), 1)

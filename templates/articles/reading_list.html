@@ -5,8 +5,8 @@
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">For You</h1>
-    <p class="mt-2 text-sm text-muted-foreground">Latest articles from the sections and keywords you follow.</p>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Reading List</h1>
+    <p class="mt-2 text-sm text-muted-foreground">Articles you've saved for later.</p>
 
     <div class="mt-10 divide-y divide-border">
         {% for article in articles %}
@@ -20,9 +20,17 @@
                     {% endif %}
                 </a>
                 <div class="flex-1 min-w-0">
-                    <span class="section-label text-muted-foreground">
-                        {% if article.section %}{{ article.section.name }} · {% endif %}{{ article.get_article_type_display }}
-                    </span>
+                    <div class="flex items-start justify-between gap-4">
+                        <span class="section-label text-muted-foreground">
+                            {% if article.section %}{{ article.section.name }} · {% endif %}{{ article.get_article_type_display }}
+                        </span>
+                        <form method="post" action="{% url 'articles:article_bookmark_toggle' article.slug %}">
+                            {% csrf_token %}
+                            <button type="submit" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent underline whitespace-nowrap">
+                                Remove
+                            </button>
+                        </form>
+                    </div>
                     <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h2>
@@ -43,17 +51,12 @@
                 </div>
             </article>
         {% empty %}
-            {% if has_follows %}
-                <p class="text-muted-foreground py-10">No new articles from what you follow yet — check back soon.</p>
-            {% else %}
-                <div class="py-14 text-center">
-                    <p class="text-muted-foreground">You're not following any sections or keywords yet.</p>
-                    <p class="mt-2 text-sm text-muted-foreground">
-                        Pick a topic from the navigation menu above, or a keyword on any article, and click
-                        <strong>+ Follow</strong> to build your feed — you'll also get a weekly digest email.
-                    </p>
-                </div>
-            {% endif %}
+            <div class="py-14 text-center">
+                <p class="text-muted-foreground">Nothing saved yet.</p>
+                <p class="mt-2 text-sm text-muted-foreground">
+                    Click <strong>+ Save for later</strong> on any article to add it here.
+                </p>
+            </div>
         {% endfor %}
     </div>
 

@@ -35,7 +35,16 @@ from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
-from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Keyword
+from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Bookmark, Keyword, KeywordFollow
+
+# A keyword used on this many articles or fewer has nothing meaningful to
+# "follow" yet — a keyword used exactly once is structurally guaranteed to
+# never surface a second article. Only gates whether the Follow *button*
+# shows (keyword_follow_toggle, ArticleListView below) — an existing follow
+# on a keyword that later drops back to/below this count is left alone
+# (see KeywordFollow's own docstring), so this constant is deliberately not
+# consulted by ForYouView or send_topic_digests.
+KEYWORD_FOLLOW_MIN_ARTICLES = 1
 from .seo import breadcrumb_list_structured_data, news_article_structured_data, person_structured_data
 
 # Article types treated as "peer-reviewed research" for the homepage's
@@ -259,6 +268,18 @@ class ArticleListView(ListView):
             if selected_keyword_slug else ''
         )
         context['selected_keyword_label'] = selected_keyword_label
+        context['keyword_follow_eligible'] = False
+        context['is_following_keyword'] = False
+        if selected_keyword_slug:
+            keyword = Keyword.objects.filter(slug=selected_keyword_slug).annotate(
+                article_count=Count('articles'),
+            ).first()
+            if keyword and keyword.article_count > KEYWORD_FOLLOW_MIN_ARTICLES:
+                context['keyword_follow_eligible'] = True
+                context['is_following_keyword'] = (
+                    self.request.user.is_authenticated
+                    and KeywordFollow.objects.filter(user=self.request.user, keyword=keyword).exists()
+                )
         # Pre-fills the Tagify keyword-search box (article_list.html) in its
         # expected format — same {"value", "slug"} shape keyword_autocomplete
         # returns, so the same JS "add" handler that reads .data.slug works
@@ -284,11 +305,14 @@ class ArticleListView(ListView):
 @method_decorator(login_required, name='dispatch')
 class ForYouView(ListView):
     """A reader's personalized feed — published articles from every Section
-    they follow (see sections.models.SectionFollow, ROADMAP.md Phase 10
-    Session 3), most recent first. login_required rather than hiding the
-    nav link for an anonymous visitor — there's no feed to build without an
-    account to key follows off of, so the page itself explains that instead
-    of 404ing or silently redirecting.
+    or Keyword they follow (see sections.models.SectionFollow,
+    articles.models.KeywordFollow, ROADMAP.md Phase 10 Sessions 3 & 5),
+    combined into one de-duplicated feed (an article matching both a
+    followed section and a followed keyword appears once, not twice), most
+    recent first. login_required rather than hiding the nav link for an
+    anonymous visitor — there's no feed to build without an account to key
+    follows off of, so the page itself explains that instead of 404ing or
+    silently redirecting.
     """
 
     model = Article
@@ -300,13 +324,22 @@ class ForYouView(ListView):
         followed_section_ids = SectionFollow.objects.filter(
             user=self.request.user,
         ).values_list('section_id', flat=True)
+        followed_keyword_ids = KeywordFollow.objects.filter(
+            user=self.request.user,
+        ).values_list('keyword_id', flat=True)
         return Article.objects.filter(
-            status=Article.Status.PUBLISHED, section_id__in=followed_section_ids,
-        ).order_by('-is_pinned', '-publication_date', '-created_at').prefetch_related('articleauthor_set__user')
+            Q(section_id__in=followed_section_ids) | Q(keyword_tags__in=followed_keyword_ids),
+            status=Article.Status.PUBLISHED,
+        ).distinct().order_by(
+            '-is_pinned', '-publication_date', '-created_at',
+        ).prefetch_related('articleauthor_set__user')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['has_follows'] = SectionFollow.objects.filter(user=self.request.user).exists()
+        context['has_follows'] = (
+            SectionFollow.objects.filter(user=self.request.user).exists()
+            or KeywordFollow.objects.filter(user=self.request.user).exists()
+        )
         context['meta_title'] = f'For You — {settings.JOURNAL_NAME}'
         context['meta_robots'] = 'noindex, follow'  # personalized, not a page worth indexing
         return context
@@ -348,6 +381,10 @@ class ArticleDetailView(DetailView):
                     'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
                 }
         context['show_full_text'] = show_full_text
+        context['is_bookmarked'] = (
+            self.request.user.is_authenticated
+            and Bookmark.objects.filter(user=self.request.user, article=self.object).exists()
+        )
         context['keyword_list'] = list(self.object.keyword_tags.all())
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
         context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
@@ -520,6 +557,60 @@ def article_download(request, slug):
     return redirect(article.pdf_file.url)
 
 
+@login_required
+@require_POST
+def article_bookmark_toggle(request, slug):
+    """Save/unsave, in one endpoint — same shape as
+    sections:section_follow_toggle (the template only needs the current
+    state to decide which label to show). Deliberately not paywall-gated —
+    an abstract-only, subscription-required article can still be saved for
+    later; a reader shouldn't have to pass the paywall just to bookmark
+    something they intend to subscribe and come back to.
+    """
+    article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
+    bookmark, created = Bookmark.objects.get_or_create(user=request.user, article=article)
+    if not created:
+        bookmark.delete()
+        messages.success(request, 'Removed from your reading list.')
+    else:
+        messages.success(request, 'Saved to your reading list.')
+    return redirect('articles:article_detail', slug=article.slug)
+
+
+@method_decorator(login_required, name='dispatch')
+class ReadingListView(ListView):
+    """A reader's saved articles (Bookmark, see above), most recently saved
+    first. login_required rather than hiding the nav link — there's no list
+    to build without an account to key bookmarks off of.
+    """
+
+    model = Article
+    template_name = 'articles/reading_list.html'
+    context_object_name = 'articles'
+    paginate_by = 10
+
+    def get_queryset(self):
+        bookmarked_article_ids = Bookmark.objects.filter(
+            user=self.request.user,
+        ).order_by('-bookmarked_at').values_list('article_id', flat=True)
+        # Bookmark.Meta.ordering (-bookmarked_at) is lost once articles are
+        # pulled through a separate Article queryset — Case/When preserves
+        # the original save order instead of falling back to Article's own
+        # default ordering (-is_pinned, -publication_date, ...), which would
+        # otherwise silently reorder a reader's own reading list out from
+        # under them every time a newly-pinned article jumped to the top.
+        preserved_order = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(bookmarked_article_ids)])
+        return Article.objects.filter(
+            pk__in=bookmarked_article_ids, status=Article.Status.PUBLISHED,
+        ).order_by(preserved_order).prefetch_related('articleauthor_set__user')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['meta_title'] = f'Reading List — {settings.JOURNAL_NAME}'
+        context['meta_robots'] = 'noindex, follow'  # personal, not a page worth indexing
+        return context
+
+
 # Chars MySQL's BOOLEAN MODE gives special meaning to (+ - < > ( ) ~ * " @) —
 # stripped from each token before it's wrapped as a required prefix match,
 # so a reader typing e.g. "COVID-19" doesn't accidentally write boolean syntax.
@@ -630,6 +721,33 @@ def keyword_autocomplete(request):
     query = request.GET.get('q', '').strip()
     keywords = Keyword.objects.filter(name__icontains=query)[:20] if query else Keyword.objects.all()[:20]
     return JsonResponse([{'value': kw.name, 'slug': kw.slug} for kw in keywords], safe=False)
+
+
+@login_required
+@require_POST
+def keyword_follow_toggle(request, slug):
+    """Follow/unfollow, in one endpoint — same shape as
+    sections:section_follow_toggle and articles:article_bookmark_toggle.
+
+    The KEYWORD_FOLLOW_MIN_ARTICLES eligibility check only gates *creating*
+    a new follow — removing an existing one always works regardless of the
+    keyword's current usage count. Otherwise a keyword that later drops
+    back to/below the threshold (e.g. an article unpublished or retagged)
+    would leave an existing follower with no way to unfollow it from here,
+    contradicting KeywordFollow's own docstring, which promises exactly
+    that an existing follow is left alone by a usage change.
+    """
+    keyword = get_object_or_404(Keyword, slug=slug)
+    existing = KeywordFollow.objects.filter(user=request.user, keyword=keyword).first()
+    if existing:
+        existing.delete()
+        messages.success(request, f'Unfollowed "{keyword.name}".')
+    else:
+        if keyword.articles.count() <= KEYWORD_FOLLOW_MIN_ARTICLES:
+            raise Http404
+        KeywordFollow.objects.create(user=request.user, keyword=keyword)
+        messages.success(request, f'Following "{keyword.name}" — new articles will appear in your feed and weekly digest.')
+    return redirect(f"{reverse('articles:article_list')}?keyword={keyword.slug}")
 
 
 # -- Editorial article management (CRUD, not public browsing) --------------

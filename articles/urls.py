@@ -16,8 +16,10 @@ urlpatterns = [
     path('index/', views.HomeView.as_view(), name='home'),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
     path('for-you/', views.ForYouView.as_view(), name='for_you'),
+    path('reading-list/', views.ReadingListView.as_view(), name='reading_list'),
     path('search/', views.SearchView.as_view(), name='search'),
     path('keywords/autocomplete/', views.keyword_autocomplete, name='keyword_autocomplete'),
+    path('keywords/<slug:slug>/follow/', views.keyword_follow_toggle, name='keyword_follow_toggle'),
     path('feed/', LatestArticlesFeed(), name='latest_feed'),
     path('feed/atom/', LatestArticlesAtomFeed(), name='latest_feed_atom'),
     # Must come before <slug:slug> below — a bare short code (e.g. "3f2a4")
@@ -32,6 +34,7 @@ urlpatterns = [
         views.article_citation, name='article_citation',
     ),
     path('articles/<slug:slug>/download/', views.article_download, name='article_download'),
+    path('articles/<slug:slug>/bookmark/', views.article_bookmark_toggle, name='article_bookmark_toggle'),
 
     # Editorial CRUD — Editor/EiC/Admin only (see EDITORIAL_ROLES in views.py)
     path('manage/articles/', views.ArticleManageListView.as_view(), name='manage_article_list'),

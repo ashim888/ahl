@@ -282,3 +282,52 @@ class ArticleView(models.Model):
 
     def __str__(self):
         return f'View of {self.article} at {self.viewed_at}'
+
+
+class Bookmark(models.Model):
+    """A reader saving an article for later ("read later" — ROADMAP.md
+    Phase 10 deferred list). Distinct from ArticleView above — that's an
+    anonymous, session-keyed page-view event for the Trending widget;
+    a Bookmark is an explicit, account-only save, shown back to the reader
+    themselves on their reading list (/reading-list/) and profile page.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bookmarks')
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='bookmarked_by')
+    bookmarked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-bookmarked_at']
+        unique_together = ('user', 'article')
+        indexes = [models.Index(fields=['user', '-bookmarked_at'])]
+
+    def __str__(self):
+        return f'{self.user} saved {self.article}'
+
+
+class KeywordFollow(models.Model):
+    """A reader following a Keyword for the personalized feed (/for-you/)
+    and weekly digest — ROADMAP.md Phase 10 Session 5, folded into the same
+    feed/digest sections.SectionFollow already powers, not a second
+    parallel system. Unlike Section (curated, editorially maintained),
+    Keyword is coined ad hoc per-article by whichever editor is tagging it,
+    so the Follow control itself is only ever shown (see
+    articles/views.py:keyword_follow_toggle) on a keyword already used on
+    more than one article — a keyword used once is structurally guaranteed
+    to never surface a second article, so there's nothing meaningful to
+    follow yet. That eligibility check happens at the view layer, not here,
+    since a keyword can drop below the threshold later (e.g. an article
+    unpublished) without needing to retroactively invalidate existing
+    follows.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='keyword_follows')
+    keyword = models.ForeignKey(Keyword, on_delete=models.CASCADE, related_name='followers')
+    followed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-followed_at']
+        unique_together = ('user', 'keyword')
+
+    def __str__(self):
+        return f'{self.user} follows {self.keyword}'

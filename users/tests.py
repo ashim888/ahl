@@ -589,6 +589,79 @@ class ProfileFollowedSectionsTests(TestCase):
         self.assertContains(response, 'Not following any sections yet')
 
 
+class ProfileSavedArticlesTests(TestCase):
+    """SAVED ARTICLES block (ROADMAP.md Phase 10 deferred list —
+    bookmarks/read-later) — lists a reader's articles.models.Bookmark rows
+    with a remove action.
+    """
+
+    def test_saved_article_listed(self):
+        from articles.models import Article, Bookmark
+
+        article = Article.objects.create(
+            title='Profile Test Article', slug='profile-test-bookmark-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        reader = make_user('profile-bookmark-reader@example.com', User.Role.UNVERIFIED)
+        Bookmark.objects.create(user=reader, article=article)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'SAVED ARTICLES')
+        self.assertContains(response, 'Profile Test Article')
+
+    def test_remove_button_on_profile_removes_the_bookmark(self):
+        from articles.models import Article, Bookmark
+
+        article = Article.objects.create(
+            title='Profile Remove Article', slug='profile-remove-bookmark-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        reader = make_user('profile-remove-bookmark-reader@example.com', User.Role.UNVERIFIED)
+        Bookmark.objects.create(user=reader, article=article)
+        self.client.force_login(reader)
+        self.client.post(reverse('articles:article_bookmark_toggle', args=[article.slug]))
+        self.assertFalse(Bookmark.objects.filter(user=reader, article=article).exists())
+
+    def test_empty_state_when_nothing_saved(self):
+        reader = make_user('profile-no-bookmark-reader@example.com', User.Role.UNVERIFIED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'Nothing saved yet')
+
+
+class ProfileFollowedKeywordsTests(TestCase):
+    """FOLLOWED KEYWORDS block (ROADMAP.md Phase 10 Session 5) — lists a
+    reader's articles.models.KeywordFollow rows with an unfollow action.
+    """
+
+    def test_followed_keyword_listed(self):
+        from articles.models import Keyword, KeywordFollow
+
+        keyword = Keyword.objects.create(name='Profile Test Keyword', slug='profile-test-keyword')
+        reader = make_user('profile-keyword-reader@example.com', User.Role.UNVERIFIED)
+        KeywordFollow.objects.create(user=reader, keyword=keyword)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'FOLLOWED KEYWORDS')
+        self.assertContains(response, 'Profile Test Keyword')
+
+    def test_unfollow_button_on_profile_removes_the_follow(self):
+        from articles.models import Keyword, KeywordFollow
+
+        keyword = Keyword.objects.create(name='Profile Unfollow Keyword', slug='profile-unfollow-keyword')
+        reader = make_user('profile-keyword-unfollow-reader@example.com', User.Role.UNVERIFIED)
+        KeywordFollow.objects.create(user=reader, keyword=keyword)
+        self.client.force_login(reader)
+        self.client.post(reverse('articles:keyword_follow_toggle', args=[keyword.slug]))
+        self.assertFalse(KeywordFollow.objects.filter(user=reader, keyword=keyword).exists())
+
+    def test_empty_state_when_following_no_keywords(self):
+        reader = make_user('profile-no-keyword-reader@example.com', User.Role.UNVERIFIED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'Not following any keywords yet')
+
+
 class Custom403PageTests(TestCase):
     """role_required (users/decorators.py) raises PermissionDenied for a
     logged-in-but-wrong-role user — Django previously fell back to its own

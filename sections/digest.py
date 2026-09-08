@@ -1,7 +1,8 @@
-"""Weekly "what's new in your followed sections" email — see ROADMAP.md
-Phase 10 Session 3. Runs on a django_q schedule (see the
-0004_topic_digest_schedule migration), the same worker process
-(`qcluster`) newsletter sends already require — no new infrastructure.
+"""Weekly "what's new from what you follow" email — see ROADMAP.md Phase 10
+Sessions 3 & 5 (Section- and Keyword-follows, combined into one digest, not
+two). Runs on a django_q schedule (see the 0004_topic_digest_schedule
+migration), the same worker process (`qcluster`) newsletter sends already
+require — no new infrastructure.
 
 Modeled on newsletter.tasks.send_newsletter_issue's one-connection,
 per-recipient-isolated send loop, for the same reason: this is also a bulk
@@ -15,10 +16,11 @@ import logging
 
 from django.conf import settings
 from django.core.mail import get_connection, send_mail
+from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 
-from articles.models import Article
+from articles.models import Article, KeywordFollow
 from users.models import User
 
 from .models import SectionFollow
@@ -48,16 +50,20 @@ def _digest_body(user, articles):
 
 
 def send_topic_digests():
-    """One email per reader following at least one Section, listing
-    published articles from those sections in the last DIGEST_LOOKBACK_DAYS
-    days (by publication_date — when it actually went live, not
-    created_at, which can predate publication by a long draft period).
+    """One email per reader following at least one Section or Keyword,
+    listing published articles matching either in the last
+    DIGEST_LOOKBACK_DAYS days (by publication_date — when it actually went
+    live, not created_at, which can predate publication by a long draft
+    period), combined and de-duplicated — an article matching both a
+    followed section and a followed keyword is listed once, not twice.
     Skips a reader with nothing new this week — no "nothing to report"
     filler email. Returns the number of digests actually sent, mirroring
     send_newsletter_issue's return shape.
     """
     cutoff_date = timezone.localdate() - datetime.timedelta(days=DIGEST_LOOKBACK_DAYS)
-    followers = User.objects.filter(section_follows__isnull=False).distinct()
+    followers = User.objects.filter(
+        Q(section_follows__isnull=False) | Q(keyword_follows__isnull=False),
+    ).distinct()
 
     connection = get_connection()
     connection.open()
@@ -65,10 +71,12 @@ def send_topic_digests():
     try:
         for user in followers:
             section_ids = SectionFollow.objects.filter(user=user).values_list('section_id', flat=True)
+            keyword_ids = KeywordFollow.objects.filter(user=user).values_list('keyword_id', flat=True)
             articles = list(
                 Article.objects.filter(
-                    section_id__in=section_ids, status=Article.Status.PUBLISHED, publication_date__gte=cutoff_date,
-                ).order_by('-publication_date', '-created_at'),
+                    Q(section_id__in=section_ids) | Q(keyword_tags__in=keyword_ids),
+                    status=Article.Status.PUBLISHED, publication_date__gte=cutoff_date,
+                ).distinct().order_by('-publication_date', '-created_at'),
             )
             if not articles:
                 continue

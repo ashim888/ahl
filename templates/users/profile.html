@@ -85,6 +85,71 @@
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">FOLLOWED KEYWORDS</p>
+            {% if followed_keywords %}
+                <a href="{% url 'articles:for_you' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
+                    VIEW YOUR FEED →
+                </a>
+            {% endif %}
+        </div>
+        {% if followed_keywords %}
+            <div class="divide-y divide-border border-t border-border">
+                {% for follow in followed_keywords %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <a href="{% url 'articles:article_list' %}?keyword={{ follow.keyword.slug }}" class="text-sm font-medium hover:text-accent">
+                            {{ follow.keyword.name }}
+                        </a>
+                        <form method="post" action="{% url 'articles:keyword_follow_toggle' follow.keyword.slug %}">
+                            {% csrf_token %}
+                            <button type="submit" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent underline">
+                                Unfollow
+                            </button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-sm text-muted-foreground">
+                Not following any keywords yet — on an article tagged with a keyword used more than once, click
+                <strong>+ Follow</strong> next to it.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="mt-10">
+        <div class="flex items-center justify-between mb-4">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">SAVED ARTICLES</p>
+            {% if saved_articles %}
+                <a href="{% url 'articles:reading_list' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
+                    VIEW READING LIST →
+                </a>
+            {% endif %}
+        </div>
+        {% if saved_articles %}
+            <div class="divide-y divide-border border-t border-border">
+                {% for bookmark in saved_articles %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <a href="{% url 'articles:article_detail' bookmark.article.slug %}" class="text-sm font-medium hover:text-accent truncate">
+                            {{ bookmark.article.title }}
+                        </a>
+                        <form method="post" action="{% url 'articles:article_bookmark_toggle' bookmark.article.slug %}">
+                            {% csrf_token %}
+                            <button type="submit" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent underline whitespace-nowrap">
+                                Remove
+                            </button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-sm text-muted-foreground">
+                Nothing saved yet — click <strong>+ Save for later</strong> on any article to add it here.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="mt-10">
+        <div class="flex items-center justify-between mb-4">
             <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">STORY PITCHES</p>
             <a href="{% url 'pitches:pitch_create' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
                 PITCH A STORY →
