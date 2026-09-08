@@ -556,6 +556,39 @@ class ProfileViewPitchesTests(TestCase):
         self.assertContains(response, 'STORY PITCHES')
 
 
+class ProfileFollowedSectionsTests(TestCase):
+    """FOLLOWED SECTIONS block (ROADMAP.md Phase 10 Session 3) — lists a
+    reader's sections.models.SectionFollow rows with an unfollow action.
+    """
+
+    def test_followed_section_listed(self):
+        from sections.models import Section, SectionFollow
+
+        section = Section.objects.create(name_en='Profile Test Section', slug='profile-test-section')
+        reader = make_user('profile-follow-reader@example.com', User.Role.UNVERIFIED)
+        SectionFollow.objects.create(user=reader, section=section)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'FOLLOWED SECTIONS')
+        self.assertContains(response, 'Profile Test Section')
+
+    def test_unfollow_button_on_profile_removes_the_follow(self):
+        from sections.models import Section, SectionFollow
+
+        section = Section.objects.create(name_en='Profile Unfollow Section', slug='profile-unfollow-section')
+        reader = make_user('profile-unfollow-reader@example.com', User.Role.UNVERIFIED)
+        SectionFollow.objects.create(user=reader, section=section)
+        self.client.force_login(reader)
+        self.client.post(reverse('sections:section_follow_toggle', args=[section.slug]))
+        self.assertFalse(SectionFollow.objects.filter(user=reader, section=section).exists())
+
+    def test_empty_state_when_following_nothing(self):
+        reader = make_user('profile-no-follow-reader@example.com', User.Role.UNVERIFIED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'Not following any sections yet')
+
+
 class Custom403PageTests(TestCase):
     """role_required (users/decorators.py) raises PermissionDenied for a
     logged-in-but-wrong-role user — Django previously fell back to its own

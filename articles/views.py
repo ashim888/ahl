@@ -4,6 +4,7 @@ import re
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import IntegrityError
 from django.db.models import Case, Count, F, FloatField, IntegerField, Q, Value, When, prefetch_related_objects
@@ -25,6 +26,7 @@ from billing.access import (
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from newsletter.models import Subscriber
+from sections.models import SectionFollow
 from users.decorators import role_required
 from users.models import User
 
@@ -276,6 +278,37 @@ class ArticleListView(ListView):
         else:
             context['meta_title'] = f'All Articles — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'Browse all published articles from {settings.JOURNAL_NAME}.'
+        return context
+
+
+@method_decorator(login_required, name='dispatch')
+class ForYouView(ListView):
+    """A reader's personalized feed — published articles from every Section
+    they follow (see sections.models.SectionFollow, ROADMAP.md Phase 10
+    Session 3), most recent first. login_required rather than hiding the
+    nav link for an anonymous visitor — there's no feed to build without an
+    account to key follows off of, so the page itself explains that instead
+    of 404ing or silently redirecting.
+    """
+
+    model = Article
+    template_name = 'articles/for_you.html'
+    context_object_name = 'articles'
+    paginate_by = 10
+
+    def get_queryset(self):
+        followed_section_ids = SectionFollow.objects.filter(
+            user=self.request.user,
+        ).values_list('section_id', flat=True)
+        return Article.objects.filter(
+            status=Article.Status.PUBLISHED, section_id__in=followed_section_ids,
+        ).order_by('-is_pinned', '-publication_date', '-created_at').prefetch_related('articleauthor_set__user')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['has_follows'] = SectionFollow.objects.filter(user=self.request.user).exists()
+        context['meta_title'] = f'For You — {settings.JOURNAL_NAME}'
+        context['meta_robots'] = 'noindex, follow'  # personalized, not a page worth indexing
         return context
 
 

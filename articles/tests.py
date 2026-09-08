@@ -6,6 +6,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
+from sections.models import Section, SectionFollow
+
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .forms import ArticleForm, TagifyKeywordsField
@@ -1565,3 +1567,51 @@ class LanguageSwitcherTests(TestCase):
         self.client.post(reverse('set_language'), {'language': 'ne', 'next': reverse('articles:home')})
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
         self.assertContains(response, article.title)
+
+
+class ForYouViewTests(TestCase):
+    """articles:for_you — a reader's personalized feed from their followed
+    sections (sections.models.SectionFollow, ROADMAP.md Phase 10 Session 3).
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.section = Section.objects.create(name_en='Test For You Section', slug='test-for-you-section')
+        self.other_section = Section.objects.create(name_en='Test For You Other', slug='test-for-you-other')
+        self.reader = User.objects.create_user(
+            email='for-you-reader@example.com', password='pw', first_name='F', last_name='Y',
+        )
+
+    def test_anonymous_visitor_is_redirected_to_login(self):
+        response = self.client.get(reverse('articles:for_you'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('users:login'), response.url)
+
+    def test_shows_articles_from_followed_sections_only(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        followed_article = make_article('for-you-followed', Article.ArticleType.NEWS_COMMENTARY)
+        followed_article.section = self.section
+        followed_article.save(update_fields=['section'])
+        unfollowed_article = make_article('for-you-unfollowed', Article.ArticleType.NEWS_COMMENTARY)
+        unfollowed_article.section = self.other_section
+        unfollowed_article.save(update_fields=['section'])
+
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:for_you'))
+        articles = list(response.context['articles'])
+        self.assertIn(followed_article, articles)
+        self.assertNotIn(unfollowed_article, articles)
+
+    def test_empty_state_when_following_nothing(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:for_you'))
+        self.assertFalse(response.context['has_follows'])
+        self.assertContains(response, 'not following any sections yet')
+
+    def test_empty_state_differs_when_following_something_with_no_new_articles(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('articles:for_you'))
+        self.assertTrue(response.context['has_follows'])
+        self.assertContains(response, 'check back soon')

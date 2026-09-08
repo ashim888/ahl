@@ -15,6 +15,7 @@ from django_ratelimit.decorators import ratelimit
 
 from articles.models import Article
 from pitches.models import StoryPitch
+from sections.models import Section
 from training.models import Enrollment
 
 from .decorators import role_required
@@ -124,6 +125,9 @@ class ProfileView(DetailView):
         context['story_pitches'] = StoryPitch.objects.filter(
             submitter=self.request.user,
         ).order_by('-created_at')[:5]
+        context['followed_sections'] = Section.objects.filter(
+            followers__user=self.request.user,
+        ).order_by('name')
         return context
 
 

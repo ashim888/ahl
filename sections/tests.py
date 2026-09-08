@@ -1,11 +1,16 @@
+import datetime
+
+from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from articles.models import Article
 from users.models import User
 
-from .models import Section
+from .digest import send_topic_digests
+from .models import Section, SectionFollow
 
 
 def make_article(slug, section=None, status=Article.Status.PUBLISHED):
@@ -311,6 +316,98 @@ class SectionDetailViewTests(TestCase):
         self.assertIn('"@type": "BreadcrumbList"', content)
         self.assertIn('Test Top', content)
         self.assertIn('Test Child', content)
+
+
+class SectionFollowToggleTests(TestCase):
+    """Follow/unfollow via sections:section_follow_toggle (ROADMAP.md Phase
+    10 Session 3) — one endpoint handles both directions, keyed off whether
+    a SectionFollow row already exists.
+    """
+
+    def setUp(self):
+        self.section = Section.objects.create(name_en='Test Followable', slug='test-followable')
+        self.reader = make_reader()
+
+    def test_following_a_section_creates_a_follow(self):
+        self.client.force_login(self.reader)
+        self.client.post(reverse('sections:section_follow_toggle', args=['test-followable']))
+        self.assertTrue(SectionFollow.objects.filter(user=self.reader, section=self.section).exists())
+
+    def test_toggling_again_removes_the_follow(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        self.client.force_login(self.reader)
+        self.client.post(reverse('sections:section_follow_toggle', args=['test-followable']))
+        self.assertFalse(SectionFollow.objects.filter(user=self.reader, section=self.section).exists())
+
+    def test_anonymous_visitor_is_redirected_to_login(self):
+        response = self.client.post(reverse('sections:section_follow_toggle', args=['test-followable']))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('users:login'), response.url)
+
+    def test_section_detail_reflects_follow_state(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('sections:section_detail', args=['test-followable']))
+        self.assertFalse(response.context['is_following'])
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        response = self.client.get(reverse('sections:section_detail', args=['test-followable']))
+        self.assertTrue(response.context['is_following'])
+
+    def test_link_override_section_cannot_be_followed(self):
+        Section.objects.create(name_en='Test Training Follow', slug='test-training-follow', link_url_name='training:course_list')
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('sections:section_follow_toggle', args=['test-training-follow']))
+        self.assertEqual(response.status_code, 404)
+
+
+class TopicDigestTests(TestCase):
+    """sections.digest.send_topic_digests — the weekly email listing new
+    articles from a reader's followed sections.
+    """
+
+    def setUp(self):
+        self.section = Section.objects.create(name_en='Test Digest Section', slug='test-digest-section')
+        self.other_section = Section.objects.create(name_en='Test Other Digest', slug='test-other-digest-section')
+        self.reader = make_reader(email='digest-reader@example.com')
+
+    def test_follower_with_a_recent_article_gets_a_digest(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        article = make_article('test-digest-recent', section=self.section)
+        sent = send_topic_digests()
+        self.assertEqual(sent, 1)
+        self.assertEqual(mail.outbox[0].to, [self.reader.email])
+        self.assertIn(article.title, mail.outbox[0].body)
+
+    def test_follower_with_nothing_new_gets_no_email(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        sent = send_topic_digests()
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_article_from_an_unfollowed_section_is_excluded(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        make_article('test-digest-unfollowed', section=self.other_section)
+        sent = send_topic_digests()
+        self.assertEqual(sent, 0)
+
+    def test_article_older_than_the_lookback_window_is_excluded(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        old_article = make_article('test-digest-old', section=self.section)
+        old_article.publication_date = timezone.localdate() - datetime.timedelta(days=30)
+        old_article.save(update_fields=['publication_date'])
+        sent = send_topic_digests()
+        self.assertEqual(sent, 0)
+
+    def test_non_follower_gets_no_digest(self):
+        make_article('test-digest-no-follower', section=self.section)
+        sent = send_topic_digests()
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_draft_article_is_excluded(self):
+        SectionFollow.objects.create(user=self.reader, section=self.section)
+        make_article('test-digest-draft', section=self.section, status=Article.Status.DRAFT)
+        sent = send_topic_digests()
+        self.assertEqual(sent, 0)
 
 
 class PrimaryNavRenderingTests(TestCase):

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
@@ -12,7 +13,7 @@ from users.decorators import role_required
 from users.models import User
 
 from .forms import SectionForm
-from .models import Section
+from .models import Section, SectionFollow
 
 # Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
@@ -52,6 +53,10 @@ class SectionDetailView(DetailView):
         context['is_paginated'] = page_obj.has_other_pages()
         context['meta_title'] = f'{self.object.name} — {settings.JOURNAL_NAME}'
         context['meta_description'] = f'{self.object.name} coverage from {settings.JOURNAL_NAME}.'
+        context['is_following'] = (
+            self.request.user.is_authenticated
+            and SectionFollow.objects.filter(user=self.request.user, section=self.object).exists()
+        )
 
         breadcrumb_items = [('Home', self.request.build_absolute_uri(reverse('articles:home')))]
         if self.object.parent:
@@ -61,6 +66,26 @@ class SectionDetailView(DetailView):
         breadcrumb_items.append((self.object.name, None))
         context['breadcrumb_json'] = breadcrumb_list_structured_data(breadcrumb_items)
         return context
+
+
+@login_required
+@require_POST
+def section_follow_toggle(request, slug):
+    """Follow/unfollow, in one endpoint — the template only ever needs to
+    know the current state (is_following) to decide which label to show,
+    not which of two separate URLs to point at. link_url_name='' excludes
+    Training/Issues-style nav shortcuts, same as SectionDetailView's own
+    queryset — there's no landing page (and so no article feed) for a
+    follow of one of those to ever populate.
+    """
+    section = get_object_or_404(Section, slug=slug, link_url_name='')
+    follow, created = SectionFollow.objects.get_or_create(user=request.user, section=section)
+    if not created:
+        follow.delete()
+        messages.success(request, f'Unfollowed "{section.name}".')
+    else:
+        messages.success(request, f'Following "{section.name}" — new articles will appear in your feed and weekly digest.')
+    return redirect('sections:section_detail', slug=section.slug)
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')

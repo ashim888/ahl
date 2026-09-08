@@ -6,6 +6,7 @@ app_name = 'sections'
 
 urlpatterns = [
     path('sections/<slug:slug>/', views.SectionDetailView.as_view(), name='section_detail'),
+    path('sections/<slug:slug>/follow/', views.section_follow_toggle, name='section_follow_toggle'),
 
     path('manage/sections/', views.SectionManageListView.as_view(), name='manage_section_list'),
     path('manage/sections/new/', views.SectionCreateView.as_view(), name='manage_section_create'),

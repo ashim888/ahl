@@ -15,6 +15,7 @@ urlpatterns = [
     path('', views.ComingSoonView.as_view(), name='coming_soon'),
     path('index/', views.HomeView.as_view(), name='home'),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
+    path('for-you/', views.ForYouView.as_view(), name='for_you'),
     path('search/', views.SearchView.as_view(), name='search'),
     path('keywords/autocomplete/', views.keyword_autocomplete, name='keyword_autocomplete'),
     path('feed/', LatestArticlesFeed(), name='latest_feed'),

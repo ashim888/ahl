@@ -2,48 +2,11 @@
 
 {% block title %}{{ meta_title }}{% endblock %}
 
-{% block extra_head %}
-    {% if breadcrumb_json %}
-        <script type="application/ld+json">{{ breadcrumb_json }}</script>
-    {% endif %}
-{% endblock %}
-
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    {% if section.parent %}
-        <a href="{{ section.parent.nav_url }}" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">
-            ← {{ section.parent.name|upper }}
-        </a>
-    {% endif %}
-    <div class="flex items-center justify-between gap-4 mt-2">
-        <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{{ section.name }}</h1>
-        {% if user.is_authenticated %}
-            <form method="post" action="{% url 'sections:section_follow_toggle' section.slug %}">
-                {% csrf_token %}
-                <button type="submit"
-                        class="font-mono-editorial text-xs tracking-widest px-4 py-2 border {% if is_following %}border-foreground bg-foreground text-primary-foreground hover:bg-accent hover:border-accent{% else %}border-foreground hover:border-accent hover:text-accent{% endif %} transition-colors whitespace-nowrap">
-                    {% if is_following %}FOLLOWING ✓{% else %}+ FOLLOW{% endif %}
-                </button>
-            </form>
-        {% else %}
-            <a href="{% url 'users:login' %}?next={{ request.path }}"
-               class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:border-accent hover:text-accent transition-colors whitespace-nowrap">
-                LOG IN TO FOLLOW
-            </a>
-        {% endif %}
-    </div>
-
-    {% if section.children.all %}
-        <div class="mt-6 flex flex-wrap gap-2">
-            {% for child in section.children.all %}
-                <a href="{{ child.nav_url }}"
-                   class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border border-border text-muted-foreground hover:border-foreground hover:text-foreground">
-                    {{ child.name|upper }}
-                </a>
-            {% endfor %}
-        </div>
-    {% endif %}
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">For You</h1>
+    <p class="mt-2 text-sm text-muted-foreground">Latest articles from the sections you follow.</p>
 
     <div class="mt-10 divide-y divide-border">
         {% for article in articles %}
@@ -58,8 +21,7 @@
                 </a>
                 <div class="flex-1 min-w-0">
                     <span class="section-label text-muted-foreground">
-                        {% if article.is_pinned %}<span class="text-accent">PINNED ·</span> {% endif %}
-                        {{ article.get_article_type_display }} · {{ article.get_access_type_display }}
+                        {% if article.section %}{{ article.section.name }} · {% endif %}{{ article.get_article_type_display }}
                     </span>
                     <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
@@ -81,7 +43,17 @@
                 </div>
             </article>
         {% empty %}
-            <p class="text-muted-foreground py-10">No articles in this section yet.</p>
+            {% if has_follows %}
+                <p class="text-muted-foreground py-10">No new articles from your followed sections yet — check back soon.</p>
+            {% else %}
+                <div class="py-14 text-center">
+                    <p class="text-muted-foreground">You're not following any sections yet.</p>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        Pick a topic from the navigation menu above and click <strong>+ Follow</strong> on its page
+                        to build your feed — you'll also get a weekly digest email.
+                    </p>
+                </div>
+            {% endif %}
         {% endfor %}
     </div>
 

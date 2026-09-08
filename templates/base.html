@@ -285,6 +285,9 @@
                                         Dashboard
                                     </a>
                                 {% endif %}
+                                <a href="{% url 'articles:for_you' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
+                                    For You
+                                </a>
                                 <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
                                     Profile
                                 </a>
@@ -358,6 +361,7 @@
                     {% if user.is_editorial_staff %}
                         <a href="{% url 'admin_custom:dashboard' %}" class="block py-2 text-sm">Dashboard</a>
                     {% endif %}
+                    <a href="{% url 'articles:for_you' %}" class="block py-2 text-sm">For You</a>
                     <a href="{% url 'users:profile' %}" class="block py-2 text-sm">Profile</a>
                     <form method="post" action="{% url 'users:logout' %}">
                         {% csrf_token %}

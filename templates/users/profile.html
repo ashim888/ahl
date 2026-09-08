@@ -50,6 +50,41 @@
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">FOLLOWED SECTIONS</p>
+            {% if followed_sections %}
+                <a href="{% url 'articles:for_you' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
+                    VIEW YOUR FEED →
+                </a>
+            {% endif %}
+        </div>
+        {% if followed_sections %}
+            <div class="divide-y divide-border border-t border-border">
+                {% for section in followed_sections %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <a href="{{ section.nav_url }}" class="text-sm font-medium hover:text-accent">{{ section.name }}</a>
+                        <form method="post" action="{% url 'sections:section_follow_toggle' section.slug %}">
+                            {% csrf_token %}
+                            <button type="submit" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent underline">
+                                Unfollow
+                            </button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="mt-3 text-xs text-muted-foreground">
+                New articles from these sections appear in your <a href="{% url 'articles:for_you' %}" class="underline hover:text-accent">For You feed</a>
+                and a weekly digest email.
+            </p>
+        {% else %}
+            <p class="text-sm text-muted-foreground">
+                Not following any sections yet — visit a topic's page and click <strong>+ Follow</strong> to build a
+                personalized feed and get a weekly digest.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="mt-10">
+        <div class="flex items-center justify-between mb-4">
             <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">STORY PITCHES</p>
             <a href="{% url 'pitches:pitch_create' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
                 PITCH A STORY →
