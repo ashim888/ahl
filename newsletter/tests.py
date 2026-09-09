@@ -7,12 +7,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django_q.models import Task
 
+from articles.models import Article
 from billing.models import SubscriptionPlan, UserSubscription
 from users.models import User
 
 from .models import NewsletterIssue, Subscriber
 from .recipients import confirmed_recipients
-from .tasks import send_newsletter_issue
+from .tasks import send_newsletter_issue, send_weekly_digest_issue
 
 
 class SubscribeFlowTests(TestCase):
@@ -180,6 +181,78 @@ class SendNewsletterIssueTaskTests(TestCase):
         # that sent_at stayed unset — the one thing that would otherwise
         # make get_send_status() report SENT regardless of the Task.
         self.assertNotEqual(issue.get_send_status(), NewsletterIssue.Status.SENT)
+
+
+class WeeklyDigestIssueTests(TestCase):
+    """newsletter.tasks.send_weekly_digest_issue — the automated cadence
+    job (ROADMAP.md Phase 10 Session 8). Reuses send_newsletter_issue for
+    the actual send, so per-recipient failure isolation etc. is already
+    covered by SendNewsletterIssueTaskTests above; these tests cover just
+    the composing/skip-when-empty logic that's new here.
+    """
+
+    def _make_article(self, slug, publication_date=None):
+        return Article.objects.create(
+            title=slug.replace('-', ' ').title(), slug=slug, abstract='Abstract text.',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+            publication_date=publication_date or timezone.localdate(),
+        )
+
+    def test_skips_entirely_when_nothing_published_that_week(self):
+        issue = send_weekly_digest_issue()
+        self.assertIsNone(issue)
+        self.assertFalse(NewsletterIssue.objects.exists())
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_creates_and_sends_an_issue_when_something_was_published(self):
+        Subscriber.objects.create(email='digest-sub@example.com', status=Subscriber.Status.CONFIRMED)
+        article = self._make_article('weekly-digest-article')
+
+        issue = send_weekly_digest_issue()
+
+        self.assertIsNotNone(issue)
+        self.assertTrue(NewsletterIssue.objects.filter(pk=issue.pk).exists())
+        self.assertIsNotNone(issue.sent_at)
+        self.assertEqual(issue.recipient_count, 1)
+        self.assertIn(article.title, issue.body_html)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_generated_issue_has_no_editor_attached(self):
+        Subscriber.objects.create(email='digest-sub2@example.com', status=Subscriber.Status.CONFIRMED)
+        self._make_article('weekly-digest-no-editor')
+        issue = send_weekly_digest_issue()
+        self.assertIsNone(issue.created_by)
+
+    def test_generated_issue_targets_all_subscribers(self):
+        self._make_article('weekly-digest-audience')
+        issue = send_weekly_digest_issue()
+        self.assertEqual(issue.audience, NewsletterIssue.Audience.ALL)
+
+    def test_article_older_than_the_lookback_window_is_excluded(self):
+        old_article = self._make_article(
+            'weekly-digest-old', publication_date=timezone.localdate() - datetime.timedelta(days=30),
+        )
+        issue = send_weekly_digest_issue()
+        self.assertIsNone(issue)
+        self.assertFalse(NewsletterIssue.objects.filter(body_html__icontains=old_article.title).exists())
+
+    def test_draft_article_is_excluded(self):
+        Article.objects.create(
+            title='Weekly Digest Draft', slug='weekly-digest-draft', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
+        )
+        issue = send_weekly_digest_issue()
+        self.assertIsNone(issue)
+
+    def test_generated_issue_appears_in_the_editorial_list(self):
+        editor = User.objects.create_user(
+            email='digest-list-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self._make_article('weekly-digest-list')
+        issue = send_weekly_digest_issue()
+        self.client.force_login(editor)
+        response = self.client.get(reverse('newsletter:manage_issue_list'))
+        self.assertContains(response, issue.subject)
 
 
 class PremiumAudienceTests(TestCase):

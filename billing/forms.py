@@ -13,7 +13,7 @@ class SubscriptionPlanForm(forms.ModelForm):
         fields = [
             'name', 'plan_type', 'price', 'duration_days', 'description', 'features',
             'grants_ad_free_reading', 'grants_unlimited_articles', 'grants_premium_newsletter',
-            'gift_articles_per_month', 'is_featured', 'is_active',
+            'grants_full_archive', 'gift_articles_per_month', 'is_featured', 'is_active',
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),

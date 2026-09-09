@@ -303,6 +303,32 @@ class ArticleListView(ListView):
         return context
 
 
+class ArchiveListView(ListView):
+    """Public browsing of archived articles (ROADMAP.md Phase 10 Session 7)
+    — titles/abstracts always visible, matching this app's existing
+    "abstract always public" convention for every other gated tier; full
+    text stays gated on the detail page (billing.access.article_is_accessible's
+    ARCHIVED branch), not hidden from this list. No login required just to
+    browse what exists, same as the main article list.
+    """
+
+    model = Article
+    template_name = 'articles/archive_list.html'
+    context_object_name = 'articles'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Article.objects.filter(
+            status=Article.Status.ARCHIVED,
+        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__user')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['meta_title'] = f'Archive — {settings.JOURNAL_NAME}'
+        context['meta_description'] = f'Archived articles from {settings.JOURNAL_NAME}.'
+        return context
+
+
 @method_decorator(login_required, name='dispatch')
 class ForYouView(ListView):
     """A reader's personalized feed — published articles from every Section
@@ -358,7 +384,11 @@ class ArticleDetailView(DetailView):
     context_object_name = 'article'
 
     def get_queryset(self):
-        return Article.objects.filter(status=Article.Status.PUBLISHED)
+        # ARCHIVED is included so an archived article stays reachable at
+        # its own permalink — full-text access is still gated (see
+        # article_is_accessible's grants_full_archive check), just not a
+        # blanket 404 the way it was before Session 7.
+        return Article.objects.filter(status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -706,8 +736,12 @@ class SearchView(ListView):
 
     def get_queryset(self):
         self.query = self.request.GET.get('q', '').strip()
+        # ARCHIVED included — "full searchability... of historical
+        # articles" (Session 7) is specifically what makes archival access
+        # worth gating as a perk; excluding archived content from search
+        # would make grants_full_archive largely undiscoverable.
         queryset = Article.objects.filter(
-            status=Article.Status.PUBLISHED,
+            status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED],
         ).prefetch_related('articleauthor_set__user')
         if self.query:
             boolean_query = _fulltext_boolean_query(self.query)

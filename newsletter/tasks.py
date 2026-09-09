@@ -1,20 +1,29 @@
-"""Runs on a django_q worker (`python manage.py qcluster`), triggered by
-newsletter/views.py's compose view via django_q.tasks.async_task — kept out
-of the request/response cycle since a real subscriber list makes this a
-send-many-emails loop that would otherwise block a submit.
+"""Runs on a django_q worker (`python manage.py qcluster`), triggered either
+by newsletter/views.py's compose view via django_q.tasks.async_task (kept
+out of the request/response cycle since a real subscriber list makes this a
+send-many-emails loop that would otherwise block a submit), or by the
+weekly-digest django_q Schedule (see send_weekly_digest_issue below and
+0003_weekly_digest_schedule.py) — same worker, same send path either way.
 """
+import datetime
 import logging
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
+
+from articles.models import Article
 
 from .emails import issue_email_text_body, render_issue_email
 from .models import NewsletterIssue
 from .recipients import confirmed_recipients
 
 logger = logging.getLogger(__name__)
+
+DIGEST_LOOKBACK_DAYS = 7
+DIGEST_ARTICLE_LIMIT = 5
 
 
 def send_newsletter_issue(issue_id):
@@ -80,3 +89,52 @@ def send_newsletter_issue(issue_id):
     issue.recipient_count = sent
     issue.save(update_fields=['sent_at', 'recipient_count'])
     return sent
+
+
+def _weekly_digest_body(articles):
+    rows = []
+    for article in articles:
+        url = f"{settings.SITE_BASE_URL}{reverse('articles:article_detail', args=[article.slug])}"
+        rows.append(
+            f'<p><a href="{url}"><strong>{escape(article.title)}</strong></a><br>{escape(article.abstract)}</p>',
+        )
+    return '\n'.join(rows)
+
+
+def send_weekly_digest_issue():
+    """Auto-composes and sends a real NewsletterIssue from the last
+    DIGEST_LOOKBACK_DAYS days' published articles (ROADMAP.md Phase 10
+    Session 8) — capped at DIGEST_ARTICLE_LIMIT, most recent first, by
+    publication_date (when it actually went live, matching
+    sections/digest.py's own recency convention). Skips entirely — no
+    issue created, nothing sent — if nothing was published that week,
+    rather than sending a thin or empty issue; mirrors send_topic_digests'
+    "skip a reader with nothing new" rule, just at the whole-issue level
+    instead of per-subscriber.
+
+    Deliberately reuses send_newsletter_issue() for the actual send rather
+    than a second, parallel send path — same branded template, same
+    unsubscribe link, same per-recipient failure isolation as a
+    manually-composed issue. created_by stays null (the field is already
+    nullable) — a system-generated issue has no editor attached, and shows
+    up in the normal /manage/newsletter/ list exactly like any other.
+    """
+    cutoff_date = timezone.localdate() - datetime.timedelta(days=DIGEST_LOOKBACK_DAYS)
+    articles = list(
+        Article.objects.filter(
+            status=Article.Status.PUBLISHED, publication_date__gte=cutoff_date,
+        ).order_by('-publication_date', '-created_at')[:DIGEST_ARTICLE_LIMIT],
+    )
+    if not articles:
+        return None
+    issue = NewsletterIssue.objects.create(
+        subject=f'This Week at {settings.JOURNAL_NAME}',
+        body_html=_weekly_digest_body(articles),
+        audience=NewsletterIssue.Audience.ALL,
+    )
+    send_newsletter_issue(issue.pk)
+    # send_newsletter_issue fetches its own copy of the row and mutates
+    # that (sent_at/recipient_count) — this local `issue` object predates
+    # that write, so it has to be refreshed before the caller sees it.
+    issue.refresh_from_db()
+    return issue

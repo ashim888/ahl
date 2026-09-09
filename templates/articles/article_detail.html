@@ -233,7 +233,13 @@
                 {% endif %}
             {% else %}
                 <div class="border border-border p-6 bg-secondary">
-                    {% if article.access_type == 'pay_per_article' %}
+                    {% if article.status == 'archived' %}
+                        <p class="section-label text-accent mb-2">Archive Access Required</p>
+                        <p class="text-sm text-muted-foreground leading-relaxed">
+                            This is an archived article — full-text access requires a subscription plan with
+                            archive access, regardless of this article's original access tier.
+                        </p>
+                    {% elif article.access_type == 'pay_per_article' %}
                         <p class="section-label text-accent mb-2">Special Article</p>
                         <p class="text-sm text-muted-foreground leading-relaxed">
                             This is a one-time-purchase special article — ₹{{ article.price }} for full access,
@@ -247,7 +253,7 @@
                     {% endif %}
                     {% if user.is_authenticated %}
                         <div class="mt-4 flex flex-wrap gap-3">
-                            {% if article.access_type == 'pay_per_article' %}
+                            {% if article.access_type == 'pay_per_article' and article.status != 'archived' %}
                                 <a href="{% url 'billing:purchase_checkout' article.slug %}"
                                    class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors">
                                     BUY FOR ₹{{ article.price }}

@@ -269,6 +269,76 @@ class GiftArticleAccessTests(TestCase):
         self.assertIsNone(get_valid_article_gift(article, gift.token))
 
 
+class ArchivedArticleAccessTests(TestCase):
+    """billing.access.article_is_accessible's ARCHIVED branch (ROADMAP.md
+    Phase 10 Session 7) — an archived article requires grants_full_archive
+    regardless of whatever access_type it had while still active, and is
+    excluded from both the metered free-sample fallback and gifting (both
+    would otherwise silently bypass the archive gate, since archiving
+    doesn't touch access_type).
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='archive-reader@example.com', password='pw', first_name='A', last_name='R',
+        )
+
+    def _subscribe(self, **plan_kwargs):
+        plan = SubscriptionPlan.objects.create(
+            name='Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+            **plan_kwargs,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        return plan
+
+    def test_archived_article_blocked_without_the_perk(self):
+        self._subscribe(grants_full_archive=False)
+        article = make_article(Article.AccessType.OPEN_ACCESS, status=Article.Status.ARCHIVED, slug_suffix='-archive-1')
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_archived_article_open_access_does_not_bypass_the_perk(self):
+        # The key behavior this session exists to fix: archiving doesn't
+        # touch access_type, so a once-open_access article must not stay
+        # free forever just because its access_type field never changed.
+        article = make_article(Article.AccessType.OPEN_ACCESS, status=Article.Status.ARCHIVED, slug_suffix='-archive-2')
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_archived_article_accessible_with_the_perk(self):
+        self._subscribe(grants_full_archive=True)
+        article = make_article(Article.AccessType.SUBSCRIPTION, status=Article.Status.ARCHIVED, slug_suffix='-archive-3')
+        self.assertTrue(article_is_accessible(self.reader, article))
+
+    def test_grants_unlimited_articles_alone_does_not_unlock_archive(self):
+        # A plan can have grants_unlimited_articles=True (the default) and
+        # grants_full_archive=False (also the default) at once — the two
+        # perks are independent; unlimited *current* articles doesn't imply
+        # unlimited *archived* ones.
+        self._subscribe(grants_unlimited_articles=True, grants_full_archive=False)
+        article = make_article(Article.AccessType.SUBSCRIPTION, status=Article.Status.ARCHIVED, slug_suffix='-archive-4')
+        self.assertFalse(article_is_accessible(self.reader, article))
+
+    def test_editorial_staff_always_sees_archived_articles(self):
+        editor = User.objects.create_user(
+            email='archive-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        article = make_article(Article.AccessType.OPEN_ACCESS, status=Article.Status.ARCHIVED, slug_suffix='-archive-5')
+        self.assertTrue(article_is_accessible(editor, article))
+
+    def test_archived_article_does_not_grant_a_free_sample(self):
+        article = make_article(Article.AccessType.SUBSCRIPTION, status=Article.Status.ARCHIVED, slug_suffix='-archive-6')
+        request = RequestFactory().get('/')
+        request.user = self.reader
+        self.assertFalse(consume_free_sample(request, article))
+
+    def test_archived_article_cannot_be_gifted(self):
+        self._subscribe(gift_articles_per_month=3)
+        article = make_article(Article.AccessType.SUBSCRIPTION, status=Article.Status.ARCHIVED, slug_suffix='-archive-7')
+        self.assertIsNone(create_or_get_article_gift(self.reader, article))
+
+
 class PlanManageFormViewTests(TestCase):
     """/manage/billing/plans/ create & update — previously untested at the
     view level, which is exactly how grants_premium_newsletter ended up
@@ -288,13 +358,14 @@ class PlanManageFormViewTests(TestCase):
             'name': 'Full Plan', 'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
             'price': '9.99', 'duration_days': 30, 'description': '',
             'grants_ad_free_reading': 'on', 'grants_unlimited_articles': 'on', 'grants_premium_newsletter': 'on',
-            'gift_articles_per_month': 3,
+            'grants_full_archive': 'on', 'gift_articles_per_month': 3,
         })
         self.assertEqual(response.status_code, 302)
         plan = SubscriptionPlan.objects.get(name='Full Plan')
         self.assertTrue(plan.grants_ad_free_reading)
         self.assertTrue(plan.grants_unlimited_articles)
         self.assertTrue(plan.grants_premium_newsletter)
+        self.assertTrue(plan.grants_full_archive)
         self.assertEqual(plan.gift_articles_per_month, 3)
 
     def test_create_without_checkboxes_saves_all_perks_off(self):
@@ -310,6 +381,7 @@ class PlanManageFormViewTests(TestCase):
         self.assertFalse(plan.grants_ad_free_reading)
         self.assertFalse(plan.grants_unlimited_articles)
         self.assertFalse(plan.grants_premium_newsletter)
+        self.assertFalse(plan.grants_full_archive)
 
     def test_update_changes_gift_allowance(self):
         plan = SubscriptionPlan.objects.create(

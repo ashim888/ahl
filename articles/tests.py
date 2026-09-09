@@ -1954,3 +1954,65 @@ class ArticleGiftTests(TestCase):
         self.client.force_login(reader)
         response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
         self.assertIsNone(response.context['gift_remaining'])
+
+
+class ArchivedArticleTests(TestCase):
+    """Archival access (ROADMAP.md Phase 10 Session 7) — an archived
+    article stays reachable at its own permalink and in search, but its
+    full text is gated behind SubscriptionPlan.grants_full_archive.
+    """
+
+    def setUp(self):
+        self.article = make_article('archived-test-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.article.status = Article.Status.ARCHIVED
+        self.article.access_type = Article.AccessType.OPEN_ACCESS
+        self.article.html_content = 'Secret archived text'
+        self.article.save(update_fields=['status', 'access_type', 'html_content'])
+
+    def test_archived_article_is_reachable_at_its_permalink(self):
+        # Previously a blanket 404 — ArticleDetailView.get_queryset() only
+        # matched PUBLISHED, so archiving silently removed the article from
+        # the public site entirely, not just its full text.
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_archived_article_hides_full_text_without_the_perk(self):
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertNotContains(response, 'Secret archived text')
+        self.assertContains(response, 'Archive Access Required')
+
+    def test_archived_article_shows_full_text_with_the_perk(self):
+        from billing.models import SubscriptionPlan, UserSubscription
+        from users.models import User
+
+        reader = User.objects.create_user(email='archive-detail-reader@example.com', password='pw', first_name='A', last_name='R')
+        plan = SubscriptionPlan.objects.create(
+            name='Archive Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30, grants_full_archive=True,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(user=reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30))
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertContains(response, 'Secret archived text')
+
+    def test_draft_article_still_404s(self):
+        # Confirms the ARCHIVED addition didn't accidentally widen the
+        # queryset beyond PUBLISHED + ARCHIVED.
+        draft = make_article('archived-scope-draft', Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT)
+        response = self.client.get(reverse('articles:article_detail', args=[draft.slug]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_search_includes_archived_articles(self):
+        response = self.client.get(reverse('articles:search'), {'q': 'archived-test-article'.replace('-', ' ')})
+        self.assertIn(self.article, list(response.context['articles']))
+
+    def test_archive_list_shows_archived_articles(self):
+        response = self.client.get(reverse('articles:archive_list'))
+        self.assertContains(response, self.article.title)
+
+    def test_archive_list_excludes_published_articles(self):
+        published = make_article('archive-list-published', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:archive_list'))
+        articles = list(response.context['articles'])
+        self.assertNotIn(published, articles)

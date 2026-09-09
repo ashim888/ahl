@@ -87,6 +87,16 @@ class SubscriptionPlan(models.Model):
                    'non-subscribers each month, via a shareable link (billing.access.create_or_get_article_gift). '
                    '0 disables gifting for this plan.',
     )
+    # Default False, same "brand-new capability" reasoning as
+    # grants_premium_newsletter/gift_articles_per_month — an archived
+    # article requires this regardless of what access_type it had while
+    # still active (see billing.access.article_is_accessible), so a
+    # once-free article doesn't stay free forever purely by accident.
+    grants_full_archive = models.BooleanField(
+        default=False,
+        help_text='Subscribers on this plan can read archived (Article.Status.ARCHIVED) articles in full, '
+                   'regardless of the access tier those articles had while still active.',
+    )
     is_featured = models.BooleanField(
         default=False, help_text='Highlight as "Most Popular" on the pricing page.',
     )

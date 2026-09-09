@@ -74,6 +74,13 @@ def article_is_accessible(user, article):
     pay-per-article ("special") articles — pay-per-article exists for readers
     who don't want a subscription, not as an extra charge on top of one.
 
+    An ARCHIVED article is checked **before** any of that — it requires
+    grants_full_archive (or editorial staff) regardless of whatever
+    access_type it had while still active, so a once-open_access article
+    doesn't stay permanently free by accident just because archiving
+    doesn't touch access_type. This is why the check has to come before the
+    OPEN_ACCESS shortcut below, not after it.
+
     This is the *real* entitlement check only — it deliberately does not
     know about the metered free-sample allowance (see consume_free_sample
     below), since that's a one-time, stateful grant rather than a durable
@@ -81,9 +88,11 @@ def article_is_accessible(user, article):
     to honor a free sample calls consume_free_sample separately when this
     returns False for a METERED_ACCESS_TYPES article.
     """
-    if article.access_type == article.AccessType.OPEN_ACCESS:
-        return True
     if user.is_authenticated and getattr(user, 'is_editorial_staff', False):
+        return True
+    if article.status == article.Status.ARCHIVED:
+        return user_has_perk(user, 'grants_full_archive')
+    if article.access_type == article.AccessType.OPEN_ACCESS:
         return True
     if user_has_perk(user, 'grants_unlimited_articles'):
         return True
@@ -124,15 +133,19 @@ def consume_free_sample(request, article):
     reader has any left this period, recording the read so it counts against
     future checks. Returns True if access is granted this way (the caller
     should treat that exactly like a real entitlement for this request), or
-    False if the article isn't a METERED_ACCESS_TYPES type or the quota is
-    already used up.
+    False if the article isn't a METERED_ACCESS_TYPES type, is archived, or
+    the quota is already used up.
 
     Only meaningful to call for a METERED_ACCESS_TYPES article the reader
     doesn't already have real access to (article_is_accessible returned
     False) — a subscriber or purchaser never reaches this, since they
-    already passed the real gate.
+    already passed the real gate. ARCHIVED is excluded even when
+    access_type happens to be 'subscription' — archiving doesn't touch
+    access_type, so without this check a free sample would quietly bypass
+    grants_full_archive, the gate article_is_accessible actually enforces
+    for archived content.
     """
-    if article.access_type not in METERED_ACCESS_TYPES:
+    if article.access_type not in METERED_ACCESS_TYPES or article.status == article.Status.ARCHIVED:
         return False
     period = _current_period()
     queryset = _metered_reads_queryset(request, period)
@@ -188,13 +201,15 @@ def get_existing_article_gift(user, article):
 
 def create_or_get_article_gift(user, article):
     """Returns an ArticleGift the caller can build a shareable link from, or
-    None if `article` isn't giftable or the user has no gift allowance left
-    this period. Regenerating for an article already gifted this period
-    returns the existing row (same link, same expiry) rather than consuming
-    a second slot of the monthly allowance — see ArticleGift's own
-    docstring.
+    None if `article` isn't giftable, is archived, or the user has no gift
+    allowance left this period. Regenerating for an article already gifted
+    this period returns the existing row (same link, same expiry) rather
+    than consuming a second slot of the monthly allowance — see
+    ArticleGift's own docstring. ARCHIVED is excluded for the same reason
+    as consume_free_sample above — archiving doesn't touch access_type, so
+    without this check a gift link would quietly bypass grants_full_archive.
     """
-    if article.access_type not in GIFTABLE_ACCESS_TYPES:
+    if article.access_type not in GIFTABLE_ACCESS_TYPES or article.status == article.Status.ARCHIVED:
         return None
     period = _current_period()
     existing = ArticleGift.objects.filter(gifter=user, article=article, period=period).first()

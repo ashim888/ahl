@@ -15,6 +15,7 @@ urlpatterns = [
     path('', views.ComingSoonView.as_view(), name='coming_soon'),
     path('index/', views.HomeView.as_view(), name='home'),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
+    path('archive/', views.ArchiveListView.as_view(), name='archive_list'),
     path('for-you/', views.ForYouView.as_view(), name='for_you'),
     path('reading-list/', views.ReadingListView.as_view(), name='reading_list'),
     path('search/', views.SearchView.as_view(), name='search'),
