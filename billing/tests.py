@@ -8,7 +8,10 @@ from django.utils import timezone
 from articles.models import Article
 from users.models import User
 
-from .access import FREE_SAMPLE_LIMIT_PER_MONTH, article_is_accessible, consume_free_sample, free_sample_reads_used
+from .access import (
+    FREE_SAMPLE_LIMIT_PER_MONTH, article_is_accessible, consume_free_sample, create_or_get_article_gift,
+    free_sample_reads_used, get_valid_article_gift, gift_articles_remaining,
+)
 from .gateway import PaymentResult
 from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
 from .views import build_comparison_matrix
@@ -177,6 +180,149 @@ class PlanPerkEnforcementTests(TestCase):
         self._subscribe()
         article = make_article(Article.AccessType.SUBSCRIPTION)
         self.assertTrue(article_is_accessible(self.reader, article))
+
+
+class GiftArticleAccessTests(TestCase):
+    """billing.access.gift_articles_remaining/create_or_get_article_gift/
+    get_valid_article_gift — "gift articles" (ROADMAP.md Phase 10).
+    """
+
+    def setUp(self):
+        self.reader = User.objects.create_user(
+            email='gift-reader@example.com', password='pw', first_name='G', last_name='R',
+        )
+
+    def _subscribe(self, **plan_kwargs):
+        plan = SubscriptionPlan.objects.create(
+            name='Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=5, duration_days=30,
+            **plan_kwargs,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.reader, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        return plan
+
+    def test_non_subscriber_has_zero_gifts_remaining(self):
+        self.assertEqual(gift_articles_remaining(self.reader), 0)
+
+    def test_default_plan_has_zero_gifts_remaining(self):
+        # Default 0, unlike grants_unlimited_articles/grants_ad_free_reading
+        # — gifting is a brand-new capability, no plan claims to grant it
+        # until an editor sets an allowance.
+        self._subscribe()
+        self.assertEqual(gift_articles_remaining(self.reader), 0)
+
+    def test_plan_with_allowance_reports_remaining(self):
+        self._subscribe(gift_articles_per_month=3)
+        self.assertEqual(gift_articles_remaining(self.reader), 3)
+
+    def test_creating_a_gift_consumes_one_slot(self):
+        self._subscribe(gift_articles_per_month=2)
+        article = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-gift-1')
+        create_or_get_article_gift(self.reader, article)
+        self.assertEqual(gift_articles_remaining(self.reader), 1)
+
+    def test_regenerating_for_the_same_article_does_not_consume_a_second_slot(self):
+        self._subscribe(gift_articles_per_month=2)
+        article = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-gift-2')
+        first = create_or_get_article_gift(self.reader, article)
+        second = create_or_get_article_gift(self.reader, article)
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(gift_articles_remaining(self.reader), 1)
+
+    def test_no_gift_created_once_allowance_is_used_up(self):
+        self._subscribe(gift_articles_per_month=1)
+        first = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-gift-3')
+        second = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-gift-4')
+        create_or_get_article_gift(self.reader, first)
+        self.assertIsNone(create_or_get_article_gift(self.reader, second))
+
+    def test_pay_per_article_is_not_giftable(self):
+        self._subscribe(gift_articles_per_month=3)
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=2)
+        self.assertIsNone(create_or_get_article_gift(self.reader, article))
+
+    def test_open_access_is_not_giftable(self):
+        self._subscribe(gift_articles_per_month=3)
+        article = make_article(Article.AccessType.OPEN_ACCESS)
+        self.assertIsNone(create_or_get_article_gift(self.reader, article))
+
+    def test_get_valid_article_gift_returns_the_gift(self):
+        self._subscribe(gift_articles_per_month=2)
+        article = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-gift-5')
+        gift = create_or_get_article_gift(self.reader, article)
+        self.assertEqual(get_valid_article_gift(article, gift.token), gift)
+
+    def test_get_valid_article_gift_returns_none_for_wrong_token(self):
+        self._subscribe(gift_articles_per_month=2)
+        article = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-gift-6')
+        create_or_get_article_gift(self.reader, article)
+        self.assertIsNone(get_valid_article_gift(article, 'not-a-real-token'))
+
+    def test_get_valid_article_gift_returns_none_once_expired(self):
+        self._subscribe(gift_articles_per_month=2)
+        article = make_article(Article.AccessType.SUBSCRIPTION, slug_suffix='-gift-7')
+        gift = create_or_get_article_gift(self.reader, article)
+        gift.expires_at = timezone.now() - datetime.timedelta(days=1)
+        gift.save(update_fields=['expires_at'])
+        self.assertIsNone(get_valid_article_gift(article, gift.token))
+
+
+class PlanManageFormViewTests(TestCase):
+    """/manage/billing/plans/ create & update — previously untested at the
+    view level, which is exactly how grants_premium_newsletter ended up
+    referenced in plan_form.html but missing from SubscriptionPlanForm.
+    Meta.fields entirely: nothing exercised the real form/view together,
+    only the model field directly (see PlanPerkEnforcementTests above).
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email='plan-form-admin@example.com', password='pw', first_name='A', last_name='D', role=User.Role.ADMIN,
+        )
+
+    def test_create_saves_every_perk_field(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('billing:manage_plan_create'), {
+            'name': 'Full Plan', 'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            'price': '9.99', 'duration_days': 30, 'description': '',
+            'grants_ad_free_reading': 'on', 'grants_unlimited_articles': 'on', 'grants_premium_newsletter': 'on',
+            'gift_articles_per_month': 3,
+        })
+        self.assertEqual(response.status_code, 302)
+        plan = SubscriptionPlan.objects.get(name='Full Plan')
+        self.assertTrue(plan.grants_ad_free_reading)
+        self.assertTrue(plan.grants_unlimited_articles)
+        self.assertTrue(plan.grants_premium_newsletter)
+        self.assertEqual(plan.gift_articles_per_month, 3)
+
+    def test_create_without_checkboxes_saves_all_perks_off(self):
+        # Unchecked HTML checkboxes aren't submitted at all — confirms the
+        # form correctly reads that as False rather than erroring or
+        # defaulting to True.
+        self.client.force_login(self.admin)
+        self.client.post(reverse('billing:manage_plan_create'), {
+            'name': 'Bare Plan', 'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            'price': '9.99', 'duration_days': 30, 'description': '', 'gift_articles_per_month': 0,
+        })
+        plan = SubscriptionPlan.objects.get(name='Bare Plan')
+        self.assertFalse(plan.grants_ad_free_reading)
+        self.assertFalse(plan.grants_unlimited_articles)
+        self.assertFalse(plan.grants_premium_newsletter)
+
+    def test_update_changes_gift_allowance(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Editable Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30, gift_articles_per_month=0,
+        )
+        self.client.force_login(self.admin)
+        self.client.post(reverse('billing:manage_plan_update', args=[plan.pk]), {
+            'name': plan.name, 'plan_type': plan.plan_type, 'price': plan.price, 'duration_days': plan.duration_days,
+            'description': '', 'gift_articles_per_month': 5,
+        })
+        plan.refresh_from_db()
+        self.assertEqual(plan.gift_articles_per_month, 5)
 
 
 class MeteredPaywallTests(TestCase):

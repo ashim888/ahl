@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
+from billing.models import ArticleGift, SubscriptionPlan, UserSubscription
 from sections.models import Section, SectionFollow
 
 from .citations import linkify_citations
@@ -1851,3 +1852,105 @@ class ForYouKeywordFollowTests(TestCase):
         response = self.client.get(reverse('articles:for_you'))
         articles = list(response.context['articles'])
         self.assertEqual(articles.count(article), 1)
+
+
+class ArticleGiftTests(TestCase):
+    """Gift-article creation and redemption (ROADMAP.md Phase 10) — a
+    subscriber generates a shareable link (articles:article_gift_create),
+    anyone who opens it (articles:article_gift_view, routes back into
+    ArticleDetailView with a gift_token kwarg) reads the article free.
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.subscriber = User.objects.create_user(
+            email='gift-subscriber@example.com', password='pw', first_name='G', last_name='S',
+        )
+        plan = SubscriptionPlan.objects.create(
+            name='Gifting Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            price=5, duration_days=30, gift_articles_per_month=2,
+        )
+        today = timezone.localdate()
+        UserSubscription.objects.create(
+            user=self.subscriber, plan=plan, start_date=today, end_date=today + datetime.timedelta(days=30),
+        )
+        self.article = make_article('gift-test-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.article.access_type = Article.AccessType.SUBSCRIPTION
+        self.article.html_content = 'Secret gifted text'
+        self.article.save(update_fields=['access_type', 'html_content'])
+
+    def test_subscriber_can_create_a_gift_link(self):
+        self.client.force_login(self.subscriber)
+        response = self.client.post(reverse('articles:article_gift_create', args=[self.article.slug]))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ArticleGift.objects.filter(gifter=self.subscriber, article=self.article).exists())
+
+    def test_reader_without_gift_allowance_cannot_create_a_link(self):
+        from users.models import User
+
+        reader = User.objects.create_user(email='no-gift-reader@example.com', password='pw', first_name='N', last_name='R')
+        self.client.force_login(reader)
+        self.client.post(reverse('articles:article_gift_create', args=[self.article.slug]))
+        self.assertFalse(ArticleGift.objects.filter(article=self.article).exists())
+
+    def test_anonymous_reader_gets_full_text_via_a_valid_gift_link(self):
+        gift = ArticleGift.objects.create(
+            gifter=self.subscriber, article=self.article, period='2026-09',
+            expires_at=timezone.now() + datetime.timedelta(days=14),
+        )
+        response = self.client.get(reverse('articles:article_gift_view', args=[self.article.slug, gift.token]))
+        self.assertContains(response, 'Secret gifted text')
+        self.assertContains(response, self.subscriber.get_full_name())
+
+    def test_gift_view_does_not_consume_the_visitors_free_sample_quota(self):
+        from billing.models import MeteredArticleRead
+
+        gift = ArticleGift.objects.create(
+            gifter=self.subscriber, article=self.article, period='2026-09',
+            expires_at=timezone.now() + datetime.timedelta(days=14),
+        )
+        self.client.get(reverse('articles:article_gift_view', args=[self.article.slug, gift.token]))
+        self.assertFalse(MeteredArticleRead.objects.filter(article=self.article).exists())
+
+    def test_expired_gift_link_falls_back_to_normal_gating(self):
+        # "Falls back to normal gating" legitimately includes the metered
+        # free-sample allowance, which can independently grant full text on
+        # a fresh anonymous session — so the thing to assert isn't "no
+        # access at all," it's that the *expired gift* specifically wasn't
+        # what granted it (no gift_banner).
+        gift = ArticleGift.objects.create(
+            gifter=self.subscriber, article=self.article, period='2026-09',
+            expires_at=timezone.now() - datetime.timedelta(days=1),
+        )
+        response = self.client.get(reverse('articles:article_gift_view', args=[self.article.slug, gift.token]))
+        self.assertIsNone(response.context['gift_banner'])
+
+    def test_invalid_token_falls_back_to_normal_gating(self):
+        response = self.client.get(
+            reverse('articles:article_gift_view', args=[self.article.slug, 'not-a-real-token']),
+        )
+        self.assertIsNone(response.context['gift_banner'])
+
+    def test_regenerating_returns_the_same_link_and_notice(self):
+        self.client.force_login(self.subscriber)
+        self.client.post(reverse('articles:article_gift_create', args=[self.article.slug]))
+        first_gift = ArticleGift.objects.get(gifter=self.subscriber, article=self.article)
+        self.client.post(reverse('articles:article_gift_create', args=[self.article.slug]))
+        self.assertEqual(ArticleGift.objects.filter(gifter=self.subscriber, article=self.article).count(), 1)
+        second_gift = ArticleGift.objects.get(gifter=self.subscriber, article=self.article)
+        self.assertEqual(first_gift.token, second_gift.token)
+
+    def test_article_page_shows_gift_control_for_eligible_subscriber(self):
+        self.client.force_login(self.subscriber)
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertIsNotNone(response.context['gift_remaining'])
+        self.assertEqual(response.context['gift_remaining'], 2)
+
+    def test_article_page_hides_gift_control_for_non_subscriber(self):
+        from users.models import User
+
+        reader = User.objects.create_user(email='hide-gift-reader@example.com', password='pw', first_name='H', last_name='R')
+        self.client.force_login(reader)
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertIsNone(response.context['gift_remaining'])

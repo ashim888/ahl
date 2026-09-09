@@ -35,6 +35,8 @@ urlpatterns = [
     ),
     path('articles/<slug:slug>/download/', views.article_download, name='article_download'),
     path('articles/<slug:slug>/bookmark/', views.article_bookmark_toggle, name='article_bookmark_toggle'),
+    path('articles/<slug:slug>/gift/', views.article_gift_create, name='article_gift_create'),
+    path('articles/<slug:slug>/gift/<str:gift_token>/', views.ArticleDetailView.as_view(), name='article_gift_view'),
 
     # Editorial CRUD — Editor/EiC/Admin only (see EDITORIAL_ROLES in views.py)
     path('manage/articles/', views.ArticleManageListView.as_view(), name='manage_article_list'),

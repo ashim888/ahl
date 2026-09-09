@@ -1,6 +1,12 @@
+import secrets
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+
+
+def generate_gift_token():
+    return secrets.token_urlsafe(32)
 
 
 class PlanFeature(models.Model):
@@ -67,6 +73,19 @@ class SubscriptionPlan(models.Model):
         default=False,
         help_text='Subscribers on this plan receive newsletter issues sent to "Premium subscribers only" '
                    '(newsletter.recipients.confirmed_recipients), in addition to every regular issue.',
+    )
+    # A quantity, not a boolean, unlike the three perks above — "share a
+    # limited number of premium articles a month" is inherently about how
+    # many, and different plans may reasonably get different allowances
+    # (e.g. an Institutional plan gifting more than an Individual one).
+    # Default 0 (disabled), same "brand-new capability" reasoning as
+    # grants_premium_newsletter — no plan claims to grant this until an
+    # editor deliberately sets an allowance.
+    gift_articles_per_month = models.PositiveIntegerField(
+        default=0,
+        help_text='How many distinct subscription-tier articles a subscriber on this plan can gift to '
+                   'non-subscribers each month, via a shareable link (billing.access.create_or_get_article_gift). '
+                   '0 disables gifting for this plan.',
     )
     is_featured = models.BooleanField(
         default=False, help_text='Highlight as "Most Popular" on the pricing page.',
@@ -176,3 +195,37 @@ class MeteredArticleRead(models.Model):
     def __str__(self):
         reader = self.user or f'session {self.session_key[:8]}'
         return f'{reader} read {self.article} free ({self.period})'
+
+
+class ArticleGift(models.Model):
+    """A subscriber-generated shareable link granting anyone who has it free
+    access to one subscription-tier article — "gift articles" (ROADMAP.md
+    Phase 10). No claim/recipient step: whoever opens the link reads the
+    article, the same way NYT/WaPo gift links work, not a single-use invite.
+
+    One row per (gifter, article, calendar-month) — regenerating a link for
+    the same article within the same month returns the existing row rather
+    than consuming a second slot of the gifter's monthly allowance (see
+    billing.access.create_or_get_article_gift), matching
+    MeteredArticleRead's own re-read-is-free precedent.
+    """
+
+    gifter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='article_gifts_given',
+    )
+    article = models.ForeignKey('articles.Article', on_delete=models.CASCADE, related_name='gift_links')
+    token = models.CharField(max_length=64, unique=True, default=generate_gift_token)
+    period = models.CharField(max_length=7, help_text='Calendar-month bucket, e.g. "2026-09".')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('gifter', 'article', 'period')
+
+    def __str__(self):
+        return f'{self.gifter} gifted {self.article}'
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at

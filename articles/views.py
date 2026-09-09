@@ -20,8 +20,9 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, T
 from django_ratelimit.decorators import ratelimit
 
 from billing.access import (
-    FREE_SAMPLE_LIMIT_PER_MONTH, METERED_ACCESS_TYPES, article_is_accessible, consume_free_sample,
-    free_sample_reads_used,
+    FREE_SAMPLE_LIMIT_PER_MONTH, GIFTABLE_ACCESS_TYPES, METERED_ACCESS_TYPES, article_is_accessible,
+    consume_free_sample, create_or_get_article_gift, free_sample_reads_used, get_existing_article_gift,
+    get_valid_article_gift, gift_articles_remaining,
 )
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
@@ -370,7 +371,19 @@ class ArticleDetailView(DetailView):
         )
         show_full_text = article_is_accessible(self.request.user, self.object)
         context['free_sample_notice'] = None
-        if not show_full_text and self.object.access_type in METERED_ACCESS_TYPES:
+        context['gift_banner'] = None
+        # /articles/<slug>/gift/<gift_token>/ (articles:article_gift_view)
+        # routes to this same view with an extra URL kwarg, rather than a
+        # separate view duplicating all the context-building below — an
+        # expired/unknown token isn't an error, it just falls through to
+        # the normal access rules (real entitlement, then metering) as if
+        # no gift link were involved.
+        gift_token = self.kwargs.get('gift_token')
+        gift = get_valid_article_gift(self.object, gift_token) if gift_token else None
+        if gift:
+            show_full_text = True
+            context['gift_banner'] = gift.gifter
+        elif not show_full_text and self.object.access_type in METERED_ACCESS_TYPES:
             # Metering is a separate, stateful concern from the real
             # entitlement check above — see billing.access.consume_free_sample's
             # own docstring for why the two aren't merged into one function.
@@ -385,6 +398,24 @@ class ArticleDetailView(DetailView):
             self.request.user.is_authenticated
             and Bookmark.objects.filter(user=self.request.user, article=self.object).exists()
         )
+        context['gift_link'] = None
+        context['gift_remaining'] = None
+        # Only offered to a *real* subscriber (show_full_text via a genuine
+        # entitlement, not a free sample) — a reader who only got in on the
+        # metered allowance has nothing of their own to give away.
+        if (
+            self.object.access_type in GIFTABLE_ACCESS_TYPES
+            and self.request.user.is_authenticated
+            and article_is_accessible(self.request.user, self.object)
+        ):
+            existing_gift = get_existing_article_gift(self.request.user, self.object)
+            remaining = gift_articles_remaining(self.request.user)
+            if existing_gift or remaining > 0:
+                context['gift_remaining'] = remaining
+                if existing_gift:
+                    context['gift_link'] = self.request.build_absolute_uri(
+                        reverse('articles:article_gift_view', args=[self.object.slug, existing_gift.token]),
+                    )
         context['keyword_list'] = list(self.object.keyword_tags.all())
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
         context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
@@ -574,6 +605,25 @@ def article_bookmark_toggle(request, slug):
         messages.success(request, 'Removed from your reading list.')
     else:
         messages.success(request, 'Saved to your reading list.')
+    return redirect('articles:article_detail', slug=article.slug)
+
+
+@login_required
+@require_POST
+def article_gift_create(request, slug):
+    """Creates (or finds this period's existing) shareable gift link for a
+    subscription-tier article — quota-gated by billing.access.
+    create_or_get_article_gift, which also enforces that only a real
+    subscriber with an active plan/allowance reaches this at all. Redirects
+    back to the article page, where the link is now shown (ArticleDetailView's
+    gift_link context) — no separate "your gift link" page.
+    """
+    article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
+    gift = create_or_get_article_gift(request.user, article)
+    if gift is None:
+        messages.error(request, "You don't have a gift available for this article right now.")
+    else:
+        messages.success(request, 'Your gift link is ready — copy it below to share.')
     return redirect('articles:article_detail', slug=article.slug)
 
 

@@ -44,7 +44,10 @@
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.grants_unlimited_articles %}
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.grants_premium_newsletter %}
                 </div>
-                <p class="mt-1.5 text-xs text-gray-400">Unlike the features list above, these two actually control what a subscriber on this plan can access.</p>
+                <div class="mt-3 max-w-xs">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.gift_articles_per_month %}
+                </div>
+                <p class="mt-1.5 text-xs text-gray-400">Unlike the features list above, these actually control what a subscriber on this plan can access.</p>
             </div>
 
             <div class="flex items-center gap-8">

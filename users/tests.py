@@ -1,9 +1,11 @@
+import datetime
 from unittest.mock import patch
 
 from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import User
 
@@ -660,6 +662,53 @@ class ProfileFollowedKeywordsTests(TestCase):
         self.client.force_login(reader)
         response = self.client.get(reverse('users:profile'))
         self.assertContains(response, 'Not following any keywords yet')
+
+
+class ProfileGiftedArticlesTests(TestCase):
+    """GIFTED ARTICLES block (ROADMAP.md Phase 10) — lists a reader's active
+    billing.models.ArticleGift links.
+    """
+
+    def test_active_gift_listed(self):
+        from articles.models import Article
+        from billing.models import ArticleGift
+
+        article = Article.objects.create(
+            title='Profile Gift Article', slug='profile-gift-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        reader = make_user('profile-gift-reader@example.com', User.Role.UNVERIFIED)
+        ArticleGift.objects.create(
+            gifter=reader, article=article, period='2026-09',
+            expires_at=timezone.now() + datetime.timedelta(days=14),
+        )
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'GIFTED ARTICLES')
+        self.assertContains(response, 'Profile Gift Article')
+
+    def test_expired_gift_not_listed(self):
+        from articles.models import Article
+        from billing.models import ArticleGift
+
+        article = Article.objects.create(
+            title='Profile Expired Gift Article', slug='profile-expired-gift-article', abstract='Abstract',
+            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
+        )
+        reader = make_user('profile-expired-gift-reader@example.com', User.Role.UNVERIFIED)
+        ArticleGift.objects.create(
+            gifter=reader, article=article, period='2026-08',
+            expires_at=timezone.now() - datetime.timedelta(days=1),
+        )
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertNotContains(response, 'Profile Expired Gift Article')
+
+    def test_empty_state_when_no_active_gifts(self):
+        reader = make_user('profile-no-gift-reader@example.com', User.Role.UNVERIFIED)
+        self.client.force_login(reader)
+        response = self.client.get(reverse('users:profile'))
+        self.assertContains(response, 'No active gift links')
 
 
 class Custom403PageTests(TestCase):

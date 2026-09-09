@@ -150,6 +150,35 @@
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">GIFTED ARTICLES</p>
+        </div>
+        {% if active_gifts %}
+            <div class="divide-y divide-border border-t border-border">
+                {% for gift in active_gifts %}
+                    <div class="py-3 flex items-center justify-between gap-4">
+                        <a href="{% url 'articles:article_detail' gift.article.slug %}" class="text-sm font-medium hover:text-accent truncate">
+                            {{ gift.article.title }}
+                        </a>
+                        <span class="font-mono-editorial text-xs text-muted-foreground whitespace-nowrap">
+                            Expires {{ gift.expires_at|date:"M j, Y" }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="mt-3 text-xs text-muted-foreground">
+                Visit an article you're subscribed to and click <strong>Gift this article</strong> to get the
+                shareable link again.
+            </p>
+        {% else %}
+            <p class="text-sm text-muted-foreground">
+                No active gift links — on a subscription-tier article you can read, click
+                <strong>Gift this article</strong> to share it free with someone else.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="mt-10">
+        <div class="flex items-center justify-between mb-4">
             <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">STORY PITCHES</p>
             <a href="{% url 'pitches:pitch_create' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
                 PITCH A STORY →

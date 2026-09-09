@@ -7,6 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
@@ -14,6 +15,7 @@ from django.views.generic.detail import DetailView
 from django_ratelimit.decorators import ratelimit
 
 from articles.models import Article, Bookmark, KeywordFollow
+from billing.models import ArticleGift
 from pitches.models import StoryPitch
 from sections.models import Section
 from training.models import Enrollment
@@ -134,6 +136,9 @@ class ProfileView(DetailView):
         context['followed_keywords'] = KeywordFollow.objects.filter(
             user=self.request.user,
         ).select_related('keyword')
+        context['active_gifts'] = ArticleGift.objects.filter(
+            gifter=self.request.user, expires_at__gte=timezone.now(),
+        ).select_related('article')
         return context
 
 

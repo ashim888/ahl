@@ -150,6 +150,55 @@
                             DOWNLOAD PDF
                         </a>
                     {% endif %}
+                    {% if gift_remaining is not None %}
+                        <form method="post" action="{% url 'articles:article_gift_create' article.slug %}">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 border border-foreground hover:border-accent hover:text-accent transition-colors">
+                                {% if gift_link %}↻ REFRESH GIFT LINK{% else %}🎁 GIFT THIS ARTICLE{% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if gift_link %}
+                <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6">
+                    <p class="text-sm text-muted-foreground mb-2">
+                        Share this link — anyone who opens it reads the full article free, no account or
+                        subscription needed, for 14 days.
+                        {% if gift_remaining == 0 %}You've used your gift{{ gift_remaining|pluralize }} for this month.{% else %}You have {{ gift_remaining }} gift{{ gift_remaining|pluralize }} left this month.{% endif %}
+                    </p>
+                    <div class="flex gap-2">
+                        <input type="text" id="gift-link-input" value="{{ gift_link }}" readonly
+                               class="flex-1 border border-border px-3 py-2 text-xs bg-transparent font-mono-editorial">
+                        <button type="button" id="gift-link-copy-btn"
+                                class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:border-accent hover:text-accent transition-colors whitespace-nowrap">
+                            COPY
+                        </button>
+                    </div>
+                </div>
+                <script>
+                    (function () {
+                        var copyBtn = document.getElementById('gift-link-copy-btn');
+                        var input = document.getElementById('gift-link-input');
+                        if (!copyBtn || !input) return;
+                        copyBtn.addEventListener('click', function () {
+                            input.select();
+                            navigator.clipboard.writeText(input.value).then(function () {
+                                copyBtn.textContent = 'COPIED';
+                                setTimeout(function () { copyBtn.textContent = 'COPY'; }, 2000);
+                            });
+                        });
+                    })();
+                </script>
+            {% endif %}
+
+            {% if gift_banner %}
+                <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6">
+                    <p class="text-sm text-muted-foreground">
+                        🎁 This article was gifted to you by <strong class="text-foreground">{{ gift_banner.get_full_name }}</strong> — free to read, no subscription needed.
+                    </p>
                 </div>
             {% endif %}
 
