@@ -12,7 +12,7 @@ from articles.models import Article, ArticleAuthor, ArticleView, Keyword
 from billing.models import PlanFeature, SubscriptionPlan
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
-from training.models import TrainingCourse
+from training.models import CourseModule, TrainingCourse
 from users.models import User
 
 # Model apps an Editor needs view/add/change access to in /admin/ — matches
@@ -411,23 +411,83 @@ class Command(BaseCommand):
     # -- Training ------------------------------------------------------
 
     def seed_training(self):
+        """Demo courses with the full catalog fields (outcomes, audience,
+        modules, FAQs, ...). Re-running fills only fields that are still
+        blank on an existing course and adds modules only to a course that
+        has none — it never overwrites anything an editor has entered.
+        """
         self.stdout.write('Seeding training courses...')
         specs = [
             dict(title='Research Writing Fundamentals',
-                 description='A foundational course on structuring and writing a publishable research manuscript.',
+                 subtitle='Go from research question to a manuscript journals want to publish.',
+                 category='Research Writing', level=TrainingCourse.Level.BEGINNER,
+                 mode=TrainingCourse.Mode.ONLINE, effort='3–4 hours a week',
+                 start_date=datetime.date(2026, 11, 2), offers_certificate=True, is_featured=True,
+                 max_enrollments=40,
+                 description='A foundational course on structuring and writing a publishable research manuscript.\n\n'
+                             'Each week pairs a short lesson with a writing exercise on your own project, reviewed by '
+                             'the instructor, so you finish with a complete first draft rather than a set of notes.',
                  price=49.00, duration='4 weeks', instructor='Dr. Sunita Rai',
-                 syllabus='Week 1: Structure. Week 2: Abstracts. Week 3: Methods & Results. Week 4: Peer review.'),
+                 instructor_title='Editor-in-Chief, Ajna Health Lens',
+                 instructor_bio='Sunita Rai leads the editorial team with a focus on rural health equity and '
+                                'evidence-based public health policy across Nepal.',
+                 learning_outcomes='Structure a manuscript using the IMRaD format\n'
+                                   'Write a clear, structured abstract\n'
+                                   'Report methods and results so they can be reproduced\n'
+                                   'Choose a suitable journal and respond to peer review',
+                 audience='Early-career researchers\nMaster\'s and PhD students\nClinicians writing their first paper',
+                 prerequisites='A research project or dataset you want to write up',
+                 faqs='Do I need a finished study?\nNo — a study in progress is fine. The exercises work on whatever '
+                      'you have so far.\n\nIs the course live or recorded?\nWeekly live sessions, recorded for '
+                      'anyone who misses one.',
+                 modules=[('Week 1', 'Structuring a manuscript', 'IMRaD, story arc, and outlining your paper.'),
+                          ('Week 2', 'Writing the abstract', 'Structured abstracts, titles and keywords.'),
+                          ('Week 3', 'Methods and results', 'Reproducible methods, tables and figures.'),
+                          ('Week 4', 'Submission and peer review', 'Choosing a journal, cover letters, responding to reviewers.')]),
             dict(title='Research Methodology Bootcamp',
+                 subtitle='Study design, sampling and the statistics you actually need.',
+                 category='Research Methods', level=TrainingCourse.Level.INTERMEDIATE,
+                 mode=TrainingCourse.Mode.HYBRID, effort='5–6 hours a week',
+                 start_date=datetime.date(2026, 11, 16), offers_certificate=True, max_enrollments=25,
                  description='An intensive bootcamp covering study design, sampling, and statistical analysis basics.',
-                 price=99.00, duration='6 weeks', instructor='Dr. Rajesh Gurung'),
+                 price=99.00, duration='6 weeks', instructor='Dr. Rajesh Gurung',
+                 instructor_title='Associate Editor, Research Methods',
+                 learning_outcomes='Pick the right study design for a question\nCalculate a sample size\n'
+                                   'Run and interpret common statistical tests\nSpot bias and confounding',
+                 audience='Researchers planning a new study\nPublic health professionals',
+                 prerequisites='Basic spreadsheet skills',
+                 modules=[('Week 1', 'Asking an answerable question', ''),
+                          ('Week 2', 'Study designs', 'Cross-sectional, cohort, case-control and trials.'),
+                          ('Week 3', 'Sampling and sample size', ''),
+                          ('Weeks 4–5', 'Statistical analysis', 'Descriptive statistics, tests and regression basics.'),
+                          ('Week 6', 'Bias, confounding and ethics', '')]),
             dict(title='Research Visibility Workshop',
+                 subtitle='Get your published work read, shared and cited.',
+                 category='Publishing', level=TrainingCourse.Level.ALL_LEVELS,
+                 mode=TrainingCourse.Mode.ONLINE, effort='2 hours a week',
                  description='Learn how to promote and disseminate your published work effectively.',
-                 price=29.00, duration='2 weeks', instructor='Dr. Priya Koirala'),
+                 price=29.00, duration='2 weeks', instructor='Dr. Priya Koirala',
+                 learning_outcomes='Set up ORCID and Google Scholar profiles\nWrite a plain-language summary\n'
+                                   'Share research on social media responsibly',
+                 modules=[('Week 1', 'Your researcher profile', ''), ('Week 2', 'Telling people about your work', '')]),
         ]
         count = 0
         for spec in specs:
-            _, created = TrainingCourse.objects.get_or_create(title=spec['title'], defaults=spec)
+            modules = spec.pop('modules', [])
+            course, created = TrainingCourse.objects.get_or_create(title=spec['title'], defaults=spec)
             count += created
+            if not created:
+                blank_fields = [
+                    name for name, value in spec.items()
+                    if name not in ('title', 'price', 'is_featured') and getattr(course, name) in ('', None)
+                ]
+                for name in blank_fields:
+                    setattr(course, name, spec[name])
+                if blank_fields:
+                    course.save(update_fields=blank_fields)
+            if not course.modules.exists():
+                for order, (length, title, summary) in enumerate(modules):
+                    CourseModule.objects.create(course=course, order=order, duration=length, title=title, summary=summary)
         self.stdout.write(f'  {count} training courses created.')
 
     # -- Editorial board -------------------------------------------------

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
@@ -12,55 +13,252 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-6 py-14">
-    <span class="section-label text-accent">{{ course.duration }}</span>
-    <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">{{ course.title }}</h1>
-    <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">{{ course.instructor }}</p>
-    <p class="mt-4 font-display text-3xl font-bold">${{ course.price }}</p>
+{% with outcomes=course.learning_outcome_list audience=course.audience_list prerequisites=course.prerequisite_list faqs=course.faq_list %}
 
-    <div class="mt-8 border-t-2 border-foreground border-b border-border py-6">
-        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">DESCRIPTION</p>
-        <p class="text-foreground leading-relaxed" style="font-family: Georgia, serif; line-height: 1.75;">{{ course.description }}</p>
-    </div>
-
-    {% if course.syllabus %}
-        <div class="mt-8">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">SYLLABUS</p>
-            <p class="text-foreground leading-relaxed whitespace-pre-line" style="font-family: Georgia, serif; line-height: 1.75;">{{ course.syllabus }}</p>
-        </div>
-    {% endif %}
-
-    <div class="mt-8 pt-6 border-t border-border">
-        {% if spots_left is not None %}
-            <p class="font-mono-editorial text-xs text-muted-foreground mb-3">
-                {% if spots_left > 0 %}{{ spots_left }} SPOT(S) LEFT OF {{ course.max_enrollments }}
-                {% else %}THIS COURSE IS FULL{% endif %}
-            </p>
-        {% endif %}
-
-        {% if user.is_authenticated %}
-            {% if enrollment and enrollment.status != 'cancelled' %}
-                <div class="border border-foreground bg-secondary px-4 py-3">
-                    <p class="text-sm font-medium">
-                        You're enrolled ({{ enrollment.get_status_display }}, payment {{ enrollment.get_payment_status_display|lower }}).
-                    </p>
-                </div>
-            {% elif spots_left == 0 %}
-                <button disabled class="font-mono-editorial text-xs tracking-widest border border-border px-6 py-3 text-muted-foreground cursor-not-allowed">
-                    COURSE FULL
-                </button>
-            {% else %}
-                <a href="{% url 'training:course_checkout' course.pk %}"
-                   class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
-                    ENROLL — ${{ course.price }}
-                </a>
+{# Hero #}
+<section class="bg-foreground text-primary-foreground">
+    <div class="max-w-6xl mx-auto px-6 pt-8 pb-12 md:pb-16">
+        <nav aria-label="{% trans 'Breadcrumb' %}" class="font-mono-editorial text-[0.65rem] tracking-widest opacity-70">
+            <a href="{% url 'training:course_list' %}" class="hover:text-accent">{% trans "TRAINING" %}</a>
+            {% if course.category %}
+                <span class="mx-1.5">›</span>
+                <a href="{% url 'training:course_list' %}?category={{ course.category|urlencode }}" class="hover:text-accent">{{ course.category|upper }}</a>
             {% endif %}
-        {% else %}
-            <a href="{% url 'users:login' %}?next={{ request.path }}"
-               class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
-                LOG IN TO ENROLL
-            </a>
-        {% endif %}
+        </nav>
+        <div class="max-w-3xl">
+            <h1 class="font-display text-3xl md:text-5xl font-bold leading-tight mt-5" style="letter-spacing: -0.025em;">{{ course.title }}</h1>
+            {% if course.subtitle %}
+                <p class="mt-4 text-lg opacity-80 leading-relaxed">{{ course.subtitle }}</p>
+            {% endif %}
+            <div class="mt-6 flex items-center gap-3">
+                {% if course.instructor_photo %}
+                    <img src="{{ course.instructor_photo.url }}" alt="" class="w-11 h-11 rounded-full object-cover border border-primary-foreground/30">
+                {% else %}
+                    <span class="w-11 h-11 rounded-full bg-accent text-white flex items-center justify-center font-display font-bold">{{ course.instructor_initial }}</span>
+                {% endif %}
+                <div class="text-sm">
+                    <p><span class="opacity-70">{% trans "Taught by" %}</span> <a href="#instructor" class="font-semibold underline underline-offset-2 decoration-primary-foreground/40 hover:decoration-accent">{{ course.instructor }}</a></p>
+                    {% if course.instructor_title %}<p class="opacity-60 text-xs mt-0.5">{{ course.instructor_title }}</p>{% endif %}
+                </div>
+            </div>
+            <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm opacity-90">
+                {% if enrolled_count %}
+                    <span>{% blocktrans count counter=enrolled_count %}<strong>{{ counter }}</strong> learner enrolled{% plural %}<strong>{{ counter }}</strong> learners enrolled{% endblocktrans %}</span>
+                {% endif %}
+                {% if course.start_date %}<span>{% blocktrans with date=course.start_date|date:"F j, Y" %}Starts {{ date }}{% endblocktrans %}</span>{% endif %}
+                {% if spots_left is not None and spots_left > 0 and spots_left <= 10 %}
+                    <span class="text-accent font-semibold">{% blocktrans count counter=spots_left %}Only {{ counter }} seat left{% plural %}Only {{ counter }} seats left{% endblocktrans %}</span>
+                {% endif %}
+            </div>
+        </div>
     </div>
+</section>
+
+{# Key facts #}
+<section class="border-b border-border bg-card">
+    <dl class="max-w-6xl mx-auto px-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div class="py-5 pr-4">
+            <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "LEVEL" %}</dt>
+            <dd class="mt-1 font-semibold text-sm">{{ course.get_level_display }}</dd>
+        </div>
+        <div class="py-5 pr-4">
+            <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "DURATION" %}</dt>
+            <dd class="mt-1 font-semibold text-sm">{{ course.duration }}</dd>
+        </div>
+        <div class="py-5 pr-4">
+            <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "EFFORT" %}</dt>
+            <dd class="mt-1 font-semibold text-sm">{{ course.effort|default:"—" }}</dd>
+        </div>
+        <div class="py-5 pr-4">
+            <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "FORMAT" %}</dt>
+            <dd class="mt-1 font-semibold text-sm">{{ course.get_mode_display }}</dd>
+        </div>
+        <div class="py-5 pr-4">
+            <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "LANGUAGE" %}</dt>
+            <dd class="mt-1 font-semibold text-sm">{{ course.language }}</dd>
+        </div>
+        <div class="py-5 pr-4">
+            <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "CERTIFICATE" %}</dt>
+            <dd class="mt-1 font-semibold text-sm">{% if course.offers_certificate %}{% trans "Yes, on completion" %}{% else %}{% trans "Not included" %}{% endif %}</dd>
+        </div>
+    </dl>
+</section>
+
+<div class="max-w-6xl mx-auto px-6 pb-16">
+    <div class="flex flex-col lg:grid lg:grid-cols-[1fr_360px] lg:gap-10">
+
+        {# Main column #}
+        <div class="min-w-0 mt-6 lg:mt-0">
+            <nav class="border-b border-border flex gap-6 overflow-x-auto" aria-label="{% trans 'Course sections' %}">
+                {% if outcomes %}<a href="#outcomes" class="font-mono-editorial text-[0.65rem] tracking-widest py-4 whitespace-nowrap hover:text-accent">{% trans "OUTCOMES" %}</a>{% endif %}
+                <a href="#about" class="font-mono-editorial text-[0.65rem] tracking-widest py-4 whitespace-nowrap hover:text-accent">{% trans "ABOUT" %}</a>
+                {% if modules or course.syllabus %}<a href="#syllabus" class="font-mono-editorial text-[0.65rem] tracking-widest py-4 whitespace-nowrap hover:text-accent">{% trans "SYLLABUS" %}</a>{% endif %}
+                <a href="#instructor" class="font-mono-editorial text-[0.65rem] tracking-widest py-4 whitespace-nowrap hover:text-accent">{% trans "INSTRUCTOR" %}</a>
+                {% if faqs %}<a href="#faq" class="font-mono-editorial text-[0.65rem] tracking-widest py-4 whitespace-nowrap hover:text-accent">{% trans "FAQ" %}</a>{% endif %}
+            </nav>
+
+            {% if outcomes %}
+                <section id="outcomes" class="mt-10 border border-border p-6 md:p-8">
+                    <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "What you'll learn" %}</h2>
+                    <ul class="mt-5 grid md:grid-cols-2 gap-x-8 gap-y-3">
+                        {% for item in outcomes %}
+                            <li class="flex gap-3 text-sm leading-relaxed">
+                                <svg class="w-4 h-4 mt-0.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+                                <span>{{ item }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+
+            <section id="about" class="mt-10">
+                <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "About this course" %}</h2>
+                <div class="mt-4 text-foreground leading-relaxed space-y-4" style="font-family: Georgia, 'Noto Serif Devanagari', serif; line-height: 1.8;">
+                    {{ course.description|linebreaks }}
+                </div>
+            </section>
+
+            {% if audience or prerequisites %}
+                <section class="mt-10 grid md:grid-cols-2 gap-6">
+                    {% if audience %}
+                        <div class="bg-secondary p-6">
+                            <h3 class="section-label text-muted-foreground">{% trans "WHO THIS COURSE IS FOR" %}</h3>
+                            <ul class="mt-4 space-y-2.5">
+                                {% for item in audience %}
+                                    <li class="flex gap-2.5 text-sm leading-relaxed"><span class="text-accent" aria-hidden="true">→</span><span>{{ item }}</span></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    <div class="bg-secondary p-6">
+                        <h3 class="section-label text-muted-foreground">{% trans "PREREQUISITES" %}</h3>
+                        {% if prerequisites %}
+                            <ul class="mt-4 space-y-2.5">
+                                {% for item in prerequisites %}
+                                    <li class="flex gap-2.5 text-sm leading-relaxed"><span class="text-accent" aria-hidden="true">•</span><span>{{ item }}</span></li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="mt-4 text-sm">{% trans "None — open to everyone." %}</p>
+                        {% endif %}
+                    </div>
+                </section>
+            {% endif %}
+
+            {% if modules %}
+                <section id="syllabus" class="mt-12">
+                    <div class="flex items-end justify-between gap-4">
+                        <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Syllabus" %}</h2>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">
+                            {% blocktrans count counter=modules|length %}{{ counter }} MODULE{% plural %}{{ counter }} MODULES{% endblocktrans %}
+                        </span>
+                    </div>
+                    <ol class="mt-5 border-t-2 border-foreground">
+                        {% for module in modules %}
+                            <li class="border-b border-border">
+                                <details class="group" {% if forloop.first %}open{% endif %}>
+                                    <summary class="flex items-start gap-4 py-5 cursor-pointer list-none select-none">
+                                        <span class="font-display text-2xl font-bold text-muted-foreground w-8 shrink-0 leading-none">{{ forloop.counter }}</span>
+                                        <span class="flex-1 min-w-0">
+                                            <span class="block font-semibold group-hover:text-accent transition-colors">{{ module.title }}</span>
+                                            {% if module.duration %}<span class="block font-mono-editorial text-xs text-muted-foreground mt-1">{{ module.duration }}</span>{% endif %}
+                                        </span>
+                                        {% if module.summary %}
+                                            <svg class="w-4 h-4 mt-1 shrink-0 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                                        {% endif %}
+                                    </summary>
+                                    {% if module.summary %}
+                                        <p class="pb-5 pl-12 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{{ module.summary }}</p>
+                                    {% endif %}
+                                </details>
+                            </li>
+                        {% endfor %}
+                    </ol>
+                </section>
+            {% elif course.syllabus %}
+                <section id="syllabus" class="mt-12">
+                    <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Syllabus" %}</h2>
+                    <p class="mt-4 text-foreground leading-relaxed whitespace-pre-line">{{ course.syllabus }}</p>
+                </section>
+            {% endif %}
+
+            <section id="instructor" class="mt-12">
+                <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Instructor" %}</h2>
+                <div class="mt-5 flex gap-5 items-start">
+                    {% if course.instructor_photo %}
+                        <img src="{{ course.instructor_photo.url }}" alt="{{ course.instructor }}" class="w-20 h-20 rounded-full object-cover shrink-0">
+                    {% else %}
+                        <span class="w-20 h-20 rounded-full shrink-0 flex items-center justify-center font-display text-2xl font-bold text-white" style="background: linear-gradient(135deg, #1f2a44 0%, #b3452c 100%);">{{ course.instructor_initial }}</span>
+                    {% endif %}
+                    <div class="min-w-0">
+                        <p class="font-semibold text-lg">{{ course.instructor }}</p>
+                        {% if course.instructor_title %}<p class="text-sm text-muted-foreground mt-0.5">{{ course.instructor_title }}</p>{% endif %}
+                        {% if course.instructor_bio %}<div class="mt-3 text-sm leading-relaxed">{{ course.instructor_bio|linebreaks }}</div>{% endif %}
+                    </div>
+                </div>
+            </section>
+
+            {% if faqs %}
+                <section id="faq" class="mt-12">
+                    <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Frequently asked questions" %}</h2>
+                    <div class="mt-5 border-t border-border">
+                        {% for faq in faqs %}
+                            <details class="group border-b border-border">
+                                <summary class="flex items-center justify-between gap-4 py-4 cursor-pointer list-none select-none font-medium hover:text-accent">
+                                    {{ faq.question }}
+                                    <span class="text-xl leading-none text-muted-foreground transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                                </summary>
+                                <p class="pb-5 text-sm text-muted-foreground leading-relaxed">{{ faq.answer }}</p>
+                            </details>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+        </div>
+
+        {# Enrollment card — first thing after the key facts on phones, a sticky sidebar on wide screens #}
+        <aside class="mt-8 lg:mt-10 order-first lg:order-none">
+            <div class="lg:sticky lg:top-28 border border-border bg-card shadow-xl">
+                <div class="aspect-video bg-secondary overflow-hidden">
+                    {% include 'training/includes/course_cover.html' with course=course %}
+                </div>
+                <div class="p-6">
+                    <p class="font-display text-3xl font-bold">{% include 'training/includes/course_price.html' %}</p>
+                    {% if course.price %}<p class="text-xs text-muted-foreground mt-1">{% trans "One-time payment · full course access" %}</p>{% endif %}
+                    <div class="mt-5">{% include 'training/includes/enroll_action.html' %}</div>
+                    {% if spots_left is not None %}
+                        <p class="mt-3 font-mono-editorial text-xs text-center {% if spots_left <= 5 %}text-accent{% else %}text-muted-foreground{% endif %}">
+                            {% if spots_left > 0 %}{% blocktrans with total=course.max_enrollments count counter=spots_left %}{{ counter }} OF {{ total }} SEAT LEFT{% plural %}{{ counter }} OF {{ total }} SEATS LEFT{% endblocktrans %}{% else %}{% trans "THIS COURSE IS FULL" %}{% endif %}
+                        </p>
+                    {% endif %}
+
+                    <p class="section-label text-muted-foreground mt-7">{% trans "THIS COURSE INCLUDES" %}</p>
+                    <ul class="mt-3 space-y-2.5 text-sm">
+                        {% if modules %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{% blocktrans count counter=modules|length %}{{ counter }} module{% plural %}{{ counter }} modules{% endblocktrans %}</li>{% endif %}
+                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{{ course.duration }}{% if course.effort %} · {{ course.effort }}{% endif %}</li>
+                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{{ course.get_mode_display }} · {{ course.language }}</li>
+                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{% if course.start_date %}{% blocktrans with date=course.start_date|date:"F j, Y" %}Starts {{ date }}{% endblocktrans %}{% else %}{% trans "Start any time" %}{% endif %}</li>
+                        {% if course.offers_certificate %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{% trans "Certificate of completion" %}</li>{% endif %}
+                    </ul>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    {% if related_courses %}
+        <section class="mt-16 pt-10 border-t-2 border-foreground">
+            <div class="flex items-end justify-between gap-4">
+                <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "More courses" %}</h2>
+                <a href="{% url 'training:course_list' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:text-accent hover:border-accent pb-0.5">{% trans "ALL COURSES →" %}</a>
+            </div>
+            <div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for course in related_courses %}
+                    {% include 'training/includes/course_card.html' %}
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
 </div>
+
+{% endwith %}
 {% endblock %}

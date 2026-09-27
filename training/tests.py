@@ -270,3 +270,104 @@ class CoursePublicPageMetaTagsTests(TestCase):
         self.assertIn('"price": "75.00"', content)
         self.assertIn('"priceCurrency": "USD"', content)
         self.assertIn('"@type": "BreadcrumbList"', content)
+
+
+class CourseCatalogFieldTests(TestCase):
+    """Parsing helpers behind the course page's checklist/FAQ sections."""
+
+    def test_line_fields_drop_blanks_and_typed_bullets(self):
+        course = TrainingCourse(learning_outcomes='- Write an abstract\n\n• Pick a journal\n  * Respond to reviewers  ')
+        self.assertEqual(course.learning_outcome_list, ['Write an abstract', 'Pick a journal', 'Respond to reviewers'])
+
+    def test_faqs_split_on_blank_lines_and_skip_unanswered(self):
+        course = TrainingCourse(faqs='Is it live?\nYes, weekly.\nRecorded too.\n\nOrphan question?\n\nCost?\nSee above.')
+        self.assertEqual(course.faq_list, [
+            {'question': 'Is it live?', 'answer': 'Yes, weekly. Recorded too.'},
+            {'question': 'Cost?', 'answer': 'See above.'},
+        ])
+
+    def test_instructor_initial_skips_honorifics(self):
+        self.assertEqual(TrainingCourse(instructor='Dr. Sunita Rai').instructor_initial, 'S')
+        self.assertEqual(TrainingCourse(instructor='prof ram').instructor_initial, 'R')
+
+
+def make_course(title, **fields):
+    defaults = {'description': 'About.', 'price': 10, 'duration': '2 weeks', 'instructor': 'Dr. Rao'}
+    defaults.update(fields)
+    return TrainingCourse.objects.create(title=title, **defaults)
+
+
+class CourseCatalogPageTests(TestCase):
+    def test_filters_by_category_level_mode_and_search(self):
+        writing = make_course('Writing', category='Research Writing', level=TrainingCourse.Level.BEGINNER)
+        stats = make_course('Stats', category='Research Methods', mode=TrainingCourse.Mode.HYBRID)
+        url = reverse('training:course_list')
+        self.assertEqual(list(self.client.get(url, {'category': 'research writing'}).context['courses']), [writing])
+        self.assertEqual(list(self.client.get(url, {'level': 'beginner'}).context['courses']), [writing])
+        self.assertEqual(list(self.client.get(url, {'mode': 'hybrid'}).context['courses']), [stats])
+        self.assertEqual(list(self.client.get(url, {'q': 'stat'}).context['courses']), [stats])
+
+    def test_featured_course_only_on_unfiltered_catalog(self):
+        featured = make_course('Flagship', is_featured=True)
+        make_course('Other')
+        url = reverse('training:course_list')
+        self.assertEqual(self.client.get(url).context['featured_course'], featured)
+        self.assertIsNone(self.client.get(url, {'q': 'other'}).context['featured_course'])
+
+    def test_inactive_courses_hidden(self):
+        make_course('Retired Zebra Course', is_active=False)
+        response = self.client.get(reverse('training:course_list'))
+        self.assertNotContains(response, 'Retired Zebra Course')
+        self.assertEqual(response.context['catalog_stats']['courses'], 0)
+
+    def test_detail_renders_outcomes_modules_faq_and_related(self):
+        course = make_course(
+            'Grant Writing', category='Writing', learning_outcomes='Draft a budget\nWrite aims',
+            faqs='Is there homework?\nOne exercise a week.', instructor_title='Senior Editor',
+        )
+        course.modules.create(order=1, title='Second module')
+        course.modules.create(order=0, title='First module', summary='Intro.')
+        related = make_course('Report Writing', category='Writing')
+        make_course('Unrelated')
+        response = self.client.get(reverse('training:course_detail', args=[course.pk]))
+        self.assertContains(response, 'Draft a budget')
+        self.assertContains(response, 'Is there homework?')
+        self.assertContains(response, 'Senior Editor')
+        self.assertEqual([m.title for m in response.context['modules']], ['First module', 'Second module'])
+        self.assertEqual(response.context['related_courses'][0], related)
+        self.assertNotIn(course, response.context['related_courses'])
+
+
+@FAST_PASSWORD_HASHERS
+class CourseManageModulesTests(TestCase):
+    def setUp(self):
+        self.editor = User.objects.create_user(
+            email='course-editor@example.com', password='pw', first_name='C', last_name='E', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def _data(self, **overrides):
+        data = {
+            'title': 'Data Visualisation', 'description': 'Charts.', 'price': '20', 'duration': '3 weeks',
+            'instructor': 'Dr. Lama', 'level': 'beginner', 'mode': 'online', 'language': 'English',
+            'is_active': 'on',
+            'modules-TOTAL_FORMS': '2', 'modules-INITIAL_FORMS': '0',
+            'modules-MIN_NUM_FORMS': '0', 'modules-MAX_NUM_FORMS': '1000',
+            'modules-0-order': '0', 'modules-0-title': 'Chart types', 'modules-0-duration': 'Week 1',
+            'modules-1-order': '0', 'modules-1-title': '',
+        }
+        data.update(overrides)
+        return data
+
+    def test_create_saves_course_and_filled_modules_only(self):
+        response = self.client.post(reverse('training:manage_course_create'), self._data())
+        self.assertEqual(response.status_code, 302)
+        course = TrainingCourse.objects.get(title='Data Visualisation')
+        self.assertEqual([m.title for m in course.modules.all()], ['Chart types'])
+
+    def test_invalid_module_row_blocks_saving_the_course(self):
+        response = self.client.post(reverse('training:manage_course_create'), self._data(**{
+            'modules-1-order': '1', 'modules-1-title': '', 'modules-1-duration': 'Week 2',
+        }))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(TrainingCourse.objects.filter(title='Data Visualisation').exists())

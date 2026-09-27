@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 16:24+0545\n"
+"POT-Creation-Date: 2026-09-27 16:45+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -95,7 +95,7 @@ msgstr "समाचार तथा टिप्पणी"
 msgid "Letter to Editor"
 msgstr "सम्पादकलाई पत्र"
 
-#: articles/models.py:83
+#: articles/models.py:83 templates/training/includes/course_price.html:1
 msgid "Free"
 msgstr "निःशुल्क"
 
@@ -318,7 +318,7 @@ msgstr "यो लेखको पूर्ण पाठ पढ्न सक्�
 msgid "BUY FOR ₹%(price)s"
 msgstr "₹%(price)s मा किन्नुहोस्"
 
-#: templates/articles/article_detail.html:282 templates/base.html:485
+#: templates/articles/article_detail.html:282 templates/base.html:494
 #: templates/home.html:269
 msgid "SUBSCRIBE"
 msgstr "सदस्यता लिनुहोस्"
@@ -437,6 +437,7 @@ msgstr "मुख्य शब्दबाट खोज्नुहोस्…"
 
 #: templates/articles/article_list.html:31
 #: templates/articles/search_results.html:15
+#: templates/training/course_list.html:24
 msgid "SEARCH"
 msgstr "खोज्नुहोस्"
 
@@ -472,7 +473,7 @@ msgstr "पिन गरिएको ·"
 msgid "No articles published yet."
 msgstr "अहिलेसम्म कुनै लेख प्रकाशित भएको छैन।"
 
-#: templates/articles/search_results.html:9 templates/base.html:314
+#: templates/articles/search_results.html:9 templates/base.html:323
 msgid "Search"
 msgstr "खोज्नुहोस्"
 
@@ -491,123 +492,124 @@ msgstr[1] "\"%(query)s\" का लागि %(counter)s नतिजाहर�
 msgid "No articles matched your search."
 msgstr "तपाईंको खोजसँग मिल्ने कुनै लेख भेटिएन।"
 
-#: templates/base.html:264
+#: templates/base.html:273
 msgid "LATEST ISSUE"
 msgstr "पछिल्लो अंक"
 
-#: templates/base.html:279
+#: templates/base.html:288
 msgid "Menu"
 msgstr "मेनु"
 
-#: templates/base.html:288 templates/base.html:408
+#: templates/base.html:297 templates/base.html:417
 msgid "Search…"
 msgstr "खोज्नुहोस्…"
 
-#: templates/base.html:308 templates/base.html:439
+#: templates/base.html:317 templates/base.html:448
 msgid "Language"
 msgstr "भाषा"
 
-#: templates/base.html:342 templates/base.html:423
+#: templates/base.html:351 templates/base.html:432
 msgid "Dashboard"
 msgstr "ड्यासबोर्ड"
 
-#: templates/base.html:346 templates/base.html:425
+#: templates/base.html:355 templates/base.html:434
 msgid "For You"
 msgstr "तपाईंका लागि"
 
-#: templates/base.html:349 templates/base.html:426
+#: templates/base.html:358 templates/base.html:435
 msgid "Reading List"
 msgstr "पठन सूची"
 
-#: templates/base.html:352 templates/base.html:362 templates/base.html:427
+#: templates/base.html:361 templates/base.html:371 templates/base.html:436
 msgid "Profile"
 msgstr "प्रोफाइल"
 
-#: templates/base.html:357 templates/base.html:430
+#: templates/base.html:366 templates/base.html:439
 msgid "Log out"
 msgstr "लग आउट"
 
-#: templates/base.html:373
+#: templates/base.html:382
 msgid "LOGIN"
 msgstr "लग इन"
 
-#: templates/base.html:377
+#: templates/base.html:386
 msgid "REGISTER"
 msgstr "दर्ता"
 
-#: templates/base.html:387 templates/base.html:412
+#: templates/base.html:396 templates/base.html:421
 msgid "HOME"
 msgstr "गृहपृष्ठ"
 
-#: templates/base.html:414
+#: templates/base.html:423
 msgid "ARTICLES"
 msgstr "लेखहरू"
 
-#: templates/base.html:415 templates/base.html:506
+#: templates/base.html:424 templates/base.html:515
+#: templates/training/course_detail.html:94
 msgid "ABOUT"
 msgstr "बारेमा"
 
-#: templates/base.html:416
+#: templates/base.html:425
 msgid "PITCH A STORY"
 msgstr "कथा प्रस्ताव गर्नुहोस्"
 
-#: templates/base.html:433
+#: templates/base.html:442
 msgid "Login"
 msgstr "लग इन"
 
-#: templates/base.html:434 templates/base.html:509
+#: templates/base.html:443 templates/base.html:518
 msgid "Register"
 msgstr "दर्ता गर्नुहोस्"
 
-#: templates/base.html:474
+#: templates/base.html:483
 msgid "NEWSLETTER"
 msgstr "न्यूजलेटर"
 
-#: templates/base.html:475
+#: templates/base.html:484
 msgid "Free — the latest articles and news, straight to your inbox."
 msgstr "निःशुल्क — ताजा लेख र समाचार, सिधै तपाईंको इमेलमा।"
 
-#: templates/base.html:491
+#: templates/base.html:500
 msgid "SECTIONS"
 msgstr "विभागहरू"
 
-#: templates/base.html:492
+#: templates/base.html:501
 msgid "Home"
 msgstr "गृहपृष्ठ"
 
-#: templates/base.html:496
+#: templates/base.html:505
 msgid "Subscribe"
 msgstr "सदस्यता लिनुहोस्"
 
-#: templates/base.html:499
+#: templates/base.html:508
 msgid "JOURNAL"
 msgstr "जर्नल"
 
-#: templates/base.html:500
+#: templates/base.html:509
 msgid "Issue Archive"
 msgstr "अंक अभिलेख"
 
-#: templates/base.html:501
+#: templates/base.html:510
 msgid "Article Archive"
 msgstr "लेख अभिलेख"
 
-#: templates/base.html:502
+#: templates/base.html:511
 msgid "Research"
 msgstr "अनुसन्धान"
 
-#: templates/base.html:503
+#: templates/base.html:512
 msgid "Editorial Policy"
 msgstr "सम्पादकीय नीति"
 
-#: templates/base.html:507
+#: templates/base.html:516
 msgid "Editorial Board"
 msgstr "सम्पादकीय बोर्ड"
 
-#: templates/base.html:508
+#: templates/base.html:517
 msgid "Policies"
 msgstr "नीतिहरू"
 
-#: templates/base.html:519
+#: templates/base.html:528
 msgid "All rights reserved."
 msgstr "सर्वाधिकार सुरक्षित।"
 
@@ -860,3 +862,365 @@ msgid ""
 msgstr ""
 "%(email)s ले अब हाम्रो न्युजलेटर प्राप्त गर्ने छैन। मन बदलियो? जुनसुकै बेला फेरि सदस्यता लिन "
 "सक्नुहुन्छ।"
+
+#: templates/training/course_checkout.html:4
+#: templates/training/course_checkout.html:9
+msgid "Checkout"
+msgstr "भुक्तानी"
+
+#: templates/training/course_checkout.html:8
+msgid "← BACK TO COURSE"
+msgstr "← कोर्समा फर्कनुहोस्"
+
+#: templates/training/course_checkout.html:21
+#: templates/training/course_detail.html:48
+#: templates/training/course_detail.html:240
+#: templates/training/course_list.html:68
+#, python-format
+msgid "Starts %(date)s"
+msgstr "%(date)s देखि सुरु"
+
+#: templates/training/course_checkout.html:26
+msgid "One-time enrollment"
+msgstr "एक पटकको भर्ना शुल्क"
+
+#: templates/training/course_checkout.html:32
+msgid ""
+"Payment processing isn't live yet — confirming below enrolls you immediately "
+"at no charge while checkout is in test mode."
+msgstr ""
+"भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — तल पुष्टि गर्दा कुनै शुल्क नलागी तुरुन्तै भर्ना "
+"हुनुहुनेछ।"
+
+#: templates/training/course_checkout.html:39
+msgid "CONFIRM & ENROLL"
+msgstr "पुष्टि गरी भर्ना हुनुहोस्"
+
+#: templates/training/course_detail.html:21
+msgid "Breadcrumb"
+msgstr "पृष्ठ मार्ग"
+
+#: templates/training/course_detail.html:22
+msgid "TRAINING"
+msgstr "तालिम"
+
+#: templates/training/course_detail.html:40
+#: templates/training/course_list.html:58
+msgid "Taught by"
+msgstr "प्रशिक्षक"
+
+#: templates/training/course_detail.html:46
+#, python-format
+msgid "<strong>%(counter)s</strong> learner enrolled"
+msgid_plural "<strong>%(counter)s</strong> learners enrolled"
+msgstr[0] "<strong>%(counter)s</strong> जना सिकारु भर्ना"
+msgstr[1] "<strong>%(counter)s</strong> जना सिकारु भर्ना"
+
+#: templates/training/course_detail.html:50
+#, python-format
+msgid "Only %(counter)s seat left"
+msgid_plural "Only %(counter)s seats left"
+msgstr[0] "%(counter)s सिट मात्र बाँकी"
+msgstr[1] "%(counter)s सिट मात्र बाँकी"
+
+#: templates/training/course_detail.html:61
+msgid "LEVEL"
+msgstr "तह"
+
+#: templates/training/course_detail.html:65
+msgid "DURATION"
+msgstr "अवधि"
+
+#: templates/training/course_detail.html:69
+msgid "EFFORT"
+msgstr "समय आवश्यकता"
+
+#: templates/training/course_detail.html:73
+msgid "FORMAT"
+msgstr "ढाँचा"
+
+#: templates/training/course_detail.html:77
+msgid "LANGUAGE"
+msgstr "भाषा"
+
+#: templates/training/course_detail.html:81
+msgid "CERTIFICATE"
+msgstr "प्रमाणपत्र"
+
+#: templates/training/course_detail.html:82
+msgid "Yes, on completion"
+msgstr "हो, पूरा गरेपछि"
+
+#: templates/training/course_detail.html:82
+msgid "Not included"
+msgstr "समावेश छैन"
+
+#: templates/training/course_detail.html:92
+msgid "Course sections"
+msgstr "कोर्सका खण्डहरू"
+
+#: templates/training/course_detail.html:93
+msgid "OUTCOMES"
+msgstr "सिकाइ"
+
+#: templates/training/course_detail.html:95
+msgid "SYLLABUS"
+msgstr "पाठ्यक्रम"
+
+#: templates/training/course_detail.html:96
+msgid "INSTRUCTOR"
+msgstr "प्रशिक्षक"
+
+#: templates/training/course_detail.html:97
+msgid "FAQ"
+msgstr "प्रश्नोत्तर"
+
+#: templates/training/course_detail.html:102
+msgid "What you'll learn"
+msgstr "तपाईं के सिक्नुहुनेछ"
+
+#: templates/training/course_detail.html:115
+msgid "About this course"
+msgstr "यो कोर्सबारे"
+
+#: templates/training/course_detail.html:125
+msgid "WHO THIS COURSE IS FOR"
+msgstr "यो कोर्स कसका लागि"
+
+#: templates/training/course_detail.html:134
+msgid "PREREQUISITES"
+msgstr "पूर्वआवश्यकता"
+
+#: templates/training/course_detail.html:142
+msgid "None — open to everyone."
+msgstr "केही छैन — सबैका लागि खुला।"
+
+#: templates/training/course_detail.html:151
+#: templates/training/course_detail.html:180
+msgid "Syllabus"
+msgstr "पाठ्यक्रम"
+
+#: templates/training/course_detail.html:153
+#, python-format
+msgid "%(counter)s MODULE"
+msgid_plural "%(counter)s MODULES"
+msgstr[0] "%(counter)s मोड्युल"
+msgstr[1] "%(counter)s मोड्युल"
+
+#: templates/training/course_detail.html:186
+msgid "Instructor"
+msgstr "प्रशिक्षक"
+
+#: templates/training/course_detail.html:203
+msgid "Frequently asked questions"
+msgstr "बारम्बार सोधिने प्रश्नहरू"
+
+#: templates/training/course_detail.html:227
+msgid "One-time payment · full course access"
+msgstr "एक पटकको भुक्तानी · पूरा कोर्समा पहुँच"
+
+#: templates/training/course_detail.html:231
+#, python-format
+msgid "%(counter)s OF %(total)s SEAT LEFT"
+msgid_plural "%(counter)s OF %(total)s SEATS LEFT"
+msgstr[0] "%(total)s मध्ये %(counter)s सिट बाँकी"
+msgstr[1] "%(total)s मध्ये %(counter)s सिट बाँकी"
+
+#: templates/training/course_detail.html:231
+msgid "THIS COURSE IS FULL"
+msgstr "यो कोर्स भरिइसक्यो"
+
+#: templates/training/course_detail.html:235
+msgid "THIS COURSE INCLUDES"
+msgstr "यो कोर्समा समावेश"
+
+#: templates/training/course_detail.html:237
+#, python-format
+msgid "%(counter)s module"
+msgid_plural "%(counter)s modules"
+msgstr[0] "%(counter)s मोड्युल"
+msgstr[1] "%(counter)s मोड्युल"
+
+#: templates/training/course_detail.html:240
+msgid "Start any time"
+msgstr "जुनसुकै बेला सुरु गर्न सकिन्छ"
+
+#: templates/training/course_detail.html:241
+msgid "Certificate of completion"
+msgstr "कोर्स पूरा गरेको प्रमाणपत्र"
+
+#: templates/training/course_detail.html:251
+msgid "More courses"
+msgstr "थप कोर्सहरू"
+
+#: templates/training/course_detail.html:252
+msgid "ALL COURSES →"
+msgstr "सबै कोर्सहरू →"
+
+#: templates/training/course_list.html:11
+msgid "TRAINING PROGRAMS"
+msgstr "तालिम कार्यक्रमहरू"
+
+#: templates/training/course_list.html:13
+msgid "Build the research skills health work runs on"
+msgstr "स्वास्थ्य क्षेत्रलाई चाहिने अनुसन्धान सीप विकास गर्नुहोस्"
+
+#: templates/training/course_list.html:16
+msgid ""
+"Practical courses in research writing, methods and publishing — taught by "
+"working researchers and editors."
+msgstr ""
+"अनुसन्धान लेखन, विधि र प्रकाशनसम्बन्धी व्यावहारिक कोर्सहरू — कार्यरत अनुसन्धानकर्ता र "
+"सम्पादकहरूद्वारा।"
+
+#: templates/training/course_list.html:19
+msgid "Search courses"
+msgstr "कोर्स खोज्नुहोस्"
+
+#: templates/training/course_list.html:21
+msgid "What do you want to learn?"
+msgstr "तपाईं के सिक्न चाहनुहुन्छ?"
+
+#: templates/training/course_list.html:30
+msgid "COURSES"
+msgstr "कोर्सहरू"
+
+#: templates/training/course_list.html:34
+msgid "LEARNERS"
+msgstr "सिकारुहरू"
+
+#: templates/training/course_list.html:38
+msgid "INSTRUCTORS"
+msgstr "प्रशिक्षकहरू"
+
+#: templates/training/course_list.html:55
+msgid "FEATURED COURSE"
+msgstr "विशेष कोर्स"
+
+#: templates/training/course_list.html:65
+msgid "VIEW COURSE →"
+msgstr "कोर्स हेर्नुहोस् →"
+
+#: templates/training/course_list.html:80
+msgid "Matching courses"
+msgstr "मिल्दा कोर्सहरू"
+
+#: templates/training/course_list.html:80
+msgid "All courses"
+msgstr "सबै कोर्सहरू"
+
+#: templates/training/course_list.html:83
+#, python-format
+msgid "%(counter)s course"
+msgid_plural "%(counter)s courses"
+msgstr[0] "%(counter)s कोर्स"
+msgstr[1] "%(counter)s कोर्स"
+
+#: templates/training/course_list.html:89
+msgid "Topic"
+msgstr "विषय"
+
+#: templates/training/course_list.html:91
+msgid "All topics"
+msgstr "सबै विषय"
+
+#: templates/training/course_list.html:95
+msgid "Level"
+msgstr "तह"
+
+#: templates/training/course_list.html:97
+msgid "Any level"
+msgstr "कुनै पनि तह"
+
+#: templates/training/course_list.html:100
+msgid "Format"
+msgstr "ढाँचा"
+
+#: templates/training/course_list.html:102
+msgid "Any format"
+msgstr "कुनै पनि ढाँचा"
+
+#: templates/training/course_list.html:105
+msgid "Apply"
+msgstr "लागू गर्नुहोस्"
+
+#: templates/training/course_list.html:107
+msgid "Clear filters"
+msgstr "फिल्टर हटाउनुहोस्"
+
+#: templates/training/course_list.html:116
+msgid "All"
+msgstr "सबै"
+
+#: templates/training/course_list.html:130
+msgid "No courses match those filters."
+msgstr "यी फिल्टरसँग मिल्ने कुनै कोर्स छैन।"
+
+#: templates/training/course_list.html:131
+msgid "See all courses"
+msgstr "सबै कोर्स हेर्नुहोस्"
+
+#: templates/training/course_list.html:133
+msgid "No training programs open right now — check back soon."
+msgstr "अहिले कुनै तालिम खुला छैन — केही समयपछि फेरि हेर्नुहोस्।"
+
+#: templates/training/includes/course_card.html:16
+msgid "Certificate"
+msgstr "प्रमाणपत्र"
+
+#: templates/training/includes/course_card.html:31
+#, python-format
+msgid "STARTS %(date)s"
+msgstr "%(date)s देखि सुरु"
+
+#: templates/training/includes/course_card.html:31
+msgid "ENROLL ANYTIME"
+msgstr "जुनसुकै बेला भर्ना"
+
+#: templates/training/includes/enroll_action.html:9
+msgid "You've completed this course"
+msgstr "तपाईंले यो कोर्स पूरा गर्नुभयो"
+
+#: templates/training/includes/enroll_action.html:9
+msgid "You're enrolled"
+msgstr "तपाईं भर्ना हुनुभएको छ"
+
+#: templates/training/includes/enroll_action.html:14
+msgid "COURSE FULL"
+msgstr "कोर्स भरिइसक्यो"
+
+#: templates/training/includes/enroll_action.html:19
+msgid "ENROLL NOW"
+msgstr "अहिले भर्ना हुनुहोस्"
+
+#: templates/training/includes/enroll_action.html:24
+msgid "LOG IN TO ENROLL"
+msgstr "भर्ना हुन लग इन गर्नुहोस्"
+
+#: training/models.py:33
+msgid "Beginner"
+msgstr "सुरुवाती"
+
+#: training/models.py:34
+msgid "Intermediate"
+msgstr "मध्यम"
+
+#: training/models.py:35
+msgid "Advanced"
+msgstr "उन्नत"
+
+#: training/models.py:36
+msgid "All levels"
+msgstr "सबै तह"
+
+#: training/models.py:39
+msgid "Online"
+msgstr "अनलाइन"
+
+#: training/models.py:40
+msgid "In person"
+msgstr "प्रत्यक्ष (कक्षामा)"
+
+#: training/models.py:41
+msgid "Hybrid"
+msgstr "मिश्रित (अनलाइन र प्रत्यक्ष)"

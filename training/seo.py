@@ -13,7 +13,11 @@ from articles.seo import ld_json
 CURRENCY_CODE = 'USD'
 
 
-def course_structured_data(course, journal_name):
+# schema.org CourseInstance.courseMode values for TrainingCourse.Mode.
+COURSE_MODE_SCHEMA = {'online': 'online', 'in_person': 'onsite', 'hybrid': 'blended'}
+
+
+def course_structured_data(course, journal_name, image_url=None):
     """schema.org Course — powers rich results (price, provider) for a
     training program listing.
     """
@@ -21,16 +25,22 @@ def course_structured_data(course, journal_name):
         '@context': 'https://schema.org',
         '@type': 'Course',
         'name': course.title,
-        'description': course.description,
+        'description': course.subtitle or course.description,
+        'image': image_url,
         'provider': {'@type': 'Organization', 'name': journal_name},
+        'educationalLevel': course.get_level_display() if course.level != course.Level.ALL_LEVELS else None,
+        'inLanguage': course.language or None,
+        'teaches': course.learning_outcome_list or None,
         'hasCourseInstance': {
             '@type': 'CourseInstance',
-            'courseMode': 'online',
+            'courseMode': COURSE_MODE_SCHEMA.get(course.mode, 'online'),
             'instructor': {'@type': 'Person', 'name': course.instructor},
+            **({'startDate': course.start_date.isoformat()} if course.start_date else {}),
         },
         'offers': {
             '@type': 'Offer',
             'price': str(course.price),
             'priceCurrency': CURRENCY_CODE,
+            'category': 'Paid' if course.price else 'Free',
         },
     })

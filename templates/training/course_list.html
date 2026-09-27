@@ -1,26 +1,138 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-6 py-14">
-    <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Training Programs</h1>
-    <p class="mt-2 text-muted-foreground">Research writing, methodology, and visibility workshops from our editorial team.</p>
+{# Hero #}
+<section class="bg-foreground text-primary-foreground">
+    <div class="max-w-6xl mx-auto px-6 py-14 md:py-20 grid md:grid-cols-12 gap-10 items-end">
+        <div class="md:col-span-7">
+            <p class="section-label text-accent">{% trans "TRAINING PROGRAMS" %}</p>
+            <h1 class="font-display text-4xl md:text-5xl font-bold leading-tight mt-3" style="letter-spacing: -0.025em;">
+                {% trans "Build the research skills health work runs on" %}
+            </h1>
+            <p class="mt-4 text-base md:text-lg opacity-75 leading-relaxed max-w-xl">
+                {% trans "Practical courses in research writing, methods and publishing — taught by working researchers and editors." %}
+            </p>
+            <form method="get" action="{% url 'training:course_list' %}" class="mt-8 flex max-w-xl border border-primary-foreground/30 bg-primary-foreground/5 focus-within:border-primary-foreground">
+                <label for="course-search" class="sr-only">{% trans "Search courses" %}</label>
+                <input id="course-search" type="search" name="q" value="{{ filters.q }}"
+                       placeholder="{% trans 'What do you want to learn?' %}"
+                       class="flex-1 min-w-0 !bg-transparent !border-0 px-4 py-3 text-sm !text-primary-foreground placeholder:text-primary-foreground/50 outline-none">
+                <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-accent text-white px-5 hover:opacity-90 transition-opacity">
+                    {% trans "SEARCH" %}
+                </button>
+            </form>
+        </div>
+        <dl class="md:col-span-5 grid grid-cols-3 gap-4 md:border-l md:border-primary-foreground/20 md:pl-10">
+            <div>
+                <dt class="font-mono-editorial text-[0.65rem] tracking-widest opacity-60">{% trans "COURSES" %}</dt>
+                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.courses }}</dd>
+            </div>
+            <div>
+                <dt class="font-mono-editorial text-[0.65rem] tracking-widest opacity-60">{% trans "LEARNERS" %}</dt>
+                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.learners }}</dd>
+            </div>
+            <div>
+                <dt class="font-mono-editorial text-[0.65rem] tracking-widest opacity-60">{% trans "INSTRUCTORS" %}</dt>
+                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.instructors }}</dd>
+            </div>
+        </dl>
+    </div>
+</section>
 
-    <div class="mt-10 grid md:grid-cols-2 gap-6">
+<div class="max-w-6xl mx-auto px-6 py-12">
+    {# Featured course #}
+    {% if featured_course %}
+        {% with course=featured_course %}
+        <a href="{% url 'training:course_detail' course.pk %}"
+           class="group grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all mb-14">
+            <div class="aspect-video md:aspect-auto md:min-h-[300px] bg-secondary overflow-hidden">
+                {% include 'training/includes/course_cover.html' with course=course classes="group-hover:scale-[1.03] transition-transform duration-300" %}
+            </div>
+            <div class="p-7 md:p-10 flex flex-col">
+                <span class="section-label text-accent">{% trans "FEATURED COURSE" %}{% if course.category %} · {{ course.category|upper }}{% endif %}</span>
+                <h2 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-3 group-hover:text-accent transition-colors" style="letter-spacing: -0.02em;">{{ course.title }}</h2>
+                {% if course.subtitle %}<p class="mt-3 text-muted-foreground leading-relaxed">{{ course.subtitle }}</p>{% endif %}
+                <p class="mt-4 text-sm"><span class="text-muted-foreground">{% trans "Taught by" %}</span> <span class="font-medium">{{ course.instructor }}</span></p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    {{ course.get_level_display }} · {{ course.duration }}{% if course.effort %} · {{ course.effort }}{% endif %} · {{ course.get_mode_display }}
+                </p>
+                <div class="mt-auto pt-6 flex items-center gap-5 flex-wrap">
+                    <span class="font-display text-2xl font-bold">{% include 'training/includes/course_price.html' %}</span>
+                    <span class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-3 group-hover:bg-accent transition-colors">
+                        {% trans "VIEW COURSE →" %}
+                    </span>
+                    {% if course.start_date %}
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{% blocktrans with date=course.start_date|date:"F j" %}Starts {{ date }}{% endblocktrans %}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endwith %}
+    {% endif %}
+
+    {# Filters #}
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-5 border-b-2 border-foreground">
+        <div>
+            <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">
+                {% if is_filtered %}{% trans "Matching courses" %}{% else %}{% trans "All courses" %}{% endif %}
+            </h2>
+            <p class="text-sm text-muted-foreground mt-1">
+                {% blocktrans count counter=courses|length %}{{ counter }} course{% plural %}{{ counter }} courses{% endblocktrans %}{% if filters.q %} · “{{ filters.q }}”{% endif %}
+            </p>
+        </div>
+        <form method="get" class="flex flex-wrap items-center gap-2" id="course-filters">
+            {% if filters.q %}<input type="hidden" name="q" value="{{ filters.q }}">{% endif %}
+            {% if categories %}
+                <label class="sr-only" for="filter-category">{% trans "Topic" %}</label>
+                <select id="filter-category" name="category" onchange="this.form.submit()" class="!w-auto text-sm border border-border bg-background px-3 py-2">
+                    <option value="">{% trans "All topics" %}</option>
+                    {% for category in categories %}<option value="{{ category }}" {% if filters.category|lower == category|lower %}selected{% endif %}>{{ category }}</option>{% endfor %}
+                </select>
+            {% endif %}
+            <label class="sr-only" for="filter-level">{% trans "Level" %}</label>
+            <select id="filter-level" name="level" onchange="this.form.submit()" class="!w-auto text-sm border border-border bg-background px-3 py-2">
+                <option value="">{% trans "Any level" %}</option>
+                {% for value, label in level_choices %}<option value="{{ value }}" {% if filters.level == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <label class="sr-only" for="filter-mode">{% trans "Format" %}</label>
+            <select id="filter-mode" name="mode" onchange="this.form.submit()" class="!w-auto text-sm border border-border bg-background px-3 py-2">
+                <option value="">{% trans "Any format" %}</option>
+                {% for value, label in mode_choices %}<option value="{{ value }}" {% if filters.mode == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <noscript><button type="submit" class="text-sm border border-foreground px-3 py-2">{% trans "Apply" %}</button></noscript>
+            {% if is_filtered %}
+                <a href="{% url 'training:course_list' %}" class="text-sm text-muted-foreground hover:text-accent underline underline-offset-2 ml-1">{% trans "Clear filters" %}</a>
+            {% endif %}
+        </form>
+    </div>
+
+    {# Topic chips #}
+    {% if categories|length > 1 %}
+        <div class="flex flex-wrap gap-2 mt-5">
+            <a href="{% url 'training:course_list' %}"
+               class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 rounded-full border {% if not filters.category %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{% trans "All" %}</a>
+            {% for category in categories %}
+                <a href="?category={{ category|urlencode }}"
+                   class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 rounded-full border {% if filters.category|lower == category|lower %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{{ category }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for course in courses %}
-            <a href="{% url 'training:course_detail' course.pk %}"
-               class="border border-border bg-card p-6 hover:border-foreground transition-colors">
-                <span class="section-label text-accent">{{ course.duration }}</span>
-                <h2 class="font-display text-lg font-bold leading-snug mt-2" style="letter-spacing: -0.01em;">{{ course.title }}</h2>
-                <p class="mt-1 font-mono-editorial text-xs text-muted-foreground">{{ course.instructor }}</p>
-                <p class="mt-3 text-sm text-muted-foreground leading-relaxed line-clamp-3">{{ course.description }}</p>
-                <div class="rule-thin mt-4 mb-3"></div>
-                <p class="font-display text-xl font-bold">${{ course.price }}</p>
-            </a>
+            {% include 'training/includes/course_card.html' %}
         {% empty %}
-            <p class="text-muted-foreground">No training programs open right now — check back soon.</p>
+            <div class="sm:col-span-2 lg:col-span-3 border border-dashed border-border px-6 py-14 text-center">
+                {% if is_filtered %}
+                    <p class="font-display text-xl font-bold">{% trans "No courses match those filters." %}</p>
+                    <a href="{% url 'training:course_list' %}" class="inline-block mt-3 text-sm text-accent underline underline-offset-2">{% trans "See all courses" %}</a>
+                {% else %}
+                    <p class="text-muted-foreground">{% trans "No training programs open right now — check back soon." %}</p>
+                {% endif %}
+            </div>
         {% endfor %}
     </div>
 </div>

@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
@@ -14,7 +14,7 @@ from billing.gateway import charge_safely
 from users.decorators import role_required
 from users.models import User
 
-from .forms import TrainingCourseForm
+from .forms import CourseModuleFormSet, TrainingCourseForm
 from .models import Enrollment, TrainingCourse
 from .seo import course_structured_data
 
@@ -22,16 +22,68 @@ from .seo import course_structured_data
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 
+def _with_seat_counts(queryset):
+    """Annotates active (non-cancelled) enrollment counts, used for "N
+    learners" and seats-left on catalog cards without a query per card.
+    """
+    return queryset.annotate(
+        active_enrollment_count=Count('enrollments', filter=~Q(enrollments__status=Enrollment.Status.CANCELLED)),
+    )
+
+
 class CourseListView(ListView):
+    """Public course catalog — featured course on top, then a filterable
+    grid (search, category, level, format), in the style of a MOOC catalog.
+    """
+
     model = TrainingCourse
     template_name = 'training/course_list.html'
     context_object_name = 'courses'
 
     def get_queryset(self):
-        return TrainingCourse.objects.filter(is_active=True).order_by('title')
+        queryset = _with_seat_counts(TrainingCourse.objects.filter(is_active=True))
+        self.filters = {
+            'q': self.request.GET.get('q', '').strip(),
+            'category': self.request.GET.get('category', '').strip(),
+            'level': self.request.GET.get('level', ''),
+            'mode': self.request.GET.get('mode', ''),
+        }
+        if self.filters['q']:
+            q = self.filters['q']
+            queryset = queryset.filter(
+                Q(title__icontains=q) | Q(subtitle__icontains=q) | Q(description__icontains=q)
+                | Q(instructor__icontains=q) | Q(category__icontains=q),
+            )
+        if self.filters['category']:
+            queryset = queryset.filter(category__iexact=self.filters['category'])
+        if self.filters['level'] in TrainingCourse.Level.values:
+            queryset = queryset.filter(level=self.filters['level'])
+        if self.filters['mode'] in TrainingCourse.Mode.values:
+            queryset = queryset.filter(mode=self.filters['mode'])
+        return queryset.order_by('-is_featured', 'start_date', 'title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        active = TrainingCourse.objects.filter(is_active=True)
+        is_filtered = any(self.filters.values())
+        context['filters'] = self.filters
+        context['is_filtered'] = is_filtered
+        context['categories'] = sorted(
+            {c for c in active.exclude(category='').values_list('category', flat=True)}, key=str.lower,
+        )
+        context['level_choices'] = TrainingCourse.Level.choices
+        context['mode_choices'] = TrainingCourse.Mode.choices
+        # Only on the unfiltered catalog — a filtered view is a search result, not a landing page.
+        featured = None
+        if not is_filtered:
+            featured = _with_seat_counts(active.filter(is_featured=True)).order_by('start_date', 'title').first()
+        context['featured_course'] = featured
+        context['catalog_stats'] = {
+            'courses': active.count(),
+            'learners': Enrollment.objects.filter(course__is_active=True).exclude(
+                status=Enrollment.Status.CANCELLED).values('user').distinct().count(),
+            'instructors': active.values('instructor').distinct().count(),
+        }
         context['meta_title'] = f'Training Programs — {settings.JOURNAL_NAME}'
         context['meta_description'] = f'Professional training programs offered by {settings.JOURNAL_NAME}.'
         return context
@@ -43,27 +95,42 @@ class CourseDetailView(DetailView):
     context_object_name = 'course'
 
     def get_queryset(self):
-        return TrainingCourse.objects.filter(is_active=True)
+        return TrainingCourse.objects.filter(is_active=True).prefetch_related('modules')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        enrolled_count = self.object.enrollments.exclude(status=Enrollment.Status.CANCELLED).count()
+        course = self.object
+        enrolled_count = course.enrollments.exclude(status=Enrollment.Status.CANCELLED).count()
         context['enrolled_count'] = enrolled_count
         context['spots_left'] = (
-            None if self.object.max_enrollments is None
-            else max(self.object.max_enrollments - enrolled_count, 0)
+            None if course.max_enrollments is None
+            else max(course.max_enrollments - enrolled_count, 0)
         )
         if self.request.user.is_authenticated:
             context['enrollment'] = Enrollment.objects.filter(
-                user=self.request.user, course=self.object,
+                user=self.request.user, course=course,
             ).first()
-        context['meta_title'] = f'{self.object.title} — {settings.JOURNAL_NAME}'
-        context['meta_description'] = (self.object.description or '')[:200]
-        context['structured_data_json'] = course_structured_data(self.object, journal_name=settings.JOURNAL_NAME)
+        context['modules'] = list(course.modules.all())
+        # Other courses, same category first.
+        context['related_courses'] = list(
+            _with_seat_counts(TrainingCourse.objects.filter(is_active=True).exclude(pk=course.pk)).annotate(
+                other_category=Case(
+                    When(category__iexact=course.category, then=0), default=1, output_field=IntegerField(),
+                ) if course.category else Value(1, output_field=IntegerField()),
+            ).order_by('other_category', '-is_featured', 'title')[:3],
+        )
+        context['meta_title'] = f'{course.title} — {settings.JOURNAL_NAME}'
+        context['meta_description'] = (course.subtitle or course.description or '')[:200]
+        image_url = self.request.build_absolute_uri(course.cover_image.url) if course.cover_image else None
+        if image_url:
+            context['meta_image_url'] = image_url
+        context['structured_data_json'] = course_structured_data(
+            course, journal_name=settings.JOURNAL_NAME, image_url=image_url,
+        )
         context['breadcrumb_json'] = breadcrumb_list_structured_data([
             ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
             ('Training Programs', self.request.build_absolute_uri(reverse('training:course_list'))),
-            (self.object.title, None),
+            (course.title, None),
         ])
         return context
 
@@ -137,8 +204,29 @@ class CourseManageListView(ListView):
 
 
 class CourseFormMixin:
+    """Saves the course and its modules (CourseModuleFormSet) together — a
+    course is only saved when both the form and every module row validate.
+    """
+
     def get_success_url(self):
         return reverse('training:manage_course_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if 'module_formset' not in context:
+            data = self.request.POST if self.request.method == 'POST' else None
+            context['module_formset'] = CourseModuleFormSet(data, instance=self.object, prefix='modules')
+        return context
+
+    def form_valid(self, form):
+        module_formset = CourseModuleFormSet(self.request.POST, instance=form.instance, prefix='modules')
+        if not module_formset.is_valid():
+            return self.render_to_response(self.get_context_data(form=form, module_formset=module_formset))
+        self.object = form.save()
+        module_formset.instance = self.object
+        module_formset.save()
+        messages.success(self.request, f'"{self.object.title}" {self.success_verb}.')
+        return redirect(self.get_success_url())
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -146,15 +234,12 @@ class CourseCreateView(CourseFormMixin, CreateView):
     model = TrainingCourse
     form_class = TrainingCourseForm
     template_name = 'training/manage/course_form.html'
+    success_verb = 'created'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_create'] = True
         return context
-
-    def form_valid(self, form):
-        messages.success(self.request, f'"{form.instance.title}" created.')
-        return super().form_valid(form)
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -162,15 +247,12 @@ class CourseUpdateView(CourseFormMixin, UpdateView):
     model = TrainingCourse
     form_class = TrainingCourseForm
     template_name = 'training/manage/course_form.html'
+    success_verb = 'updated'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_create'] = False
         return context
-
-    def form_valid(self, form):
-        messages.success(self.request, f'"{form.instance.title}" updated.')
-        return super().form_valid(form)
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')

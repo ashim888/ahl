@@ -297,13 +297,37 @@ busy queue. Already-decided pitches are automatically skipped if accidentally in
 
 `/manage/training/` — manage the courses shown publicly at `/training/`.
 
-1. Create a course: title, description, price, duration, instructor, optional syllabus, and an
-   optional enrollment cap.
-2. **Enrollments** — click into a course's enrollment list to see who's signed up. You can update
-   status/payment status per row, or select multiple rows and apply a status/payment change to
-   all of them at once via the bulk toolbar at the top.
-3. Readers self-enroll from the public course page — you don't create enrollments manually except
-   for corrections.
+**What readers see.** `/training/` is a course catalog: a search box, a **featured course**
+banner, topic chips, level/format filters, and a card per course (cover, topic, title,
+instructor, level · duration · format, price, start date). Each course page has a summary
+header, key facts (level, duration, weekly effort, format, language, certificate), an
+enrollment card with price and seats left, **What you'll learn**, **About this course**, **Who
+this course is for**, **Prerequisites**, an expandable **Syllabus**, the **Instructor**, **FAQs**,
+and **More courses** (same topic first).
+
+**Creating or editing a course** — the form is split into sections:
+1. **Basics** — title, a one-line subtitle, *category* (the topic used for filtering — spell it
+   the same way across courses so they group together), description, and a cover image
+   (landscape, about 1200×675). Without a cover, the page generates one.
+2. **Format, schedule & price** — level, format (online / in person / hybrid), language,
+   duration, weekly effort, start date (leave empty if learners can start any time), price, an
+   optional seat limit, and three switches: *offers certificate*, *is active* (visible to the
+   public) and *is featured* (shown as the banner at the top of the catalog).
+3. **Outcomes & audience** — *What you'll learn*, *Who this course is for* and *Prerequisites*:
+   one item per line, each becomes a bullet.
+4. **Syllabus modules** — one row per module: order, title, length (e.g. "Week 1") and a short
+   summary. Three blank rows are added each time; leave unused ones empty, and tick *Remove this
+   module* to delete one.
+5. **Instructor** — name, title/affiliation, bio and photo.
+6. **FAQs** — type each question on its own line with the answer on the lines below it, and
+   leave a blank line between questions.
+
+**After creating a course:**
+- **Enrollments** — click into a course's enrollment list to see who's signed up. You can update
+  status/payment status per row, or select multiple rows and apply a status/payment change to
+  all of them at once via the bulk toolbar at the top.
+- Readers self-enroll from the public course page — you don't create enrollments manually except
+  for corrections.
 
 ---
 
