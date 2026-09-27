@@ -183,6 +183,15 @@
         :lang(ne) .tracking-wider,
         :lang(ne) .tracking-widest,
         :lang(ne) [style*="letter-spacing"] { letter-spacing: normal !important; }
+        /* The small label sizes (nav 0.65rem, footer/menus 0.75rem) are sized
+           for Latin UPPERCASE with wide tracking, where every letter is full
+           cap height. Devanagari at the same size has a much smaller letter
+           body and loses the tracking, so the same labels read noticeably
+           smaller — bump them roughly 20% in Nepali only. */
+        :lang(ne) .section-label,
+        :lang(ne) .font-mono-editorial.text-\[0\.65rem\] { font-size: 0.8rem; }
+        :lang(ne) .font-mono-editorial.text-\[0\.6rem\] { font-size: 0.75rem; }
+        :lang(ne) .font-mono-editorial.text-xs { font-size: 0.875rem; }
         :lang(ne) .italic,
         :lang(ne) .prose-article blockquote { font-style: normal; }
         :lang(ne) .leading-tight,
