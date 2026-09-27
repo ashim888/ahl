@@ -1,0 +1,23 @@
+{% comment %}
+Impressions vs. clicks bar chart for Keyword Analytics — `trend` is
+admin_custom/keyword_analytics.py:daily_trend output (one column per day,
+or per week for a 90-day window). Same dual-bar markup as the ads analytics
+chart (templates/ads/manage/adslot_analytics_overview.html).
+{% endcomment %}
+<div class="overflow-x-auto">
+    <div class="flex items-end justify-between gap-1.5 h-40 min-w-[640px]">
+        {% for d in trend %}
+            <div class="flex-1 flex flex-col items-center h-full" title="{{ d.label }}: {{ d.impressions }} impressions, {{ d.clicks }} clicks{% if d.ctr is not None %} ({{ d.ctr }}% CTR){% endif %}">
+                <div class="relative w-full max-w-6 h-full flex items-end justify-center">
+                    <div class="absolute bottom-0 w-full rounded-t-md bg-violet-200" style="height: {{ d.impressions_pct }}%; min-height: {% if d.impressions %}4px{% else %}0{% endif %};"></div>
+                    <div class="absolute bottom-0 w-1/2 rounded-t-md bg-violet-600" style="height: {{ d.clicks_pct }}%; min-height: {% if d.clicks %}4px{% else %}0{% endif %};"></div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="flex items-center justify-between gap-1.5 mt-2 min-w-[640px]">
+        {% for d in trend %}
+            <span class="flex-1 text-center text-[0.6rem] text-gray-400">{{ d.label }}</span>
+        {% endfor %}
+    </div>
+</div>

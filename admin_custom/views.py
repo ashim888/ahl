@@ -13,13 +13,15 @@ from django.views.generic import ListView, TemplateView
 from django_comments_xtd.models import XtdComment
 
 from ads.models import AdEvent, AdSlot
-from articles.models import Article, ArticleView
+from articles.models import Article, ArticleView, Keyword, KeywordEvent
 from billing.models import ArticlePurchase, SubscriptionPlan, UserSubscription
 from newsletter.models import NewsletterIssue, Subscriber
 from pitches.models import StoryPitch
 from training.models import Enrollment, TrainingCourse
 from users.decorators import role_required
 from users.models import User
+
+from . import keyword_analytics as ka
 
 # Single source of truth is User.EDITORIAL_ROLES (see users/models.py).
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
@@ -679,3 +681,165 @@ def comment_moderate(request, pk, action):
     comment.save(update_fields=['is_removed'])
     messages.success(request, f'Comment {"removed" if comment.is_removed else "restored"}.')
     return redirect('admin_custom:manage_comment_list')
+
+
+# How many keywords get a row in the keyword × time heatmap and the
+# "Highest reader interest" list — enough to spot trends without the grid
+# turning into a wall of mostly-empty rows.
+KEYWORD_HEATMAP_ROWS = 12
+KEYWORD_INTEREST_ROWS = 10
+RECENT_KEYWORD_CLICKS = 25
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class KeywordAnalyticsView(TemplateView):
+    """/editorial/keywords/ — how readers engage with article keyword pills
+    (articles.KeywordEvent): the full keyword list with impressions, clicks
+    and click-through rate ("how much readers want to click this"), a
+    weekday × hour click heatmap, a keyword × day heatmap of the most
+    clicked keywords, and a log of recent clicks. `days`, `q` and `sort`
+    are GET params, all carried by one form in the template.
+    """
+
+    template_name = 'admin_custom/keyword_analytics.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        days = ka.parse_window_days(self.request.GET.get('days'))
+        query = self.request.GET.get('q', '').strip()
+        sort = self.request.GET.get('sort', ka.DEFAULT_SORT)
+        if sort not in ka.SORT_CHOICES:
+            sort = ka.DEFAULT_SORT
+        window_start = ka.window_start_for(days)
+
+        # Unfiltered rows feed the KPIs/heatmaps (a search box shouldn't
+        # change the sitewide picture); the filtered list feeds the table.
+        all_rows = ka.keyword_rows(window_start)
+        rows = ka.keyword_rows(window_start, query, sort) if (query or sort != ka.DEFAULT_SORT) else all_rows
+
+        impressions = sum(r['impressions'] for r in all_rows)
+        clicks = sum(r['clicks'] for r in all_rows)
+        context.update({
+            'days': days,
+            'window_day_choices': ka.WINDOW_DAY_CHOICES,
+            'query': query,
+            'sort': sort,
+            'sort_choices': ka.SORT_CHOICES.items(),
+            'keyword_rows': rows,
+            'keyword_total': len(all_rows),
+            'window_impressions': impressions,
+            'window_clicks': clicks,
+            'window_ctr': ka.ctr(clicks, impressions),
+            'keywords_clicked': sum(1 for r in all_rows if r['clicks']),
+            'min_impressions_for_ctr': ka.MIN_IMPRESSIONS_FOR_CTR_RANK,
+        })
+
+        interest = sorted(
+            (r for r in all_rows if not r['low_data'] and r['clicks']),
+            key=lambda r: r['ctr'], reverse=True,
+        )[:KEYWORD_INTEREST_ROWS]
+        top_ctr = interest[0]['ctr'] if interest else 0
+        for r in interest:
+            r['bar_pct'] = round(r['ctr'] / top_ctr * 100) if top_ctr else 0
+        context['interest_rows'] = interest
+
+        window_clicks = KeywordEvent.objects.filter(
+            event_type=KeywordEvent.EventType.CLICK, occurred_at__gte=window_start,
+        )
+        context['hour_heatmap'] = ka.weekday_hour_heatmap(window_clicks)
+        top_clicked = [r['keyword'] for r in all_rows if r['clicks']][:KEYWORD_HEATMAP_ROWS]
+        context['keyword_heatmap'] = ka.keyword_time_heatmap(top_clicked, days) if top_clicked else None
+        context['daily_trend'] = ka.daily_trend(KeywordEvent.objects.all(), days)
+        context['recent_clicks'] = (
+            window_clicks.select_related('keyword', 'article').order_by('-occurred_at')[:RECENT_KEYWORD_CLICKS]
+        )
+        return context
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class KeywordAnalyticsDetailView(TemplateView):
+    """/editorial/keywords/<pk>/ — one keyword's trend, its own weekday ×
+    hour click heatmap, which articles drive its clicks (with per-article
+    CTR), and header-vs-footer pill placement.
+    """
+
+    template_name = 'admin_custom/keyword_analytics_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        keyword = get_object_or_404(Keyword, pk=self.kwargs['pk'])
+        days = ka.parse_window_days(self.request.GET.get('days'))
+        window_start = ka.window_start_for(days)
+        events = keyword.events.filter(occurred_at__gte=window_start)
+        clicks_qs = events.filter(event_type=KeywordEvent.EventType.CLICK)
+
+        impressions = events.filter(event_type=KeywordEvent.EventType.IMPRESSION).count()
+        clicks = clicks_qs.count()
+        context.update({
+            'keyword': keyword,
+            'days': days,
+            'window_day_choices': ka.WINDOW_DAY_CHOICES,
+            'window_impressions': impressions,
+            'window_clicks': clicks,
+            'window_ctr': ka.ctr(clicks, impressions),
+            'lifetime_clicks': keyword.events.filter(event_type=KeywordEvent.EventType.CLICK).count(),
+            'follower_count': keyword.followers.count(),
+            'article_count': keyword.articles.filter(status=Article.Status.PUBLISHED).count(),
+            'daily_trend': ka.daily_trend(keyword.events.all(), days),
+            'hour_heatmap': ka.weekday_hour_heatmap(clicks_qs),
+        })
+
+        article_stats = (
+            events.filter(article__isnull=False)
+            .values('article', 'article__title', 'article__slug')
+            .annotate(
+                impressions=Count('id', filter=Q(event_type=KeywordEvent.EventType.IMPRESSION)),
+                clicks=Count('id', filter=Q(event_type=KeywordEvent.EventType.CLICK)),
+            )
+            .order_by('-clicks', '-impressions')[:15]
+        )
+        context['article_rows'] = [
+            {**row, 'ctr': ka.ctr(row['clicks'], row['impressions'])} for row in article_stats
+        ]
+
+        placement_counts = dict(
+            clicks_qs.values_list('placement').annotate(count=Count('id')).order_by(),
+        )
+        context['placement_rows'] = [
+            {
+                'label': label,
+                'count': placement_counts.get(value, 0),
+                'pct': round(placement_counts.get(value, 0) / clicks * 100) if clicks else 0,
+            }
+            for value, label in KeywordEvent.Placement.choices
+        ]
+        return context
+
+
+@role_required(*EDITORIAL_ROLES)
+def keyword_analytics_csv_export(request):
+    """CSV of the Keyword Analytics table — same rows, window, search and
+    sort as the page (KeywordAnalyticsView), so what's downloaded matches
+    what's on screen.
+    """
+    days = ka.parse_window_days(request.GET.get('days'))
+    query = request.GET.get('q', '').strip()
+    sort = request.GET.get('sort', ka.DEFAULT_SORT)
+    if sort not in ka.SORT_CHOICES:
+        sort = ka.DEFAULT_SORT
+    rows = ka.keyword_rows(ka.window_start_for(days), query, sort)
+
+    today = timezone.localdate()
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="keyword-analytics-{days}d-{today.isoformat()}.csv"'
+    writer = csv.writer(response)
+    writer.writerow([
+        'Keyword', 'Slug', 'Published Articles', 'Followers',
+        f'Impressions ({days}d)', f'Clicks ({days}d)', 'CTR %', 'Low data',
+    ])
+    for r in rows:
+        writer.writerow([
+            r['keyword'].name, r['keyword'].slug, r['article_count'], r['follower_count'],
+            r['impressions'], r['clicks'], '' if r['ctr'] is None else r['ctr'], 'yes' if r['low_data'] else '',
+        ])
+    return response

@@ -12,7 +12,7 @@ from sections.models import Section, SectionFollow
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .forms import ArticleForm, TagifyKeywordsField
-from .models import Article, Bookmark, Keyword, KeywordFollow
+from .models import Article, Bookmark, Keyword, KeywordEvent, KeywordFollow
 from .toc import extract_toc
 
 
@@ -785,6 +785,77 @@ class ArticleViewTrackingTests(TestCase):
         self.client.force_login(editor)
         self.client.get(reverse('articles:article_detail', args=[article.slug]))
         self.assertEqual(article.page_views.count(), 0)
+
+
+class KeywordEventTrackingTests(TestCase):
+    """Keyword-pill impressions (recorded with a counted article view) and
+    clicks (articles:keyword_click, sent by sendBeacon) — the data behind
+    the editorial Keyword Analytics page.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.article = make_article('keyword-tracked-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.tb = make_keyword('Tuberculosis')
+        self.screening = make_keyword('Screening')
+        self.article.keyword_tags.set([self.tb, self.screening])
+
+    def _click(self, keyword=None, placement='header'):
+        return self.client.post(
+            reverse('articles:keyword_click', args=[(keyword or self.tb).pk]),
+            {'article': self.article.pk, 'placement': placement},
+        )
+
+    def _count(self, event_type):
+        return KeywordEvent.objects.filter(event_type=event_type).count()
+
+    def test_article_view_records_one_impression_per_keyword(self):
+        self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        impressions = KeywordEvent.objects.filter(event_type=KeywordEvent.EventType.IMPRESSION)
+        self.assertEqual(set(impressions.values_list('keyword', flat=True)), {self.tb.pk, self.screening.pk})
+        self.assertTrue(all(e.article_id == self.article.pk for e in impressions))
+
+    def test_refresh_does_not_add_impressions(self):
+        for _ in range(3):
+            self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertEqual(self._count(KeywordEvent.EventType.IMPRESSION), 2)
+
+    def test_pills_carry_click_tracking_attributes(self):
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertContains(response, reverse('articles:keyword_click', args=[self.tb.pk]), count=2)
+        self.assertContains(response, 'data-placement="header"')
+        self.assertContains(response, 'data-placement="footer"')
+
+    def test_click_is_recorded_with_article_and_placement(self):
+        response = self._click(placement='footer')
+        self.assertEqual(response.status_code, 204)
+        event = KeywordEvent.objects.get(event_type=KeywordEvent.EventType.CLICK)
+        self.assertEqual((event.keyword, event.article, event.placement), (self.tb, self.article, 'footer'))
+
+    def test_repeat_click_in_same_session_is_deduplicated(self):
+        self._click()
+        self._click()
+        self._click(keyword=self.screening)
+        self.assertEqual(self._count(KeywordEvent.EventType.CLICK), 2)
+
+    def test_unknown_placement_is_stored_blank(self):
+        self._click(placement='sidebar-hack')
+        self.assertEqual(KeywordEvent.objects.get().placement, '')
+
+    def test_editorial_staff_clicks_are_not_recorded(self):
+        from users.models import User
+
+        editor = User.objects.create_user(
+            email='kw-click-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        self.assertEqual(self._click().status_code, 204)
+        self.assertEqual(self._count(KeywordEvent.EventType.CLICK), 0)
+
+    def test_click_endpoint_rejects_get(self):
+        response = self.client.get(reverse('articles:keyword_click', args=[self.tb.pk]))
+        self.assertEqual(response.status_code, 405)
 
 
 class TrendingSectionTests(TestCase):

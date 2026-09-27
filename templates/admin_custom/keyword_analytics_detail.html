@@ -1,0 +1,113 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{{ keyword.name }} — Keyword Analytics — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Keyword: {{ keyword.name }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'admin_custom:keyword_analytics' %}?days={{ days }}" class="text-sm font-medium text-gray-500 hover:text-gray-900">← All keywords</a>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <a href="{% url 'articles:article_list' %}?keyword={{ keyword.slug }}" target="_blank" rel="noopener"
+       class="text-sm text-gray-500 hover:text-gray-900">View public keyword page ↗</a>
+    <form method="get">
+        <select name="days" onchange="this.form.submit()" class="w-auto rounded-md border border-gray-300 px-2.5 py-1.5 text-xs">
+            {% for choice in window_day_choices %}
+                <option value="{{ choice }}" {% if choice == days %}selected{% endif %}>Last {{ choice }} days</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Impressions ({{ days }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_impressions }}</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Clicks ({{ days }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ window_clicks }}</p>
+        <p class="mt-2 text-xs text-gray-400">{{ lifetime_clicks }} all-time</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">CTR ({{ days }}d)</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{% if window_ctr is not None %}{{ window_ctr }}%{% else %}—{% endif %}</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Published articles</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ article_count }}</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-500">Followers</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ follower_count }}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
+        <h2 class="text-base font-semibold text-gray-900">Impressions &amp; Clicks</h2>
+        <div class="flex items-center gap-4 text-xs">
+            <span class="flex items-center gap-1.5 text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-violet-200"></span> Impressions</span>
+            <span class="flex items-center gap-1.5 text-gray-500"><span class="w-2.5 h-2.5 rounded-sm bg-violet-600"></span> Clicks</span>
+        </div>
+    </div>
+    {% include 'admin_custom/includes/keyword_trend.html' with trend=daily_trend %}
+</div>
+
+<div class="grid grid-cols-1 gap-4 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900">When readers click “{{ keyword.name }}”</h2>
+        <p class="text-xs text-gray-400 mt-1 mb-5">Clicks by weekday and hour of day, last {{ days }} days.</p>
+        {% include 'admin_custom/includes/keyword_hour_heatmap.html' with heatmap=hour_heatmap %}
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Where it was clicked</h2>
+        <p class="text-xs text-gray-400 mb-5">Header tags vs. the tag list at the end of the article.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4">
+            {% for p in placement_rows %}
+                <div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-700">{{ p.label }}</span>
+                        <span class="text-xs text-gray-500"><span class="font-semibold text-gray-900">{{ p.count }}</span> · {{ p.pct }}%</span>
+                    </div>
+                    <div class="mt-1.5 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div class="h-full rounded-full bg-violet-500" style="width: {{ p.pct }}%;"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-1">Articles driving clicks</h2>
+    <p class="text-xs text-gray-400 mb-4">Which article pages readers clicked this keyword from, last {{ days }} days.</p>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-100">
+                    <th class="py-2 pr-4 font-medium">Article</th>
+                    <th class="py-2 px-3 font-medium text-right">Impressions</th>
+                    <th class="py-2 px-3 font-medium text-right">Clicks</th>
+                    <th class="py-2 pl-3 font-medium text-right">CTR</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for row in article_rows %}
+                    <tr>
+                        <td class="py-2 pr-4 max-w-md truncate">
+                            <a href="{% url 'articles:article_detail' row.article__slug %}" target="_blank" rel="noopener" class="text-gray-900 hover:text-violet-700">{{ row.article__title }}</a>
+                        </td>
+                        <td class="py-2 px-3 text-right text-gray-600">{{ row.impressions }}</td>
+                        <td class="py-2 px-3 text-right font-semibold text-gray-900">{{ row.clicks }}</td>
+                        <td class="py-2 pl-3 text-right text-gray-700">{% if row.ctr is not None %}{{ row.ctr }}%{% else %}—{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="py-8 text-center text-gray-400">No activity for this keyword in the last {{ days }} days.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

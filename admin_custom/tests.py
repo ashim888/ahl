@@ -9,7 +9,7 @@ from PIL import Image
 
 from ads.models import AdSlot
 from ads.services import record_click, record_impression
-from articles.models import Article, ArticleView
+from articles.models import Article, ArticleView, Keyword, KeywordEvent
 from billing.models import ArticlePurchase, SubscriptionPlan, UserSubscription
 from newsletter.models import Subscriber
 from training.models import Enrollment, TrainingCourse
@@ -372,3 +372,94 @@ class CommentModerationTests(TestCase):
 
         response = self.client.get(reverse('admin_custom:manage_comment_list'), {'status': 'removed'})
         self.assertEqual(list(response.context['comments']), [self.comment])
+
+
+class KeywordAnalyticsTests(TestCase):
+    """/editorial/keywords/ — keyword list with impressions/clicks/CTR,
+    heatmaps, per-keyword detail and CSV export (admin_custom/keyword_analytics.py).
+    """
+
+    def setUp(self):
+        self.editor = make_editor('kw-analytics-editor@example.com')
+        self.article = make_article('kw-analytics-article')
+        self.popular = Keyword.objects.create(name='Popular Topic')
+        self.ignored = Keyword.objects.create(name='Ignored Topic')
+        self.article.keyword_tags.set([self.popular, self.ignored])
+        impressions = [
+            KeywordEvent(keyword=kw, article=self.article, event_type=KeywordEvent.EventType.IMPRESSION)
+            for kw in (self.popular, self.ignored) for _ in range(25)
+        ]
+        clicks = [
+            KeywordEvent(
+                keyword=self.popular, article=self.article, event_type=KeywordEvent.EventType.CLICK,
+                placement=KeywordEvent.Placement.HEADER,
+            )
+            for _ in range(5)
+        ]
+        KeywordEvent.objects.bulk_create(impressions + clicks)
+
+    def test_reader_cannot_view_keyword_analytics(self):
+        self.client.force_login(make_reader('kw-analytics-reader@example.com'))
+        self.assertEqual(self.client.get(reverse('admin_custom:keyword_analytics')).status_code, 403)
+
+    def test_keyword_rows_show_impressions_clicks_and_ctr(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:keyword_analytics'))
+        self.assertEqual(response.status_code, 200)
+        rows = {r['keyword'].pk: r for r in response.context['keyword_rows']}
+        self.assertEqual((rows[self.popular.pk]['impressions'], rows[self.popular.pk]['clicks']), (25, 5))
+        self.assertEqual(rows[self.popular.pk]['ctr'], 20.0)
+        self.assertEqual(rows[self.ignored.pk]['ctr'], 0.0)
+        self.assertEqual(response.context['keyword_rows'][0]['keyword'], self.popular)
+        self.assertEqual(response.context['window_ctr'], 10.0)
+        self.assertEqual(response.context['keywords_clicked'], 1)
+
+    def test_heatmaps_count_clicks(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:keyword_analytics'))
+        hour_heatmap = response.context['hour_heatmap']
+        self.assertEqual(sum(row['total'] for row in hour_heatmap['rows']), 5)
+        self.assertEqual(hour_heatmap['busiest']['count'], 5)
+        keyword_heatmap = response.context['keyword_heatmap']
+        self.assertEqual([row['keyword'] for row in keyword_heatmap['rows']], [self.popular])
+        self.assertEqual(keyword_heatmap['rows'][0]['total'], 5)
+
+    def test_interest_ranking_excludes_low_data_keywords(self):
+        sparse = Keyword.objects.create(name='Sparse Topic')
+        KeywordEvent.objects.bulk_create([
+            KeywordEvent(keyword=sparse, event_type=KeywordEvent.EventType.IMPRESSION),
+            KeywordEvent(keyword=sparse, event_type=KeywordEvent.EventType.CLICK),
+        ])
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:keyword_analytics'), {'sort': 'ctr'})
+        self.assertEqual([r['keyword'] for r in response.context['interest_rows']], [self.popular])
+        # 100% CTR on 1 impression still sorts after a keyword with enough data.
+        self.assertEqual(response.context['keyword_rows'][0]['keyword'], self.popular)
+
+    def test_search_filters_the_list(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:keyword_analytics'), {'q': 'ignored'})
+        self.assertEqual([r['keyword'] for r in response.context['keyword_rows']], [self.ignored])
+
+    def test_old_events_fall_outside_the_window(self):
+        KeywordEvent.objects.filter(event_type=KeywordEvent.EventType.CLICK).update(
+            occurred_at=timezone.now() - datetime.timedelta(days=20),
+        )
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:keyword_analytics'), {'days': 7})
+        self.assertEqual(response.context['window_clicks'], 0)
+
+    def test_detail_page(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:keyword_analytics_detail', args=[self.popular.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['window_ctr'], 20.0)
+        self.assertEqual(response.context['article_rows'][0]['clicks'], 5)
+        header = next(p for p in response.context['placement_rows'] if p['label'] == 'Article header')
+        self.assertEqual((header['count'], header['pct']), (5, 100))
+
+    def test_csv_export(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('admin_custom:keyword_analytics_csv_export'))
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn('Popular Topic,popular-topic,1,0,25,5,20.0,', response.content.decode())

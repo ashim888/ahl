@@ -21,6 +21,7 @@ urlpatterns = [
     path('search/', views.SearchView.as_view(), name='search'),
     path('keywords/autocomplete/', views.keyword_autocomplete, name='keyword_autocomplete'),
     path('keywords/<slug:slug>/follow/', views.keyword_follow_toggle, name='keyword_follow_toggle'),
+    path('keywords/<int:pk>/click/', views.keyword_click, name='keyword_click'),
     path('feed/', LatestArticlesFeed(), name='latest_feed'),
     path('feed/atom/', LatestArticlesAtomFeed(), name='latest_feed_atom'),
     # Must come before <slug:slug> below — a bare short code (e.g. "3f2a4")

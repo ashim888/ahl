@@ -331,3 +331,46 @@ class KeywordFollow(models.Model):
 
     def __str__(self):
         return f'{self.user} follows {self.keyword}'
+
+
+class KeywordEvent(models.Model):
+    """One keyword-pill impression or click on an article page — first-party,
+    same event-log pattern as ArticleView and ads.AdEvent. Powers the
+    editorial Keyword Analytics page (admin_custom, /editorial/keywords/):
+    clicks ÷ impressions is the "how much do readers want to click this
+    keyword" signal, and the timestamps drive its weekday × hour heatmap.
+
+    An impression is recorded once per keyword per *counted* article view
+    (see articles/views.py:_record_keyword_impressions) — not once per pill,
+    even though article_detail.html shows each keyword twice (header and
+    footer); `placement` on a click says which of the two was used. Like
+    ArticleView, no IP/user is stored — session_key exists only to
+    de-duplicate repeat clicks within a short window.
+    """
+
+    class EventType(models.TextChoices):
+        IMPRESSION = 'impression', 'Impression'
+        CLICK = 'click', 'Click'
+
+    class Placement(models.TextChoices):
+        HEADER = 'header', 'Article header'
+        FOOTER = 'footer', 'Article footer'
+
+    keyword = models.ForeignKey(Keyword, on_delete=models.CASCADE, related_name='events')
+    article = models.ForeignKey(
+        Article, on_delete=models.SET_NULL, null=True, blank=True, related_name='keyword_events',
+        help_text='The article page the keyword was shown/clicked on.',
+    )
+    event_type = models.CharField(max_length=20, choices=EventType.choices)
+    placement = models.CharField(max_length=20, choices=Placement.choices, blank=True)
+    session_key = models.CharField(max_length=40, blank=True)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['keyword', 'event_type', 'occurred_at']),
+            models.Index(fields=['event_type', 'occurred_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_event_type_display()} on {self.keyword} at {self.occurred_at}'

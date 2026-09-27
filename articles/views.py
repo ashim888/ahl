@@ -36,7 +36,7 @@ from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
-from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Bookmark, Keyword, KeywordFollow
+from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Bookmark, Keyword, KeywordEvent, KeywordFollow
 
 # A keyword used on this many articles or fewer has nothing meaningful to
 # "follow" yet — a keyword used exactly once is structurally guaranteed to
@@ -66,28 +66,93 @@ EDITORIAL_ROLES = User.EDITORIAL_ROLES
 VIEW_DEDUP_WINDOW_MINUTES = 30
 
 
-def _record_article_view(request, article):
+def _record_article_view(request, article) -> bool:
     """Powers the homepage's Trending section (HomeView._build_sections) —
     skips editorial staff (so QA/editing an article doesn't inflate its own
     numbers) and de-duplicates repeat views from the same session within a
     short window (a page refresh isn't a new "view"). Falls back to always
     recording if no session key is available, rather than risking
     conflating two different sessionless visitors under the same empty key.
+
+    Returns whether a view was actually counted — ArticleDetailView uses it
+    to count keyword impressions under exactly the same rules.
     """
     if request.user.is_authenticated and request.user.is_editorial_staff:
-        return
+        return False
     if not request.session.session_key:
         request.session.save()
     session_key = request.session.session_key
     if not session_key:
         ArticleView.objects.create(article=article)
-        return
+        return True
     cutoff = timezone.now() - datetime.timedelta(minutes=VIEW_DEDUP_WINDOW_MINUTES)
     recent_duplicate = ArticleView.objects.filter(
         article=article, session_key=session_key, viewed_at__gte=cutoff,
     ).exists()
-    if not recent_duplicate:
-        ArticleView.objects.create(article=article, session_key=session_key)
+    if recent_duplicate:
+        return False
+    ArticleView.objects.create(article=article, session_key=session_key)
+    return True
+
+
+def _record_keyword_impressions(request, article, keywords) -> None:
+    """One KeywordEvent impression per keyword shown on a counted article
+    view — the denominator of the Keyword Analytics page's click-through
+    rate. Only called when _record_article_view counted the view, so staff
+    and refreshes are excluded from impressions the same way they are from
+    clicks (keyword_click below).
+    """
+    if not keywords:
+        return
+    session_key = request.session.session_key or ''
+    KeywordEvent.objects.bulk_create([
+        KeywordEvent(
+            keyword=keyword, article=article, event_type=KeywordEvent.EventType.IMPRESSION,
+            session_key=session_key,
+        )
+        for keyword in keywords
+    ])
+
+
+@require_POST
+@ratelimit(key='ip', rate='60/m', method='POST', block=True)
+def keyword_click(request, pk):
+    """Records a keyword-pill click, sent by navigator.sendBeacon from
+    article_detail.html as the reader follows the pill's normal link — a
+    beacon rather than a tracked redirect so the pill's href stays the real
+    /articles/?keyword=<slug> URL (crawlers keep following it as ordinary
+    internal linking, and bots that don't run JS don't inflate clicks).
+    Always 204: the browser ignores a beacon's response, and a skipped
+    (staff/duplicate) click isn't an error.
+    """
+    keyword = get_object_or_404(Keyword, pk=pk)
+    if request.user.is_authenticated and request.user.is_editorial_staff:
+        return HttpResponse(status=204)
+
+    article = None
+    article_id = request.POST.get('article')
+    if article_id and article_id.isdigit():
+        article = Article.objects.filter(pk=int(article_id)).first()
+    placement = request.POST.get('placement', '')
+    if placement not in KeywordEvent.Placement.values:
+        placement = ''
+
+    if not request.session.session_key:
+        request.session.save()
+    session_key = request.session.session_key or ''
+    if session_key:
+        cutoff = timezone.now() - datetime.timedelta(minutes=VIEW_DEDUP_WINDOW_MINUTES)
+        if KeywordEvent.objects.filter(
+            keyword=keyword, article=article, session_key=session_key,
+            event_type=KeywordEvent.EventType.CLICK, occurred_at__gte=cutoff,
+        ).exists():
+            return HttpResponse(status=204)
+
+    KeywordEvent.objects.create(
+        keyword=keyword, article=article, event_type=KeywordEvent.EventType.CLICK,
+        placement=placement, session_key=session_key,
+    )
+    return HttpResponse(status=204)
 
 
 class ComingSoonView(TemplateView):
@@ -392,7 +457,7 @@ class ArticleDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        _record_article_view(self.request, self.object)
+        view_counted = _record_article_view(self.request, self.object)
 
         article_authors = list(self.object.articleauthor_set.select_related('user').order_by('order'))
         context['article_authors'] = article_authors
@@ -447,6 +512,8 @@ class ArticleDetailView(DetailView):
                         reverse('articles:article_gift_view', args=[self.object.slug, existing_gift.token]),
                     )
         context['keyword_list'] = list(self.object.keyword_tags.all())
+        if view_counted:
+            _record_keyword_impressions(self.request, self.object, context['keyword_list'])
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
         context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
         context['content_blocks'] = build_content_blocks(html_with_ids)

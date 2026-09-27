@@ -85,6 +85,7 @@
                 <div class="flex flex-wrap gap-2 mb-6">
                     {% for kw in keyword_list %}
                         <a href="{% url 'articles:article_list' %}?keyword={{ kw.slug }}"
+                           {% if not preview_mode %}data-keyword-click="{% url 'articles:keyword_click' kw.pk %}" data-placement="header"{% endif %}
                            class="font-mono-editorial text-[0.65rem] tracking-wider uppercase bg-secondary text-muted-foreground px-2.5 py-1 rounded-full hover:bg-foreground hover:text-primary-foreground transition-colors">
                             {{ kw.name }}
                         </a>
@@ -288,6 +289,7 @@
                 <div class="flex flex-wrap gap-2 mt-12 pt-8 border-t border-border">
                     {% for kw in keyword_list %}
                         <a href="{% url 'articles:article_list' %}?keyword={{ kw.slug }}"
+                           {% if not preview_mode %}data-keyword-click="{% url 'articles:keyword_click' kw.pk %}" data-placement="footer"{% endif %}
                            class="font-mono-editorial text-xs border border-border px-3 py-1 hover:border-foreground hover:text-accent transition-colors">
                             {{ kw.name }}
                         </a>
@@ -529,6 +531,22 @@ document.addEventListener('DOMContentLoaded', function () {
     ['copy-link-btn', 'copy-short-link-btn', 'copy-link-btn-mobile', 'copy-short-link-btn-mobile'].forEach(function (id) {
         var btn = document.getElementById(id);
         if (btn) btn.addEventListener('click', function () { copyLink(btn); });
+    });
+
+    // Keyword Analytics (/editorial/keywords/) — reports a pill click in the
+    // background while the link navigates as normal. sendBeacon survives the
+    // page unload; the pill's href is left untouched (see
+    // articles/views.py:keyword_click for why this isn't a tracked redirect).
+    var csrfToken = '{{ csrf_token }}';
+    document.querySelectorAll('[data-keyword-click]').forEach(function (pill) {
+        pill.addEventListener('click', function () {
+            if (!navigator.sendBeacon) return;
+            var data = new FormData();
+            data.append('csrfmiddlewaretoken', csrfToken);
+            data.append('article', '{{ article.pk }}');
+            data.append('placement', pill.dataset.placement || '');
+            navigator.sendBeacon(pill.dataset.keywordClick, data);
+        });
     });
 });
 </script>
