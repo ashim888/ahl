@@ -20,6 +20,7 @@
     {% endcomment %}
     <style>
         .tagify {
+            width: 100%;
             --tags-border-color: #e5e7eb;
             --tags-hover-border-color: #d1d5db;
             --tags-focus-border-color: #6366f1;
@@ -82,6 +83,7 @@
                 <button type="button" data-tab="content" data-tab-index="0" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Content</button>
                 <button type="button" data-tab="publishing" data-tab-index="1" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Publishing</button>
                 <button type="button" data-tab="media" data-tab-index="2" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Media</button>
+                <button type="button" data-tab="related" data-tab-index="3" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Related</button>
             </div>
 
             <div data-panel="content" class="space-y-5"
@@ -156,6 +158,34 @@
                 </div>
             </div>
 
+            <div data-panel="related" class="space-y-6 hidden"
+                 {% if form.related_articles.errors %}data-has-error="true"{% endif %}>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.related_articles %}
+
+                {% comment %}
+                Filled by the script below from articles:manage_related_article_suggestions
+                (articles/similarity.py). Fetched when this tab opens — the
+                Next/Prev autosave that got the editor here has just saved
+                the latest text, so scores reflect the current draft.
+                {% endcomment %}
+                <div class="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Suggested by text similarity</h3>
+                            <p class="mt-1 text-xs text-gray-500 max-w-xl">
+                                Ranked by cosine similarity of TF-IDF term vectors built from each article's title,
+                                keywords, abstract and full text. If you don't pick any related articles above,
+                                the top matches are shown to readers automatically.
+                            </p>
+                        </div>
+                        <button type="button" id="refresh-suggestions-btn" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">↻ Refresh</button>
+                    </div>
+                    <div id="related-suggestions" class="mt-4 space-y-2 text-sm">
+                        <p class="text-gray-400 text-xs">Open this tab to load suggestions.</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="mt-8 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
                 <button type="button" id="prev-btn"
                         class="hidden inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
@@ -191,7 +221,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.getElementById('article-form');
-    var TAB_ORDER = ['content', 'publishing', 'media'];
+    var TAB_ORDER = ['content', 'publishing', 'media', 'related'];
     var isCreate = {{ is_create|yesno:"true,false" }};
 
     var tabButtons = Array.prototype.slice.call(form.querySelectorAll('.tab-btn'));
@@ -241,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentIndex = idx;
         maxReachedIndex = Math.max(maxReachedIndex, idx);
         render();
+        if (TAB_ORDER[idx] === 'related' && window.loadRelatedSuggestions) window.loadRelatedSuggestions();
     }
 
     tabButtons.forEach(function (btn) {
@@ -433,6 +464,104 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    // Related articles — Tagify with enforceWhitelist: only existing
+    // published articles can be picked (TagifyRelatedArticlesField stores
+    // their ids). Suggestions come from articles:manage_related_article_autocomplete.
+    var relatedInput = document.getElementById('id_related_articles');
+    var relatedTagify = null;
+    if (relatedInput && window.Tagify) {
+        // Already-saved chips must be in the whitelist *before* Tagify
+        // initialises, or enforceWhitelist drops them.
+        var initialRelated = [];
+        try { initialRelated = JSON.parse(relatedInput.value || '[]'); } catch (e) { initialRelated = []; }
+        relatedTagify = new Tagify(relatedInput, {
+            enforceWhitelist: true,
+            whitelist: initialRelated,
+            dropdown: { enabled: 1, maxItems: 20, closeOnSelect: true, searchKeys: ['value'] },
+        });
+        var relatedController = null;
+        relatedTagify.on('input', function (e) {
+            var query = e.detail.value;
+            if (relatedController) relatedController.abort();
+            relatedController = new AbortController();
+            var url = '{% url "articles:manage_related_article_autocomplete" %}?q=' + encodeURIComponent(query)
+                + '&exclude=' + encodeURIComponent(articlePkInput.value || '');
+            fetch(url, { signal: relatedController.signal })
+                .then(function (response) { return response.json(); })
+                .then(function (items) {
+                    relatedTagify.whitelist = items.concat(relatedTagify.value);
+                    relatedTagify.dropdown.show.call(relatedTagify, query);
+                })
+                .catch(function (error) {
+                    if (error.name !== 'AbortError') throw error;
+                });
+        });
+    }
+
+    var suggestionsBox = document.getElementById('related-suggestions');
+    function selectedRelatedIds() {
+        return relatedTagify ? relatedTagify.value.map(function (t) { return String(t.id); }) : [];
+    }
+    function renderSuggestions(items) {
+        suggestionsBox.innerHTML = '';
+        if (!items.length) {
+            suggestionsBox.innerHTML = '<p class="text-xs text-gray-400">No sufficiently similar published articles yet.</p>';
+            return;
+        }
+        var selected = selectedRelatedIds();
+        items.forEach(function (item) {
+            var row = document.createElement('div');
+            row.className = 'flex items-center gap-3 rounded-xl bg-white border border-gray-100 px-3 py-2';
+            var bar = '<div class="w-16 shrink-0"><div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">'
+                + '<div class="h-full bg-indigo-500" style="width:' + Math.min(100, item.score) + '%"></div></div>'
+                + '<p class="mt-1 text-[0.65rem] font-semibold text-gray-600">' + item.score + '%</p></div>';
+            var title = document.createElement('div');
+            title.className = 'flex-1 min-w-0';
+            var link = document.createElement('a');
+            link.href = item.url; link.target = '_blank'; link.rel = 'noopener';
+            link.className = 'block truncate text-gray-900 hover:text-indigo-700';
+            link.textContent = item.value;
+            var type = document.createElement('p');
+            type.className = 'text-xs text-gray-400';
+            type.textContent = item.type;
+            title.appendChild(link); title.appendChild(type);
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            var added = selected.indexOf(String(item.id)) !== -1;
+            btn.className = 'shrink-0 text-xs font-medium ' + (added ? 'text-gray-400' : 'text-indigo-600 hover:text-indigo-800');
+            btn.textContent = added ? 'Added ✓' : '+ Add';
+            btn.disabled = added;
+            btn.addEventListener('click', function () {
+                if (!relatedTagify) return;
+                var tag = { value: item.value, id: item.id };
+                relatedTagify.whitelist = relatedTagify.whitelist.concat([tag]);
+                relatedTagify.addTags([tag]);
+                btn.textContent = 'Added ✓'; btn.disabled = true;
+                btn.className = 'shrink-0 text-xs font-medium text-gray-400';
+            });
+            row.innerHTML = bar;
+            row.appendChild(title); row.appendChild(btn);
+            suggestionsBox.appendChild(row);
+        });
+    }
+    window.loadRelatedSuggestions = function () {
+        if (!suggestionsBox) return;
+        if (!articlePkInput.value) {
+            suggestionsBox.innerHTML = '<p class="text-xs text-gray-400">Save the draft first to see suggestions.</p>';
+            return;
+        }
+        suggestionsBox.innerHTML = '<p class="text-xs text-gray-400">Finding similar articles…</p>';
+        fetch('{% url "articles:manage_related_article_suggestions" %}?article=' + encodeURIComponent(articlePkInput.value))
+            .then(function (response) { return response.json(); })
+            .then(function (data) { renderSuggestions(data.suggestions || []); })
+            .catch(function () {
+                suggestionsBox.innerHTML = '<p class="text-xs text-red-600">Could not load suggestions.</p>';
+            });
+    };
+    var refreshBtn = document.getElementById('refresh-suggestions-btn');
+    if (refreshBtn) refreshBtn.addEventListener('click', window.loadRelatedSuggestions);
+    if (TAB_ORDER[currentIndex] === 'related') window.loadRelatedSuggestions();
 });
 </script>
 {% endblock %}

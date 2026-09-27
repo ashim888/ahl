@@ -16,7 +16,7 @@ from users.decorators import role_required
 from users.models import User
 
 from .content_templates import WEEKLY_DIGEST_TEMPLATE
-from .emails import issue_email_text_body, render_issue_email, send_confirmation_email
+from .emails import issue_email_text_body, render_issue_email, send_confirmation_email, send_welcome_email
 from .forms import NewsletterIssueForm, SubscribeForm
 from .models import NewsletterIssue, Subscriber
 from .recipients import confirmed_recipients
@@ -70,6 +70,9 @@ def confirm(request, token):
         subscriber.status = Subscriber.Status.CONFIRMED
         subscriber.confirmed_at = timezone.now()
         subscriber.save(update_fields=['status', 'confirmed_at'])
+        # Only on the pending → confirmed transition, so re-clicking the
+        # confirmation link never sends a second welcome.
+        send_welcome_email(subscriber)
     return render(request, 'newsletter/confirmed.html', {'subscriber': subscriber})
 
 

@@ -1,0 +1,12 @@
+Hello,
+
+Thanks for signing up for the {{ journal_name }} newsletter - health news, research and analysis from Nepal and beyond, delivered to your inbox.
+
+Confirm your subscription:
+{{ confirm_url }}
+
+Didn't sign up? Just ignore this email - you won't be subscribed and we won't email you again.
+
+--
+{{ journal_name }}
+{{ site_url }}

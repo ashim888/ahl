@@ -416,12 +416,22 @@ LOGOUT_REDIRECT_URL = '/'
 
 
 # Email
+# .env is read once at process start (load_dotenv above) — after changing
+# any of these, restart the server; runserver's autoreload doesn't watch .env.
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+# Port 587 → STARTTLS (EMAIL_USE_TLS=True); port 465 → implicit SSL
+# (EMAIL_USE_SSL=True, EMAIL_USE_TLS=False). Django refuses both at once.
 EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
+EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', False)
+if EMAIL_USE_SSL:
+    EMAIL_USE_TLS = False
+# Seconds before giving up on an unreachable SMTP server — without it a
+# misconfigured host hangs the request (e.g. a comment post) indefinitely.
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '30'))
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@ajnahealthlens.example')
 
 

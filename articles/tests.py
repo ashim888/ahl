@@ -2174,3 +2174,273 @@ class ArchivedArticleTests(TestCase):
         response = self.client.get(reverse('articles:archive_list'))
         articles = list(response.context['articles'])
         self.assertNotIn(published, articles)
+
+
+def make_text_article(slug, title, abstract, body='', status=Article.Status.PUBLISHED, keywords=()):
+    article = Article.objects.create(
+        title=title, slug=slug, abstract=abstract, html_content=body,
+        article_type=Article.ArticleType.NEWS_COMMENTARY, status=status,
+    )
+    if keywords:
+        article.keyword_tags.set([Keyword.objects.get_or_create(slug=slugify(k), defaults={'name': k})[0] for k in keywords])
+    return article
+
+
+class TextSimilarityTests(TestCase):
+    """articles/similarity.py — TF-IDF cosine similarity used for automatic
+    "Related reading" and the editor's suggestions.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.tb_review = make_text_article(
+            'sim-tb-review', 'Community Tuberculosis Screening Review',
+            'A systematic review of tuberculosis screening in rural districts.',
+            '<p>Active case finding for tuberculosis improves screening yield.</p>', keywords=['Tuberculosis'],
+        )
+        self.tb_news = make_text_article(
+            'sim-tb-news', 'New Tuberculosis Screening Guidelines Issued',
+            'The ministry issued guidelines for tuberculosis screening.',
+            '<p>Screening for tuberculosis will expand to every district.</p>', keywords=['Tuberculosis'],
+        )
+        self.budget = make_text_article(
+            'sim-budget', 'Parliament Passes Infrastructure Budget',
+            'Road and bridge spending rises in the new fiscal year.',
+            '<p>Highways and bridges receive the largest allocation.</p>',
+        )
+
+    def test_tokenize_strips_html_stopwords_and_folds_plurals(self):
+        from .similarity import tokenize
+        self.assertEqual(tokenize('<p>The Studies of <b>Clinics</b> and the clinic</p>'), ['study', 'clinic', 'clinic'])
+
+    def test_tokenize_keeps_devanagari_words_whole(self):
+        from .similarity import tokenize
+        # Vowel signs (ा, ्) are combining marks — must not split words; र is a stopword.
+        self.assertEqual(tokenize('स्वास्थ्य र सजगता'), ['स्वास्थ्य', 'सजगता'])
+
+    def test_topical_match_ranks_first_and_unrelated_is_excluded(self):
+        from .similarity import similar_articles
+        results = similar_articles(self.tb_review)
+        self.assertEqual([a for a, _ in results], [self.tb_news])
+        self.assertGreater(results[0][1], 0.08)
+
+    def test_scores_are_symmetric(self):
+        from .similarity import similar_articles
+        forward = dict((a.pk, s) for a, s in similar_articles(self.tb_review))
+        backward = dict((a.pk, s) for a, s in similar_articles(self.tb_news))
+        self.assertAlmostEqual(forward[self.tb_news.pk], backward[self.tb_review.pk], places=3)
+
+    def test_drafts_are_never_suggested_but_can_get_suggestions(self):
+        from .similarity import similar_articles
+        draft = make_text_article(
+            'sim-tb-draft', 'Tuberculosis Screening Draft', 'Draft about tuberculosis screening.',
+            status=Article.Status.DRAFT,
+        )
+        self.assertNotIn(draft, [a for a, _ in similar_articles(self.tb_review)])
+        self.assertIn(self.tb_review, [a for a, _ in similar_articles(draft)])
+
+    def test_results_refresh_when_an_article_is_edited(self):
+        from .similarity import similar_articles
+        self.assertEqual(similar_articles(self.budget), [])
+        self.tb_news.title = 'Parliament Budget Adds Tuberculosis Screening Highways Bridges'
+        self.tb_news.save()
+        self.assertIn(self.tb_news, [a for a, _ in similar_articles(self.budget)])
+
+
+class RelatedReadingTests(TestCase):
+    """Article page "Related reading": editor picks first, text similarity
+    otherwise (articles/views.py:related_articles_for).
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.article = make_text_article(
+            'rel-main', 'Tuberculosis Screening Expands', 'Tuberculosis screening reaches more districts.',
+        )
+        self.similar = make_text_article(
+            'rel-similar', 'Tuberculosis Screening Methods Compared', 'Comparing tuberculosis screening methods.',
+        )
+        self.picked = make_text_article('rel-picked', 'Monsoon Flood Relief', 'Relief camps open after floods.')
+
+    def _related(self):
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        return response.context['related_articles']
+
+    def test_falls_back_to_text_similarity(self):
+        self.assertEqual(self._related(), [self.similar])
+
+    def test_editor_picks_replace_similarity(self):
+        self.article.related_articles.set([self.picked])
+        self.assertEqual(self._related(), [self.picked])
+
+    def test_unpublished_picks_are_ignored(self):
+        draft = make_text_article('rel-draft-pick', 'Draft Pick', 'x', status=Article.Status.DRAFT)
+        self.article.related_articles.set([draft])
+        self.assertEqual(self._related(), [self.similar])
+
+    def test_related_is_one_directional(self):
+        self.article.related_articles.set([self.picked])
+        self.assertEqual(list(self.picked.related_articles.all()), [])
+
+
+class ArticleFormRelatedArticlesTests(TestCase):
+    def setUp(self):
+        self.published = make_text_article('form-rel-pub', 'Published One', 'x')
+        self.draft = make_text_article('form-rel-draft', 'Draft One', 'x', status=Article.Status.DRAFT)
+
+    def _data(self, **overrides):
+        data = {
+            'title': 'A New Article', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'abstract': 'An abstract.',
+        }
+        data.update(overrides)
+        return data
+
+    def test_saves_picked_published_articles_and_keywords_together(self):
+        import json
+        form = ArticleForm(data=self._data(
+            related_articles=json.dumps([{'value': 'Published One', 'id': self.published.pk},
+                                         {'value': 'Draft One', 'id': self.draft.pk}]),
+            keywords='[{"value": "Diabetes"}]',
+        ))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save()
+        self.assertEqual(list(article.related_articles.all()), [self.published])
+        self.assertEqual([k.name for k in article.keyword_tags.all()], ['Diabetes'])
+
+    def test_commit_false_defers_related_until_save_m2m(self):
+        form = ArticleForm(data=self._data(related_articles=str(self.published.pk)))
+        self.assertTrue(form.is_valid(), form.errors)
+        article = form.save(commit=False)
+        article.save()
+        self.assertEqual(article.related_articles.count(), 0)
+        form.save_m2m()
+        self.assertEqual(article.related_articles.count(), 1)
+
+    def test_article_cannot_relate_to_itself(self):
+        form = ArticleForm(data=self._data(title='Published One', related_articles=str(self.published.pk)),
+                           instance=self.published)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(list(form.save().related_articles.all()), [])
+
+    def test_edit_form_prefills_picks_as_tagify_json(self):
+        self.draft.related_articles.set([self.published])
+        form = ArticleForm(instance=self.draft)
+        self.assertIn(f'"id": {self.published.pk}', form.fields['related_articles'].initial)
+
+
+class RelatedArticleEndpointsTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        from users.models import User
+        cache.clear()
+        self.editor = User.objects.create_user(
+            email='related-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='related-reader@example.com', password='pw', first_name='R', last_name='D')
+        self.a = make_text_article('ep-a', 'Malaria Vaccine Rollout', 'Malaria vaccine rollout begins.')
+        self.b = make_text_article('ep-b', 'Malaria Vaccine Trial Results', 'Malaria vaccine trial results.')
+
+    def test_readers_are_forbidden(self):
+        self.client.force_login(self.reader)
+        self.assertEqual(self.client.get(reverse('articles:manage_related_article_autocomplete')).status_code, 403)
+        self.assertEqual(self.client.get(reverse('articles:manage_related_article_suggestions')).status_code, 403)
+
+    def test_autocomplete_matches_title_and_excludes_current(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(
+            reverse('articles:manage_related_article_autocomplete'), {'q': 'malaria', 'exclude': self.a.pk},
+        )
+        self.assertEqual([item['id'] for item in response.json()], [self.b.pk])
+
+    def test_suggestions_include_similarity_score(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('articles:manage_related_article_suggestions'), {'article': self.a.pk})
+        suggestions = response.json()['suggestions']
+        self.assertEqual([s['id'] for s in suggestions], [self.b.pk])
+        self.assertTrue(0 < suggestions[0]['score'] <= 100)
+
+    def test_suggestions_for_unsaved_article(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('articles:manage_related_article_suggestions'))
+        self.assertEqual(response.json(), {'suggestions': [], 'reason': 'unsaved'})
+
+    def test_article_form_has_related_tab(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('articles:manage_article_update', args=[self.a.slug]))
+        self.assertContains(response, 'data-panel="related"')
+        self.assertContains(response, 'id="id_related_articles"')
+
+
+class ReaderTextSizeAndNepaliTypographyTests(TestCase):
+    def test_text_size_controls_render(self):
+        article = make_article('text-size-article', Article.ArticleType.NEWS_COMMENTARY)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'id="text-size-controls"')
+        for action in ('down', 'reset', 'up'):
+            self.assertContains(response, f'data-text-size="{action}"')
+
+    def test_nepali_script_article_gets_lang_ne(self):
+        article = Article.objects.create(
+            title='दशैं तथा चाडपर्वको समयमा स्वास्थ्य सजगता', slug='nepali-script-article',
+            abstract='चाडपर्वमा स्वास्थ्यको ख्याल राख्नुहोस्।', article_type=Article.ArticleType.NEWS_COMMENTARY,
+            status=Article.Status.PUBLISHED,
+        )
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'id="article-main" lang="ne"')
+
+    def test_content_lang_filter(self):
+        from .templatetags.text_filters import content_lang
+        self.assertEqual(content_lang('स्वास्थ्य सजगता'), 'ne')
+        self.assertEqual(content_lang('Health news with one word स्वास्थ्य'), 'en')
+        self.assertEqual(content_lang('', 'ne'), 'ne')
+
+
+class CommentEmailTemplateTests(TestCase):
+    """templates/django_comments_xtd/email_*.html — branded overrides of the
+    comments package's plain default emails.
+    """
+
+    def setUp(self):
+        from users.models import User
+        self.article = make_article('emailed-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.first = User.objects.create_user(email='first@example.com', password='pw', first_name='First', last_name='Reader')
+        self.second = User.objects.create_user(email='second@example.com', password='pw', first_name='Second', last_name='Reader')
+
+    def test_confirmation_email_is_branded_with_absolute_link(self):
+        from django.conf import settings
+        from django.core import mail
+
+        self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(self.article, 'Please publish me.', name='Anon Reader', email='anon@example.com'),
+        )
+        message = mail.outbox[0]
+        self.assertEqual(message.subject, 'Confirm your comment')
+        html = message.alternatives[0][0]
+        self.assertIn('Confirm your comment to publish it', html)
+        self.assertIn('Please publish me.', html)
+        self.assertIn(f'{settings.SITE_BASE_URL}/comments/confirm/', html)
+        self.assertIn(self.article.title, html)
+        self.assertIn(f'{settings.SITE_BASE_URL}/comments/confirm/', message.body)
+
+    def test_followup_email_links_to_the_new_comment_and_mute(self):
+        from django.conf import settings
+        from django.core import mail
+        from django_comments_xtd.models import XtdComment
+
+        self.client.force_login(self.first)
+        self.client.post(reverse('comments-post-comment'), _comment_post_data(self.article, 'First!', followup=True))
+        self.client.force_login(self.second)
+        mail.outbox = []
+        self.client.post(reverse('comments-post-comment'), _comment_post_data(self.article, 'A reply.'))
+
+        reply = XtdComment.objects.get(comment='A reply.')
+        message = next(m for m in mail.outbox if m.to == ['first@example.com'])
+        self.assertEqual(message.subject, 'New comment in a discussion you follow')
+        html = message.alternatives[0][0]
+        self.assertIn('A reply.', html)
+        self.assertIn(f'{settings.SITE_BASE_URL}{self.article.get_absolute_url()}#c{reply.pk}', html)
+        self.assertIn(f'{settings.SITE_BASE_URL}/comments/mute/', html)

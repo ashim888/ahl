@@ -116,3 +116,33 @@ class IssuePublicPageMetaTagsTests(TestCase):
         content = response.content.decode()
         self.assertIn('"@type": "BreadcrumbList"', content)
         self.assertIn('Malaria Series', content)
+
+
+class IssueDetailArticleThumbnailTests(TestCase):
+    """The issue page's "In this issue" list shows each article's featured
+    image, same thumbnail as the /articles/ listing — it previously rendered
+    no image at all, only the issue's own cover.
+    """
+
+    def setUp(self):
+        from articles.models import Article
+
+        self.issue = Issue.objects.create(title='Thumbs Issue', slug='thumbs-issue', is_published=True)
+        self.with_image = Article.objects.create(
+            title='Has Image', slug='has-image', abstract='A', article_type=Article.ArticleType.NEWS_COMMENTARY,
+            status=Article.Status.PUBLISHED, issue=self.issue, featured_image='articles/images/thumb.jpg',
+        )
+        self.without_image = Article.objects.create(
+            title='No Image', slug='no-image', abstract='A', article_type=Article.ArticleType.NEWS_COMMENTARY,
+            status=Article.Status.PUBLISHED, issue=self.issue,
+        )
+
+    def test_featured_image_is_rendered(self):
+        response = self.client.get(reverse('issues:issue_detail', args=[self.issue.slug]))
+        self.assertContains(response, self.with_image.featured_image.url)
+        self.assertContains(response, 'alt="Has Image"')
+
+    def test_article_without_image_gets_placeholder_not_broken_img(self):
+        response = self.client.get(reverse('issues:issue_detail', args=[self.issue.slug]))
+        self.assertNotContains(response, 'alt="No Image"')
+        self.assertContains(response, 'No Image')

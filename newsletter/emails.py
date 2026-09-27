@@ -37,6 +37,14 @@ def issue_email_text_body(subject, body_html, unsubscribe_url):
     return f'{subject}\n\n{strip_tags(body_html)}\n\n---\nUnsubscribe: {unsubscribe_url}'
 
 
+def _email_context(**extra) -> dict:
+    """Shared context for the subscriber emails below — the journal name and
+    site URL (email/base.html reads branding itself via email_tags, but the
+    plain-text parts and body copy need them too).
+    """
+    return {'journal_name': settings.JOURNAL_NAME, 'site_url': settings.SITE_BASE_URL, **extra}
+
+
 def send_confirmation_email(subscriber):
     """Single recipient, sent synchronously at signup time — same pattern as
     users/signals.py's verification-status email. Only the bulk send
@@ -46,11 +54,25 @@ def send_confirmation_email(subscriber):
     here shouldn't turn a successful signup into a 500.
     """
     confirm_url = f"{settings.SITE_BASE_URL}{reverse('newsletter:confirm', args=[subscriber.confirm_token])}"
+    context = _email_context(confirm_url=confirm_url)
     send_notification_email(
         subject=f'Confirm your {settings.JOURNAL_NAME} newsletter subscription',
-        message=(
-            f'Confirm your subscription by visiting:\n{confirm_url}\n\n'
-            "If you didn't request this, you can ignore this email."
-        ),
+        message=render_to_string('newsletter/email/confirm_subscription.txt', context),
+        html_message=render_to_string('newsletter/email/confirm_subscription.html', context),
+        recipient_list=[subscriber.email],
+    )
+
+
+def send_welcome_email(subscriber):
+    """Sent once, when a subscriber confirms (views.confirm) — tells them
+    what to expect and gives them an unsubscribe link from day one.
+    """
+    unsubscribe_url = f"{settings.SITE_BASE_URL}{reverse('newsletter:unsubscribe', args=[subscriber.unsubscribe_token])}"
+    articles_url = f"{settings.SITE_BASE_URL}{reverse('articles:article_list')}"
+    context = _email_context(unsubscribe_url=unsubscribe_url, articles_url=articles_url)
+    send_notification_email(
+        subject=f'Welcome to the {settings.JOURNAL_NAME} newsletter',
+        message=render_to_string('newsletter/email/welcome.txt', context),
+        html_message=render_to_string('newsletter/email/welcome.html', context),
         recipient_list=[subscriber.email],
     )

@@ -1,0 +1,20 @@
+{% extends 'email/base.html' %}
+{% comment %}Double opt-in confirmation — newsletter/emails.py:send_confirmation_email.{% endcomment %}
+{% block title %}Confirm your subscription{% endblock %}
+{% block preheader %}One click to start receiving the {{ journal_name }} newsletter.{% endblock %}
+{% block eyebrow %}Newsletter signup{% endblock %}
+{% block heading %}Please confirm your subscription{% endblock %}
+{% block content %}
+    <p>Hello,</p>
+    <p>
+        Thanks for signing up for the {{ journal_name }} newsletter — health news, research and analysis
+        from Nepal and beyond, delivered to your inbox.
+    </p>
+    <p>Confirm that this is your email address and we'll start sending it to you:</p>
+    {% include 'email/includes/button.html' with url=confirm_url label='Confirm my subscription' %}
+    {% include 'email/includes/link_fallback.html' with url=confirm_url %}
+    <p style="font-size: 14px; color: #6b6860;">
+        Didn't sign up? Just ignore this email — you won't be subscribed and we won't email you again.
+    </p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because someone entered this address in the {{ journal_name }} newsletter signup form.{% endblock %}

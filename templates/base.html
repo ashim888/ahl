@@ -83,9 +83,15 @@
         .password-toggle-btn:hover { color: #111110; }
 
         /* Full-text article body (Article.html_content) */
-        .prose-article { font-family: Georgia, serif; }
-        .prose-article h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-top: 2rem; border-top: 1px solid #d4d0cb; letter-spacing: -0.015em; }
-        .prose-article h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        /* Every stack names a Devanagari face matching the Latin one's style
+           (serif ↔ Noto Serif Devanagari, sans ↔ Noto Sans Devanagari).
+           Georgia/Playfair have no Devanagari glyphs, so Nepali text
+           previously fell through to whatever the OS had (Kohinoor on macOS,
+           Mangal/Nirmala on Windows) — a different design on every device,
+           and never matching the rest of the page. */
+        .prose-article { font-family: Georgia, 'Noto Serif Devanagari', serif; }
+        .prose-article h2 { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; font-size: 1.5rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-top: 2rem; border-top: 1px solid #d4d0cb; letter-spacing: -0.015em; }
+        .prose-article h3 { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
         /* Text elements only (not figure/table/ad blocks, which stay full
            column width) get a narrower, ~68-character measure — the column
            itself (~699px at the lg breakpoint) is wider than ideal for
@@ -93,16 +99,18 @@
            1.85 to 1.7 to match — very airy line-height needs a wide measure
            to still feel balanced; a narrower one reads better a touch tighter. */
         .prose-article p, .prose-article ul, .prose-article ol, .prose-article blockquote { max-width: 68ch; }
-        .prose-article p { margin-top: 1.5rem; font-size: 1.0625rem; line-height: 1.7; }
+        /* --reader-scale is set by the A− / A / A+ text-size control on the
+           article page (article_detail.html), 1 = default. */
+        .prose-article p { margin-top: 1.5rem; font-size: calc(1.0625rem * var(--reader-scale, 1)); line-height: 1.7; }
         .prose-article > p:first-of-type::first-letter {
-            font-family: 'Playfair Display', serif; font-size: 4.5rem; font-weight: 700;
+            font-family: 'Playfair Display', 'Noto Serif Devanagari', serif; font-size: 4.5rem; font-weight: 700;
             float: left; line-height: 0.8; margin-right: 0.08em; margin-top: 0.06em;
         }
-        .prose-article ul, .prose-article ol { margin-top: 1rem; padding-left: 1.5rem; }
+        .prose-article ul, .prose-article ol { margin-top: 1rem; padding-left: 1.5rem; font-size: calc(1.0625rem * var(--reader-scale, 1)); }
         .prose-article ul { list-style: disc; }
         .prose-article ol { list-style: decimal; }
         .prose-article li { margin-top: 0.25rem; }
-        .prose-article blockquote { border-left: 4px solid #c0392b; padding-left: 1.5rem; margin: 2.5rem 0; font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.5rem; font-weight: 600; line-height: 1.35; }
+        .prose-article blockquote { border-left: 4px solid #c0392b; padding-left: 1.5rem; margin: 2.5rem 0; font-family: 'Playfair Display', 'Noto Serif Devanagari', serif; font-style: italic; font-size: calc(1.5rem * var(--reader-scale, 1)); font-weight: 600; line-height: 1.35; }
         .prose-article table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.875rem; }
         .prose-article th, .prose-article td { border: 1px solid #d4d0cb; padding: 0.5rem 0.75rem; text-align: left; }
         .prose-article th { background: #f0ede8; font-weight: 600; }
@@ -138,6 +146,44 @@
         :target { scroll-margin-top: 6.5rem; }
         @media (min-width: 768px) {
             :target { scroll-margin-top: 11rem; }
+        }
+
+        /* Nepali (Devanagari) typography. :lang(ne) matches the whole page
+           when the site language is Nepali (<html lang="ne">), and also a
+           Nepali-script article viewed in the English UI (article_detail.html
+           sets lang="ne" on its <article> via the content_lang filter).
+           - Letter-spacing pulls apart the joined letters and the shirorekha
+             (the headline bar) that Devanagari words depend on, so the
+             editorial tracking used on labels/nav/headings is dropped.
+           - Noto Sans/Serif Devanagari have no italic; browsers fake one by
+             slanting the glyphs, which reads badly, so italics go upright.
+           - Vowel signs above and below the line need more vertical room than
+             Latin text, or they collide with the neighbouring lines.
+           - ::first-letter can't take a whole Devanagari syllable, so the
+             drop cap would show a broken fragment; it's turned off. */
+        /* The editorial monospace (Space Mono) has no Devanagari, so Nepali
+           letters already came from Noto Sans Devanagari — but the spaces and
+           digits between them still came from Space Mono, whose extra-wide
+           monospace space pulled Nepali labels ("नीति र अर्थराजनीति") apart.
+           In Nepali, labels use the same sans-serif as the body text. */
+        :lang(ne) .section-label,
+        :lang(ne) .font-mono-editorial { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; }
+        :lang(ne) .section-label,
+        :lang(ne) .font-mono-editorial,
+        :lang(ne) .tracking-wide,
+        :lang(ne) .tracking-wider,
+        :lang(ne) .tracking-widest,
+        :lang(ne) [style*="letter-spacing"] { letter-spacing: normal !important; }
+        :lang(ne) .italic,
+        :lang(ne) .prose-article blockquote { font-style: normal; }
+        :lang(ne) .leading-tight,
+        :lang(ne) .leading-snug { line-height: 1.45; }
+        :lang(ne) .prose-article p,
+        :lang(ne) .prose-article li { line-height: 1.9; }
+        :lang(ne) .prose-article h2,
+        :lang(ne) .prose-article h3 { line-height: 1.5; }
+        :lang(ne) .prose-article > p:first-of-type::first-letter {
+            font-size: inherit; font-weight: inherit; float: none; line-height: inherit; margin: 0;
         }
 
         /* Collapses the tall brand/utility row (logo, search, profile) once

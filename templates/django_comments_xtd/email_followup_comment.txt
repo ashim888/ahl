@@ -1,0 +1,15 @@
+{% load email_tags %}{% email_branding as brand %}Hi {{ user_name|default:"there" }},
+
+{{ comment.name }} commented on "{{ content_object }}", a discussion you asked to follow:
+
+"{{ comment.comment|truncatewords:120 }}"
+
+Read the discussion:
+{{ content_object.get_absolute_url|absolute_url }}#c{{ comment.pk }}
+
+Stop notifications for this discussion:
+{{ mute_url|absolute_url }}
+
+--
+{{ brand.name }}
+{{ brand.site_url }}

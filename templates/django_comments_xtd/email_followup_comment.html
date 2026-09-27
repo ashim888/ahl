@@ -1,0 +1,22 @@
+{% extends 'email/base.html' %}
+{% load email_tags %}
+{% comment %}
+Sent by django_comments_xtd to earlier commenters on the same article who
+ticked "Notify me about follow-up comments". Context from the package:
+user_name (the recipient), comment (the new XtdComment), content_object
+(the article), mute_url (site-relative), site.
+{% endcomment %}
+{% block title %}New comment on {{ content_object }}{% endblock %}
+{% block preheader %}{{ comment.name }} commented on “{{ content_object }}”.{% endblock %}
+{% block eyebrow %}New in a discussion you follow{% endblock %}
+{% block heading %}{{ comment.name }} commented on “{{ content_object }}”{% endblock %}
+{% block content %}
+    <p>Hi {{ user_name|default:"there" }},</p>
+    <p>There's a new comment in a discussion you asked to follow.</p>
+    {% include 'email/includes/quote.html' with text=comment.comment|truncatewords:120 attribution=comment.name attribution_date=comment.submit_date %}
+    {% with thread_url=content_object.get_absolute_url|append:"#c"|append:comment.pk|absolute_url %}
+        {% include 'email/includes/button.html' with url=thread_url label='Read the discussion' %}
+    {% endwith %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you asked to be notified about follow-up comments on this article.{% endblock %}
+{% block footer_links %}<a href="{{ mute_url|absolute_url }}" style="color:#6b6860; text-decoration:underline;">Stop notifications for this discussion</a>&nbsp;·&nbsp;{% endblock %}

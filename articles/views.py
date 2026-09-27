@@ -48,6 +48,7 @@ from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Bookmark, Key
 # consulted by ForYouView or send_topic_digests.
 KEYWORD_FOLLOW_MIN_ARTICLES = 1
 from .seo import breadcrumb_list_structured_data, news_article_structured_data, person_structured_data
+from .similarity import similar_articles
 
 # Article types treated as "peer-reviewed research" for the homepage's
 # "From the Journal" section — everything except news/editorial/letters.
@@ -154,6 +155,26 @@ def keyword_click(request, pk):
         placement=placement, session_key=session_key,
     )
     return HttpResponse(status=204)
+
+
+RELATED_ARTICLES_LIMIT = 3
+
+
+def related_articles_for(article, limit: int = RELATED_ARTICLES_LIMIT) -> list:
+    """"Related reading" for an article page: the editor's hand-picked
+    Article.related_articles when there are any (published ones only,
+    newest first), otherwise the most text-similar published articles
+    (articles/similarity.py — TF-IDF cosine similarity over title,
+    keywords, abstract and body). Returns fewer than `limit`, or none,
+    rather than padding with articles that aren't actually related.
+    """
+    curated = list(
+        article.related_articles.filter(status=Article.Status.PUBLISHED)
+        .exclude(pk=article.pk).order_by('-publication_date', '-created_at')[:limit],
+    )
+    if curated:
+        return curated
+    return [related for related, _score in similar_articles(article, limit=limit)]
 
 
 class ComingSoonView(TemplateView):
@@ -525,9 +546,7 @@ class ArticleDetailView(DetailView):
             context['references_list'] = [
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
             ]
-        context['related_articles'] = Article.objects.filter(
-            status=Article.Status.PUBLISHED, article_type=self.object.article_type,
-        ).exclude(pk=self.object.pk).order_by('-publication_date', '-created_at')[:3]
+        context['related_articles'] = related_articles_for(self.object)
 
         # Fetch one extra and trim, so excluding the article being viewed
         # (it'd be a strange thing to see "trending" on its own page) still
@@ -876,6 +895,51 @@ def keyword_autocomplete(request):
     query = request.GET.get('q', '').strip()
     keywords = Keyword.objects.filter(name__icontains=query)[:20] if query else Keyword.objects.all()[:20]
     return JsonResponse([{'value': kw.name, 'slug': kw.slug} for kw in keywords], safe=False)
+
+
+RELATED_SUGGESTION_LIMIT = 8
+
+
+@role_required(*EDITORIAL_ROLES)
+def related_article_autocomplete(request):
+    """Tagify suggestions for the article form's "Related articles" picker —
+    published articles whose title matches `q`, excluding the article being
+    edited (`exclude`). Editorial-only, unlike keyword_autocomplete: it's
+    only ever used from the editorial form.
+    """
+    query = request.GET.get('q', '').strip()
+    articles = Article.objects.filter(status=Article.Status.PUBLISHED)
+    if query:
+        articles = articles.filter(title__icontains=query)
+    exclude = request.GET.get('exclude', '')
+    if exclude.isdigit():
+        articles = articles.exclude(pk=int(exclude))
+    articles = articles.order_by('-publication_date', '-created_at')[:20]
+    return JsonResponse(
+        [{'value': a.title, 'id': a.pk, 'type': a.get_article_type_display()} for a in articles], safe=False,
+    )
+
+
+@role_required(*EDITORIAL_ROLES)
+def related_article_suggestions(request):
+    """Most text-similar published articles for the article form's
+    "Related" tab (see articles/similarity.py), with the cosine similarity
+    as a 0–100 score. Works on drafts: the article's saved text (autosave
+    keeps it current) is compared against the published corpus.
+    """
+    article_id = request.GET.get('article', '')
+    if not article_id.isdigit():
+        return JsonResponse({'suggestions': [], 'reason': 'unsaved'})
+    article = get_object_or_404(Article, pk=int(article_id))
+    suggestions = similar_articles(article, limit=RELATED_SUGGESTION_LIMIT)
+    return JsonResponse({'suggestions': [
+        {
+            'id': related.pk, 'value': related.title, 'type': related.get_article_type_display(),
+            'score': round(score * 100, 1),
+            'url': reverse('articles:article_detail', args=[related.slug]),
+        }
+        for related, score in suggestions
+    ]})
 
 
 @login_required

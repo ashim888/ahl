@@ -562,3 +562,25 @@ class IssueRetryViewTests(TestCase):
         self.client.force_login(self.reader)
         response = self.client.post(reverse('newsletter:manage_issue_retry', args=[issue.pk]))
         self.assertEqual(response.status_code, 403)
+
+
+class SubscriberEmailTemplateTests(TestCase):
+    """Branded signup-confirmation and welcome emails (newsletter/emails.py)."""
+
+    def test_confirmation_email_has_html_button_and_text_link(self):
+        self.client.post(reverse('newsletter:subscribe'), {'email': 'styled@example.com'})
+        subscriber = Subscriber.objects.get(email='styled@example.com')
+        message = mail.outbox[0]
+        html = message.alternatives[0][0]
+        self.assertIn('Confirm my subscription', html)
+        self.assertIn(subscriber.confirm_token, html)
+        self.assertIn(subscriber.confirm_token, message.body)
+
+    def test_welcome_email_sent_once_on_confirmation(self):
+        subscriber = Subscriber.objects.create(email='welcome@example.com')
+        url = reverse('newsletter:confirm', args=[subscriber.confirm_token])
+        self.client.get(url)
+        self.client.get(url)  # re-clicking the link must not send a second welcome
+        welcome = [m for m in mail.outbox if m.subject.startswith('Welcome to')]
+        self.assertEqual(len(welcome), 1)
+        self.assertIn(subscriber.unsubscribe_token, welcome[0].alternatives[0][0])

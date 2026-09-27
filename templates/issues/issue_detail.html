@@ -32,7 +32,17 @@
         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-6">IN THIS ISSUE</p>
         <div class="divide-y divide-border">
             {% for article in issue_articles %}
-                <article class="article-link py-5">
+                <article class="article-link py-5 flex gap-6">
+                    {# Same thumbnail as the /articles/ listing (article_list.html) — bg-secondary placeholder when there's no featured image. #}
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 hidden sm:block" style="width: 160px; height: 110px;">
+                        {% if article.featured_image %}
+                            <img src="{{ article.featured_image.url }}" alt="{{ article.title }}" loading="lazy"
+                                 class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                        {% else %}
+                            <div class="w-full h-full bg-secondary"></div>
+                        {% endif %}
+                    </a>
+                    <div class="flex-1 min-w-0">
                     <span class="section-label text-muted-foreground">{{ article.get_article_type_display }}</span>
                     <h3 class="font-display text-lg font-bold leading-snug mt-1 article-title" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
@@ -49,6 +59,7 @@
                             <span class="text-border text-xs">·</span>
                             <span class="font-mono-editorial text-xs text-muted-foreground">pp. {{ article.page_numbers }}</span>
                         {% endif %}
+                    </div>
                     </div>
                 </article>
             {% empty %}

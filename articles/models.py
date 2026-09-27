@@ -108,6 +108,14 @@ class Article(models.Model):
     # lookup instead of an icontains substring match on a joined string. See
     # Keyword's docstring above and articles/forms.py's TagifyKeywordsField.
     keyword_tags = models.ManyToManyField(Keyword, blank=True, related_name='articles')
+    # Editor-curated "Related reading" — one-directional (A listing B doesn't
+    # make B list A), since relevance often isn't mutual. When empty, the
+    # article page falls back to text-similarity ranking instead
+    # (articles/similarity.py) rather than a fixed rule like "same type".
+    related_articles = models.ManyToManyField(
+        'self', symmetrical=False, blank=True, related_name='related_from',
+        help_text='Hand-picked related reading. Leave empty to let the site suggest articles by text similarity.',
+    )
     article_type = models.CharField(max_length=30, choices=ArticleType.choices)
     # A per-article editorial/business call, independent of article_type —
     # see ROADMAP.md Phase 7 "Business model (revised — three access tiers)".

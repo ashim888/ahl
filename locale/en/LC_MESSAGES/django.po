@@ -75,3 +75,14 @@ msgstr ""
 
 msgid "Reply to comment"
 msgstr ""
+
+# django_comments_xtd's email subjects are hard-coded gettext strings
+# (views.py: send_email_confirmation_request / notify_comment_followers);
+# these entries override its generic lowercase wording. English in both
+# catalogues on purpose — the email bodies themselves are English
+# (templates/django_comments_xtd/email_*.html).
+msgid "comment confirmation request"
+msgstr "Confirm your comment"
+
+msgid "new comment posted"
+msgstr "New comment in a discussion you follow"

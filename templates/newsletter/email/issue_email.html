@@ -1,32 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="color-scheme" content="light">
-<title>{{ subject }}</title>
-<!--[if mso]>
-<style type="text/css">
-    table { border-collapse: collapse; }
-    .fallback-font { font-family: Georgia, 'Times New Roman', serif !important; }
-</style>
-<![endif]-->
-<style>
-    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-    body { margin: 0; padding: 0; width: 100% !important; background-color: #f0ede8; }
-    a { color: #c0392b; }
-    .email-body p { margin: 0 0 1.1em; }
-    .email-body h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 19px; margin: 1.6em 0 0.6em; color: #111110; }
-    .email-body h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 16px; margin: 1.4em 0 0.5em; color: #111110; }
-    .email-body img { max-width: 100%; height: auto; }
-    .email-body a { color: #c0392b; }
-    @media (max-width: 620px) {
-        .email-container { width: 100% !important; }
-        .email-padding { padding-left: 20px !important; padding-right: 20px !important; }
-    }
-</style>
-</head>
-<body style="margin:0; padding:0; background-color:#f0ede8;">
+{% extends 'email/base.html' %}
+{% comment %}
+A newsletter issue — rendered by newsletter/emails.py:render_issue_email for
+both the real send (tasks.py) and the editorial preview, so the two can never
+drift apart. Layout/branding come from email/base.html, shared with every
+other email the site sends.
+{% endcomment %}
+{% block title %}{{ subject }}{% endblock %}
+{% block preheader %}{{ body_html|striptags|truncatewords:25 }}{% endblock %}
+{% block before_card %}
     {% if is_preview %}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
@@ -42,52 +23,9 @@
         </tr>
     </table>
     {% endif %}
-
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-            <td align="center" style="padding: 24px 16px;">
-                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container fallback-font" style="max-width:600px; width:100%; background-color:#ffffff; border:1px solid #d4d0cb;">
-
-                    <!-- Header -->
-                    <tr>
-                        <td align="center" class="email-padding" style="padding: 28px 32px; border-bottom: 2px solid #111110;">
-                            <div class="fallback-font" style="font-family: Arial, Helvetica, sans-serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #6b6860; margin-bottom: 8px;">
-                                {{ journal_tagline }}
-                            </div>
-                            <div class="fallback-font" style="font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: bold; letter-spacing: -0.5px; color: #111110;">
-                                {{ journal_name|upper }}
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Body -->
-                    <tr>
-                        <td class="email-padding fallback-font email-body" style="padding: 32px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.65; color: #111110;">
-                            <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 23px; line-height: 1.3; margin: 0 0 22px; color: #111110;">
-                                {{ subject }}
-                            </h1>
-                            {{ body_html|safe }}
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td align="center" class="email-padding" style="padding: 24px 32px; border-top: 1px solid #d4d0cb; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.7; color: #6b6860;">
-                            <p style="margin: 0 0 6px;">{{ journal_name }}{% if journal_publisher %} — {{ journal_publisher }}{% endif %}</p>
-                            <p style="margin: 0;">
-                                You're receiving this because you subscribed to {{ journal_name }}'s newsletter.<br>
-                                <a href="{{ unsubscribe_url }}" style="color:#6b6860; text-decoration:underline;">Unsubscribe</a>
-                                {% if journal_contact_email %}
-                                    &nbsp;·&nbsp;
-                                    <a href="mailto:{{ journal_contact_email }}" style="color:#6b6860; text-decoration:underline;">Contact us</a>
-                                {% endif %}
-                            </p>
-                        </td>
-                    </tr>
-
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
+{% endblock %}
+{% block eyebrow %}Newsletter{% endblock %}
+{% block heading %}{{ subject }}{% endblock %}
+{% block content %}{{ body_html|safe }}{% endblock %}
+{% block footer_reason %}You're receiving this because you subscribed to the {{ journal_name }} newsletter.{% endblock %}
+{% block footer_links %}<a href="{{ unsubscribe_url }}" style="color:#6b6860; text-decoration:underline;">Unsubscribe</a>&nbsp;·&nbsp;{% endblock %}

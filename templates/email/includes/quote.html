@@ -1,0 +1,11 @@
+{# Quoted comment/excerpt block — `text` is the quoted text; `attribution` and `attribution_date` optional. #}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 4px 0 8px;">
+    <tr>
+        <td style="border-left: 3px solid #c0392b; background-color:#faf9f7; padding: 14px 18px; font-family: Georgia, 'Noto Serif Devanagari', 'Times New Roman', serif; font-size: 15px; line-height: 1.6; color: #333330;">
+            {{ text|linebreaksbr }}
+            {% if attribution %}
+                <div style="margin-top: 10px; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #6b6860;">— {{ attribution }}{% if attribution_date %}, {{ attribution_date|date:"M j, Y" }}{% endif %}</div>
+            {% endif %}
+        </td>
+    </tr>
+</table>

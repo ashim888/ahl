@@ -1,0 +1,20 @@
+{% extends 'email/base.html' %}
+{% comment %}Sent once, when a subscriber confirms — newsletter/emails.py:send_welcome_email.{% endcomment %}
+{% block title %}Welcome to the {{ journal_name }} newsletter{% endblock %}
+{% block preheader %}You're subscribed. Here's what to expect.{% endblock %}
+{% block eyebrow %}You're subscribed{% endblock %}
+{% block heading %}Welcome to the {{ journal_name }} newsletter{% endblock %}
+{% block content %}
+    <p>Hello,</p>
+    <p>Your subscription is confirmed — thank you for reading.</p>
+    <p>Here's what you'll get:</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 1.1em;">
+        <tr><td style="padding: 0 10px 8px 0; color:#c0392b; vertical-align:top;">&#9632;</td><td style="padding-bottom:8px;">Our latest reporting and analysis on health policy, public health and clinical practice.</td></tr>
+        <tr><td style="padding: 0 10px 8px 0; color:#c0392b; vertical-align:top;">&#9632;</td><td style="padding-bottom:8px;">New research published in the journal.</td></tr>
+        <tr><td style="padding: 0 10px 8px 0; color:#c0392b; vertical-align:top;">&#9632;</td><td style="padding-bottom:8px;">Announcements about training programs and events.</td></tr>
+    </table>
+    <p>While you wait for the next issue, catch up on what's new:</p>
+    {% include 'email/includes/button.html' with url=articles_url label='Read the latest' %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you subscribed to the {{ journal_name }} newsletter.{% endblock %}
+{% block footer_links %}<a href="{{ unsubscribe_url }}" style="color:#6b6860; text-decoration:underline;">Unsubscribe</a>&nbsp;·&nbsp;{% endblock %}

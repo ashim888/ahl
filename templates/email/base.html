@@ -1,0 +1,108 @@
+{% load email_tags %}{% email_branding as brand %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{% block title %}{{ brand.name }}{% endblock %}</title>
+{% comment %}
+Shared layout for every HTML email the site sends — comment confirmations
+and reply notifications (templates/django_comments_xtd/), newsletter signup
+confirmation/welcome and newsletter issues (templates/newsletter/email/).
+
+Email-client rules, not web rules: table layout, inline styles on anything
+that matters (Gmail strips most <style>), web-safe font stacks with Noto
+Devanagari as the fallback for Nepali text, 600px max width. Branding comes
+from {% templatetag openblock %} email_branding {% templatetag closeblock %}
+(articles/templatetags/email_tags.py), not the request, because several
+senders render with no request at all.
+
+Blocks: preheader (inbox preview text), eyebrow (small label above the
+heading), heading, content, footer_reason (why the reader got this email),
+footer_links.
+{% endcomment %}
+<!--[if mso]>
+<style type="text/css">
+    table { border-collapse: collapse; }
+    .fallback-font { font-family: Georgia, 'Times New Roman', serif !important; }
+</style>
+<![endif]-->
+<style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    body { margin: 0; padding: 0; width: 100% !important; background-color: #f0ede8; }
+    a { color: #c0392b; }
+    .email-body p { margin: 0 0 1.1em; }
+    .email-body h2 { font-family: Georgia, 'Noto Serif Devanagari', 'Times New Roman', serif; font-size: 19px; margin: 1.6em 0 0.6em; color: #111110; }
+    .email-body h3 { font-family: Georgia, 'Noto Serif Devanagari', 'Times New Roman', serif; font-size: 16px; margin: 1.4em 0 0.5em; color: #111110; }
+    .email-body img { max-width: 100%; height: auto; }
+    .email-body a { color: #c0392b; }
+    @media (max-width: 620px) {
+        .email-container { width: 100% !important; }
+        .email-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#f0ede8;">
+    {# Inbox preview text — hidden in the email body itself. #}
+    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#f0ede8; opacity:0;">
+        {% block preheader %}{% endblock %}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+    </div>
+
+    {% block before_card %}{% endblock %}
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <td align="center" style="padding: 24px 16px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="email-container fallback-font" style="max-width:600px; width:100%; background-color:#ffffff; border:1px solid #d4d0cb;">
+
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" class="email-padding" style="padding: 28px 32px 24px; border-bottom: 2px solid #111110;">
+                            <a href="{{ brand.site_url }}/" style="text-decoration:none; color:#111110;">
+                                <img src="{{ brand.logo_url }}" alt="" width="44" height="44" style="display:block; margin:0 auto 10px; width:44px; height:44px; border:0;">
+                                <div class="fallback-font" style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: bold; letter-spacing: -0.5px; color: #111110;">
+                                    {{ brand.name|upper }}
+                                </div>
+                            </a>
+                            {% if brand.tagline %}
+                                <div style="font-family: Arial, Helvetica, sans-serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #6b6860; margin-top: 6px;">
+                                    {{ brand.tagline }}
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td class="email-padding fallback-font email-body" style="padding: 32px; font-family: Georgia, 'Noto Serif Devanagari', 'Times New Roman', serif; font-size: 16px; line-height: 1.65; color: #111110;">
+                            <div style="font-family: Arial, Helvetica, sans-serif; font-size: 11px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; color: #c0392b; margin: 0 0 10px;">{% block eyebrow %}{% endblock %}</div>
+                            <h1 style="font-family: Georgia, 'Noto Serif Devanagari', 'Times New Roman', serif; font-size: 23px; line-height: 1.35; margin: 0 0 22px; color: #111110;">
+                                {% block heading %}{% endblock %}
+                            </h1>
+                            {% block content %}{% endblock %}
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" class="email-padding" style="padding: 24px 32px; border-top: 1px solid #d4d0cb; background-color:#faf9f7; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.7; color: #6b6860;">
+                            <p style="margin: 0 0 8px;">{% block footer_reason %}{% endblock %}</p>
+                            <p style="margin: 0 0 8px;">
+                                {% block footer_links %}{% endblock %}
+                                <a href="{{ brand.site_url }}/" style="color:#6b6860; text-decoration:underline;">Visit {{ brand.name }}</a>
+                                {% if brand.contact_email %}
+                                    &nbsp;·&nbsp;
+                                    <a href="mailto:{{ brand.contact_email }}" style="color:#6b6860; text-decoration:underline;">Contact us</a>
+                                {% endif %}
+                            </p>
+                            <p style="margin: 0; color:#9a968f;">{{ brand.name }}{% if brand.publisher %} — {{ brand.publisher }}{% endif %}</p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends 'email/base.html' %}
+{% load email_tags %}
+{% comment %}
+Sent by django_comments_xtd when an anonymous reader posts a comment
+(COMMENTS_XTD_CONFIRM_EMAIL). Context from the package: comment (the
+not-yet-saved TmpXtdComment), confirmation_url (site-relative), contact, site.
+{% endcomment %}
+{% block title %}Confirm your comment{% endblock %}
+{% block preheader %}One click to publish your comment on “{{ comment.content_object }}”.{% endblock %}
+{% block eyebrow %}Comment confirmation{% endblock %}
+{% block heading %}Confirm your comment to publish it{% endblock %}
+{% block content %}
+    <p>Hi {{ comment.user_name|default:"there" }},</p>
+    <p>
+        Thanks for joining the conversation on
+        <a href="{{ comment.content_object.get_absolute_url|absolute_url }}" style="color:#c0392b;">{{ comment.content_object }}</a>.
+        To keep the discussion free of spam, we publish comments from readers without an account only once
+        they confirm their email address.
+    </p>
+    <p style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #6b6860; margin-bottom: 6px;">Your comment</p>
+    {% include 'email/includes/quote.html' with text=comment.comment %}
+    {% include 'email/includes/button.html' with url=confirmation_url|absolute_url label='Publish my comment' %}
+    {% include 'email/includes/link_fallback.html' with url=confirmation_url|absolute_url %}
+    <p style="font-size: 14px; color: #6b6860;">
+        Didn't write this? Just ignore this email — nothing will be posted.
+        {% firstof brand.contact_email contact as contact_address %}{% if contact_address %}If you think someone is misusing your address, let us know at <a href="mailto:{{ contact_address }}" style="color:#6b6860;">{{ contact_address }}</a>.{% endif %}
+    </p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because a comment was submitted with this email address.{% endblock %}

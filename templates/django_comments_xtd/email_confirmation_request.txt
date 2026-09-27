@@ -1,0 +1,17 @@
+{% load email_tags %}{% email_branding as brand %}Hi {{ comment.user_name|default:"there" }},
+
+Thanks for joining the conversation on "{{ comment.content_object }}" ({{ comment.content_object.get_absolute_url|absolute_url }}).
+
+To keep the discussion free of spam, we publish comments from readers without an account only once they confirm their email address.
+
+Your comment:
+"{{ comment.comment }}"
+
+Publish my comment:
+{{ confirmation_url|absolute_url }}
+
+Didn't write this? Just ignore this email - nothing will be posted.{% firstof brand.contact_email contact as contact_address %}{% if contact_address %} If you think someone is misusing your address, let us know at {{ contact_address }}.{% endif %}
+
+--
+{{ brand.name }}
+{{ brand.site_url }}

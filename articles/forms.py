@@ -49,6 +49,37 @@ class TagifyKeywordsField(forms.CharField):
         return keywords
 
 
+class TagifyRelatedArticlesField(forms.CharField):
+    """Backs the Tagify-enhanced "Related articles" input (article_form.html)
+    — Tagify serializes its chips as a JSON array of {"value": title,
+    "id": pk} objects. Unlike TagifyKeywordsField this never creates
+    anything: only existing, published articles can be picked, and the
+    article being edited is dropped (ArticleForm.clean_related_articles).
+    With JS off it accepts a comma-separated list of article pks.
+    """
+
+    widget = forms.TextInput
+
+    def to_python(self, value):
+        if not value:
+            return []
+        try:
+            parsed = json.loads(value)
+            raw_ids = [item.get('id') for item in parsed if isinstance(item, dict)]
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            raw_ids = value.split(',')
+        ids = []
+        for raw_id in raw_ids:
+            try:
+                pk = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if pk not in ids:
+                ids.append(pk)
+        found = Article.objects.filter(pk__in=ids, status=Article.Status.PUBLISHED).in_bulk()
+        return [found[pk] for pk in ids if pk in found]
+
+
 class ArticleForm(forms.ModelForm):
     """Front-end editorial CRUD form. Authors (the Article<->User through
     model, with ordering/corresponding-author flags) are edited separately
@@ -69,6 +100,14 @@ class ArticleForm(forms.ModelForm):
     keywords = TagifyKeywordsField(
         required=False, label='Keywords',
         help_text='Press enter after each one. Existing keywords are suggested as you type.',
+    )
+    # Same reason as `keywords` above — Article.related_articles is a real
+    # M2M, but the input is a Tagify-enhanced text field, so it's declared
+    # here and saved by hand in save() rather than listed in Meta.fields.
+    related_articles = TagifyRelatedArticlesField(
+        required=False, label='Related articles',
+        help_text='Hand-picked "Related reading" for this article. Leave empty to let the site pick '
+                  'the most similar articles automatically (see suggestions below).',
     )
 
     class Meta:
@@ -124,6 +163,10 @@ class ArticleForm(forms.ModelForm):
             self.fields['keywords'].initial = json.dumps(
                 [{'value': kw.name} for kw in self.instance.keyword_tags.all()],
             )
+        if self.instance.pk:
+            self.fields['related_articles'].initial = json.dumps(
+                [{'value': a.title, 'id': a.pk} for a in self.instance.related_articles.all()],
+            )
         # Blank is valid — Article.save() auto-generates slug + short_code
         # from the title when left empty (see articles/models.py). Django's
         # own unique-value validation on the ModelForm already rejects an
@@ -135,6 +178,10 @@ class ArticleForm(forms.ModelForm):
         if cleaned_data.get('access_type') == Article.AccessType.PAY_PER_ARTICLE and not cleaned_data.get('price'):
             self.add_error('price', 'Set a price for pay-per-article articles.')
         return cleaned_data
+
+    def clean_related_articles(self):
+        related = self.cleaned_data.get('related_articles', [])
+        return [a for a in related if a.pk != self.instance.pk]
 
     def clean_html_content(self):
         # See articles/sanitize.py — defense in depth on top of the
@@ -149,17 +196,23 @@ class ArticleForm(forms.ModelForm):
         # ModelForm M2M field, just implemented by hand: callers that save
         # with commit=False (article_autosave, article_preview) must still
         # call form.save_m2m() themselves once the instance has a pk.
+        # related_articles is the same kind of hand-saved M2M. Django's own
+        # _save_m2m() is still called too, so any M2M later added to
+        # Meta.fields isn't silently dropped by this override.
         instance = super().save(commit=False)
         keywords = self.cleaned_data.get('keywords', [])
+        related = self.cleaned_data.get('related_articles', [])
 
-        def save_keywords():
+        def save_m2m():
+            self._save_m2m()
             instance.keyword_tags.set(keywords)
+            instance.related_articles.set(related)
 
         if commit:
             instance.save()
-            save_keywords()
+            save_m2m()
         else:
-            self.save_m2m = save_keywords
+            self.save_m2m = save_m2m
         return instance
 
 
