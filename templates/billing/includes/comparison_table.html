@@ -1,4 +1,4 @@
-{% comment %}
+{% load money_tags %}{% comment %}
 Shared plan-comparison table. Usage:
     {% include 'billing/includes/comparison_table.html' with plans=plans comparison_matrix=comparison_matrix %}
 Built by billing.views.build_comparison_matrix — plans and comparison_matrix
@@ -17,7 +17,7 @@ must come from the same call so columns/rows line up.
                             <p class="font-mono-editorial text-[0.65rem] text-accent tracking-widest mb-1">MOST POPULAR</p>
                         {% endif %}
                         <a href="{% url 'billing:plan_detail' plan.pk %}" class="font-display text-base font-bold hover:text-accent">{{ plan.name }}</a>
-                        <p class="font-mono-editorial text-xs text-muted-foreground mt-1">₹{{ plan.price }}</p>
+                        <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{{ plan.price|money }}</p>
                     </th>
                 {% endfor %}
             </tr>

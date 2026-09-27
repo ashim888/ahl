@@ -268,7 +268,7 @@ class CoursePublicPageMetaTagsTests(TestCase):
         self.assertIn('"@type": "Course"', content)
         self.assertIn('"name": "Systematic Reviews 101"', content)
         self.assertIn('"price": "75.00"', content)
-        self.assertIn('"priceCurrency": "USD"', content)
+        self.assertIn('"priceCurrency": "NPR"', content)
         self.assertIn('"@type": "BreadcrumbList"', content)
 
 
@@ -371,3 +371,19 @@ class CourseManageModulesTests(TestCase):
         }))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(TrainingCourse.objects.filter(title='Data Visualisation').exists())
+
+
+@FAST_PASSWORD_HASHERS
+class CourseManageListCountsTests(TestCase):
+    def test_seat_counts_not_multiplied_by_module_count(self):
+        editor = User.objects.create_user(
+            email='count-editor@example.com', password='pw', first_name='C', last_name='E', role=User.Role.EDITOR,
+        )
+        learner = User.objects.create_user(email='count-learner@example.com', password='pw', first_name='L', last_name='N')
+        course = make_course('Counted Course')
+        for order in range(3):
+            course.modules.create(order=order, title=f'Module {order}')
+        Enrollment.objects.create(user=learner, course=course)
+        self.client.force_login(editor)
+        row = self.client.get(reverse('training:manage_course_list')).context['courses'][0]
+        self.assertEqual((row.active_enrollment_count, row.enrollment_count, row.module_count), (1, 1, 3))

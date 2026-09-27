@@ -1,0 +1,7 @@
+{% if issue.cover_image %}
+    <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
+{% else %}
+    <div class="w-full h-full relative overflow-hidden" style="background: linear-gradient(135deg, #1f2a44 0%, #3b3f58 45%, #b3452c 100%);">
+        <span aria-hidden="true" class="absolute -right-4 -top-8 font-display font-bold text-white/10 leading-none select-none" style="font-size: 9rem;">{{ issue.title|first|upper }}</span>
+    </div>
+{% endif %}

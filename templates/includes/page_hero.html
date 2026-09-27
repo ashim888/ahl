@@ -1,0 +1,29 @@
+{% comment %}
+Dark header band shared by the catalog-style pages (training, subscribe,
+issues, sections) so they open the same way. Usage:
+    {% include 'includes/page_hero.html' with eyebrow=_("ISSUES") title=_("Issues") lead="..." %}
+Optional:
+    back_url / back_label — a small "← back" link above the eyebrow
+    image_url             — a cover shown to the right on wide screens
+    meta                  — a short line under the lead (e.g. "12 articles · Updated May 3")
+Page-specific extras (search box, stats, follow button) go in the page's own
+markup right after the include, inside a matching band if needed.
+{% endcomment %}
+<section class="bg-foreground text-primary-foreground">
+    <div class="max-w-6xl mx-auto px-6 py-12 md:py-16 {% if image_url %}grid md:grid-cols-12 gap-10 items-center{% endif %}">
+        <div class="{% if image_url %}md:col-span-7{% endif %} max-w-3xl">
+            {% if back_url %}
+                <a href="{{ back_url }}" class="inline-block mb-4 font-mono-editorial text-[0.65rem] tracking-widest opacity-70 hover:opacity-100 hover:text-accent">{{ back_label }}</a>
+            {% endif %}
+            {% if eyebrow %}<p class="section-label text-accent">{{ eyebrow }}</p>{% endif %}
+            <h1 class="font-display text-4xl md:text-5xl font-bold leading-tight mt-3" style="letter-spacing: -0.025em;">{{ title }}</h1>
+            {% if lead %}<p class="mt-4 text-base md:text-lg opacity-75 leading-relaxed">{{ lead }}</p>{% endif %}
+            {% if meta %}<p class="mt-5 font-mono-editorial text-xs tracking-widest opacity-60">{{ meta }}</p>{% endif %}
+        </div>
+        {% if image_url %}
+            <div class="md:col-span-5">
+                <img src="{{ image_url }}" alt="" class="w-full aspect-[4/3] object-cover border border-primary-foreground/20 shadow-2xl">
+            </div>
+        {% endif %}
+    </div>
+</section>

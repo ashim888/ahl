@@ -832,3 +832,29 @@ class PurchaseListFilterTests(TestCase):
         make_article(Article.AccessType.OPEN_ACCESS)
         response = self.client.get(reverse('billing:manage_purchase_list'))
         self.assertEqual(set(response.context['articles']), {self.article_a, self.article_b})
+
+
+class MoneyFormatTests(TestCase):
+    """billing/money.py — the one place prices are turned into text."""
+
+    def test_rupee_format_with_south_asian_grouping(self):
+        from decimal import Decimal
+
+        from .money import format_money
+
+        self.assertEqual(format_money(499), 'Rs. 499')
+        self.assertEqual(format_money(Decimal('4999.00')), 'Rs. 4,999')
+        self.assertEqual(format_money(149999), 'Rs. 1,49,999')
+        self.assertEqual(format_money(Decimal('1234567.89')), 'Rs. 12,34,567.89')
+        self.assertEqual(format_money(Decimal('12.5')), 'Rs. 12.50')
+        self.assertEqual(format_money(None), '')
+
+    def test_plan_page_shows_rs_not_other_symbols(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Rs Plan', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=1499, duration_days=30,
+        )
+        response = self.client.get(reverse('billing:plan_detail', args=[plan.pk]))
+        content = response.content.decode()
+        self.assertIn('Rs. 1,499', content)
+        self.assertNotIn('₹', content)
+        self.assertEqual(str(plan), 'Rs Plan (Rs. 1,499)')

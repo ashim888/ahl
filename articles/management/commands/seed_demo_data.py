@@ -427,7 +427,7 @@ class Command(BaseCommand):
                  description='A foundational course on structuring and writing a publishable research manuscript.\n\n'
                              'Each week pairs a short lesson with a writing exercise on your own project, reviewed by '
                              'the instructor, so you finish with a complete first draft rather than a set of notes.',
-                 price=49.00, duration='4 weeks', instructor='Dr. Sunita Rai',
+                 price=4900.00, duration='4 weeks', instructor='Dr. Sunita Rai',
                  instructor_title='Editor-in-Chief, Ajna Health Lens',
                  instructor_bio='Sunita Rai leads the editorial team with a focus on rural health equity and '
                                 'evidence-based public health policy across Nepal.',
@@ -450,7 +450,7 @@ class Command(BaseCommand):
                  mode=TrainingCourse.Mode.HYBRID, effort='5–6 hours a week',
                  start_date=datetime.date(2026, 11, 16), offers_certificate=True, max_enrollments=25,
                  description='An intensive bootcamp covering study design, sampling, and statistical analysis basics.',
-                 price=99.00, duration='6 weeks', instructor='Dr. Rajesh Gurung',
+                 price=9900.00, duration='6 weeks', instructor='Dr. Rajesh Gurung',
                  instructor_title='Associate Editor, Research Methods',
                  learning_outcomes='Pick the right study design for a question\nCalculate a sample size\n'
                                    'Run and interpret common statistical tests\nSpot bias and confounding',
@@ -466,7 +466,7 @@ class Command(BaseCommand):
                  category='Publishing', level=TrainingCourse.Level.ALL_LEVELS,
                  mode=TrainingCourse.Mode.ONLINE, effort='2 hours a week',
                  description='Learn how to promote and disseminate your published work effectively.',
-                 price=29.00, duration='2 weeks', instructor='Dr. Priya Koirala',
+                 price=2900.00, duration='2 weeks', instructor='Dr. Priya Koirala',
                  learning_outcomes='Set up ORCID and Google Scholar profiles\nWrite a plain-language summary\n'
                                    'Share research on social media responsibly',
                  modules=[('Week 1', 'Your researcher profile', ''), ('Week 2', 'Telling people about your work', '')]),

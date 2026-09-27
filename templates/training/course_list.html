@@ -48,7 +48,7 @@
         {% with course=featured_course %}
         <a href="{% url 'training:course_detail' course.pk %}"
            class="group grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all mb-14">
-            <div class="aspect-video md:aspect-auto md:min-h-[300px] bg-secondary overflow-hidden">
+            <div class="relative aspect-video md:aspect-auto md:min-h-[300px] bg-secondary overflow-hidden [&>*]:absolute [&>*]:inset-0">
                 {% include 'training/includes/course_cover.html' with course=course classes="group-hover:scale-[1.03] transition-transform duration-300" %}
             </div>
             <div class="p-7 md:p-10 flex flex-col">

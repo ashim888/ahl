@@ -54,6 +54,7 @@ class SectionDetailView(DetailView):
         context['is_paginated'] = page_obj.has_other_pages()
         context['meta_title'] = f'{self.object.name} — {settings.JOURNAL_NAME}'
         context['meta_description'] = f'{self.object.name} coverage from {settings.JOURNAL_NAME}.'
+        context['follower_count'] = self.object.followers.count()
         context['is_following'] = (
             self.request.user.is_authenticated
             and SectionFollow.objects.filter(user=self.request.user, section=self.object).exists()

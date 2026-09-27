@@ -6,6 +6,40 @@
 {% block content %}
 <a href="{% url 'training:manage_course_list' %}" class="text-sm underline">← Back to courses</a>
 
+<div class="mt-4 rounded-2xl border border-gray-100 bg-white shadow-sm p-5 flex flex-col md:flex-row gap-5">
+    <div class="w-full md:w-48 aspect-video rounded-lg overflow-hidden bg-gray-100 shrink-0">
+        {% include 'training/includes/course_cover.html' with course=course %}
+    </div>
+    <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <p class="font-semibold text-gray-900">{{ course.title }}</p>
+                <p class="text-sm text-gray-500 mt-0.5">
+                    {{ course.instructor }} · {{ course.get_level_display }} · {{ course.get_mode_display }} · {{ course.duration }}
+                    · {% if course.start_date %}starts {{ course.start_date|date:"M j, Y" }}{% else %}start anytime{% endif %}
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'training:manage_course_update' course.pk %}" class="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Edit course</a>
+                {% if course.is_active %}<a href="{% url 'training:course_detail' course.pk %}" target="_blank" class="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Public page ↗</a>{% endif %}
+            </div>
+        </div>
+        <dl class="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div><dt class="text-xs text-gray-500">Active</dt><dd class="text-lg font-semibold text-gray-900">{{ course_summary.active }}</dd></div>
+            <div><dt class="text-xs text-gray-500">Completed</dt><dd class="text-lg font-semibold text-gray-900">{{ course_summary.completed }}</dd></div>
+            <div><dt class="text-xs text-gray-500">Cancelled</dt><dd class="text-lg font-semibold text-gray-900">{{ course_summary.cancelled }}</dd></div>
+            <div><dt class="text-xs text-gray-500">Paid</dt><dd class="text-lg font-semibold text-gray-900">{{ course_summary.paid }}</dd></div>
+            <div>
+                <dt class="text-xs text-gray-500">Seats</dt>
+                <dd class="text-lg font-semibold text-gray-900">{{ course_summary.seats_taken }}{% if course.max_enrollments %} / {{ course.max_enrollments }}{% endif %}</dd>
+                {% if course_summary.seats_pct is not None %}
+                    <div class="mt-1 h-1.5 rounded-full bg-gray-100 overflow-hidden"><div class="h-full rounded-full {% if course_summary.seats_pct >= 100 %}bg-red-500{% else %}bg-gray-900{% endif %}" style="width: {{ course_summary.seats_pct }}%;"></div></div>
+                {% endif %}
+            </div>
+        </dl>
+    </div>
+</div>
+
 <form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
     <div>
         <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>

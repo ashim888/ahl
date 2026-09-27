@@ -12,6 +12,26 @@
     </a>
 </div>
 
+<div class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500">Live courses</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900">{{ summary.active_courses }}</p>
+    </div>
+    <div class="rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500">Learners enrolled</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900">{{ summary.enrollments }}</p>
+    </div>
+    <div class="rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500">Paid enrollments</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900">{{ summary.paid }}</p>
+    </div>
+    <div class="rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+        <p class="text-xs font-medium text-gray-500">Featured on /training/</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900">{{ summary.featured }}</p>
+        {% if summary.featured > 1 %}<p class="text-[11px] text-amber-600 mt-0.5">Only one shows as the catalog banner.</p>{% endif %}
+    </div>
+</div>
+
 <form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
     {% include 'includes/search_field.html' with placeholder="Search title or instructor…" %}
     <div>
@@ -29,29 +49,56 @@
     <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
         <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
             <tr>
-                <th class="px-4 py-3">#</th>
-                <th class="px-4 py-3">Title</th>
-                <th class="px-4 py-3">Instructor</th>
+                <th class="px-4 py-3">Course</th>
+                <th class="px-4 py-3">Format</th>
+                <th class="px-4 py-3">Starts</th>
                 <th class="px-4 py-3">Price</th>
-                <th class="px-4 py-3">Enrollments</th>
-                <th class="px-4 py-3">Active</th>
+                <th class="px-4 py-3">Seats</th>
+                <th class="px-4 py-3">Status</th>
                 <th class="px-4 py-3"></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 bg-white">
             {% for course in courses %}
-                <tr>
-                    <td class="px-4 py-3 text-gray-400">{{ forloop.counter0|add:page_obj.start_index }}</td>
-                    <td class="px-4 py-3 font-medium text-gray-900">{{ course.title }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ course.instructor }}</td>
-                    <td class="px-4 py-3 text-gray-600">${{ course.price }}</td>
-                    <td class="px-4 py-3 text-gray-600">
-                        <a href="{% url 'training:manage_course_enrollments' course.pk %}" class="underline">
-                            {{ course.enrollment_count }}{% if course.max_enrollments %} / {{ course.max_enrollments }}{% endif %}
-                        </a>
+                <tr class="align-top">
+                    <td class="px-4 py-3">
+                        <div class="flex gap-3 items-start min-w-[280px]">
+                            <div class="w-20 aspect-video rounded-md overflow-hidden bg-gray-100 shrink-0">
+                                {% include 'training/includes/course_cover.html' with course=course %}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-medium text-gray-900 leading-snug">{{ course.title }}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">{{ course.instructor }}{% if course.category %} · {{ course.category }}{% endif %}</p>
+                                <p class="text-[11px] text-gray-400 mt-0.5">
+                                    {{ course.module_count }} module{{ course.module_count|pluralize }}
+                                    {% if not course.learning_outcomes %}· <span class="text-amber-600">no outcomes yet</span>{% endif %}
+                                </p>
+                            </div>
+                        </div>
                     </td>
-                    <td class="px-4 py-3 text-gray-600">{% if course.is_active %}Yes{% else %}No{% endif %}</td>
+                    <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ course.get_level_display }}<br><span class="text-xs text-gray-400">{{ course.get_mode_display }} · {{ course.duration }}</span></td>
+                    <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ course.start_date|date:"M j, Y"|default:"Anytime" }}</td>
+                    <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{% include 'training/includes/course_price.html' %}</td>
+                    <td class="px-4 py-3 text-gray-600 min-w-[120px]">
+                        <a href="{% url 'training:manage_course_enrollments' course.pk %}" class="underline">
+                            {{ course.active_enrollment_count }}{% if course.max_enrollments %} / {{ course.max_enrollments }}{% endif %}
+                        </a>
+                        {% if course.max_enrollments %}
+                            {% widthratio course.active_enrollment_count course.max_enrollments 100 as seat_pct %}
+                            <div class="mt-1.5 h-1.5 w-24 rounded-full bg-gray-100 overflow-hidden"><div class="h-full rounded-full {% if course.active_enrollment_count >= course.max_enrollments %}bg-red-500{% else %}bg-gray-900{% endif %}" style="width: {{ seat_pct }}%; max-width: 100%;"></div></div>
+                        {% endif %}
+                        {% if course.enrollment_count != course.active_enrollment_count %}<p class="text-[11px] text-gray-400 mt-1">{{ course.enrollment_count }} incl. cancelled</p>{% endif %}
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        {% if course.is_active %}<span class="inline-flex rounded-full bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">Live</span>{% else %}<span class="inline-flex rounded-full bg-gray-100 text-gray-500 px-2 py-0.5 text-xs font-medium">Hidden</span>{% endif %}
+                        {% if course.is_featured %}<span class="inline-flex rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-medium ml-1">Featured</span>{% endif %}
+                    </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
+                        {% if course.is_active %}
+                            <a href="{% url 'training:course_detail' course.pk %}" target="_blank" class="icon-action-btn" title="View public page" aria-label="View public page">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6m0-6L10 14M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+                            </a>
+                        {% endif %}
                         <a href="{% url 'training:manage_course_update' course.pk %}" class="icon-action-btn" title="Edit" aria-label="Edit">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5m-1.5-9.5a2.121 2.121 0 0 1 3 3L12 17l-4 1 1-4 9.5-9.5Z"/></svg>
                         </a>

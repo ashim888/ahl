@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.contrib import messages
+from django.db.models import Count, F, Q
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.formats import date_format
+from django.utils.translation import ngettext
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from articles.models import Article
@@ -24,7 +27,9 @@ class IssueListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Issue.objects.filter(is_published=True)
+        return Issue.objects.filter(is_published=True).annotate(
+            published_article_count=Count('articles', filter=Q(articles__status=Article.Status.PUBLISHED)),
+        ).order_by(F('publication_date').desc(nulls_last=True), '-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -53,6 +58,12 @@ class IssueDetailView(DetailView):
         )
         if self.object.cover_image:
             context['meta_image_url'] = self.request.build_absolute_uri(self.object.cover_image.url)
+        # Header band line: "5 ARTICLES · MAY 3, 2026" (see includes/page_hero.html).
+        article_count = len(context['issue_articles'])
+        meta = ngettext('%(count)d ARTICLE', '%(count)d ARTICLES', article_count) % {'count': article_count}
+        if self.object.publication_date:
+            meta += f' · {date_format(self.object.publication_date, "F j, Y").upper()}'
+        context['hero_meta'] = meta
         context['breadcrumb_json'] = breadcrumb_list_structured_data([
             ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
             ('Issues', self.request.build_absolute_uri(reverse('issues:issue_list'))),

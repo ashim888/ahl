@@ -1,0 +1,15 @@
+{% comment %}
+Section heading used across the homepage and catalog pages: small accent
+eyebrow, display title, optional "see all" link on the right, heavy rule
+underneath. Usage:
+    {% include 'includes/section_heading.html' with eyebrow=_("NEWS") title=_("Latest News") link_url=url link_label=_("ALL NEWS →") %}
+{% endcomment %}
+<div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-foreground">
+    <div>
+        {% if eyebrow %}<p class="section-label text-accent">{{ eyebrow }}</p>{% endif %}
+        <h2 class="font-display text-2xl md:text-3xl font-bold mt-1.5" style="letter-spacing: -0.02em;">{{ title }}</h2>
+    </div>
+    {% if link_url %}
+        <a href="{{ link_url }}" class="shrink-0 font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{{ link_label }}</a>
+    {% endif %}
+</div>

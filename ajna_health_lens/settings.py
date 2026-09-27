@@ -520,6 +520,13 @@ JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
 JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing')
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.com')
 
+# Every price on the site (subscriptions, special articles, training courses,
+# revenue dashboards) is shown as "Rs. 1,49,999" — see billing/money.py.
+# CURRENCY_CODE is the ISO 4217 code used in structured data (schema.org
+# priceCurrency).
+CURRENCY_SYMBOL = 'Rs.'
+CURRENCY_CODE = 'NPR'
+
 
 # Cloudflare Turnstile (CAPTCHA) — pitches app, story-pitch submission
 # (August 2026: opened to any authenticated account, not just verified

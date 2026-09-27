@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import F
 from django.templatetags.static import static
 from django.urls import reverse
 
@@ -21,7 +22,9 @@ def journal_settings(request):
         # -created_at, not -publication_date — an issue's publication_date
         # is optional (unlike Article.publication_date, nothing stamps it
         # automatically), so it's not a reliable "latest" ordering on its own.
-        'latest_issue': Issue.objects.filter(is_published=True).order_by('-created_at').first(),
+        'latest_issue': Issue.objects.filter(is_published=True).order_by(
+            F('publication_date').desc(nulls_last=True), '-created_at',
+        ).first(),
         # Fallback og:image/twitter:image for pages that don't set their own
         # meta_image_url (see templates/base.html) — Open Graph requires an
         # absolute URL, not a relative /static/ path.

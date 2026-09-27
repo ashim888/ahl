@@ -120,61 +120,24 @@ zone) fill the row, centered as a group.
 </div>
 
 {% if latest_news %}
-<section class="max-w-7xl mx-auto px-6 py-10">
-    <div class="flex items-baseline justify-between mb-6">
-        <div>
-            <div class="rule-editorial mb-3" style="width: 48px;"></div>
-            <h3 class="font-display text-2xl font-bold">{% trans "Latest News" %}</h3>
-        </div>
-        <a href="{% url 'articles:article_list' %}?type=news_commentary" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">
-            {% trans "ALL NEWS →" %}
-        </a>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<section class="max-w-7xl mx-auto px-6 py-12">
+    {% url 'articles:article_list' as all_url %}
+    {% trans "NEWS" as eyebrow %}{% trans "Latest News" as title %}{% trans "ALL NEWS →" as link_label %}
+    {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=news_commentary" %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         {% for article in latest_news %}
-            <article class="article-link">
-                <a href="{% url 'articles:article_detail' article.slug %}">
-                    <div class="overflow-hidden bg-muted mb-4" style="height: 200px;">
-                        {% if article.featured_image %}
-                            <img src="{{ article.featured_image.url }}" alt="{{ article.title }}"
-                                 class="w-full h-full object-cover" style="filter: grayscale(10%);">
-                        {% else %}
-                            <div class="w-full h-full bg-secondary"></div>
-                        {% endif %}
-                    </div>
-                    <span class="section-label text-muted-foreground">{{ article.get_article_type_display }}</span>
-                    <h4 class="font-display text-lg font-bold leading-tight mt-2 article-title" style="letter-spacing: -0.01em;">
-                        {{ article.title }}
-                    </h4>
-                </a>
-                <div class="flex items-center gap-2 mt-3">
-                    <span class="text-xs text-muted-foreground font-medium">
-                        {% with a=article.articleauthor_set.all|first %}
-                            {% if a %}{% if a.user_id %}<a href="{% url 'articles:author_detail' a.user_id %}" class="hover:text-accent">{{ a.display_name }}</a>{% else %}<span>{{ a.display_name }}</span>{% endif %}{% else %}{% trans "Editorial staff" %}{% endif %}
-                        {% endwith %}
-                    </span>
-                    <span class="text-border text-xs">·</span>
-                    <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.estimated_read_minutes }} {% trans "min" %}</span>
-                </div>
-            </article>
+            {% include 'articles/includes/article_card.html' with show_summary=True %}
         {% endfor %}
     </div>
 </section>
 {% endif %}
 
 {% if opinion_pieces %}
-<section class="border-t-2 border-foreground">
-    <div class="max-w-7xl mx-auto px-6 py-10">
-        <div class="flex items-baseline justify-between mb-8">
-            <div class="flex items-center gap-4">
-                <div class="w-1 bg-accent" style="height: 32px;"></div>
-                <h3 class="font-display text-2xl font-bold italic">{% trans "Opinion &amp; Commentary" %}</h3>
-            </div>
-            <a href="{% url 'articles:article_list' %}?type=editorial" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">
-                {% trans "ALL OPINION →" %}
-            </a>
-        </div>
+<section>
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        {% url 'articles:article_list' as all_url %}
+        {% trans "OPINION" as eyebrow %}{% trans "Opinion &amp; Commentary" as title %}{% trans "ALL OPINION →" as link_label %}
+        {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=editorial" %}
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-border">
             {% for article in opinion_pieces %}
@@ -205,19 +168,13 @@ zone) fill the row, centered as a group.
 {% if research_highlights %}
 <section class="bg-secondary border-t border-border">
     <div class="max-w-7xl mx-auto px-6 py-10">
-        <div class="flex items-baseline justify-between mb-8">
-            <div>
-                <span class="section-label text-accent">{% trans "Peer-Reviewed Research" %}</span>
-                <h3 class="font-display text-2xl font-bold mt-2">{% trans "From the Journal" %}</h3>
-            </div>
-            <a href="{% url 'issues:issue_list' %}" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">
-                {% trans "BROWSE ARCHIVE →" %}
-            </a>
-        </div>
+        {% url 'issues:issue_list' as all_url %}
+        {% trans "PEER-REVIEWED RESEARCH" as eyebrow %}{% trans "From the Journal" as title %}{% trans "BROWSE ARCHIVE →" as link_label %}
+        {% include 'includes/section_heading.html' with link_url=all_url %}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {% for article in research_highlights %}
-                <div class="article-link block bg-card border border-border p-6 hover:border-foreground transition-colors">
+                <div class="article-link block bg-card border border-border p-6 hover:border-foreground hover:shadow-lg transition-all">
                     <a href="{% url 'articles:article_detail' article.slug %}" class="block">
                         <div class="flex items-center justify-between mb-3">
                             <span class="font-mono-editorial text-xs text-accent">
@@ -274,50 +231,51 @@ zone) fill the row, centered as a group.
 {% endif %}
 
 {% if special_issues %}
-<section class="border-t-2 border-foreground">
-    <div class="max-w-7xl mx-auto px-6 py-10">
-        <div class="flex items-baseline justify-between mb-8">
-            <div>
-                <div class="rule-editorial mb-3" style="width: 48px;"></div>
-                <h3 class="font-display text-2xl font-bold">{% trans "Special Issues" %}</h3>
-            </div>
-            <a href="{% url 'issues:issue_list' %}" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">
-                {% trans "ALL ISSUES →" %}
-            </a>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-0">
+<section>
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        {% url 'issues:issue_list' as all_url %}
+        {% trans "STORY TRAILS" as eyebrow %}{% trans "Special Issues" as title %}{% trans "ALL ISSUES →" as link_label %}
+        {% include 'includes/section_heading.html' with link_url=all_url %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {% for issue in special_issues %}
                 {% if issue.is_published %}
                     <a href="{% url 'issues:issue_detail' issue.slug %}"
-                       class="relative p-8 border border-border bg-card hover:border-foreground transition-colors">
-                        <h4 class="font-display text-2xl font-bold italic leading-tight mb-3" style="letter-spacing: -0.01em;">
-                            {{ issue.title }}
-                        </h4>
-                        <p class="text-sm leading-relaxed mb-6 text-muted-foreground line-clamp-3">{{ issue.editorial_note }}</p>
-                        <div class="rule-thin mb-4"></div>
-                        <div class="flex items-center justify-between">
-                            <span class="font-mono-editorial text-xs text-muted-foreground">
-                                {% if issue.publication_date %}{{ issue.publication_date|date:"F Y" }}{% else %}{% trans "Available Now" %}{% endif %}
-                            </span>
-                            <span class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "READ →" %}</span>
+                       class="group flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all">
+                        <div class="aspect-video bg-secondary overflow-hidden">{% include 'issues/includes/issue_cover.html' %}</div>
+                        <div class="flex flex-col flex-1 p-5">
+                            <h3 class="font-display text-xl font-bold leading-tight group-hover:text-accent transition-colors" style="letter-spacing: -0.01em;">{{ issue.title }}</h3>
+                            {% if issue.editorial_note %}<p class="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-3">{{ issue.editorial_note }}</p>{% endif %}
+                            <p class="mt-auto pt-4 font-mono-editorial text-xs text-muted-foreground">
+                                {% if issue.publication_date %}{{ issue.publication_date|date:"F Y" }}{% else %}{% trans "Available Now" %}{% endif %} · {% trans "READ →" %}
+                            </p>
                         </div>
                     </a>
                 {% else %}
-                    <div class="relative p-8 border border-foreground bg-foreground text-primary-foreground">
-                        <div class="absolute top-0 left-0 bg-accent px-3 py-1">
-                            <span class="font-mono-editorial text-xs text-white tracking-widest">{% trans "FORTHCOMING" %}</span>
-                        </div>
-                        <div class="mt-6">
-                            <h4 class="font-display text-2xl font-bold italic leading-tight mb-3" style="letter-spacing: -0.01em;">
-                                {{ issue.title }}
-                            </h4>
-                            <p class="text-sm leading-relaxed mb-6 opacity-70 line-clamp-3">{{ issue.editorial_note }}</p>
-                            <div class="rule-thin mb-4" style="border-color: rgba(255,255,255,0.2);"></div>
-                            <span class="font-mono-editorial text-xs" style="color: #f87171;">{% trans "In production" %}</span>
+                    <div class="relative flex flex-col border border-foreground bg-foreground text-primary-foreground overflow-hidden">
+                        <div class="aspect-video relative overflow-hidden opacity-60">{% include 'issues/includes/issue_cover.html' %}</div>
+                        <span class="absolute top-0 left-0 bg-accent px-3 py-1 font-mono-editorial text-xs text-white tracking-widest">{% trans "FORTHCOMING" %}</span>
+                        <div class="p-5">
+                            <h3 class="font-display text-xl font-bold leading-tight" style="letter-spacing: -0.01em;">{{ issue.title }}</h3>
+                            {% if issue.editorial_note %}<p class="mt-2 text-sm leading-relaxed opacity-70 line-clamp-3">{{ issue.editorial_note }}</p>{% endif %}
+                            <p class="mt-4 font-mono-editorial text-xs text-accent">{% trans "In production" %}</p>
                         </div>
                     </div>
                 {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if home_courses %}
+<section class="bg-secondary border-y border-border">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        {% url 'training:course_list' as all_url %}
+        {% trans "TRAINING" as eyebrow %}{% trans "Learn with us" as title %}{% trans "ALL COURSES →" as link_label %}
+        {% include 'includes/section_heading.html' with link_url=all_url %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% for course in home_courses %}
+                {% include 'training/includes/course_card.html' %}
             {% endfor %}
         </div>
     </div>

@@ -1,4 +1,5 @@
 {% extends 'admin_dashboard/base.html' %}
+{% load money_tags %}
 
 {% block title %}Revenue — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}Revenue — Overview{% endblock %}
@@ -21,29 +22,29 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Total Revenue</p>
-        <p class="mt-2 text-3xl font-bold text-gray-900">${{ total_revenue }}</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ total_revenue|money }}</p>
         <p class="mt-2 text-xs text-gray-400">Training + subscriptions + purchases</p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Training</p>
-        <p class="mt-2 text-3xl font-bold text-gray-900">${{ training_total }}</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ training_total|money }}</p>
         <p class="mt-2 text-xs text-gray-400"><a href="{% url 'admin_custom:revenue_training' %}" class="hover:underline">View detail →</a></p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Subscriptions</p>
-        <p class="mt-2 text-3xl font-bold text-gray-900">${{ subscription_total }}</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ subscription_total|money }}</p>
         <p class="mt-2 text-xs text-gray-400"><a href="{% url 'admin_custom:revenue_subscriptions' %}" class="hover:underline">View detail →</a></p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Article Purchases</p>
-        <p class="mt-2 text-3xl font-bold text-gray-900">${{ purchase_total }}</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ purchase_total|money }}</p>
         <p class="mt-2 text-xs text-gray-400"><a href="{% url 'admin_custom:revenue_subscriptions' %}" class="hover:underline">View detail →</a></p>
     </div>
 </div>
 
 <div class="bg-white rounded-2xl border border-gray-100 p-5 mb-6 sm:w-64">
     <p class="text-sm text-gray-500">Approx. MRR</p>
-    <p class="mt-2 text-3xl font-bold text-gray-900">${{ mrr_estimate }}</p>
+    <p class="mt-2 text-3xl font-bold text-gray-900">{{ mrr_estimate|money }}</p>
     <p class="mt-2 text-xs text-gray-400">Forward-looking — not counted in Total Revenue above</p>
 </div>
 
@@ -53,7 +54,7 @@
     </div>
     <div class="flex items-end justify-between gap-0.5 h-28">
         {% for d in revenue_trend %}
-            <div class="flex-1 h-full flex items-end" title="{{ d.label }}: ${{ d.count }}">
+            <div class="flex-1 h-full flex items-end" title="{{ d.label }}: {{ d.count|money }}">
                 <div class="w-full rounded-t-sm bg-gray-900" style="height: {{ d.pct }}%; min-height: {% if d.count %}3px{% else %}0{% endif %};"></div>
             </div>
         {% endfor %}

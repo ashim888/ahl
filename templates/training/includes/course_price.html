@@ -1,1 +1,1 @@
-{% load i18n %}{% if course.price %}${{ course.price|floatformat:"-2" }}{% else %}{% trans "Free" %}{% endif %}
+{% load money_tags %}{% load i18n %}{% if course.price %}{{ course.price|money }}{% else %}{% trans "Free" %}{% endif %}

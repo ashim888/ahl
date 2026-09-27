@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load money_tags %}
 {% load i18n %}
 {% load text_filters ads_tags comments comments_xtd %}
 
@@ -251,42 +252,54 @@
                     <p class="text-sm text-muted-foreground">{% trans "Full text has not been added for this article yet." %}</p>
                 {% endif %}
             {% else %}
-                <div class="border border-border p-6 bg-secondary">
-                    {% if article.status == 'archived' %}
-                        <p class="section-label text-accent mb-2">{% trans "Archive Access Required" %}</p>
-                        <p class="text-sm text-muted-foreground leading-relaxed">
-                            {% trans "This is an archived article — full-text access requires a subscription plan with archive access, regardless of this article's original access tier." %}
+                {# Paywall — same card language as the course enrollment / plan price cards #}
+                <div class="border border-border bg-card shadow-xl overflow-hidden">
+                    <div class="bg-foreground text-primary-foreground px-6 py-4 flex items-center gap-3">
+                        <svg class="w-5 h-5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
+                        <p class="section-label text-primary-foreground">
+                            {% if article.status == 'archived' %}{% trans "Archive Access Required" %}{% elif article.access_type == 'pay_per_article' %}{% trans "Special Article" %}{% else %}{% trans "Subscription Required" %}{% endif %}
                         </p>
-                    {% elif article.access_type == 'pay_per_article' %}
-                        <p class="section-label text-accent mb-2">{% trans "Special Article" %}</p>
-                        <p class="text-sm text-muted-foreground leading-relaxed">
-                            {% blocktrans with price=article.price %}This is a one-time-purchase special article — ₹{{ price }} for full access, or read it free with an active subscription.{% endblocktrans %}
-                        </p>
-                    {% else %}
-                        <p class="section-label text-accent mb-2">{% trans "Subscription Required" %}</p>
-                        <p class="text-sm text-muted-foreground leading-relaxed">
-                            {% trans "This article requires an active subscription for full-text access." %}
-                        </p>
-                    {% endif %}
-                    {% if user.is_authenticated %}
-                        <div class="mt-4 flex flex-wrap gap-3">
-                            {% if article.access_type == 'pay_per_article' and article.status != 'archived' %}
-                                <a href="{% url 'billing:purchase_checkout' article.slug %}"
-                                   class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors">
-                                    {% blocktrans with price=article.price %}BUY FOR ₹{{ price }}{% endblocktrans %}
-                                </a>
-                            {% endif %}
-                            <a href="{% url 'billing:plan_browse' %}"
-                               class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-5 py-2.5 hover:border-accent hover:text-accent transition-colors">
-                                {% trans "SUBSCRIBE" %}
-                            </a>
-                        </div>
-                    {% else %}
-                        <p class="text-sm text-muted-foreground leading-relaxed mt-2">
-                            <a href="{% url 'users:login' %}?next={{ request.path }}" class="underline">{% trans "Log in" %}</a>
-                            {% trans "to subscribe or purchase this article." %}
-                        </p>
-                    {% endif %}
+                    </div>
+                    <div class="p-6">
+                        {% if article.status == 'archived' %}
+                            <p class="text-sm text-muted-foreground leading-relaxed">
+                                {% trans "This is an archived article — full-text access requires a subscription plan with archive access, regardless of this article's original access tier." %}
+                            </p>
+                        {% elif article.access_type == 'pay_per_article' %}
+                            <p class="font-display text-3xl font-bold">{{ article.price|money }}</p>
+                            <p class="mt-2 text-sm text-muted-foreground leading-relaxed">
+                                {% blocktrans with price=article.price|money %}This is a one-time-purchase special article — {{ price }} for full access, or read it free with an active subscription.{% endblocktrans %}
+                            </p>
+                        {% else %}
+                            <p class="text-sm text-muted-foreground leading-relaxed">
+                                {% trans "This article requires an active subscription for full-text access." %}
+                            </p>
+                        {% endif %}
+                        {% if user.is_authenticated %}
+                            <div class="mt-5 flex flex-wrap gap-3">
+                                {% if article.access_type == 'pay_per_article' and article.status != 'archived' %}
+                                    <a href="{% url 'billing:purchase_checkout' article.slug %}"
+                                       class="inline-block font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
+                                        {% blocktrans with price=article.price|money %}BUY FOR {{ price }}{% endblocktrans %}
+                                    </a>
+                                    <a href="{% url 'billing:plan_browse' %}"
+                                       class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-6 py-3.5 hover:border-accent hover:text-accent transition-colors">
+                                        {% trans "SUBSCRIBE" %}
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'billing:plan_browse' %}"
+                                       class="inline-block font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
+                                        {% trans "SUBSCRIBE" %}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <p class="text-sm text-muted-foreground leading-relaxed mt-4">
+                                <a href="{% url 'users:login' %}?next={{ request.path|urlencode }}" class="underline">{% trans "Log in" %}</a>
+                                {% trans "to subscribe or purchase this article." %}
+                            </p>
+                        {% endif %}
+                    </div>
                 </div>
             {% endif %}
 
@@ -463,29 +476,12 @@
     </div>
 
     {% if related_articles %}
-        <div class="border-t-2 border-foreground py-12">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-8">{% trans "RELATED READING" %}</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {% for related in related_articles %}
-                    <article class="article-link">
-                        <a href="{% url 'articles:article_detail' related.slug %}">
-                            <div class="overflow-hidden bg-muted mb-3" style="height: 160px;">
-                                {% if related.featured_image %}
-                                    <img src="{{ related.featured_image.url }}" alt="{{ related.title }}"
-                                         class="w-full h-full object-cover" style="filter: grayscale(15%);">
-                                {% else %}
-                                    <div class="w-full h-full bg-secondary"></div>
-                                {% endif %}
-                            </div>
-                            <span class="section-label text-accent">{{ related.get_article_type_display }}</span>
-                            <h3 class="font-display text-lg font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
-                                {{ related.title }}
-                            </h3>
-                        </a>
-                        <div class="flex items-center gap-2 mt-2">
-                            <span class="font-mono-editorial text-xs text-muted-foreground">{{ related.estimated_read_minutes }} {% trans "min" %}</span>
-                        </div>
-                    </article>
+        <div class="py-12">
+            {% trans "KEEP READING" as eyebrow %}{% trans "Related reading" as title %}
+            {% include 'includes/section_heading.html' %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% for article in related_articles %}
+                    {% include 'articles/includes/article_card.html' %}
                 {% endfor %}
             </div>
         </div>

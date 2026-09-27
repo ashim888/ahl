@@ -1,4 +1,5 @@
 {% extends 'admin_dashboard/base.html' %}
+{% load money_tags %}
 
 {% block title %}Analytics — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}Analytics{% endblock %}
@@ -67,7 +68,7 @@
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Approx. Monthly Revenue</p>
-        <p class="mt-2 text-3xl font-bold text-gray-900">₹{{ mrr_estimate }}</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">{{ mrr_estimate|money }}</p>
         <p class="mt-2 text-xs text-gray-400">Active plans normalized to 30 days</p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
@@ -77,7 +78,7 @@
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Article Purchases</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ purchase_count }}</p>
-        <p class="mt-2 text-xs text-gray-400">₹{{ purchase_revenue }} total</p>
+        <p class="mt-2 text-xs text-gray-400">{{ purchase_revenue|money }} total</p>
     </div>
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-8">

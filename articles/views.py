@@ -30,6 +30,7 @@ from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
 from newsletter.models import Subscriber
 from sections.models import SectionFollow
+from training.models import TrainingCourse
 from users.decorators import role_required
 from users.models import User
 
@@ -309,6 +310,14 @@ class HomeView(TemplateView):
                 user=self.request.user, status=Subscriber.Status.CONFIRMED,
             ).exists()
 
+        # Training row — outside the cached dict above, since HOME_SECTIONS_CACHE_KEY
+        # is only invalidated by Article.save(), not by course edits.
+        context['home_courses'] = list(
+            TrainingCourse.objects.filter(is_active=True).annotate(
+                active_enrollment_count=Count('enrollments', filter=~Q(enrollments__status='cancelled')),
+            ).order_by('-is_featured', 'start_date', 'title')[:3],
+        )
+
         context['meta_description'] = f'{settings.JOURNAL_TAGLINE} — health news, research highlights, and commentary from {settings.JOURNAL_NAME}.'
         return context
 
@@ -542,6 +551,7 @@ class ArticleDetailView(DetailView):
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
             ]
         context['related_articles'] = related_articles_for(self.object)
+        prefetch_related_objects(context['related_articles'], 'articleauthor_set__user')
 
         # Fetch one extra and trim, so excluding the article being viewed
         # (it'd be a strange thing to see "trending" on its own page) still

@@ -185,7 +185,15 @@ class CourseManageListView(ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = TrainingCourse.objects.annotate(enrollment_count=Count('enrollments')).order_by('-created_at')
+        queryset = TrainingCourse.objects.annotate(
+            # distinct=True on all three: joining enrollments and modules in
+            # one query would otherwise multiply each count by the other.
+            enrollment_count=Count('enrollments', distinct=True),
+            active_enrollment_count=Count(
+                'enrollments', filter=~Q(enrollments__status=Enrollment.Status.CANCELLED), distinct=True,
+            ),
+            module_count=Count('modules', distinct=True),
+        ).order_by('-created_at')
         active = self.request.GET.get('active')
         q = self.request.GET.get('q')
         if active == 'yes':
@@ -199,6 +207,13 @@ class CourseManageListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['selected_active'] = self.request.GET.get('active', '')
+        active_enrollments = Enrollment.objects.exclude(status=Enrollment.Status.CANCELLED)
+        context['summary'] = {
+            'active_courses': TrainingCourse.objects.filter(is_active=True).count(),
+            'enrollments': active_enrollments.count(),
+            'paid': active_enrollments.filter(payment_status=Enrollment.PaymentStatus.PAID).count(),
+            'featured': TrainingCourse.objects.filter(is_active=True, is_featured=True).count(),
+        }
         context['selected_q'] = self.request.GET.get('q', '')
         return context
 
@@ -280,8 +295,22 @@ def course_enrollments(request, pk):
     # a popular course's enrollment list can run into the hundreds, and
     # this previously rendered every row with no pagination at all.
     page_obj = Paginator(enrollments, 30).get_page(request.GET.get('page'))
+    # Unfiltered totals for the course header card.
+    counts = dict(course.enrollments.values_list('status').annotate(n=Count('id')))
+    paid_count = course.enrollments.exclude(status=Enrollment.Status.CANCELLED).filter(
+        payment_status=Enrollment.PaymentStatus.PAID,
+    ).count()
+    active_total = counts.get(Enrollment.Status.ACTIVE, 0) + counts.get(Enrollment.Status.COMPLETED, 0)
+    course_summary = {
+        'active': counts.get(Enrollment.Status.ACTIVE, 0),
+        'completed': counts.get(Enrollment.Status.COMPLETED, 0),
+        'cancelled': counts.get(Enrollment.Status.CANCELLED, 0),
+        'paid': paid_count,
+        'seats_taken': active_total,
+        'seats_pct': min(100, round(active_total * 100 / course.max_enrollments)) if course.max_enrollments else None,
+    }
     return render(request, 'training/manage/course_enrollments.html', {
-        'course': course, 'enrollments': page_obj, 'page_obj': page_obj, 'is_paginated': page_obj.has_other_pages(),
+        'course': course, 'course_summary': course_summary, 'enrollments': page_obj, 'page_obj': page_obj, 'is_paginated': page_obj.has_other_pages(),
         'status_choices': Enrollment.Status.choices,
         'payment_status_choices': Enrollment.PaymentStatus.choices,
         'selected_status': status or '',

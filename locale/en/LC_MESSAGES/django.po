@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 16:45+0545\n"
+"POT-Creation-Date: 2026-09-27 17:18+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -83,7 +83,7 @@ msgstr ""
 msgid "Methodology Paper"
 msgstr ""
 
-#: articles/models.py:78 templates/home.html:332
+#: articles/models.py:78 templates/home.html:290
 msgid "Editorial"
 msgstr ""
 
@@ -107,33 +107,40 @@ msgstr ""
 msgid "Pay-per-article (special)"
 msgstr ""
 
-#: articles/views.py:720
+#: articles/views.py:730
 msgid "Removed from your reading list."
 msgstr ""
 
-#: articles/views.py:722
+#: articles/views.py:732
 msgid "Saved to your reading list."
 msgstr ""
 
-#: articles/views.py:739
+#: articles/views.py:749
 msgid "You don't have a gift available for this article right now."
 msgstr ""
 
-#: articles/views.py:741
+#: articles/views.py:751
 msgid "Your gift link is ready — copy it below to share."
 msgstr ""
 
-#: articles/views.py:959 sections/views.py:86
+#: articles/views.py:969 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr ""
 
-#: articles/views.py:964 sections/views.py:88
+#: articles/views.py:974 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
 "digest."
 msgstr ""
+
+#: issues/views.py:63
+#, python-format
+msgid "%(count)d ARTICLE"
+msgid_plural "%(count)d ARTICLES"
+msgstr[0] ""
+msgstr[1] ""
 
 #: newsletter/views.py:47
 msgid "You're already subscribed."
@@ -147,116 +154,119 @@ msgstr ""
 msgid "Enter a valid email address."
 msgstr ""
 
-#: templates/articles/article_detail.html:28
+#: templates/articles/article_detail.html:29
 msgid "PREVIEW MODE — nothing has been saved. Close this tab to keep editing."
 msgstr ""
 
-#: templates/articles/article_detail.html:46
+#: templates/articles/article_detail.html:47
 msgid "Share on X"
 msgstr ""
 
-#: templates/articles/article_detail.html:50
+#: templates/articles/article_detail.html:51
 msgid "Share on LinkedIn"
 msgstr ""
 
-#: templates/articles/article_detail.html:54
-#: templates/articles/article_detail.html:332
+#: templates/articles/article_detail.html:55
+#: templates/articles/article_detail.html:345
 msgid "Copy link"
 msgstr ""
 
-#: templates/articles/article_detail.html:61
+#: templates/articles/article_detail.html:62
 msgid "Copy short link"
 msgstr ""
 
-#: templates/articles/article_detail.html:120
+#: templates/articles/article_detail.html:121
 #: templates/articles/article_list.html:97
+#: templates/articles/includes/article_card.html:31
 #: templates/articles/search_results.html:38 templates/home.html:46
-#: templates/home.html:154 templates/home.html:191 templates/home.html:233
-#: templates/issues/issue_detail.html:56
+#: templates/home.html:154 templates/home.html:190
+#: templates/sections/section_detail.html:79
 msgid "Editorial staff"
 msgstr ""
 
-#: templates/articles/article_detail.html:132 templates/home.html:56
+#: templates/articles/article_detail.html:133
+#: templates/articles/includes/article_card.html:34 templates/home.html:56
+#: templates/sections/section_detail.html:80
 msgid "min read"
 msgstr ""
 
-#: templates/articles/article_detail.html:143
+#: templates/articles/article_detail.html:144
 msgid "✓ SAVED"
 msgstr ""
 
-#: templates/articles/article_detail.html:143
+#: templates/articles/article_detail.html:144
 msgid "+ SAVE FOR LATER"
 msgstr ""
 
-#: templates/articles/article_detail.html:149
+#: templates/articles/article_detail.html:150
 msgid "LOG IN TO SAVE"
 msgstr ""
 
-#: templates/articles/article_detail.html:158
+#: templates/articles/article_detail.html:159
 msgid "DOWNLOAD PDF"
 msgstr ""
 
-#: templates/articles/article_detail.html:166
+#: templates/articles/article_detail.html:167
 msgid "↻ REFRESH GIFT LINK"
 msgstr ""
 
-#: templates/articles/article_detail.html:166
+#: templates/articles/article_detail.html:167
 msgid "🎁 GIFT THIS ARTICLE"
 msgstr ""
 
-#: templates/articles/article_detail.html:177
+#: templates/articles/article_detail.html:178
 msgid "Text size"
 msgstr ""
 
-#: templates/articles/article_detail.html:178
+#: templates/articles/article_detail.html:179
 msgid "Decrease text size"
 msgstr ""
 
-#: templates/articles/article_detail.html:178
+#: templates/articles/article_detail.html:179
 msgid "Smaller text"
 msgstr ""
 
-#: templates/articles/article_detail.html:180
+#: templates/articles/article_detail.html:181
 msgid "Default text size"
 msgstr ""
 
-#: templates/articles/article_detail.html:182
+#: templates/articles/article_detail.html:183
 msgid "Increase text size"
 msgstr ""
 
-#: templates/articles/article_detail.html:182
+#: templates/articles/article_detail.html:183
 msgid "Larger text"
 msgstr ""
 
-#: templates/articles/article_detail.html:191
+#: templates/articles/article_detail.html:192
 msgid ""
 "Share this link — anyone who opens it reads the full article free, no "
 "account or subscription needed, for 14 days."
 msgstr ""
 
-#: templates/articles/article_detail.html:192
+#: templates/articles/article_detail.html:193
 msgid "You've used all your gifts for this month."
 msgstr ""
 
-#: templates/articles/article_detail.html:192
+#: templates/articles/article_detail.html:193
 #, python-format
 msgid "You have %(counter)s gift left this month."
 msgid_plural "You have %(counter)s gifts left this month."
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/articles/article_detail.html:199
+#: templates/articles/article_detail.html:200
 msgid "COPY"
 msgstr ""
 
-#: templates/articles/article_detail.html:222
+#: templates/articles/article_detail.html:223
 #, python-format
 msgid ""
 "🎁 This article was gifted to you by <strong class=\"text-"
 "foreground\">%(gifter)s</strong> — free to read, no subscription needed."
 msgstr ""
 
-#: templates/articles/article_detail.html:232
+#: templates/articles/article_detail.html:233
 #, python-format
 msgid ""
 "You've read <strong class=\"text-foreground\">%(used)s</strong> of your "
@@ -264,153 +274,155 @@ msgid ""
 "articles this month."
 msgstr ""
 
-#: templates/articles/article_detail.html:236
+#: templates/articles/article_detail.html:237
 msgid "SUBSCRIBE FOR UNLIMITED"
 msgstr ""
 
-#: templates/articles/article_detail.html:252
+#: templates/articles/article_detail.html:253
 msgid "Full text has not been added for this article yet."
 msgstr ""
 
-#: templates/articles/article_detail.html:257
+#: templates/articles/article_detail.html:261
 msgid "Archive Access Required"
 msgstr ""
 
-#: templates/articles/article_detail.html:259
+#: templates/articles/article_detail.html:261
+msgid "Special Article"
+msgstr ""
+
+#: templates/articles/article_detail.html:261
+msgid "Subscription Required"
+msgstr ""
+
+#: templates/articles/article_detail.html:267
 msgid ""
 "This is an archived article — full-text access requires a subscription plan "
 "with archive access, regardless of this article's original access tier."
 msgstr ""
 
-#: templates/articles/article_detail.html:262
-msgid "Special Article"
-msgstr ""
-
-#: templates/articles/article_detail.html:264
+#: templates/articles/article_detail.html:272
 #, python-format
 msgid ""
-"This is a one-time-purchase special article — ₹%(price)s for full access, or "
+"This is a one-time-purchase special article — %(price)s for full access, or "
 "read it free with an active subscription."
 msgstr ""
 
-#: templates/articles/article_detail.html:267
-msgid "Subscription Required"
-msgstr ""
-
-#: templates/articles/article_detail.html:269
+#: templates/articles/article_detail.html:276
 msgid "This article requires an active subscription for full-text access."
 msgstr ""
 
-#: templates/articles/article_detail.html:277
+#: templates/articles/article_detail.html:284
 #, python-format
-msgid "BUY FOR ₹%(price)s"
-msgstr ""
-
-#: templates/articles/article_detail.html:282 templates/base.html:494
-#: templates/home.html:269
-msgid "SUBSCRIBE"
-msgstr ""
-
-#: templates/articles/article_detail.html:287
-msgid "Log in"
+msgid "BUY FOR %(price)s"
 msgstr ""
 
 #: templates/articles/article_detail.html:288
+#: templates/articles/article_detail.html:293 templates/base.html:494
+#: templates/billing/plan_browse.html:8 templates/billing/plan_browse.html:51
+#: templates/home.html:226
+msgid "SUBSCRIBE"
+msgstr ""
+
+#: templates/articles/article_detail.html:299
+#: templates/billing/purchase_checkout.html:30
+msgid "Log in"
+msgstr ""
+
+#: templates/articles/article_detail.html:300
 msgid "to subscribe or purchase this article."
 msgstr ""
 
-#: templates/articles/article_detail.html:296
+#: templates/articles/article_detail.html:309
 msgid "References"
 msgstr ""
 
-#: templates/articles/article_detail.html:319
+#: templates/articles/article_detail.html:332
 msgid "Cite this article"
 msgstr ""
 
-#: templates/articles/article_detail.html:323
+#: templates/articles/article_detail.html:336
 msgid "Plain text"
 msgstr ""
 
-#: templates/articles/article_detail.html:329
+#: templates/articles/article_detail.html:342
 msgid "Share:"
 msgstr ""
 
-#: templates/articles/article_detail.html:331
+#: templates/articles/article_detail.html:344
 msgid "LinkedIn"
 msgstr ""
 
-#: templates/articles/article_detail.html:333
+#: templates/articles/article_detail.html:346
 msgid "Short link"
 msgstr ""
 
-#: templates/articles/article_detail.html:340
+#: templates/articles/article_detail.html:353
 msgid "Comments"
 msgstr ""
 
-#: templates/articles/article_detail.html:352
+#: templates/articles/article_detail.html:365
 msgid "Almost there — please confirm your email."
 msgstr ""
 
-#: templates/articles/article_detail.html:354
+#: templates/articles/article_detail.html:367
 #, python-format
 msgid ""
 "We've sent a confirmation link to <span class=\"font-medium text-"
 "foreground\">%(email)s</span>."
 msgstr ""
 
-#: templates/articles/article_detail.html:354
+#: templates/articles/article_detail.html:367
 msgid "We've sent a confirmation link to your email address."
 msgstr ""
 
-#: templates/articles/article_detail.html:355
+#: templates/articles/article_detail.html:368
 msgid ""
 "Your comment will appear here once you click it. Can't find it? Check your "
 "spam folder."
 msgstr ""
 
-#: templates/articles/article_detail.html:359
+#: templates/articles/article_detail.html:372
 msgid "Thanks for confirming — your comment is now live."
 msgstr ""
 
-#: templates/articles/article_detail.html:359
+#: templates/articles/article_detail.html:372
 msgid "Your comment has been posted."
 msgstr ""
 
-#: templates/articles/article_detail.html:362
+#: templates/articles/article_detail.html:375
 msgid "View your comment ↓"
 msgstr ""
 
-#: templates/articles/article_detail.html:379
+#: templates/articles/article_detail.html:392
 msgid "In this article"
 msgstr ""
 
-#: templates/articles/article_detail.html:380
+#: templates/articles/article_detail.html:393
 msgid "IN THIS ARTICLE"
 msgstr ""
 
-#: templates/articles/article_detail.html:396
+#: templates/articles/article_detail.html:409
 msgid "ABOUT THE AUTHOR"
 msgstr ""
 
-#: templates/articles/article_detail.html:422
+#: templates/articles/article_detail.html:435
 msgid "MORE BY THIS AUTHOR →"
 msgstr ""
 
-#: templates/articles/article_detail.html:430 templates/home.html:81
+#: templates/articles/article_detail.html:443 templates/home.html:81
 msgid "TRENDING THIS WEEK"
 msgstr ""
 
-#: templates/articles/article_detail.html:456
+#: templates/articles/article_detail.html:469
 msgid "Download full-text PDF →"
 msgstr ""
 
-#: templates/articles/article_detail.html:469
-msgid "RELATED READING"
+#: templates/articles/article_detail.html:482
+msgid "KEEP READING"
 msgstr ""
 
-#: templates/articles/article_detail.html:488
-#: templates/articles/article_list.html:105 templates/home.html:158
-msgid "min"
+#: templates/articles/article_detail.html:482
+msgid "Related reading"
 msgstr ""
 
 #: templates/articles/article_list.html:22
@@ -436,14 +448,17 @@ msgid "Clear"
 msgstr ""
 
 #: templates/articles/article_list.html:46
+#: templates/sections/section_detail.html:35
 msgid "FOLLOWING ✓"
 msgstr ""
 
 #: templates/articles/article_list.html:46
+#: templates/sections/section_detail.html:35
 msgid "+ FOLLOW"
 msgstr ""
 
 #: templates/articles/article_list.html:52
+#: templates/sections/section_detail.html:41
 msgid "LOG IN TO FOLLOW"
 msgstr ""
 
@@ -455,8 +470,20 @@ msgstr ""
 msgid "PINNED ·"
 msgstr ""
 
+#: templates/articles/article_list.html:105
+msgid "min"
+msgstr ""
+
 #: templates/articles/article_list.html:110
 msgid "No articles published yet."
+msgstr ""
+
+#: templates/articles/includes/article_card.html:22
+msgid "Special"
+msgstr ""
+
+#: templates/articles/includes/article_card.html:22
+msgid "Subscribers"
 msgstr ""
 
 #: templates/articles/search_results.html:9 templates/base.html:323
@@ -478,7 +505,7 @@ msgstr[1] ""
 msgid "No articles matched your search."
 msgstr ""
 
-#: templates/base.html:273
+#: templates/base.html:273 templates/issues/issue_list.html:20
 msgid "LATEST ISSUE"
 msgstr ""
 
@@ -523,6 +550,7 @@ msgid "REGISTER"
 msgstr ""
 
 #: templates/base.html:396 templates/base.html:421
+#: templates/sections/section_detail.html:17
 msgid "HOME"
 msgstr ""
 
@@ -563,7 +591,8 @@ msgstr ""
 msgid "Home"
 msgstr ""
 
-#: templates/base.html:505
+#: templates/base.html:505 templates/billing/plan_browse.html:5
+#: templates/billing/plan_detail.html:5
 msgid "Subscribe"
 msgstr ""
 
@@ -597,6 +626,142 @@ msgstr ""
 
 #: templates/base.html:528
 msgid "All rights reserved."
+msgstr ""
+
+#: templates/billing/plan_browse.html:8
+msgid "Read without limits"
+msgstr ""
+
+#: templates/billing/plan_browse.html:8
+msgid "Full access to subscriber-only and special articles."
+msgstr ""
+
+#: templates/billing/plan_browse.html:15 templates/billing/plan_detail.html:50
+msgid "You already have an active subscription."
+msgstr ""
+
+#: templates/billing/plan_browse.html:23 templates/billing/plan_detail.html:41
+msgid "MOST POPULAR"
+msgstr ""
+
+#: templates/billing/plan_browse.html:31
+#, python-format
+msgid "every %(days)s days"
+msgstr ""
+
+#: templates/billing/plan_browse.html:44
+#, python-format
+msgid "+ %(count)s more"
+msgstr ""
+
+#: templates/billing/plan_browse.html:56
+msgid "SEE PLAN DETAILS →"
+msgstr ""
+
+#: templates/billing/plan_browse.html:61
+msgid "No plans available right now — check back soon."
+msgstr ""
+
+#: templates/billing/plan_browse.html:67 templates/billing/plan_detail.html:30
+msgid "COMPARE PLANS"
+msgstr ""
+
+#: templates/billing/plan_browse.html:68
+msgid "Full feature comparison"
+msgstr ""
+
+#: templates/billing/plan_detail.html:8
+msgid "← ALL PLANS"
+msgstr ""
+
+#: templates/billing/plan_detail.html:15
+msgid "What's included"
+msgstr ""
+
+#: templates/billing/plan_detail.html:23
+msgid "Full details coming soon."
+msgstr ""
+
+#: templates/billing/plan_detail.html:31
+#, python-format
+msgid "See how %(name)s compares"
+msgstr ""
+
+#: templates/billing/plan_detail.html:45
+#, python-format
+msgid "billed every %(days)s days"
+msgstr ""
+
+#: templates/billing/plan_detail.html:54
+msgid "VIEW MY SUBSCRIPTION"
+msgstr ""
+
+#: templates/billing/plan_detail.html:59
+msgid "SUBSCRIBE NOW"
+msgstr ""
+
+#: templates/billing/plan_detail.html:62
+msgid ""
+"Payment processing isn't live yet — checkout runs in test mode and activates "
+"access immediately."
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:5
+#: templates/billing/purchase_checkout.html:10
+#: templates/billing/subscribe_checkout.html:5
+#: templates/billing/subscribe_checkout.html:10
+#: templates/training/course_checkout.html:4
+#: templates/training/course_checkout.html:9
+msgid "Checkout"
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:9
+msgid "← BACK TO ARTICLE"
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:18
+msgid "SPECIAL ARTICLE"
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:23
+msgid "One-time purchase"
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:29
+msgid ""
+"Payment processing isn't live yet — confirming below unlocks this article "
+"immediately at no charge while checkout is in test mode."
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:30
+msgid "Already subscribed?"
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:30
+msgid "for free access instead."
+msgstr ""
+
+#: templates/billing/purchase_checkout.html:37
+msgid "CONFIRM & UNLOCK ARTICLE"
+msgstr ""
+
+#: templates/billing/subscribe_checkout.html:9
+msgid "← BACK TO PLAN"
+msgstr ""
+
+#: templates/billing/subscribe_checkout.html:19
+#, python-format
+msgid "%(days)s days access"
+msgstr ""
+
+#: templates/billing/subscribe_checkout.html:25
+msgid ""
+"Payment processing isn't live yet — confirming below activates your "
+"subscription immediately at no charge while checkout is in test mode."
+msgstr ""
+
+#: templates/billing/subscribe_checkout.html:32
+msgid "CONFIRM & SUBSCRIBE"
 msgstr ""
 
 #: templates/comments/form.html:35
@@ -678,126 +843,162 @@ msgstr ""
 msgid "PITCH A STORY →"
 msgstr ""
 
-#: templates/home.html:127
+#: templates/home.html:125
+msgid "NEWS"
+msgstr ""
+
+#: templates/home.html:125
 msgid "Latest News"
 msgstr ""
 
-#: templates/home.html:130
+#: templates/home.html:125
 msgid "ALL NEWS →"
 msgstr ""
 
-#: templates/home.html:172
+#: templates/home.html:139
+msgid "OPINION"
+msgstr ""
+
+#: templates/home.html:139
 msgid "Opinion &amp; Commentary"
 msgstr ""
 
-#: templates/home.html:175
+#: templates/home.html:139
 msgid "ALL OPINION →"
 msgstr ""
 
-#: templates/home.html:210
-msgid "Peer-Reviewed Research"
+#: templates/home.html:172
+msgid "PEER-REVIEWED RESEARCH"
 msgstr ""
 
-#: templates/home.html:211
+#: templates/home.html:172
 msgid "From the Journal"
 msgstr ""
 
-#: templates/home.html:214
+#: templates/home.html:172
 msgid "BROWSE ARCHIVE →"
 msgstr ""
 
-#: templates/home.html:224
+#: templates/home.html:181
 msgid "Online first"
 msgstr ""
 
-#: templates/home.html:239
+#: templates/home.html:196
 msgid "DOI"
 msgstr ""
 
-#: templates/home.html:239
+#: templates/home.html:196
 msgid "Read more →"
 msgstr ""
 
-#: templates/home.html:255
+#: templates/home.html:212
 msgid "FREE NEWSLETTER"
 msgstr ""
 
-#: templates/home.html:257
+#: templates/home.html:214
 msgid "Get our best health journalism in your inbox."
 msgstr ""
 
-#: templates/home.html:259
+#: templates/home.html:216
 msgid "No spam. Unsubscribe anytime."
 msgstr ""
 
-#: templates/home.html:265
+#: templates/home.html:222
 msgid "you@example.com"
 msgstr ""
 
-#: templates/home.html:282
+#: templates/home.html:237 templates/issues/issue_list.html:7
+msgid "STORY TRAILS"
+msgstr ""
+
+#: templates/home.html:237
 msgid "Special Issues"
 msgstr ""
 
-#: templates/home.html:285
+#: templates/home.html:237
 msgid "ALL ISSUES →"
 msgstr ""
 
-#: templates/home.html:301
+#: templates/home.html:249
 msgid "Available Now"
 msgstr ""
 
-#: templates/home.html:303
+#: templates/home.html:249
 msgid "READ →"
 msgstr ""
 
-#: templates/home.html:309
+#: templates/home.html:256
 msgid "FORTHCOMING"
 msgstr ""
 
-#: templates/home.html:317
+#: templates/home.html:260
 msgid "In production"
 msgstr ""
 
-#: templates/home.html:333
+#: templates/home.html:274 templates/training/course_detail.html:22
+msgid "TRAINING"
+msgstr ""
+
+#: templates/home.html:274
+msgid "Learn with us"
+msgstr ""
+
+#: templates/home.html:274 templates/training/course_detail.html:252
+msgid "ALL COURSES →"
+msgstr ""
+
+#: templates/home.html:291
 msgid "Board &amp; Policies"
 msgstr ""
 
-#: templates/home.html:335
+#: templates/home.html:293
 #, python-format
 msgid ""
 "%(journal)s is governed by an independent editorial board. Peer review for "
 "original research is conducted externally via OJS."
 msgstr ""
 
-#: templates/home.html:339
+#: templates/home.html:297
 msgid "EDITORIAL POLICY →"
 msgstr ""
 
-#: templates/issues/issue_detail.html:19
+#: templates/issues/issue_detail.html:13
+msgid "← ALL ISSUES"
+msgstr ""
+
+#: templates/issues/issue_detail.html:13
 msgid "ISSUE"
 msgstr ""
 
-#: templates/issues/issue_detail.html:33
-msgid "IN THIS ISSUE"
+#: templates/issues/issue_detail.html:22
+msgid "In this issue"
 msgstr ""
 
-#: templates/issues/issue_detail.html:61
-msgid "pp."
-msgstr ""
-
-#: templates/issues/issue_detail.html:67
+#: templates/issues/issue_detail.html:28
 msgid "No articles assigned to this issue yet."
 msgstr ""
 
-#: templates/issues/issue_list.html:9
+#: templates/issues/issue_list.html:7
 msgid "Issues"
 msgstr ""
 
-#: templates/issues/issue_list.html:10
+#: templates/issues/issue_list.html:7
 msgid "Curated story trails — ongoing coverage grouped by topic."
 msgstr ""
 
-#: templates/issues/issue_list.html:35
+#: templates/issues/issue_list.html:24 templates/issues/issue_list.html:45
+#: templates/sections/section_detail.html:27
+#, python-format
+msgid "%(counter)s ARTICLE"
+msgid_plural "%(counter)s ARTICLES"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/issues/issue_list.html:30
+msgid "More issues"
+msgstr ""
+
+#: templates/issues/issue_list.html:52
 msgid "No issues published yet."
 msgstr ""
 
@@ -841,9 +1042,24 @@ msgid ""
 "sign up again anytime."
 msgstr ""
 
-#: templates/training/course_checkout.html:4
-#: templates/training/course_checkout.html:9
-msgid "Checkout"
+#: templates/sections/section_detail.html:16
+#: templates/training/course_detail.html:21
+msgid "Breadcrumb"
+msgstr ""
+
+#: templates/sections/section_detail.html:27
+#, python-format
+msgid "%(counter)s FOLLOWER"
+msgid_plural "%(counter)s FOLLOWERS"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/sections/section_detail.html:72
+msgid "PINNED"
+msgstr ""
+
+#: templates/sections/section_detail.html:91
+msgid "No articles in this section yet."
 msgstr ""
 
 #: templates/training/course_checkout.html:8
@@ -870,14 +1086,6 @@ msgstr ""
 
 #: templates/training/course_checkout.html:39
 msgid "CONFIRM & ENROLL"
-msgstr ""
-
-#: templates/training/course_detail.html:21
-msgid "Breadcrumb"
-msgstr ""
-
-#: templates/training/course_detail.html:22
-msgid "TRAINING"
 msgstr ""
 
 #: templates/training/course_detail.html:40
@@ -1027,10 +1235,6 @@ msgstr ""
 
 #: templates/training/course_detail.html:251
 msgid "More courses"
-msgstr ""
-
-#: templates/training/course_detail.html:252
-msgid "ALL COURSES →"
 msgstr ""
 
 #: templates/training/course_list.html:11

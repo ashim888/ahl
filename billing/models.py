@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from .money import format_money
+
 
 def generate_gift_token():
     return secrets.token_urlsafe(32)
@@ -107,7 +109,7 @@ class SubscriptionPlan(models.Model):
         ordering = ['price']
 
     def __str__(self):
-        return f'{self.name} (₹{self.price})'
+        return f'{self.name} ({format_money(self.price)})'
 
 
 class UserSubscription(models.Model):

@@ -1,0 +1,38 @@
+{% load i18n %}
+{% comment %}
+Cover card for an article, matching the training course cards (cover on
+top, lift-on-hover). Used on issue, section and related-reading grids.
+Expects `article` with articleauthor_set prefetched (…__user).
+{% endcomment %}
+<article class="group relative flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all">
+    <div class="aspect-video bg-secondary overflow-hidden">
+        {% if article.featured_image %}
+            <img src="{{ article.featured_image.url }}" alt="{{ article.title }}" loading="lazy"
+                 class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
+        {% else %}
+            <div class="w-full h-full relative overflow-hidden" style="background: linear-gradient(135deg, #e8e4de 0%, #cfc9c0 100%);">
+                <span aria-hidden="true" class="absolute -right-3 -top-6 font-display font-bold text-foreground/10 leading-none select-none" style="font-size: 8rem;">{{ article.title|first|upper }}</span>
+            </div>
+        {% endif %}
+    </div>
+    <div class="flex flex-col flex-1 p-5">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
+            {% if article.access_type != 'open_access' %}
+                <span class="font-mono-editorial text-[0.6rem] tracking-wider uppercase border border-border px-1.5 py-0.5 text-muted-foreground">{% if article.access_type == 'pay_per_article' %}{% trans "Special" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>
+            {% endif %}
+        </div>
+        <h3 class="font-display text-lg font-bold leading-snug mt-2 group-hover:text-accent transition-colors" style="letter-spacing: -0.01em;">
+            <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0">{{ article.title }}</a>
+        </h3>
+        {% if show_summary %}{% with summary=article.summary %}{% if summary %}<p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}{% endif %}
+        <div class="mt-auto pt-4 flex items-center gap-2 text-xs text-muted-foreground">
+            {% with a=article.articleauthor_set.all|first %}
+                <span class="font-medium text-foreground truncate">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>
+            {% endwith %}
+            <span class="text-border">·</span>
+            <span class="shrink-0">{{ article.estimated_read_minutes }} {% trans "min read" %}</span>
+            {% if article.publication_date %}<span class="text-border">·</span><span class="shrink-0">{{ article.publication_date|date:"M j" }}</span>{% endif %}
+        </div>
+    </div>
+</article>

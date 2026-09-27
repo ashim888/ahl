@@ -2,16 +2,9 @@
 pattern (kept out of views.py, reuses articles.seo.ld_json for the shared
 JSON-LD escaping) rather than duplicating that escaping logic here.
 """
+from django.conf import settings
+
 from articles.seo import ld_json
-
-# No CURRENCY_CODE setting exists anywhere in the project, and the two
-# money-handling apps actually disagree: billing's templates render "₹"
-# (INR) throughout, but training/course_list.html and course_detail.html
-# both render "$" for TrainingCourse.price specifically — a pre-existing
-# inconsistency this function isn't the place to silently resolve. Matches
-# what a reader actually sees on *this* course page, not billing's currency.
-CURRENCY_CODE = 'USD'
-
 
 # schema.org CourseInstance.courseMode values for TrainingCourse.Mode.
 COURSE_MODE_SCHEMA = {'online': 'online', 'in_person': 'onsite', 'hybrid': 'blended'}
@@ -40,7 +33,7 @@ def course_structured_data(course, journal_name, image_url=None):
         'offers': {
             '@type': 'Offer',
             'price': str(course.price),
-            'priceCurrency': CURRENCY_CODE,
+            'priceCurrency': settings.CURRENCY_CODE,
             'category': 'Paid' if course.price else 'Free',
         },
     })
