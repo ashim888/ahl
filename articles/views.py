@@ -178,12 +178,6 @@ def related_articles_for(article, limit: int = RELATED_ARTICLES_LIMIT) -> list:
     return [related for related, _score in similar_articles(article, limit=limit)]
 
 
-class ComingSoonView(TemplateView):
-    """Pre-launch placeholder at "/" — see the routing note in articles/urls.py."""
-
-    template_name = 'coming_soon.html'
-
-
 def _trending_articles(limit=5):
     """Published articles ranked by page views in the last 7 days (not an
     all-time count), so this reflects what's hot *now*, not what was hot
@@ -561,7 +555,7 @@ class ArticleDetailView(DetailView):
         # place on the site actually shared/linked out, so it's the one that
         # gets real per-page metadata rather than the sitewide default.
         context['meta_title'] = self.object.title
-        context['meta_description'] = (self.object.abstract or '')[:200]
+        context['meta_description'] = self.object.summary[:200]
         context['og_type'] = 'article'
         context['canonical_url'] = self.request.build_absolute_uri(self.request.path)
         context['short_url'] = self.request.build_absolute_uri(
@@ -652,7 +646,7 @@ def article_citation(request, slug, citation_format):
         raise Http404
 
     article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
-    authors = [aa.user.get_full_name() for aa in article.articleauthor_set.select_related('user').order_by('order')]
+    authors = [aa.display_name for aa in article.articleauthor_set.select_related('user').order_by('order')]
     year = article.publication_date.year if article.publication_date else ''
 
     if citation_format == 'bibtex':
@@ -842,6 +836,7 @@ class SearchView(ListView):
                 | Q(keyword_tags__name__icontains=self.query)
                 | Q(authors__first_name__icontains=self.query)
                 | Q(authors__last_name__icontains=self.query)
+                | Q(articleauthor__name__icontains=self.query)
             )
             if boolean_query:
                 relevance = RawSQL(

@@ -59,8 +59,53 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-The site is now at `http://localhost:8000/`. Note: `/` is a pre-launch "Coming Soon" splash
-page — the actual homepage is at `http://localhost:8000/index/` until launch (see `TUTORIAL.MD`).
+The site is now at `http://localhost:8000/` — `/` is the real homepage. (The old pre-launch
+`/index/` URL permanently redirects there.) The editorial workspace is at
+`http://localhost:8000/editorial/`.
+
+### Background worker (Django-Q2)
+
+Scheduled and bulk jobs run on a separate worker process, not inside web requests. Start it next
+to `runserver` locally, and as its own service in production:
+
+```bash
+python manage.py qcluster
+```
+
+It runs newsletter sends, the weekly digests, and the daily analytics clean-up (below). Without
+it, those jobs queue up but never run.
+
+### Email
+
+Out of the box, emails print to the console. To send real mail, set these in `.env`:
+
+```bash
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=mail.example.com
+EMAIL_PORT=465              # 465 = implicit SSL (typical cPanel); 587 = STARTTLS
+EMAIL_USE_SSL=True          # for port 465 (this forces EMAIL_USE_TLS off)
+EMAIL_USE_TLS=False         # set True instead of EMAIL_USE_SSL for port 587
+EMAIL_HOST_USER=noreply@example.com
+EMAIL_HOST_PASSWORD=...
+EMAIL_TIMEOUT=30
+DEFAULT_FROM_EMAIL=noreply@example.com
+SITE_BASE_URL=https://example.com   # used to build every link inside emails
+```
+
+Restart the app after changing `.env`. With `DEBUG=False`, `python manage.py check --deploy`
+(run at the end of `deploy.sh`) reports an error if `SITE_BASE_URL` is still `localhost` or not
+`https`, since every email link would be broken. `deploy.sh` prints it but doesn't stop, so read
+its output. Each migrate also re-syncs the comments package's site domain from it.
+
+All emails share one branded layout (`templates/email/base.html`) with HTML and plain-text
+versions: comment confirmation and follow-up, newsletter confirmation, welcome and issues,
+account verification, pitch status updates, password reset, and staff alerts for new comments.
+
+### Analytics retention
+
+Article views, ad impressions/clicks and keyword impressions/clicks are recorded first-party.
+Rows older than `ANALYTICS_RETENTION_DAYS` (default `400`) are deleted daily by the worker. To
+prune by hand: `python manage.py prune_analytics_events [--days N]`.
 
 ### Frontend (Tailwind CSS)
 
@@ -76,9 +121,15 @@ npm run watch:css    # rebuilds automatically while editing templates
 
 ### Translations (i18n)
 
-Nav/UI chrome supports English and Nepali via a cookie-based language switcher (article content
-stays single-language — see `ROADMAP.md`). After changing a `{% trans %}`-wrapped string or a
-translated model field, regenerate and edit the catalogs:
+The whole reader-facing interface (nav, footer, homepage, article pages, lists, search, issues,
+comments, newsletter pages, reader messages) is available in English and Nepali via the
+language switcher in the header. Article content (titles, abstracts, bodies, keywords) is not
+translated — it stays in whatever language it was written in. Pages detect Devanagari text and
+switch to Nepali-friendly typography (Noto Devanagari fonts, no letter-spacing or italics, taller
+line height) automatically. Section names have separate English and Nepali fields.
+
+After changing a `{% trans %}`-wrapped string or a translated model field, regenerate and edit
+the catalogs:
 
 ```bash
 python manage.py makemessages -l ne
@@ -105,7 +156,7 @@ Each Django app owns one concern:
 | App | Concern |
 |---|---|
 | `users` | Custom `User` model, auth, roles, verification |
-| `articles` | Articles, keywords, search, sitemaps/feeds, SEO structured data |
+| `articles` | Articles, bylines (account or name-only authors), keywords, related reading, search, sitemaps/feeds, SEO structured data |
 | `sections` | Two-level subject taxonomy (Journal, Policy & Economy, ...) driving the primary nav |
 | `issues` | Curated article collections ("issues") |
 | `editorial_board` | Public editorial board profiles |
@@ -114,9 +165,14 @@ Each Django app owns one concern:
 | `newsletter` | Free email newsletter, double opt-in, async bulk send |
 | `ads` | House-sold ad zones, impressions/clicks |
 | `pitches` | Public story-pitch intake → editorial review queue |
-| `admin_custom` | The editorial dashboard (KPIs, BI analytics) |
+| `admin_custom` | The editorial dashboard (KPIs, BI analytics, keyword analytics, comment alerts, analytics retention) |
 
 ## Deployment
+
+After pulling new code on the server: run `deploy.sh` (migrations, translations, static files,
+checks), make sure the `qcluster` worker is running, and restart the app so `.env` changes take
+effect. The compiled CSS (`static/css/tailwind.css`) is committed, so the server doesn't need
+Node.js.
 
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.

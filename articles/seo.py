@@ -116,13 +116,13 @@ def news_article_structured_data(article, journal_name, canonical_url, image_url
         '@context': 'https://schema.org',
         '@type': 'NewsArticle',
         'headline': article.title[:110],
-        'description': article.abstract,
+        'description': article.summary or None,
         'image': [image_url] if image_url else None,
         'datePublished': article.publication_date.isoformat() if article.publication_date else None,
         'dateModified': article.updated_at.isoformat(),
         'mainEntityOfPage': {'@type': 'WebPage', '@id': canonical_url},
         'author': [
-            {'@type': 'Person', 'name': aa.user.get_full_name()} for aa in authors
+            {'@type': 'Person', 'name': aa.display_name} for aa in authors
         ] or [{'@type': 'Organization', 'name': journal_name}],
         'publisher': {
             '@type': 'Organization',

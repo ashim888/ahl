@@ -62,7 +62,7 @@
     {% if not is_create %}
         <p class="text-sm text-gray-500 mb-4">
             <a href="{% url 'articles:manage_article_authors' form.instance.slug %}" class="underline font-medium text-gray-700">Manage authors →</a>
-            — order and the corresponding-author flag live on that page, not here.
+            — add authors (with or without a site account), set their order and the corresponding-author flag on that page.
             Archiving an article is still a Django admin action — from here you can only save it as a draft or publish it.
         </p>
     {% endif %}

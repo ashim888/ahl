@@ -13,6 +13,6 @@ class ArticleAdmin(admin.ModelAdmin):
     list_display = ['title', 'article_type', 'access_type', 'status', 'issue', 'publication_date', 'doi']
     list_select_related = ['issue']
     list_filter = ['article_type', 'access_type', 'status']
-    search_fields = ['title', 'abstract', 'keywords', 'doi']
+    search_fields = ['title', 'abstract', 'keyword_tags__name', 'doi']
     prepopulated_fields = {'slug': ('title',)}
     inlines = [ArticleAuthorInline]

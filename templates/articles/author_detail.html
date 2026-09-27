@@ -97,7 +97,7 @@
                         <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
                             <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                         </h2>
-                        <p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ article.abstract }}</p>
+                        {% with summary=article.summary %}{% if summary %}<p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ summary }}</p>{% endif %}{% endwith %}
                         <div class="flex items-center gap-2 mt-3">
                             <span class="font-mono-editorial text-xs text-muted-foreground">
                                 {% if article.publication_date %}{{ article.publication_date|date:"M j, Y" }}{% endif %}

@@ -81,8 +81,8 @@ class TagifyRelatedArticlesField(forms.CharField):
 
 
 class ArticleForm(forms.ModelForm):
-    """Front-end editorial CRUD form. Authors (the Article<->User through
-    model, with ordering/corresponding-author flags) are edited separately
+    """Front-end editorial CRUD form. Authors (ArticleAuthor byline rows —
+    an account or a name-only label — with ordering/corresponding-author flags) are edited separately
     via ArticleAuthorFormSet below (see manage_article_authors) — a plain
     multi-select here can't represent that ordering cleanly, so this form
     sticks to the article's own fields.
@@ -236,13 +236,35 @@ class LenientArticleForm(ArticleForm):
 
 
 class ArticleAuthorForm(forms.ModelForm):
+    """One byline row: pick a site account, or type a name for a contributor
+    who has no account (see ArticleAuthor's docstring). One of the two is
+    required; when both are filled the account wins and the typed name is
+    dropped, so the stored row never carries two conflicting names.
+    """
+
     class Meta:
         model = ArticleAuthor
-        fields = ['user', 'order', 'is_corresponding']
+        fields = ['user', 'name', 'affiliation', 'order', 'is_corresponding']
+        labels = {'user': 'Account', 'name': 'Or name (no account)'}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['user'].queryset = User.objects.order_by('first_name', 'last_name')
+        self.fields['user'].required = False
+        self.fields['user'].empty_label = '— No account —'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        user = cleaned_data.get('user')
+        name = (cleaned_data.get('name') or '').strip()
+        if not user and not name:
+            raise forms.ValidationError('Choose an account or type the author\'s name.')
+        if user:
+            cleaned_data['name'] = ''
+            cleaned_data['affiliation'] = ''
+        else:
+            cleaned_data['name'] = name
+        return cleaned_data
 
 
 # Byline editor for an article — mirrors what the Django admin's

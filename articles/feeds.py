@@ -23,7 +23,7 @@ class LatestArticlesFeed(Feed):
         return item.title
 
     def item_description(self, item):
-        return item.abstract
+        return item.summary
 
     def item_link(self, item):
         return reverse('articles:article_detail', args=[item.slug])
@@ -37,7 +37,7 @@ class LatestArticlesFeed(Feed):
 
     def item_author_name(self, item):
         first_author = item.articleauthor_set.select_related('user').first()
-        return first_author.user.get_full_name() if first_author else settings.JOURNAL_NAME
+        return first_author.display_name if first_author else settings.JOURNAL_NAME
 
     def item_categories(self, item):
         return [item.get_article_type_display()]

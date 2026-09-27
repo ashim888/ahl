@@ -381,7 +381,7 @@
 
             <nav class="hidden md:flex flex-wrap items-center justify-center gap-x-1">
                 <a href="{% url 'articles:home' %}"
-                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' or path == '/index/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
+                   class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     {% trans "HOME" %}
                 </a>
                 {% include 'includes/main_nav.html' with mobile=False %}
@@ -406,7 +406,7 @@
                        class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
             </form>
             <nav class="px-4 py-4 space-y-1">
-                <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' or path == '/index/' %}text-accent{% endif %}">{% trans "HOME" %}</a>
+                <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' %}text-accent{% endif %}">{% trans "HOME" %}</a>
                 {% include 'includes/main_nav.html' with mobile=True %}
                 <a href="{% url 'articles:article_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">{% trans "ARTICLES" %}</a>
                 <a href="{% url 'editorial_board:public_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">{% trans "ABOUT" %}</a>

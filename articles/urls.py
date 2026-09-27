@@ -1,4 +1,5 @@
 from django.urls import path, register_converter
+from django.views.generic import RedirectView
 
 from . import views
 from .converters import ShortCodeConverter
@@ -9,11 +10,10 @@ register_converter(ShortCodeConverter, 'shortcode')
 app_name = 'articles'
 
 urlpatterns = [
-    # Root is a "coming soon" placeholder until launch — the real homepage stays
-    # reachable at /index/ (and via {% url 'articles:home' %}, unchanged) so
-    # editorial staff can still preview it. Swap these two paths when going live.
-    path('', views.ComingSoonView.as_view(), name='coming_soon'),
-    path('index/', views.HomeView.as_view(), name='home'),
+    path('', views.HomeView.as_view(), name='home'),
+    # The homepage lived here while "/" showed a pre-launch "coming soon"
+    # page — kept as a permanent redirect so old links and bookmarks still land.
+    path('index/', RedirectView.as_view(pattern_name='articles:home', permanent=True)),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
     path('archive/', views.ArchiveListView.as_view(), name='archive_list'),
     path('for-you/', views.ForYouView.as_view(), name='for_you'),

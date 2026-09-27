@@ -95,9 +95,8 @@ def _weekly_digest_body(articles):
     rows = []
     for article in articles:
         url = f"{settings.SITE_BASE_URL}{reverse('articles:article_detail', args=[article.slug])}"
-        rows.append(
-            f'<p><a href="{url}"><strong>{escape(article.title)}</strong></a><br>{escape(article.abstract)}</p>',
-        )
+        summary = f'<br>{escape(article.summary)}' if article.summary else ''
+        rows.append(f'<p><a href="{url}"><strong>{escape(article.title)}</strong></a>{summary}</p>')
     return '\n'.join(rows)
 
 

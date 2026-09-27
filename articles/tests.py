@@ -2461,3 +2461,144 @@ class NepaliInterfaceTests(TestCase):
         for text in ('टिप्पणीहरू', 'गृहपृष्ठ', 'अक्षरको आकार', 'सम्पादकीय टोली'):
             self.assertContains(response, text)
         self.assertNotContains(response, 'LOG IN TO SAVE')
+
+
+class OptionalAbstractTests(TestCase):
+    """Abstract is optional (short news pieces often have none) — listings,
+    feeds and meta tags fall back to Article.summary, which only ever
+    excerpts the body of open-access articles.
+    """
+
+    def _article(self, slug, **fields):
+        defaults = {
+            'title': slug.replace('-', ' ').title(), 'slug': slug, 'abstract': '',
+            'article_type': Article.ArticleType.NEWS_COMMENTARY, 'status': Article.Status.PUBLISHED,
+            'access_type': Article.AccessType.OPEN_ACCESS,
+        }
+        defaults.update(fields)
+        return Article.objects.create(**defaults)
+
+    def test_form_accepts_empty_abstract(self):
+        form = ArticleForm(data={
+            'title': 'Quick News', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'abstract': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_summary_prefers_abstract(self):
+        article = self._article('with-abstract', abstract='  The standfirst. ', html_content='<p>Body text.</p>')
+        self.assertEqual(article.summary, 'The standfirst.')
+
+    def test_summary_excerpts_open_access_body(self):
+        article = self._article('no-abstract', html_content='<p>Clinics <strong>reopened</strong> today.</p>')
+        self.assertEqual(article.summary, 'Clinics reopened today.')
+
+    def test_summary_never_excerpts_paywalled_body(self):
+        article = self._article(
+            'paid-no-abstract', access_type=Article.AccessType.SUBSCRIPTION,
+            html_content='<p>Secret premium paragraph.</p>',
+        )
+        self.assertEqual(article.summary, '')
+
+    def test_detail_and_list_render_without_abstract(self):
+        article = self._article('bare-news', html_content='<p>Opening line of the story.</p>')
+        detail = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, 'content="Opening line of the story."')
+        listing = self.client.get(reverse('articles:article_list'))
+        self.assertContains(listing, 'Opening line of the story.')
+
+
+class NameOnlyAuthorTests(TestCase):
+    """Byline authors don't need a site account — an ArticleAuthor row can
+    carry just a name (and affiliation), shown as unlinked text.
+    """
+
+    def setUp(self):
+        from users.models import User
+
+        self.article = Article.objects.create(
+            title='Guest Column', slug='guest-column', abstract='A guest column.',
+            article_type=Article.ArticleType.EDITORIAL, status=Article.Status.PUBLISHED,
+            access_type=Article.AccessType.OPEN_ACCESS,
+        )
+        self.editor = User.objects.create_user(
+            email='byline-editor@example.com', password='pw', first_name='Byline', last_name='Editor',
+            role=User.Role.EDITOR,
+        )
+
+    def test_row_requires_account_or_name(self):
+        from django.db import transaction
+
+        from .models import ArticleAuthor
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            ArticleAuthor.objects.create(article=self.article, name='')
+
+    def test_name_only_author_renders_unlinked_in_byline(self):
+        from .models import ArticleAuthor
+
+        ArticleAuthor.objects.create(
+            article=self.article, name='Dr. Guest Writer', affiliation='Kathmandu University', is_corresponding=True,
+        )
+        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertContains(response, 'Dr. Guest Writer')
+        self.assertContains(response, 'Kathmandu University')
+        self.assertNotContains(response, '/authors/')
+        listing = self.client.get(reverse('articles:article_list'))
+        self.assertContains(listing, 'Dr. Guest Writer')
+
+    def test_name_only_author_in_citation_and_search(self):
+        from .models import ArticleAuthor
+
+        ArticleAuthor.objects.create(article=self.article, name='Sita Guest')
+        citation = self.client.get(reverse('articles:article_citation', args=[self.article.slug, 'text']))
+        self.assertIn('Sita Guest', citation.content.decode())
+        search = self.client.get(reverse('articles:search'), {'q': 'Sita Guest'})
+        self.assertIn(self.article, list(search.context['articles']))
+
+    def test_byline_editor_saves_name_only_row(self):
+        self.client.force_login(self.editor)
+        url = reverse('articles:manage_article_authors', args=[self.article.slug])
+        data = {
+            'articleauthor_set-TOTAL_FORMS': '1', 'articleauthor_set-INITIAL_FORMS': '0',
+            'articleauthor_set-MIN_NUM_FORMS': '0', 'articleauthor_set-MAX_NUM_FORMS': '1000',
+            'articleauthor_set-0-user': '', 'articleauthor_set-0-name': ' Ram Contributor ',
+            'articleauthor_set-0-affiliation': 'Freelance', 'articleauthor_set-0-order': '0',
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
+        row = self.article.articleauthor_set.get()
+        self.assertIsNone(row.user)
+        self.assertEqual(row.display_name, 'Ram Contributor')
+
+    def test_byline_editor_rejects_row_with_neither(self):
+        self.client.force_login(self.editor)
+        url = reverse('articles:manage_article_authors', args=[self.article.slug])
+        data = {
+            'articleauthor_set-TOTAL_FORMS': '1', 'articleauthor_set-INITIAL_FORMS': '0',
+            'articleauthor_set-MIN_NUM_FORMS': '0', 'articleauthor_set-MAX_NUM_FORMS': '1000',
+            'articleauthor_set-0-user': '', 'articleauthor_set-0-name': '',
+            'articleauthor_set-0-affiliation': 'Only an affiliation', 'articleauthor_set-0-order': '0',
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.article.articleauthor_set.exists())
+
+    def test_linking_an_account_drops_the_typed_name(self):
+        from .forms import ArticleAuthorForm
+
+        form = ArticleAuthorForm(data={'user': self.editor.pk, 'name': 'Stale Name', 'order': 0})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['name'], '')
+
+
+class HomepageRoutingTests(TestCase):
+    def test_root_serves_homepage(self):
+        self.assertEqual(reverse('articles:home'), '/')
+        response = self.client.get('/')
+        self.assertTemplateUsed(response, 'home.html')
+
+    def test_old_index_url_redirects_permanently(self):
+        response = self.client.get('/index/')
+        self.assertRedirects(response, '/', status_code=301)

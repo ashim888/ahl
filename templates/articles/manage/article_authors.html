@@ -7,10 +7,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div class="max-w-3xl mx-auto">
     <p class="text-sm text-gray-500 mb-6">
         Byline for "<strong class="text-gray-700">{{ article.title }}</strong>" — order controls display order in the
         byline; the corresponding author is highlighted on the article page.
+    </p>
+    <p class="text-sm text-gray-500 mb-6">
+        Authors don't need an account: leave <em>Account</em> empty and type their name (and affiliation) instead.
+        Name-only authors appear in the byline as plain text. If they later need an account, create it under
+        <a href="{% url 'users:manage_author_create' %}" class="underline">Authors → New</a> and pick it here.
     </p>
 
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
@@ -27,22 +32,32 @@
                 {% for form in formset %}
                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:items-start pb-5 {% if not forloop.last %}border-b border-gray-100{% endif %}">
                         {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                        {% for error in form.non_field_errors %}<p class="sm:col-span-12 text-xs text-red-600">{{ error }}</p>{% endfor %}
                         <div class="sm:col-span-6">
-                            <label class="block text-xs font-medium text-gray-500 mb-1.5 {% if not forloop.first %}sm:hidden{% endif %}">Author</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Account</label>
                             {{ form.user }}
                             {% for error in form.user.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
                         </div>
+                        <div class="sm:col-span-6">
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Or name (no account)</label>
+                            {{ form.name }}
+                            {% for error in form.name.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                        </div>
+                        <div class="sm:col-span-6">
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Affiliation (name-only authors)</label>
+                            {{ form.affiliation }}
+                        </div>
                         <div class="sm:col-span-2">
-                            <label class="block text-xs font-medium text-gray-500 mb-1.5 {% if not forloop.first %}sm:hidden{% endif %}">Order</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Order</label>
                             {{ form.order }}
                         </div>
-                        <div class="sm:col-span-3 flex items-center sm:h-full {% if forloop.first %}sm:pt-6{% endif %}">
+                        <div class="sm:col-span-3 flex items-center sm:h-full sm:pt-6">
                             <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
                                 {{ form.is_corresponding }}
                                 Corresponding
                             </label>
                         </div>
-                        <div class="sm:col-span-1 flex items-center sm:h-full {% if forloop.first %}sm:pt-6{% endif %}">
+                        <div class="sm:col-span-1 flex items-center sm:h-full sm:pt-6">
                             {% if form.instance.pk %}
                                 <label class="flex items-center gap-1 text-xs text-red-600 cursor-pointer select-none" title="Remove">
                                     {{ form.DELETE }}

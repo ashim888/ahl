@@ -4,9 +4,11 @@ import string
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
+from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.text import slugify
+from django.utils.html import strip_tags
+from django.utils.text import Truncator, slugify
 from django.utils.translation import gettext_lazy as _
 
 from .validators import (
@@ -102,7 +104,12 @@ class Article(models.Model):
         max_length=SHORT_CODE_LENGTH, unique=True, blank=True, editable=False,
         help_text='Auto-generated permalink code — also reachable at /articles/<code>/.',
     )
-    abstract = models.TextField()
+    abstract = models.TextField(
+        blank=True,
+        help_text='Optional standfirst/summary shown under the headline and in listings. Short news '
+                  'pieces can leave it empty — listings then fall back to an excerpt of the body '
+                  '(open-access articles only; see Article.summary).',
+    )
     # Was a flat comma-separated CharField (pre-August 2026) — replaced with
     # a real M2M to Keyword so the same concept doesn't fragment into near-
     # duplicate spellings, and so keyword search/filter can do an exact tag
@@ -195,6 +202,19 @@ class Article(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
+    def summary(self) -> str:
+        """Listing/meta-description text: the abstract when there is one,
+        otherwise (abstract is optional for news) the opening words of the
+        body — but only for open-access articles, so a card or feed never
+        leaks the start of paywalled text. Empty string when neither applies.
+        """
+        if self.abstract and self.abstract.strip():
+            return self.abstract.strip()
+        if self.access_type == self.AccessType.OPEN_ACCESS and self.html_content:
+            return Truncator(' '.join(strip_tags(self.html_content).split())).words(40)
+        return ''
+
+    @property
     def estimated_read_minutes(self):
         """Word count / 200wpm. Only counts html_content for open-access
         articles — a rough public-facing estimate, not viewer-aware (the
@@ -257,17 +277,57 @@ class Article(models.Model):
 
 
 class ArticleAuthor(models.Model):
+    """One byline entry. Either linked to a site account (`user`) or a plain
+    name label (`name`) — contributors don't need an account to be credited.
+    An account can be linked later, when one is actually needed (the author
+    wants to log in, pitch, or get a public author page); until then the
+    byline shows `name` as unlinked text.
+    """
+
     article = models.ForeignKey(Article, on_delete=models.CASCADE)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
+        help_text='Linked site account. Leave empty to credit a name without an account.',
+    )
+    name = models.CharField(
+        max_length=255, blank=True,
+        help_text='Byline name for an author without an account. Ignored when an account is linked.',
+    )
+    affiliation = models.CharField(
+        max_length=255, blank=True,
+        help_text="Shown under the byline for name-only authors (linked accounts use their profile's affiliation).",
+    )
     order = models.IntegerField(default=0, help_text='Author ordering on the article byline.')
     is_corresponding = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['order']
+        # MySQL unique indexes allow repeated NULLs, so several name-only
+        # rows on one article don't collide here.
         unique_together = ('article', 'user')
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(user__isnull=False) | ~Q(name=''),
+                name='articleauthor_user_or_name',
+            ),
+        ]
 
     def __str__(self):
-        return f'{self.user} on {self.article}'
+        return f'{self.display_name} on {self.article}'
+
+    @property
+    def display_name(self) -> str:
+        """The byline text — the account's full name, or the name label."""
+        if self.user_id:
+            return self.user.get_full_name()
+        return self.name
+
+    @property
+    def display_affiliation(self) -> str:
+        """Affiliation under the byline, from the account or the label row."""
+        if self.user_id:
+            return self.user.affiliation or ''
+        return self.affiliation
 
 
 class ArticleView(models.Model):

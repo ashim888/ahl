@@ -64,11 +64,11 @@
                     <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h2>
-                    <p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ article.abstract }}</p>
+                    {% with summary=article.summary %}{% if summary %}<p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ summary }}</p>{% endif %}{% endwith %}
                     <div class="flex items-center gap-2 mt-3">
                         {% with a=article.articleauthor_set.all|first %}
                             {% if a %}
-                                <a href="{% url 'articles:author_detail' a.user.pk %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.user.get_full_name }}</a>
+                                {% if a.user_id %}<a href="{% url 'articles:author_detail' a.user_id %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.display_name }}</a>{% else %}<span class="text-xs text-muted-foreground font-medium">{{ a.display_name }}</span>{% endif %}
                             {% else %}
                                 <span class="text-xs text-muted-foreground font-medium">Editorial staff</span>
                             {% endif %}

@@ -4,9 +4,8 @@ A practical, task-oriented guide to using the platform: the public health-news s
 editorial team workspace behind it. For architecture/implementation details, see
 `ARCHITECTURE.md`; for what's built vs. planned, see `ROADMAP.md`.
 
-> **Note on the homepage:** until launch, `/` shows a "Coming Soon" splash page. The real
-> homepage is reachable at **`/index/`** — editorial staff should use that URL to preview the
-> live site before the public root is swapped over.
+> **Homepage:** the site's main page is `/`. The old preview address `/index/` still works — it
+> redirects to `/`.
 
 ---
 
@@ -17,7 +16,7 @@ The platform has six account roles, each with progressively more access:
 | Role | Can do |
 |---|---|
 | **Unverified** | Read free content, comment, subscribe to the newsletter, pitch a story, enroll in training |
-| **Verified Author** | Everything above, plus get bylined on articles and appear on public author pages |
+| **Verified Author** | Everything above, plus a public author page listing their published articles |
 | **Reviewer** | Reserved for a future peer-review integration — not active in the current workflow |
 | **Editor** | Full editorial workspace access: articles, issues, pitches, ads, newsletter, training, editorial board, comments |
 | **Editor-in-Chief** | Everything an Editor can do, plus user verification, subscription/purchase grants, staff role changes |
@@ -41,6 +40,7 @@ Jump to the section that matches what you're trying to do:
 - [§15 — Verification queue](#15-verification-queue) (Editor-in-Chief, Admin)
 - [§16 — Subscriptions & purchases](#16-subscriptions--purchases) (Editor-in-Chief, Admin)
 - [§17 — Staff accounts & permissions](#17-staff-accounts--permissions) (Editor-in-Chief, Admin)
+- [§18 — Running the site: email, worker, analytics clean-up](#18-running-the-site-email-worker-analytics-clean-up) (whoever deploys it)
 
 ---
 
@@ -57,15 +57,26 @@ No account needed for any of this.
   or directly at `/sections/<slug>/` — this is the editorial subject taxonomy, separate from an
   article's type/format. Nav labels switch between English and Nepali via the language switcher
   in the header.
+- **Switch language.** The switcher in the header changes the whole interface (menus, buttons,
+  labels, messages) between English and Nepali. Articles themselves aren't translated — each
+  stays in the language it was written in, and Nepali-language articles automatically get
+  Nepali-friendly typography.
 - **Read an article.** Free (open-access) articles show full text immediately. Subscription or
   pay-per-article ("special") pieces show the abstract plus a paywall prompt — see §16 for how an
   editor can grant access manually, or use the self-serve checkout links on the article page.
+- **Change the text size** — the **A− / A / A+** buttons on the article page make the body text
+  smaller or larger (A resets it). Your choice is remembered on that device for every article.
+- **Related reading** — the end of each article suggests up to three related articles: the
+  editors' picks when they've chosen some, otherwise the most similar articles by topic.
 - **Cite an article** — every article page has BibTeX/RIS/plain-text export links.
-- **Comment** — sign in to comment immediately, or comment as a guest (you'll get a one-click
-  confirmation email before it posts — no CAPTCHA, just email confirmation).
+- **Comment** — sign in to comment immediately, or comment as a guest. After you post, the page
+  returns to the comments section with a message: signed-in readers see "Your comment has been
+  posted"; guests are told to check their inbox and click the confirmation link, and the
+  comment appears only after that click (no CAPTCHA, just email confirmation). You can tick
+  "Notify me about follow-up comments" to get an email when someone replies.
 - **Subscribe to the newsletter** — the signup box in the footer or homepage works with just an
   email address; you'll get a confirmation link before you're actually subscribed (double
-  opt-in). Unsubscribe links in every newsletter email are one-click, no login required.
+  opt-in), then a short welcome email once you've confirmed. Unsubscribe links in every newsletter email are one-click, no login required.
 - **Browse training programs** at `/training/`. Enrolling requires an account (see §3) —
   checkout is currently a stub payment flow (always succeeds; a real gateway isn't wired up yet).
 - **Browse subscription plans** at `/subscribe/`.
@@ -79,14 +90,15 @@ No account needed for any of this.
 1. Go to `/register/` and sign up with your email (email is your login — there's no separate
    username). You're logged in immediately after registering.
 2. New accounts start as **Unverified**. You can already comment, subscribe, enroll in training,
-   and pitch stories — the only thing verification unlocks is a **byline**: appearing as a named
-   author on published articles and having a public author page.
+   and pitch stories. Verification is what gives you a **public author page** — a profile
+   (affiliation, bio, ORCID) listing your published articles. You don't need an account at all
+   to be credited on an article: editors can add any author to a byline by name (see §6).
 3. To request verification, fill out your profile (`/profile/edit/`) with your affiliation, bio,
    ORCID, publication history, etc., then submit for review from the "pending verification" page.
 4. An Editor-in-Chief or Admin reviews your request (§15). You'll get an email either way. If
    rejected, you can reapply after 30 days.
-5. Once approved, your role becomes **Verified Author** and you can be added as a byline on
-   articles.
+5. Once approved, your role becomes **Verified Author**, and bylines linked to your account
+   point to your author page.
 
 ---
 
@@ -103,8 +115,9 @@ have to retype your contact info.
 4. Submit. You'll get an email whenever the pitch's status changes (moved to review, accepted, or
    rejected).
 5. If you have an account, track all your pitches at `/pitches/mine/`, filterable by status.
-6. If a pitch is **accepted**, the editorial team turns it into a draft article (see §6) and will
-   reach out about a byline if you have an account.
+6. If a pitch is **accepted**, the editorial team turns it into a draft article (see §6). If you
+   pitched while signed in, you're added to the byline automatically; otherwise the editors
+   credit you by name.
 
 ---
 
@@ -123,12 +136,33 @@ Everything from here down requires an Editor (or higher) account. The dashboard 
   Cross-links to two focused pages: **Training** (`/editorial/revenue/training/`, collected-revenue
   trend) and **Subscriptions** (`/editorial/revenue/subscriptions/`, per-plan active count and
   lifetime revenue, MRR, purchase revenue).
+- **Keywords** (`/editorial/keywords/`) — how readers respond to article keywords. See
+  "Keyword analytics" below.
 - The sidebar shows a **badge count** next to Pitch Queue and Verification Queue whenever there's
-  something waiting on you, visible from anywhere in the workspace, not just the dashboard home.
+  something waiting on you, and next to Comments when new comments were posted in the last 24
+  hours — visible from anywhere in the workspace, not just the dashboard home.
 - Every list screen in the workspace (articles, pitches, ads, training, staff, newsletter issues,
   purchases, subscriptions) follows the same pattern: a **search box**, one or more **filter
   dropdowns**, and **pagination** — all combined in one form, so changing one doesn't reset the
   others.
+
+### Keyword analytics
+
+Every time an article page is shown, its keyword pills count as **impressions**; every time a
+reader clicks one, that's a **click**. **CTR** (click-through rate = clicks ÷ impressions) is the
+"urge to click": how often readers who see a keyword actually want more of it. Your own and
+other editors' visits are never counted.
+
+On `/editorial/keywords/`:
+- Pick a window (**7, 14, 30 or 90 days**; 30 by default), search for a keyword, and sort the
+  table by clicks, impressions, CTR, name, number of articles, or followers.
+- Keywords with fewer than 20 impressions show their CTR greyed out — too little data to trust —
+  and are left out of **Highest reader interest**.
+- Charts: impressions and clicks per day, a **heatmap** of when readers click keywords (day of
+  week × hour, Nepal time), the top keywords over time, and the most recent clicks.
+- **Export CSV** downloads the table for the chosen window.
+- Click a keyword for its own page: its daily trend, its click heatmap, where it was clicked
+  (top or bottom of the article), and which articles drive its clicks.
 
 ---
 
@@ -138,8 +172,11 @@ Everything from here down requires an Editor (or higher) account. The dashboard 
 filterable by type/status/homepage section.
 
 **Creating an article** (`+ New Article`):
-1. Fill in title, abstract, type, and keywords (type-to-add tags — start typing and pick an
-   existing keyword or create a new one).
+1. Fill in title, type, keywords (type-to-add tags — start typing and pick an existing keyword or
+   create a new one) and, optionally, the abstract. Short news pieces can leave the abstract
+   empty: the article page then goes straight from the headline to the byline, and listings,
+   feeds and search-engine snippets use the opening words of the body instead — for free
+   (open-access) articles only, so paid text never leaks into a listing.
 2. Write the body in the rich-text editor. Use the "Source" toggle in the toolbar if you need to
    drop into raw HTML (e.g. an embedded chart). Code blocks are supported with language labels.
 3. Click **Preview** any time to see exactly how the article will render publicly, in a new tab —
@@ -150,11 +187,29 @@ filterable by type/status/homepage section.
 6. **Access tier**: every article is Free (open access), Subscription, or Pay-per-article
    ("special", with its own price) — set this on the article form; it's an editorial call per
    article, not automatic from the article type.
+7. **Related articles** (the **Related** tab): choose the articles to show under "Related
+   reading" (the page shows three at most, newest first, so pick three or fewer). Type to search
+   published articles by title. Below the picker, a
+   **suggestions** list shows the most similar published articles, each with a similarity bar
+   and a **+ Add** button. If you pick nothing, the site shows the top suggestions
+   automatically. Similarity compares the words used in titles, keywords, abstracts and bodies,
+   so it only matches articles written in the same language.
 
 **After creating an article:**
-- **Authors** — go to the article's "Authors" screen to add bylines (only Verified Author and
-  above can be added), set author order, and mark the corresponding author. This is a separate
-  step from the article form itself.
+- **Authors** — go to the article's "Authors" screen (a separate step from the article form).
+  Each byline row is either:
+  - **an account** — pick it from the *Account* list. Their name, photo, affiliation and bio
+    come from their profile, and the byline links to their author page; or
+  - **a name only** — leave *Account* empty and type the author's *name* (and *affiliation*
+    if you like). Nobody needs to sign up for this. The name shows in the byline, citations,
+    feeds and search, as plain text with no author page.
+
+  Set the order and mark the corresponding author, then **Save authors**. A row needs an
+  account or a name. If both are filled, the account wins.
+
+  **Giving a name-only author an account later** — only when they actually need one (to log
+  in, pitch, or get an author page): create it under **Authors → New** (`/manage/authors/new/`),
+  then on each of their articles' Authors screens, pick the new account in their row.
 - **Quick publish/unpublish** — a one-click toggle right from the article list, with a
   confirmation prompt.
 - **Delete** — permanent, with a confirmation page. If you just want to stop showing an article,
@@ -301,6 +356,10 @@ where to remove one after the fact.
 - Filter by **Visible** or **Removed**.
 - **Remove** a comment to hide it from the article page; **Restore** brings it back. Nothing is
   ever permanently deleted through this screen.
+- **New-comment alerts**: the Editor-in-Chief and Admin accounts get an email for every new
+  public comment, with the comment text and links to the article and this screen. Comments by
+  editorial staff don't trigger it, and a guest's comment triggers it only once they've
+  confirmed it by email. The sidebar's **Comments** badge counts comments from the last 24 hours.
 
 ---
 
@@ -365,3 +424,25 @@ Editor-in-Chief and Admin only, with one carve-out noted below.
   action buttons until you've checked at least one row.
 - If you land on a page you don't have access to, you'll see a plain explanation of why (your
   current role) rather than a bare error — with a link back home or a way to request access.
+
+---
+
+## 18. Running the site: email, worker, analytics clean-up
+
+For whoever installs and deploys the site. The settings live in the server's `.env` file —
+**restart the app after changing it.** See `README.md` for the full list.
+
+- **Email.** Until SMTP is configured, emails only print to the server console and nobody
+  receives them. Set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` plus
+  `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` and `DEFAULT_FROM_EMAIL`.
+  For port **465** (typical on cPanel) set `EMAIL_USE_SSL=True`; for port **587** set
+  `EMAIL_USE_TLS=True` instead.
+- **`SITE_BASE_URL`** must be the public address, e.g. `https://ajnahealthlens.com`. Every link
+  in every email (comment confirmation, newsletter confirm/unsubscribe, password reset) is
+  built from it. `python manage.py check --deploy` flags a `localhost` or non-`https` value.
+- **The background worker** (`python manage.py qcluster`) must run all the time, as its own
+  service next to the web app. It sends newsletters and weekly digests and runs the daily
+  analytics clean-up. If it isn't running, those silently never happen.
+- **Analytics clean-up.** Page views, ad impressions/clicks and keyword impressions/clicks older
+  than `ANALYTICS_RETENTION_DAYS` (default 400 days) are deleted once a day by the worker. To run
+  it by hand: `python manage.py prune_analytics_events` (add `--days 180` to keep less).
