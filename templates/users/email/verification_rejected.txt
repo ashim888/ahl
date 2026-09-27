@@ -1,0 +1,8 @@
+Hi {{ user.first_name }},
+
+We reviewed your {{ journal_name }} verification request and weren't able to approve it at this time. This is often due to an incomplete affiliation, missing ORCID, or insufficient publication history.
+
+You can update your profile and reapply after {{ user.reapply_available_at|date:"F j, Y" }}:
+{{ profile_edit_url }}
+
+— {{ journal_name }} Editorial Team

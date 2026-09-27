@@ -1,0 +1,10 @@
+Hi {{ pitch.contact_name }},
+
+The editorial team left you a note on your story pitch "{{ pitch.title }}":
+
+{{ pitch.editor_feedback }}
+
+This doesn't change its status — it's still {{ pitch.get_status_display|lower }}. Reply
+to this email if you'd like to follow up.
+
+— Ajna Health Lens Editorial Team

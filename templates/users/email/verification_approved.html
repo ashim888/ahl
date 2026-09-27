@@ -1,8 +1,12 @@
-Hi {{ user.first_name }},
-
-Good news — your Ajna Health Lens account has been verified. You're now a Verified
-Author and can submit manuscripts.
-
-Log in and get started: {{ user.email }}
-
-— Ajna Health Lens Editorial Team
+{% extends 'email/base.html' %}
+{% block title %}Your account is verified{% endblock %}
+{% block preheader %}You now have Verified Author status on {{ journal_name }}.{% endblock %}
+{% block eyebrow %}Account verification{% endblock %}
+{% block heading %}Your account is verified{% endblock %}
+{% block content %}
+    <p>Hi {{ user.first_name }},</p>
+    <p>Good news — your {{ journal_name }} account has been verified. You now have <strong>Verified Author</strong> status, and your profile shows as verified.</p>
+    {% include 'email/includes/button.html' with url=profile_url label='View your profile' %}
+    <p>— {{ journal_name }} Editorial Team</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you requested account verification on {{ journal_name }}.{% endblock %}

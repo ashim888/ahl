@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
@@ -17,23 +18,23 @@
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Articles</h1>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Articles" %}</h1>
 
     <form method="get" class="mt-6 flex items-center gap-2 max-w-sm" id="keyword-search-form">
         {% if selected_type %}<input type="hidden" name="type" value="{{ selected_type }}">{% endif %}
         <input type="hidden" name="keyword" id="keyword-slug-input" value="{{ selected_keyword }}">
-        <input type="text" id="keyword-search-input" value="{{ selected_keyword_json }}" placeholder="Search by keyword…"
+        <input type="text" id="keyword-search-input" value="{{ selected_keyword_json }}" placeholder="{% trans 'Search by keyword…' %}"
                class="flex-1 border border-border px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-foreground">
         <button type="submit"
                 class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors whitespace-nowrap">
-            SEARCH
+            {% trans "SEARCH" %}
         </button>
     </form>
     {% if selected_keyword %}
         <p class="mt-3 text-sm text-muted-foreground flex flex-wrap items-center gap-3">
             <span>
-                Tagged <span class="font-semibold text-foreground">{{ selected_keyword_label }}</span>
-                <a href="{% url 'articles:article_list' %}{% if selected_type %}?type={{ selected_type }}{% endif %}" class="ml-2 underline hover:text-accent">Clear</a>
+                {% trans "Tagged" %} <span class="font-semibold text-foreground">{{ selected_keyword_label }}</span>
+                <a href="{% url 'articles:article_list' %}{% if selected_type %}?type={{ selected_type }}{% endif %}" class="ml-2 underline hover:text-accent">{% trans "Clear" %}</a>
             </span>
             {% if keyword_follow_eligible %}
                 {% if user.is_authenticated %}
@@ -41,13 +42,13 @@
                         {% csrf_token %}
                         <button type="submit"
                                 class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if is_following_keyword %}border-foreground bg-foreground text-primary-foreground hover:bg-accent hover:border-accent{% else %}border-foreground hover:border-accent hover:text-accent{% endif %} transition-colors">
-                            {% if is_following_keyword %}FOLLOWING ✓{% else %}+ FOLLOW{% endif %}
+                            {% if is_following_keyword %}{% trans "FOLLOWING ✓" %}{% else %}{% trans "+ FOLLOW" %}{% endif %}
                         </button>
                     </form>
                 {% else %}
                     <a href="{% url 'users:login' %}?next={{ request.path }}?keyword={{ selected_keyword }}"
                        class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border border-foreground hover:border-accent hover:text-accent transition-colors">
-                        LOG IN TO FOLLOW
+                        {% trans "LOG IN TO FOLLOW" %}
                     </a>
                 {% endif %}
             {% endif %}
@@ -57,7 +58,7 @@
     <div class="mt-6 flex flex-wrap gap-2">
         <a href="{% if selected_keyword %}?keyword={{ selected_keyword }}{% else %}{% url 'articles:article_list' %}{% endif %}"
            class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if not selected_type %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">
-            ALL
+            {% trans "ALL" %}
         </a>
         {% for value, label in article_types %}
             <a href="?type={{ value }}{% if selected_keyword %}&keyword={{ selected_keyword }}{% endif %}"
@@ -69,8 +70,8 @@
 
     <div class="mt-10 divide-y divide-border">
         {% for article in articles %}
-            <article class="article-link py-6 flex gap-6">
-                <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 hidden sm:block" style="width: 160px; height: 110px;">
+            <article class="article-link py-6 flex gap-4 sm:gap-6">
+                <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
                     {% if article.featured_image %}
                         <img src="{{ article.featured_image.url }}" alt="{{ article.title }}"
                              class="w-full h-full object-cover" style="filter: grayscale(10%);">
@@ -80,7 +81,7 @@
                 </a>
                 <div class="flex-1 min-w-0">
                     <span class="section-label text-muted-foreground">
-                        {% if article.is_pinned %}<span class="text-accent">PINNED ·</span> {% endif %}
+                        {% if article.is_pinned %}<span class="text-accent">{% trans "PINNED ·" %}</span> {% endif %}
                         {{ article.get_article_type_display }} · {{ article.get_access_type_display }}
                     </span>
                     <h2 class="font-display text-xl font-bold leading-snug mt-2 article-title" style="letter-spacing: -0.01em;">
@@ -92,7 +93,7 @@
                             {% if a %}
                                 <a href="{% url 'articles:author_detail' a.user.pk %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.user.get_full_name }}</a>
                             {% else %}
-                                <span class="text-xs text-muted-foreground font-medium">Editorial staff</span>
+                                <span class="text-xs text-muted-foreground font-medium">{% trans "Editorial staff" %}</span>
                             {% endif %}
                         {% endwith %}
                         <span class="text-border text-xs">·</span>
@@ -100,12 +101,12 @@
                             {% if article.publication_date %}{{ article.publication_date|date:"M j, Y" }}{% endif %}
                         </span>
                         <span class="text-border text-xs">·</span>
-                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.estimated_read_minutes }} min</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.estimated_read_minutes }} {% trans "min" %}</span>
                     </div>
                 </div>
             </article>
         {% empty %}
-            <p class="text-muted-foreground py-10">No articles published yet.</p>
+            <p class="text-muted-foreground py-10">{% trans "No articles published yet." %}</p>
         {% endfor %}
     </div>
 

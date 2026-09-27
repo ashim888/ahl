@@ -16,8 +16,8 @@ def sync_site_domain(apps, schema_editor):
     # confirmation/follow-up emails from Site.domain; every other absolute-link
     # email in this project already uses SITE_BASE_URL (newsletter/tasks.py,
     # newsletter/emails.py) — reused here instead of a second, easy-to-forget
-    # env var. Data migration, not a fixture, so it re-syncs on every deploy
-    # if SITE_BASE_URL ever changes.
+    # env var. NOTE: a data migration only runs once — ongoing re-syncs on
+    # every migrate are done by articles/apps.py:sync_site_domain.
     Site = apps.get_model('sites', 'Site')
     domain = urlparse(settings.SITE_BASE_URL).netloc or settings.SITE_BASE_URL
     Site.objects.update_or_create(

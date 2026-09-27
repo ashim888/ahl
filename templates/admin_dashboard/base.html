@@ -184,6 +184,9 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z"/>
                 </svg>
                 Comments
+                {% if work_counts.new_comments %}
+                    <span class="ml-auto shrink-0 min-w-[1.25rem] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[0.65rem] font-semibold text-center" title="New in the last 24 hours">{{ work_counts.new_comments }}</span>
+                {% endif %}
             </a>
             <a href="{% url 'editorial_board:manage_member_list' %}"
                class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_member' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">

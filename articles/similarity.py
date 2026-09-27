@@ -206,26 +206,31 @@ def get_index(version: str | None = None) -> CorpusIndex:
 
 def similar_articles(
     article: Article, limit: int = 3, min_score: float = MIN_SIMILARITY,
-    exclude_ids: set[int] | None = None,
+    exclude_ids: set[int] | None = None, keyword_names: list[str] | None = None,
 ) -> list[tuple[Article, float]]:
     """The `limit` published articles most similar to `article`, as
     (article, cosine similarity) pairs, best first, scores ≥ `min_score`.
-    Works for drafts too (vectorised against the published corpus's IDF);
-    results are cached only for published articles with no extra excludes.
+    Works for drafts too (vectorised against the published corpus's IDF).
+    `keyword_names` vectorises the in-memory article with those keywords
+    instead of its saved ones — the editor preview passes the form's
+    current, unsaved text and keywords this way. Results are cached only for
+    published articles with no extra excludes and no keyword override.
     """
     exclude = set(exclude_ids or ())
     if article.pk:
         exclude.add(article.pk)
 
     version = corpus_version()
-    cacheable = article.pk and article.status == Article.Status.PUBLISHED and not exclude_ids
+    cacheable = (
+        article.pk and article.status == Article.Status.PUBLISHED and not exclude_ids and keyword_names is None
+    )
     cache_key = f'related:v1:{version}:{article.pk}:{limit}:{min_score}'
     ranked = cache.get(cache_key) if cacheable else None
     if ranked is None:
         index = get_index(version)
         ranked = [
             (pk, round(score, 4))
-            for pk, score in index.rank(index.vector_for(article), exclude)[:limit]
+            for pk, score in index.rank(index.vector_for(article, keyword_names), exclude)[:limit]
             if score >= min_score
         ]
         if cacheable:

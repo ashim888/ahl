@@ -7,6 +7,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
 
 from .validators import (
     article_image_extension_validator, article_pdf_extension_validator,
@@ -67,19 +68,19 @@ class Article(models.Model):
     """
 
     class ArticleType(models.TextChoices):
-        ORIGINAL_RESEARCH = 'original_research', 'Original Research'
-        REVIEW_ARTICLE = 'review_article', 'Review Article'
-        CASE_REPORT = 'case_report', 'Case Report'
-        SHORT_COMMUNICATION = 'short_communication', 'Short Communication'
-        METHODOLOGY_PAPER = 'methodology_paper', 'Methodology Paper'
-        EDITORIAL = 'editorial', 'Editorial'
-        NEWS_COMMENTARY = 'news_commentary', 'News & Commentary'
-        LETTER_TO_EDITOR = 'letter_to_editor', 'Letter to Editor'
+        ORIGINAL_RESEARCH = 'original_research', _('Original Research')
+        REVIEW_ARTICLE = 'review_article', _('Review Article')
+        CASE_REPORT = 'case_report', _('Case Report')
+        SHORT_COMMUNICATION = 'short_communication', _('Short Communication')
+        METHODOLOGY_PAPER = 'methodology_paper', _('Methodology Paper')
+        EDITORIAL = 'editorial', _('Editorial')
+        NEWS_COMMENTARY = 'news_commentary', _('News & Commentary')
+        LETTER_TO_EDITOR = 'letter_to_editor', _('Letter to Editor')
 
     class AccessType(models.TextChoices):
-        OPEN_ACCESS = 'open_access', 'Free'
-        SUBSCRIPTION = 'subscription', 'Subscription'
-        PAY_PER_ARTICLE = 'pay_per_article', 'Pay-per-article (special)'
+        OPEN_ACCESS = 'open_access', _('Free')
+        SUBSCRIPTION = 'subscription', _('Subscription')
+        PAY_PER_ARTICLE = 'pay_per_article', _('Pay-per-article (special)')
 
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'

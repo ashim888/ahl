@@ -1,10 +1,9 @@
 from django.conf import settings
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.template.loader import render_to_string
 from django.urls import reverse
 
-from ajna_health_lens.mail import send_notification_email
+from ajna_health_lens.mail import send_templated_email
 from articles.models import Article
 from users.models import User
 
@@ -17,9 +16,9 @@ from .models import StoryPitch
 # status transition (pre_save) — a brand-new pitch has no "previous status"
 # to compare against.
 EMAIL_TEMPLATES = {
-    StoryPitch.Status.IN_REVIEW: 'pitches/email/pitch_in_review.html',
-    StoryPitch.Status.ACCEPTED: 'pitches/email/pitch_accepted.html',
-    StoryPitch.Status.REJECTED: 'pitches/email/pitch_rejected.html',
+    StoryPitch.Status.IN_REVIEW: 'pitches/email/pitch_in_review',
+    StoryPitch.Status.ACCEPTED: 'pitches/email/pitch_accepted',
+    StoryPitch.Status.REJECTED: 'pitches/email/pitch_rejected',
 }
 
 # Every submitter-facing pitch email (this file's, plus pitches/views.py's
@@ -36,10 +35,10 @@ SUBMITTER_FROM_EMAIL = settings.JOURNAL_CONTACT_EMAIL
 def notify_submitter_of_pitch_received(sender, instance, created, **kwargs):
     if not created or not instance.contact_email:
         return
-    body = render_to_string('pitches/email/pitch_submitted.html', {'pitch': instance})
-    send_notification_email(
+    send_templated_email(
         subject=f'We received your story pitch: "{instance.title}"',
-        message=body,
+        template='pitches/email/pitch_submitted',
+        context={'pitch': instance},
         recipient_list=[instance.contact_email],
         from_email=SUBMITTER_FROM_EMAIL,
     )
@@ -60,10 +59,10 @@ def notify_on_status_change(sender, instance, **kwargs):
     # since an anonymous pitch's email is user input, not guaranteed
     # present at the DB level the way an account's email is.
     if template and instance.contact_email:
-        body = render_to_string(template, {'pitch': instance})
-        send_notification_email(
+        send_templated_email(
             subject=f'Update on your story pitch: "{instance.title}"',
-            message=body,
+            template=template,
+            context={'pitch': instance},
             recipient_list=[instance.contact_email],
             from_email=SUBMITTER_FROM_EMAIL,
         )
@@ -85,13 +84,13 @@ def notify_editorial_staff_of_new_pitch(sender, instance, created, **kwargs):
     if not recipients:
         return
 
-    body = render_to_string('pitches/email/new_pitch_submitted.html', {
-        'pitch': instance,
-        'pitch_queue_url': f"{settings.SITE_BASE_URL}{reverse('pitches:manage_pitch_queue')}",
-    })
-    send_notification_email(
+    send_templated_email(
         subject=f'New story pitch: "{instance.title}"',
-        message=body,
+        template='pitches/email/new_pitch_submitted',
+        context={
+            'pitch': instance,
+            'pitch_queue_url': f"{settings.SITE_BASE_URL}{reverse('pitches:manage_pitch_queue')}",
+        },
         recipient_list=recipients,
     )
 

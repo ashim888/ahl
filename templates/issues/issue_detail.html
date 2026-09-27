@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
@@ -15,7 +16,7 @@
             <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" class="w-full md:w-56 object-cover" style="filter: grayscale(10%);">
         {% endif %}
         <div>
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">ISSUE</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">{% trans "ISSUE" %}</p>
             <h1 class="font-display text-3xl font-bold italic leading-tight" style="letter-spacing: -0.02em;">
                 {{ issue.title }}
             </h1>
@@ -29,12 +30,12 @@
     </div>
 
     <div class="mt-10">
-        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-6">IN THIS ISSUE</p>
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-6">{% trans "IN THIS ISSUE" %}</p>
         <div class="divide-y divide-border">
             {% for article in issue_articles %}
-                <article class="article-link py-5 flex gap-6">
+                <article class="article-link py-5 flex gap-4 sm:gap-6">
                     {# Same thumbnail as the /articles/ listing (article_list.html) — bg-secondary placeholder when there's no featured image. #}
-                    <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 hidden sm:block" style="width: 160px; height: 110px;">
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
                         {% if article.featured_image %}
                             <img src="{{ article.featured_image.url }}" alt="{{ article.title }}" loading="lazy"
                                  class="w-full h-full object-cover" style="filter: grayscale(10%);">
@@ -52,18 +53,18 @@
                             {% if a %}
                                 <a href="{% url 'articles:author_detail' a.user.pk %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.user.get_full_name }}</a>
                             {% else %}
-                                <span class="text-xs text-muted-foreground font-medium">Editorial staff</span>
+                                <span class="text-xs text-muted-foreground font-medium">{% trans "Editorial staff" %}</span>
                             {% endif %}
                         {% endwith %}
                         {% if article.page_numbers %}
                             <span class="text-border text-xs">·</span>
-                            <span class="font-mono-editorial text-xs text-muted-foreground">pp. {{ article.page_numbers }}</span>
+                            <span class="font-mono-editorial text-xs text-muted-foreground">{% trans "pp." %} {{ article.page_numbers }}</span>
                         {% endif %}
                     </div>
                     </div>
                 </article>
             {% empty %}
-                <p class="text-muted-foreground py-6">No articles assigned to this issue yet.</p>
+                <p class="text-muted-foreground py-6">{% trans "No articles assigned to this issue yet." %}</p>
             {% endfor %}
         </div>
     </div>

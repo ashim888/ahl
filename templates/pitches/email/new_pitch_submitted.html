@@ -1,12 +1,11 @@
-Hi,
-
-A new story pitch has been submitted:
-
-"{{ pitch.title }}"
-From: {{ pitch.contact_name }} <{{ pitch.contact_email }}>
-
-{{ pitch.summary }}
-
-Review it in the pitch queue: {{ pitch_queue_url }}
-
-— Ajna Health Lens
+{% extends 'email/base.html' %}
+{% block title %}New story pitch{% endblock %}
+{% block preheader %}{{ pitch.contact_name }} pitched “{{ pitch.title }}”.{% endblock %}
+{% block eyebrow %}Editorial · Pitch queue{% endblock %}
+{% block heading %}New pitch: “{{ pitch.title }}”{% endblock %}
+{% block content %}
+    <p style="font-family: Arial, Helvetica, sans-serif; font-size:14px; color:#6b6860;">From {{ pitch.contact_name }} &lt;{{ pitch.contact_email }}&gt;</p>
+    {% include 'email/includes/quote.html' with text=pitch.summary %}
+    {% include 'email/includes/button.html' with url=pitch_queue_url label='Review in the pitch queue' %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you're senior editorial staff on {{ journal_name }}.{% endblock %}

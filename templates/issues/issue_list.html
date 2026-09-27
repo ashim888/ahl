@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Issues</h1>
-    <p class="mt-2 text-sm text-muted-foreground">Curated story trails — ongoing coverage grouped by topic.</p>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Issues" %}</h1>
+    <p class="mt-2 text-sm text-muted-foreground">{% trans "Curated story trails — ongoing coverage grouped by topic." %}</p>
 
     <div class="mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for issue in issues %}
@@ -31,7 +32,7 @@
                 </div>
             </a>
         {% empty %}
-            <p class="text-muted-foreground">No issues published yet.</p>
+            <p class="text-muted-foreground">{% trans "No issues published yet." %}</p>
         {% endfor %}
     </div>
 

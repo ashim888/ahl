@@ -20,6 +20,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from django.apps import apps
 from django.shortcuts import redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 from django_comments.views.comments import post_comment
 from django_comments_xtd.models import XtdComment
 from django_comments_xtd.views import confirm
@@ -59,6 +60,22 @@ def _comment_target_path(request) -> str | None:
         return None
 
 
+def _same_article_next(request, target_path: str) -> str:
+    """The form's `next` when it's another address for the *same* article —
+    in practice its gift link (/articles/<slug>/gift/<token>/). A reader who
+    got in through a gift link and comments must land back on that link;
+    the canonical URL would put them in front of the paywall. Anything else
+    (another article, another site) falls back to the canonical URL.
+    """
+    next_url = request.POST.get('next', '')
+    if (
+        next_url.startswith(target_path)
+        and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()})
+    ):
+        return urlsplit(next_url).path
+    return target_path
+
+
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def rate_limited_post_comment(request, *args, **kwargs):
     """Posts via the package, then (on success) redirects to the article's
@@ -71,6 +88,7 @@ def rate_limited_post_comment(request, *args, **kwargs):
     target_path = _comment_target_path(request)
     if not target_path:
         return response
+    target_path = _same_article_next(request, target_path)
 
     # The package appends ?c=<pk> for a saved comment, or ?c=<signed key>
     # (not an int) when it only emailed a confirmation link instead.

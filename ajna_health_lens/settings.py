@@ -508,6 +508,11 @@ CACHES = {
 }
 
 
+# Raw analytics events (page views, keyword and ad impressions/clicks)
+# older than this are deleted daily — see admin_custom/retention.py.
+ANALYTICS_RETENTION_DAYS = int(os.environ.get('ANALYTICS_RETENTION_DAYS', '400'))
+
+
 # Journal branding (see ARCHITECTURE.md §10.1)
 JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Health Lens')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')

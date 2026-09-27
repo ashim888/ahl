@@ -674,8 +674,10 @@ class SearchRelevanceAndRateLimitTests(TestCase):
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
         )
         response = self.client.get(reverse('articles:search'), {'q': 'rare'})
-        self.assertContains(response, '1 RESULT(S)')
-        self.assertNotContains(response, '0 RESULT(S)')
+        # Label is now properly pluralized ("1 RESULT" / "2 RESULTS") via
+        # {% blocktrans count %}, so it can be translated (Nepali UI).
+        self.assertContains(response, '1 RESULT FOR')
+        self.assertNotContains(response, '0 RESULT')
 
     def test_excessive_search_requests_are_rate_limited(self):
         # No password hashing involved (unlike login/register — see
@@ -2444,3 +2446,18 @@ class CommentEmailTemplateTests(TestCase):
         self.assertIn('A reply.', html)
         self.assertIn(f'{settings.SITE_BASE_URL}{self.article.get_absolute_url()}#c{reply.pk}', html)
         self.assertIn(f'{settings.SITE_BASE_URL}/comments/mute/', html)
+
+
+class NepaliInterfaceTests(TestCase):
+    """The reader-facing UI is translated (locale/ne) — switching language
+    changes the interface text, not just the fonts.
+    """
+
+    def test_article_page_renders_in_nepali(self):
+        from django.conf import settings
+        article = make_article('nepali-ui-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = 'ne'
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        for text in ('टिप्पणीहरू', 'गृहपृष्ठ', 'अक्षरको आकार', 'सम्पादकीय टोली'):
+            self.assertContains(response, text)
+        self.assertNotContains(response, 'LOG IN TO SAVE')

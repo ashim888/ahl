@@ -1,23 +1,24 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Search</h1>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Search" %}</h1>
 
     <form method="get" class="mt-6 flex border border-foreground">
-        <input type="text" name="q" value="{{ query }}" placeholder="Title, abstract, keywords, or author"
+        <input type="text" name="q" value="{{ query }}" placeholder="{% trans 'Title, abstract, keywords, or author' %}"
                class="flex-1 bg-transparent px-4 py-3 text-sm outline-none font-mono-editorial !border-0">
         <button type="submit" class="bg-foreground text-primary-foreground font-mono-editorial text-xs tracking-widest px-6">
-            SEARCH
+            {% trans "SEARCH" %}
         </button>
     </form>
 
     {% if query %}
         <p class="mt-6 font-mono-editorial text-xs text-muted-foreground tracking-widest">
-            {{ page_obj.paginator.count }} RESULT(S) FOR "{{ query }}"
+            {% blocktrans count counter=page_obj.paginator.count %}{{ counter }} RESULT FOR "{{ query }}"{% plural %}{{ counter }} RESULTS FOR "{{ query }}"{% endblocktrans %}
         </p>
     {% endif %}
 
@@ -34,7 +35,7 @@
                         {% if a %}
                             <a href="{% url 'articles:author_detail' a.user.pk %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.user.get_full_name }}</a>
                         {% else %}
-                            <span class="text-xs text-muted-foreground font-medium">Editorial staff</span>
+                            <span class="text-xs text-muted-foreground font-medium">{% trans "Editorial staff" %}</span>
                         {% endif %}
                     {% endwith %}
                     <span class="text-border text-xs">·</span>
@@ -45,7 +46,7 @@
             </article>
         {% empty %}
             {% if query %}
-                <p class="text-muted-foreground py-10">No articles matched your search.</p>
+                <p class="text-muted-foreground py-10">{% trans "No articles matched your search." %}</p>
             {% endif %}
         {% endfor %}
     </div>

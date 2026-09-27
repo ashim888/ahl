@@ -1,6 +1,11 @@
-Hi {{ pitch.contact_name }},
-
-Your story pitch "{{ pitch.title }}" is now being reviewed by our editorial team. We'll
-be in touch with a decision soon.
-
-— Ajna Health Lens Editorial Team
+{% extends 'email/base.html' %}
+{% block title %}Your pitch is in review{% endblock %}
+{% block preheader %}Our editors are now reviewing “{{ pitch.title }}”.{% endblock %}
+{% block eyebrow %}Story pitch · In review{% endblock %}
+{% block heading %}Your pitch is being reviewed{% endblock %}
+{% block content %}
+    <p>Hi {{ pitch.contact_name }},</p>
+    <p>Your story pitch <strong>“{{ pitch.title }}”</strong> is now being reviewed by our editorial team. We'll be in touch with a decision soon.</p>
+    <p>— {{ journal_name }} Editorial Team</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you submitted a story pitch to {{ journal_name }}. Reply to this email to reach the editors.{% endblock %}

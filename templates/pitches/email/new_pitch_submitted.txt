@@ -1,0 +1,12 @@
+Hi,
+
+A new story pitch has been submitted:
+
+"{{ pitch.title }}"
+From: {{ pitch.contact_name }} <{{ pitch.contact_email }}>
+
+{{ pitch.summary }}
+
+Review it in the pitch queue: {{ pitch_queue_url }}
+
+— Ajna Health Lens

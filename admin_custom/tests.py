@@ -463,3 +463,105 @@ class KeywordAnalyticsTests(TestCase):
         response = self.client.get(reverse('admin_custom:keyword_analytics_csv_export'))
         self.assertEqual(response['Content-Type'], 'text/csv')
         self.assertIn('Popular Topic,popular-topic,1,0,25,5,20.0,', response.content.decode())
+
+
+class KeywordAnalyticsLocalTimeTests(TestCase):
+    """Bucketing happens in SQL with a fixed UTC-offset shift (see
+    admin_custom/keyword_analytics.py) — this pins the Kathmandu +05:45
+    boundary: 18:30 UTC Saturday is 00:15 local Sunday.
+    """
+
+    def test_click_just_after_local_midnight_lands_on_the_local_day_and_hour(self):
+        from admin_custom import keyword_analytics as ka
+
+        keyword = Keyword.objects.create(name='Boundary Topic')
+        event = KeywordEvent.objects.create(keyword=keyword, event_type=KeywordEvent.EventType.CLICK)
+        utc_saturday = datetime.datetime(2026, 9, 26, 18, 30, tzinfo=datetime.timezone.utc)
+        KeywordEvent.objects.filter(pk=event.pk).update(occurred_at=utc_saturday)
+
+        heatmap = ka.weekday_hour_heatmap(KeywordEvent.objects.all())
+        sunday = next(r for r in heatmap['rows'] if r['label'] == 'Sun')
+        self.assertEqual(sunday['cells'][0]['count'], 1)
+        self.assertEqual(sum(r['total'] for r in heatmap['rows']), 1)
+
+
+class AnalyticsRetentionTests(TestCase):
+    """admin_custom/retention.py — daily pruning of old raw analytics events."""
+
+    def test_prunes_only_events_older_than_retention(self):
+        from ads.models import AdEvent
+        from admin_custom.retention import prune_analytics_events
+
+        article = make_article('retention-article')
+        keyword = Keyword.objects.create(name='Retention Topic')
+        ad = AdSlot.objects.create(sponsor_name='Old Sponsor', zone=AdSlot.Zone.ARTICLE_SIDEBAR, image=demo_ad_image(), link_url='https://example.com')
+        old = timezone.now() - datetime.timedelta(days=500)
+        for model, field, kwargs in [
+            (ArticleView, 'viewed_at', {'article': article}),
+            (KeywordEvent, 'occurred_at', {'keyword': keyword, 'event_type': KeywordEvent.EventType.CLICK}),
+            (AdEvent, 'occurred_at', {'ad_slot': ad, 'event_type': AdEvent.EventType.CLICK}),
+        ]:
+            stale = model.objects.create(**kwargs)
+            model.objects.filter(pk=stale.pk).update(**{field: old})
+            model.objects.create(**kwargs)  # recent, must survive
+
+        deleted = prune_analytics_events(400)
+
+        self.assertEqual(deleted, {'ArticleView': 1, 'KeywordEvent': 1, 'AdEvent': 1})
+        self.assertEqual((ArticleView.objects.count(), KeywordEvent.objects.count(), AdEvent.objects.count()), (1, 1, 1))
+
+    def test_daily_schedule_exists(self):
+        from django_q.models import Schedule
+        self.assertTrue(Schedule.objects.filter(
+            name='analytics_retention_daily', func='admin_custom.retention.prune_analytics_events',
+        ).exists())
+
+
+class NewCommentStaffAlertTests(TestCase):
+    """admin_custom/signals.py — senior staff are emailed when a comment goes live."""
+
+    def setUp(self):
+        from articles.tests import _comment_post_data
+        self.post_data = _comment_post_data
+        self.article = make_article('alert-article')
+        self.eic = User.objects.create_user(
+            email='alert-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        self.reader = make_reader('alert-reader@example.com')
+
+    def _staff_alerts(self):
+        from django.core import mail
+        return [m for m in mail.outbox if m.to == ['alert-eic@example.com'] and m.subject.startswith('New comment on')]
+
+    def test_reader_comment_alerts_senior_staff(self):
+        self.client.force_login(self.reader)
+        self.client.post(reverse('comments-post-comment'), self.post_data(self.article, 'Reader comment.'))
+        alerts = self._staff_alerts()
+        self.assertEqual(len(alerts), 1)
+        self.assertIn('Reader comment.', alerts[0].alternatives[0][0])
+        self.assertIn(reverse('admin_custom:manage_comment_list'), alerts[0].body)
+
+    def test_staff_comment_does_not_alert(self):
+        self.client.force_login(make_editor('alert-editor@example.com'))
+        self.client.post(reverse('comments-post-comment'), self.post_data(self.article, 'Editor reply.'))
+        self.assertEqual(self._staff_alerts(), [])
+
+    def test_anonymous_comment_alerts_only_once_confirmed(self):
+        import re
+        from django.core import mail
+
+        self.client.post(reverse('comments-post-comment'), self.post_data(
+            self.article, 'Anon comment.', name='Anon', email='anon-alert@example.com',
+        ))
+        self.assertEqual(self._staff_alerts(), [])
+        confirmation = next(m for m in mail.outbox if m.subject == 'Confirm your comment')
+        confirm_path = re.search(r'(/comments/confirm/\S+/)', confirmation.body).group(1)
+        self.client.get(confirm_path)
+        self.assertEqual(len(self._staff_alerts()), 1)
+
+    def test_sidebar_badge_counts_new_comments(self):
+        self.client.force_login(self.reader)
+        self.client.post(reverse('comments-post-comment'), self.post_data(self.article, 'Badge comment.'))
+        self.client.force_login(make_editor('badge-editor@example.com'))
+        response = self.client.get(reverse('admin_custom:dashboard'))
+        self.assertContains(response, 'title="New in the last 24 hours">1</span>')

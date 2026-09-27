@@ -16,16 +16,27 @@ def recent_draft_articles(limit=4):
 
 @register.simple_tag
 def pending_work_counts():
-    """Badge counts for the sidebar's Verification Queue and Pitch Queue
-    links — previously the Dashboard home KPI row was the only "what needs
+    """Badge counts for the sidebar's Verification Queue, Pitch Queue and
+    Comments links — previously the Dashboard home KPI row was the only "what needs
     attention" surface, invisible if an editor lands anywhere else first.
     Same simple_tag pattern as recent_draft_articles, for the same reason
     (query only runs when the admin shell renders).
     """
+    import datetime
+
+    from django.utils import timezone
+    from django_comments_xtd.models import XtdComment
     from pitches.models import StoryPitch
     from users.models import User
 
     return {
+        # Comments publish immediately (no pre-moderation queue), so the
+        # useful signal is "new since yesterday" — what an editor should
+        # glance over — not a backlog count.
+        'new_comments': XtdComment.objects.filter(
+            is_public=True, is_removed=False,
+            submit_date__gte=timezone.now() - datetime.timedelta(hours=24),
+        ).count(),
         'pending_verifications': User.objects.filter(
             verification_status=User.VerificationStatus.PENDING,
         ).count(),

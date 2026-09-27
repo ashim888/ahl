@@ -1,0 +1,11 @@
+New comment on "{{ target }}"
+
+{{ comment.name }}{% if comment.user_email %} <{{ comment.user_email }}>{% endif %} wrote:
+
+"{{ comment.comment|truncatewords:150 }}"
+
+View it on the article: {{ comment_url }}
+Remove or restore comments: {{ moderation_url }}
+
+--
+{{ journal_name }}

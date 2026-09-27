@@ -1,9 +1,12 @@
-Hi {{ pitch.contact_name }},
-
-Thanks for pitching "{{ pitch.title }}" to Ajna Health Lens. Our editorial team reviews
-every pitch — we'll email you as soon as there's an update, whether that's moving it
-into review, accepting it, or letting you know it's not a fit this time.
-
-No need to do anything else for now.
-
-— Ajna Health Lens Editorial Team
+{% extends 'email/base.html' %}
+{% block title %}We received your pitch{% endblock %}
+{% block preheader %}Thanks for pitching “{{ pitch.title }}”. We'll be in touch.{% endblock %}
+{% block eyebrow %}Story pitch{% endblock %}
+{% block heading %}We received your pitch{% endblock %}
+{% block content %}
+    <p>Hi {{ pitch.contact_name }},</p>
+    <p>Thanks for pitching <strong>“{{ pitch.title }}”</strong> to {{ journal_name }}. Our editorial team reviews every pitch — we'll email you as soon as there's an update, whether that's moving it into review, accepting it, or letting you know it's not a fit this time.</p>
+    <p>No need to do anything else for now.</p>
+    <p>— {{ journal_name }} Editorial Team</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you submitted a story pitch to {{ journal_name }}. Reply to this email to reach the editors.{% endblock %}

@@ -21,7 +21,7 @@ styling from templates/base.html, so no per-field classes are needed here.
     `article` is in scope) and reply.html (where only `comment`, the parent
     being replied to, is).
     {% endcomment %}
-    <input type="hidden" name="next" value="{% if article %}{% url 'articles:article_detail' article.slug %}{% elif comment %}{{ comment.content_object.get_absolute_url }}{% endif %}">
+    <input type="hidden" name="next" value="{% if article %}{{ request.path }}{% elif comment %}{{ comment.content_object.get_absolute_url }}{% endif %}">
     {# Honeypot — real visitors never see this field; a bot that fills every field trips it. #}
     <div style="position: absolute; left: -9999px;" aria-hidden="true">{{ form.honeypot }}</div>
 

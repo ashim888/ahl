@@ -1,10 +1,16 @@
-Hi,
-
-A new account is awaiting verification review:
-
-{{ user.get_full_name }} <{{ user.email }}>
-{% if user.affiliation %}{{ user.affiliation }}{% endif %}
-
-Review it in the verification queue: {{ verification_queue_url }}
-
-— Ajna Health Lens
+{% extends 'email/base.html' %}
+{% block title %}New pending verification{% endblock %}
+{% block preheader %}{{ user.get_full_name }} is awaiting verification review.{% endblock %}
+{% block eyebrow %}Editorial · Verification queue{% endblock %}
+{% block heading %}New account awaiting verification{% endblock %}
+{% block content %}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px; border:1px solid #e7e4df;">
+        <tr><td style="padding:14px 18px; font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.6; color:#111110;">
+            <strong>{{ user.get_full_name }}</strong><br>
+            <span style="color:#6b6860;">{{ user.email }}</span>
+            {% if user.affiliation %}<br><span style="color:#6b6860;">{{ user.affiliation }}</span>{% endif %}
+        </td></tr>
+    </table>
+    {% include 'email/includes/button.html' with url=verification_queue_url label='Review in the queue' %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you're senior editorial staff on {{ journal_name }}.{% endblock %}

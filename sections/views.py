@@ -8,6 +8,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.utils.translation import gettext as _
 
 from users.decorators import role_required
 from users.models import User
@@ -82,9 +83,9 @@ def section_follow_toggle(request, slug):
     follow, created = SectionFollow.objects.get_or_create(user=request.user, section=section)
     if not created:
         follow.delete()
-        messages.success(request, f'Unfollowed "{section.name}".')
+        messages.success(request, _('Unfollowed "%(name)s".') % {'name': section.name})
     else:
-        messages.success(request, f'Following "{section.name}" — new articles will appear in your feed and weekly digest.')
+        messages.success(request, _('Following "%(name)s" — new articles will appear in your feed and weekly digest.') % {'name': section.name})
     return redirect('sections:section_detail', slug=section.slug)
 
 

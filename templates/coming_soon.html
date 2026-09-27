@@ -1,10 +1,11 @@
+{% load i18n %}
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ JOURNAL_NAME }} — Coming Soon</title>
+    <title>{{ JOURNAL_NAME }} — {% trans "Coming Soon" %}</title>
     <meta name="description" content="{{ JOURNAL_TAGLINE }}">
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="{% static 'images/logo.png' %}">
@@ -30,10 +31,9 @@
 
         <div class="w-10 border-t-2 border-accent my-8"></div>
 
-        <h2 class="font-display text-2xl font-bold italic mb-4">Coming soon.</h2>
+        <h2 class="font-display text-2xl font-bold italic mb-4">{% trans "Coming soon." %}</h2>
         <p class="text-sm text-muted-foreground leading-relaxed">
-            We're putting the finishing touches on {{ JOURNAL_NAME }} — curated health news,
-            commentary, and editorial coverage. Check back soon.
+            {% blocktrans with journal=JOURNAL_NAME %}We're putting the finishing touches on {{ journal }} — curated health news, commentary, and editorial coverage. Check back soon.{% endblocktrans %}
         </p>
 
         {% if JOURNAL_CONTACT_EMAIL %}
@@ -46,7 +46,7 @@
 
     <a href="{% url 'users:login' %}"
        class="fixed bottom-6 right-6 font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent">
-        EDITORIAL LOGIN →
+        {% trans "EDITORIAL LOGIN →" %}
     </a>
 
 </body>

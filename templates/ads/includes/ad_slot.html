@@ -15,17 +15,22 @@ second line of defense for any pre-existing ad whose stored image doesn't
 exactly match its zone (e.g. from before this validation existed) — it gets
 cropped to fit the box instead of stretched/distorted.
 
-No frame (border/background) or "SPONSORED" label around the creative —
-removed September 2026 at editorial request; the ad image renders bare in
-its slot. rel="sponsored" on the link still marks it as paid for search engines.
+No frame (border/background) around the creative — removed September 2026
+at editorial request. A small "Ad" tag sits in the image's top-right corner
+instead of the old "SPONSORED" header, so readers can still tell a paid
+placement from editorial content on a health news site without the frame.
+rel="sponsored" on the link marks it as paid for search engines.
 {% endcomment %}
 {% if ad %}
 <div class="{{ wrapper_class }}">
-    <a href="{% url 'ads:click' ad.pk %}" target="_blank" rel="sponsored noopener" class="block max-w-full">
-        <img src="{{ ad.image.url }}" alt="{{ ad.sponsor_name }}"
+    <a href="{% url 'ads:click' ad.pk %}" target="_blank" rel="sponsored noopener"
+       class="relative block mx-auto max-w-full" style="width: {{ ad.width }}px;">
+        <img src="{{ ad.image.url }}" alt="{{ ad.sponsor_name }} (advertisement)"
              width="{{ ad.width }}" height="{{ ad.height }}"
-             class="block mx-auto max-w-full"
+             class="block max-w-full"
              style="width: {{ ad.width }}px; max-width: 100%; aspect-ratio: {{ ad.width }} / {{ ad.height }}; object-fit: cover;">
+        <span class="absolute top-0 right-0 bg-foreground/70 text-primary-foreground font-mono-editorial text-[0.55rem] leading-none px-1.5 py-1 tracking-wider"
+              aria-hidden="true">AD</span>
     </a>
 </div>
 {% elif placeholder %}

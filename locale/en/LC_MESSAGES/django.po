@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-01 11:46+0545\n"
+"POT-Creation-Date: 2026-09-27 16:06+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,72 +17,843 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-msgid "Search…"
-msgstr ""
-
-msgid "Log out"
-msgstr ""
-
-msgid "NEWSLETTER"
-msgstr ""
-
-msgid "SUBSCRIBE"
-msgstr ""
-
-msgid "SECTIONS"
-msgstr ""
-
-msgid "JOURNAL"
-msgstr ""
-
-msgid "ABOUT"
-msgstr ""
-
-msgid "Comment"
-msgstr ""
-
-msgid "Post Comment"
-msgstr ""
-
-msgid "Confirm your comment"
-msgstr ""
-
-msgid "Almost there"
-msgstr ""
-
-msgid ""
-"We've sent a confirmation link to your email address — click it to publish "
-"your comment."
-msgstr ""
-
-msgid "Back to"
-msgstr ""
-
-msgid "STAFF"
-msgstr ""
-
-msgid "ago"
-msgstr ""
-
-msgid "This comment has been removed."
-msgstr ""
-
-msgid "REPLY"
-msgstr ""
-
-msgid "REMOVE"
-msgstr ""
-
-msgid "Reply to comment"
-msgstr ""
 
 # django_comments_xtd's email subjects are hard-coded gettext strings
 # (views.py: send_email_confirmation_request / notify_comment_followers);
 # these entries override its generic lowercase wording. English in both
 # catalogues on purpose — the email bodies themselves are English
 # (templates/django_comments_xtd/email_*.html).
+#: ajna_health_lens/i18n_strings.py:18
 msgid "comment confirmation request"
 msgstr "Confirm your comment"
 
+#: ajna_health_lens/i18n_strings.py:19
 msgid "new comment posted"
 msgstr "New comment in a discussion you follow"
+
+#: ajna_health_lens/i18n_strings.py:21
+msgid "Notify me about follow-up comments"
+msgstr ""
+
+#: ajna_health_lens/i18n_strings.py:22
+msgid "Name"
+msgstr ""
+
+#: ajna_health_lens/i18n_strings.py:23
+msgid "name"
+msgstr ""
+
+#: ajna_health_lens/i18n_strings.py:24
+msgid "Mail"
+msgstr ""
+
+#: ajna_health_lens/i18n_strings.py:25
+msgid "Required for comment verification"
+msgstr ""
+
+#: ajna_health_lens/i18n_strings.py:26
+msgid "mail address"
+msgstr ""
+
+#: ajna_health_lens/i18n_strings.py:27
+msgid "Your comment"
+msgstr ""
+
+#: ajna_health_lens/i18n_strings.py:29
+msgid "Illuminating Health Research"
+msgstr ""
+
+#: articles/models.py:71
+msgid "Original Research"
+msgstr ""
+
+#: articles/models.py:72
+msgid "Review Article"
+msgstr ""
+
+#: articles/models.py:73
+msgid "Case Report"
+msgstr ""
+
+#: articles/models.py:74
+msgid "Short Communication"
+msgstr ""
+
+#: articles/models.py:75
+msgid "Methodology Paper"
+msgstr ""
+
+#: articles/models.py:76 templates/home.html:332
+msgid "Editorial"
+msgstr ""
+
+#: articles/models.py:77
+msgid "News & Commentary"
+msgstr ""
+
+#: articles/models.py:78
+msgid "Letter to Editor"
+msgstr ""
+
+#: articles/models.py:81
+msgid "Free"
+msgstr ""
+
+#: articles/models.py:82
+msgid "Subscription"
+msgstr ""
+
+#: articles/models.py:83
+msgid "Pay-per-article (special)"
+msgstr ""
+
+#: articles/views.py:726
+msgid "Removed from your reading list."
+msgstr ""
+
+#: articles/views.py:728
+msgid "Saved to your reading list."
+msgstr ""
+
+#: articles/views.py:745
+msgid "You don't have a gift available for this article right now."
+msgstr ""
+
+#: articles/views.py:747
+msgid "Your gift link is ready — copy it below to share."
+msgstr ""
+
+#: articles/views.py:964 sections/views.py:86
+#, python-format
+msgid "Unfollowed \"%(name)s\"."
+msgstr ""
+
+#: articles/views.py:969 sections/views.py:88
+#, python-format
+msgid ""
+"Following \"%(name)s\" — new articles will appear in your feed and weekly "
+"digest."
+msgstr ""
+
+#: newsletter/views.py:47
+msgid "You're already subscribed."
+msgstr ""
+
+#: newsletter/views.py:53 newsletter/views.py:56
+msgid "Check your email to confirm your subscription."
+msgstr ""
+
+#: newsletter/views.py:58
+msgid "Enter a valid email address."
+msgstr ""
+
+#: templates/articles/article_detail.html:28
+msgid "PREVIEW MODE — nothing has been saved. Close this tab to keep editing."
+msgstr ""
+
+#: templates/articles/article_detail.html:46
+msgid "Share on X"
+msgstr ""
+
+#: templates/articles/article_detail.html:50
+msgid "Share on LinkedIn"
+msgstr ""
+
+#: templates/articles/article_detail.html:54
+#: templates/articles/article_detail.html:330
+msgid "Copy link"
+msgstr ""
+
+#: templates/articles/article_detail.html:61
+msgid "Copy short link"
+msgstr ""
+
+#: templates/articles/article_detail.html:118
+#: templates/articles/article_list.html:97
+#: templates/articles/search_results.html:38 templates/home.html:46
+#: templates/home.html:154 templates/home.html:191 templates/home.html:233
+#: templates/issues/issue_detail.html:56
+msgid "Editorial staff"
+msgstr ""
+
+#: templates/articles/article_detail.html:130 templates/home.html:56
+msgid "min read"
+msgstr ""
+
+#: templates/articles/article_detail.html:141
+msgid "✓ SAVED"
+msgstr ""
+
+#: templates/articles/article_detail.html:141
+msgid "+ SAVE FOR LATER"
+msgstr ""
+
+#: templates/articles/article_detail.html:147
+msgid "LOG IN TO SAVE"
+msgstr ""
+
+#: templates/articles/article_detail.html:156
+msgid "DOWNLOAD PDF"
+msgstr ""
+
+#: templates/articles/article_detail.html:164
+msgid "↻ REFRESH GIFT LINK"
+msgstr ""
+
+#: templates/articles/article_detail.html:164
+msgid "🎁 GIFT THIS ARTICLE"
+msgstr ""
+
+#: templates/articles/article_detail.html:175
+msgid "Text size"
+msgstr ""
+
+#: templates/articles/article_detail.html:176
+msgid "Decrease text size"
+msgstr ""
+
+#: templates/articles/article_detail.html:176
+msgid "Smaller text"
+msgstr ""
+
+#: templates/articles/article_detail.html:178
+msgid "Default text size"
+msgstr ""
+
+#: templates/articles/article_detail.html:180
+msgid "Increase text size"
+msgstr ""
+
+#: templates/articles/article_detail.html:180
+msgid "Larger text"
+msgstr ""
+
+#: templates/articles/article_detail.html:189
+msgid ""
+"Share this link — anyone who opens it reads the full article free, no "
+"account or subscription needed, for 14 days."
+msgstr ""
+
+#: templates/articles/article_detail.html:190
+msgid "You've used all your gifts for this month."
+msgstr ""
+
+#: templates/articles/article_detail.html:190
+#, python-format
+msgid "You have %(counter)s gift left this month."
+msgid_plural "You have %(counter)s gifts left this month."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/articles/article_detail.html:197
+msgid "COPY"
+msgstr ""
+
+#: templates/articles/article_detail.html:220
+#, python-format
+msgid ""
+"🎁 This article was gifted to you by <strong class=\"text-"
+"foreground\">%(gifter)s</strong> — free to read, no subscription needed."
+msgstr ""
+
+#: templates/articles/article_detail.html:230
+#, python-format
+msgid ""
+"You've read <strong class=\"text-foreground\">%(used)s</strong> of your "
+"<strong class=\"text-foreground\">%(limit)s</strong> free subscription "
+"articles this month."
+msgstr ""
+
+#: templates/articles/article_detail.html:234
+msgid "SUBSCRIBE FOR UNLIMITED"
+msgstr ""
+
+#: templates/articles/article_detail.html:250
+msgid "Full text has not been added for this article yet."
+msgstr ""
+
+#: templates/articles/article_detail.html:255
+msgid "Archive Access Required"
+msgstr ""
+
+#: templates/articles/article_detail.html:257
+msgid ""
+"This is an archived article — full-text access requires a subscription plan "
+"with archive access, regardless of this article's original access tier."
+msgstr ""
+
+#: templates/articles/article_detail.html:260
+msgid "Special Article"
+msgstr ""
+
+#: templates/articles/article_detail.html:262
+#, python-format
+msgid ""
+"This is a one-time-purchase special article — ₹%(price)s for full access, or "
+"read it free with an active subscription."
+msgstr ""
+
+#: templates/articles/article_detail.html:265
+msgid "Subscription Required"
+msgstr ""
+
+#: templates/articles/article_detail.html:267
+msgid "This article requires an active subscription for full-text access."
+msgstr ""
+
+#: templates/articles/article_detail.html:275
+#, python-format
+msgid "BUY FOR ₹%(price)s"
+msgstr ""
+
+#: templates/articles/article_detail.html:280 templates/base.html:485
+#: templates/home.html:269
+msgid "SUBSCRIBE"
+msgstr ""
+
+#: templates/articles/article_detail.html:285
+msgid "Log in"
+msgstr ""
+
+#: templates/articles/article_detail.html:286
+msgid "to subscribe or purchase this article."
+msgstr ""
+
+#: templates/articles/article_detail.html:294
+msgid "References"
+msgstr ""
+
+#: templates/articles/article_detail.html:317
+msgid "Cite this article"
+msgstr ""
+
+#: templates/articles/article_detail.html:321
+msgid "Plain text"
+msgstr ""
+
+#: templates/articles/article_detail.html:327
+msgid "Share:"
+msgstr ""
+
+#: templates/articles/article_detail.html:329
+msgid "LinkedIn"
+msgstr ""
+
+#: templates/articles/article_detail.html:331
+msgid "Short link"
+msgstr ""
+
+#: templates/articles/article_detail.html:338
+msgid "Comments"
+msgstr ""
+
+#: templates/articles/article_detail.html:350
+msgid "Almost there — please confirm your email."
+msgstr ""
+
+#: templates/articles/article_detail.html:352
+#, python-format
+msgid ""
+"We've sent a confirmation link to <span class=\"font-medium text-"
+"foreground\">%(email)s</span>."
+msgstr ""
+
+#: templates/articles/article_detail.html:352
+msgid "We've sent a confirmation link to your email address."
+msgstr ""
+
+#: templates/articles/article_detail.html:353
+msgid ""
+"Your comment will appear here once you click it. Can't find it? Check your "
+"spam folder."
+msgstr ""
+
+#: templates/articles/article_detail.html:357
+msgid "Thanks for confirming — your comment is now live."
+msgstr ""
+
+#: templates/articles/article_detail.html:357
+msgid "Your comment has been posted."
+msgstr ""
+
+#: templates/articles/article_detail.html:360
+msgid "View your comment ↓"
+msgstr ""
+
+#: templates/articles/article_detail.html:377
+msgid "In this article"
+msgstr ""
+
+#: templates/articles/article_detail.html:378
+msgid "IN THIS ARTICLE"
+msgstr ""
+
+#: templates/articles/article_detail.html:394
+msgid "ABOUT THE AUTHOR"
+msgstr ""
+
+#: templates/articles/article_detail.html:420
+msgid "MORE BY THIS AUTHOR →"
+msgstr ""
+
+#: templates/articles/article_detail.html:428 templates/home.html:81
+msgid "TRENDING THIS WEEK"
+msgstr ""
+
+#: templates/articles/article_detail.html:454
+msgid "Download full-text PDF →"
+msgstr ""
+
+#: templates/articles/article_detail.html:467
+msgid "RELATED READING"
+msgstr ""
+
+#: templates/articles/article_detail.html:486
+#: templates/articles/article_list.html:105 templates/home.html:158
+msgid "min"
+msgstr ""
+
+#: templates/articles/article_list.html:22
+msgid "Articles"
+msgstr ""
+
+#: templates/articles/article_list.html:27
+msgid "Search by keyword…"
+msgstr ""
+
+#: templates/articles/article_list.html:31
+#: templates/articles/search_results.html:15
+msgid "SEARCH"
+msgstr ""
+
+#: templates/articles/article_list.html:37
+msgid "Tagged"
+msgstr ""
+
+#: templates/articles/article_list.html:38
+msgid "Clear"
+msgstr ""
+
+#: templates/articles/article_list.html:46
+msgid "FOLLOWING ✓"
+msgstr ""
+
+#: templates/articles/article_list.html:46
+msgid "+ FOLLOW"
+msgstr ""
+
+#: templates/articles/article_list.html:52
+msgid "LOG IN TO FOLLOW"
+msgstr ""
+
+#: templates/articles/article_list.html:62
+msgid "ALL"
+msgstr ""
+
+#: templates/articles/article_list.html:85
+msgid "PINNED ·"
+msgstr ""
+
+#: templates/articles/article_list.html:110
+msgid "No articles published yet."
+msgstr ""
+
+#: templates/articles/search_results.html:9 templates/base.html:314
+msgid "Search"
+msgstr ""
+
+#: templates/articles/search_results.html:12
+msgid "Title, abstract, keywords, or author"
+msgstr ""
+
+#: templates/articles/search_results.html:21
+#, python-format
+msgid "%(counter)s RESULT FOR \"%(query)s\""
+msgid_plural "%(counter)s RESULTS FOR \"%(query)s\""
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/articles/search_results.html:49
+msgid "No articles matched your search."
+msgstr ""
+
+#: templates/base.html:264
+msgid "LATEST ISSUE"
+msgstr ""
+
+#: templates/base.html:279
+msgid "Menu"
+msgstr ""
+
+#: templates/base.html:288 templates/base.html:408
+msgid "Search…"
+msgstr ""
+
+#: templates/base.html:308 templates/base.html:439
+msgid "Language"
+msgstr ""
+
+#: templates/base.html:342 templates/base.html:423
+msgid "Dashboard"
+msgstr ""
+
+#: templates/base.html:346 templates/base.html:425
+msgid "For You"
+msgstr ""
+
+#: templates/base.html:349 templates/base.html:426
+msgid "Reading List"
+msgstr ""
+
+#: templates/base.html:352 templates/base.html:362 templates/base.html:427
+msgid "Profile"
+msgstr ""
+
+#: templates/base.html:357 templates/base.html:430
+msgid "Log out"
+msgstr ""
+
+#: templates/base.html:373
+msgid "LOGIN"
+msgstr ""
+
+#: templates/base.html:377
+msgid "REGISTER"
+msgstr ""
+
+#: templates/base.html:387 templates/base.html:412
+msgid "HOME"
+msgstr ""
+
+#: templates/base.html:414
+msgid "ARTICLES"
+msgstr ""
+
+#: templates/base.html:415 templates/base.html:506
+msgid "ABOUT"
+msgstr ""
+
+#: templates/base.html:416
+msgid "PITCH A STORY"
+msgstr ""
+
+#: templates/base.html:433
+msgid "Login"
+msgstr ""
+
+#: templates/base.html:434 templates/base.html:509
+msgid "Register"
+msgstr ""
+
+#: templates/base.html:474
+msgid "NEWSLETTER"
+msgstr ""
+
+#: templates/base.html:475
+msgid "Free — the latest articles and news, straight to your inbox."
+msgstr ""
+
+#: templates/base.html:491
+msgid "SECTIONS"
+msgstr ""
+
+#: templates/base.html:492
+msgid "Home"
+msgstr ""
+
+#: templates/base.html:496
+msgid "Subscribe"
+msgstr ""
+
+#: templates/base.html:499
+msgid "JOURNAL"
+msgstr ""
+
+#: templates/base.html:500
+msgid "Issue Archive"
+msgstr ""
+
+#: templates/base.html:501
+msgid "Article Archive"
+msgstr ""
+
+#: templates/base.html:502
+msgid "Research"
+msgstr ""
+
+#: templates/base.html:503
+msgid "Editorial Policy"
+msgstr ""
+
+#: templates/base.html:507
+msgid "Editorial Board"
+msgstr ""
+
+#: templates/base.html:508
+msgid "Policies"
+msgstr ""
+
+#: templates/base.html:519
+msgid "All rights reserved."
+msgstr ""
+
+#: templates/coming_soon.html:8
+msgid "Coming Soon"
+msgstr ""
+
+#: templates/coming_soon.html:34
+msgid "Coming soon."
+msgstr ""
+
+#: templates/coming_soon.html:36
+#, python-format
+msgid ""
+"We're putting the finishing touches on %(journal)s — curated health news, "
+"commentary, and editorial coverage. Check back soon."
+msgstr ""
+
+#: templates/coming_soon.html:49
+msgid "EDITORIAL LOGIN →"
+msgstr ""
+
+#: templates/comments/form.html:35
+msgid "Comment"
+msgstr ""
+
+#: templates/comments/form.html:69
+msgid "Post Comment"
+msgstr ""
+
+#: templates/comments/posted.html:4
+msgid "Confirm your comment"
+msgstr ""
+
+#: templates/comments/posted.html:9
+msgid "Almost there"
+msgstr ""
+
+#: templates/comments/posted.html:11
+msgid ""
+"We've sent a confirmation link to your email address — click it to publish "
+"your comment."
+msgstr ""
+
+#: templates/comments/posted.html:15
+msgid "Back to"
+msgstr ""
+
+#: templates/django_comments_xtd/comment_tree.html:19
+msgid "STAFF"
+msgstr ""
+
+#: templates/django_comments_xtd/comment_tree.html:22
+msgid "ago"
+msgstr ""
+
+#: templates/django_comments_xtd/comment_tree.html:26
+msgid "This comment has been removed."
+msgstr ""
+
+#: templates/django_comments_xtd/comment_tree.html:34
+msgid "REPLY"
+msgstr ""
+
+#: templates/django_comments_xtd/comment_tree.html:39
+msgid "REMOVE"
+msgstr ""
+
+#: templates/django_comments_xtd/reply.html:5
+#: templates/django_comments_xtd/reply.html:10
+msgid "Reply to comment"
+msgstr ""
+
+#: templates/home.html:32
+msgid "Cover Story · Featured"
+msgstr ""
+
+#: templates/home.html:60
+msgid "READ THE FULL STORY →"
+msgstr ""
+
+#: templates/home.html:71
+msgid "No articles published yet — check back soon."
+msgstr ""
+
+#: templates/home.html:96
+msgid "GOT A STORY?"
+msgstr ""
+
+#: templates/home.html:98
+msgid "Pitch a health story to our editors."
+msgstr ""
+
+#: templates/home.html:100
+msgid "No account, no manuscript — just the idea."
+msgstr ""
+
+#: templates/home.html:104
+msgid "PITCH A STORY →"
+msgstr ""
+
+#: templates/home.html:127
+msgid "Latest News"
+msgstr ""
+
+#: templates/home.html:130
+msgid "ALL NEWS →"
+msgstr ""
+
+#: templates/home.html:172
+msgid "Opinion &amp; Commentary"
+msgstr ""
+
+#: templates/home.html:175
+msgid "ALL OPINION →"
+msgstr ""
+
+#: templates/home.html:210
+msgid "Peer-Reviewed Research"
+msgstr ""
+
+#: templates/home.html:211
+msgid "From the Journal"
+msgstr ""
+
+#: templates/home.html:214
+msgid "BROWSE ARCHIVE →"
+msgstr ""
+
+#: templates/home.html:224
+msgid "Online first"
+msgstr ""
+
+#: templates/home.html:239
+msgid "DOI"
+msgstr ""
+
+#: templates/home.html:239
+msgid "Read more →"
+msgstr ""
+
+#: templates/home.html:255
+msgid "FREE NEWSLETTER"
+msgstr ""
+
+#: templates/home.html:257
+msgid "Get our best health journalism in your inbox."
+msgstr ""
+
+#: templates/home.html:259
+msgid "No spam. Unsubscribe anytime."
+msgstr ""
+
+#: templates/home.html:265
+msgid "you@example.com"
+msgstr ""
+
+#: templates/home.html:282
+msgid "Special Issues"
+msgstr ""
+
+#: templates/home.html:285
+msgid "ALL ISSUES →"
+msgstr ""
+
+#: templates/home.html:301
+msgid "Available Now"
+msgstr ""
+
+#: templates/home.html:303
+msgid "READ →"
+msgstr ""
+
+#: templates/home.html:309
+msgid "FORTHCOMING"
+msgstr ""
+
+#: templates/home.html:317
+msgid "In production"
+msgstr ""
+
+#: templates/home.html:333
+msgid "Board &amp; Policies"
+msgstr ""
+
+#: templates/home.html:335
+#, python-format
+msgid ""
+"%(journal)s is governed by an independent editorial board. Peer review for "
+"original research is conducted externally via OJS."
+msgstr ""
+
+#: templates/home.html:339
+msgid "EDITORIAL POLICY →"
+msgstr ""
+
+#: templates/issues/issue_detail.html:19
+msgid "ISSUE"
+msgstr ""
+
+#: templates/issues/issue_detail.html:33
+msgid "IN THIS ISSUE"
+msgstr ""
+
+#: templates/issues/issue_detail.html:61
+msgid "pp."
+msgstr ""
+
+#: templates/issues/issue_detail.html:67
+msgid "No articles assigned to this issue yet."
+msgstr ""
+
+#: templates/issues/issue_list.html:9
+msgid "Issues"
+msgstr ""
+
+#: templates/issues/issue_list.html:10
+msgid "Curated story trails — ongoing coverage grouped by topic."
+msgstr ""
+
+#: templates/issues/issue_list.html:35
+msgid "No issues published yet."
+msgstr ""
+
+#: templates/newsletter/confirmed.html:4
+msgid "Subscription Confirmed"
+msgstr ""
+
+#: templates/newsletter/confirmed.html:8
+#: templates/newsletter/unsubscribed.html:8
+msgid "Newsletter"
+msgstr ""
+
+#: templates/newsletter/confirmed.html:9
+msgid "You're confirmed"
+msgstr ""
+
+#: templates/newsletter/confirmed.html:11
+#, python-format
+msgid ""
+"%(email)s will now receive our newsletter. You can unsubscribe at any time "
+"from the link in any issue."
+msgstr ""
+
+#: templates/newsletter/confirmed.html:14
+#: templates/newsletter/unsubscribed.html:14
+msgid "BACK TO HOME →"
+msgstr ""
+
+#: templates/newsletter/unsubscribed.html:4
+msgid "Unsubscribed"
+msgstr ""
+
+#: templates/newsletter/unsubscribed.html:9
+msgid "You're unsubscribed"
+msgstr ""
+
+#: templates/newsletter/unsubscribed.html:11
+#, python-format
+msgid ""
+"%(email)s will no longer receive our newsletter. Changed your mind? You can "
+"sign up again anytime."
+msgstr ""

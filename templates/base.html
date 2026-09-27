@@ -2,6 +2,15 @@
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KDLXMLM9WD"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-KDLXMLM9WD');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
@@ -251,9 +260,9 @@
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <span class="font-mono-editorial text-xs tracking-widest opacity-80">
                 {% if latest_issue %}
-                    LATEST ISSUE: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}
+                    {% trans "LATEST ISSUE" %}: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}
                 {% else %}
-                    {{ JOURNAL_TAGLINE|upper }}
+                    {% trans JOURNAL_TAGLINE as tagline %}{{ tagline|upper }}
                 {% endif %}
             </span>
             <span class="font-mono-editorial text-xs tracking-widest opacity-60">
@@ -266,7 +275,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
             <div class="header-top-collapse">
             <div class="header-top-collapse-inner flex items-center justify-between py-4 sm:py-5 border-b border-border">
-                <button type="button" id="mobile-menu-button" aria-label="Menu" aria-expanded="false"
+                <button type="button" id="mobile-menu-button" aria-label="{% trans 'Menu' %}" aria-expanded="false"
                         class="md:hidden -ml-2 p-2 text-foreground">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
@@ -286,7 +295,7 @@
                         {{ JOURNAL_NAME|upper }}
                     </h1>
                     <p id="header-tagline" class="hidden sm:block font-mono-editorial text-[0.6rem] tracking-[0.25em] text-muted-foreground mt-1">
-                        {{ JOURNAL_TAGLINE|upper }}
+                        {% trans JOURNAL_TAGLINE as tagline %}{{ tagline|upper }}
                     </p>
                 </a>
 
@@ -294,13 +303,13 @@
                     <form action="{% url 'set_language' %}" method="post" class="hidden md:block">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.path }}">
-                        <select name="language" onchange="this.form.submit()" aria-label="Language"
+                        <select name="language" onchange="this.form.submit()" aria-label="{% trans 'Language' %}"
                                 class="font-mono-editorial text-xs tracking-widest bg-transparent border-0 outline-none cursor-pointer text-muted-foreground hover:text-foreground">
                             <option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
                             <option value="ne" {% if request.LANGUAGE_CODE == 'ne' %}selected{% endif %}>नेपाली</option>
                         </select>
                     </form>
-                    <a href="{% url 'articles:search' %}" aria-label="Search" class="md:hidden p-2 -mr-2 text-foreground">
+                    <a href="{% url 'articles:search' %}" aria-label="{% trans 'Search' %}" class="md:hidden p-2 -mr-2 text-foreground">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
                         </svg>
@@ -328,17 +337,17 @@
                                 </div>
                                 {% if user.is_editorial_staff %}
                                     <a href="{% url 'admin_custom:dashboard' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
-                                        Dashboard
+                                        {% trans "Dashboard" %}
                                     </a>
                                 {% endif %}
                                 <a href="{% url 'articles:for_you' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
-                                    For You
+                                    {% trans "For You" %}
                                 </a>
                                 <a href="{% url 'articles:reading_list' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
-                                    Reading List
+                                    {% trans "Reading List" %}
                                 </a>
                                 <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm hover:bg-secondary">
-                                    Profile
+                                    {% trans "Profile" %}
                                 </a>
                                 <form method="post" action="{% url 'users:logout' %}">
                                     {% csrf_token %}
@@ -348,7 +357,7 @@
                                 </form>
                             </div>
                         </div>
-                        <a href="{% url 'users:profile' %}" class="md:hidden shrink-0" aria-label="Profile">
+                        <a href="{% url 'users:profile' %}" class="md:hidden shrink-0" aria-label="{% trans 'Profile' %}">
                             {% if user.photo %}
                                 <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover">
                             {% else %}
@@ -359,11 +368,11 @@
                         </a>
                     {% else %}
                         <a href="{% url 'users:login' %}" class="hidden md:inline font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-foreground">
-                            LOGIN
+                            {% trans "LOGIN" %}
                         </a>
                         <a href="{% url 'users:register' %}"
                            class="hidden md:inline font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:bg-foreground hover:text-primary-foreground transition-colors">
-                            REGISTER
+                            {% trans "REGISTER" %}
                         </a>
                     {% endif %}
                 </div>
@@ -373,20 +382,20 @@
             <nav class="hidden md:flex flex-wrap items-center justify-center gap-x-1">
                 <a href="{% url 'articles:home' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' or path == '/index/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
-                    HOME
+                    {% trans "HOME" %}
                 </a>
                 {% include 'includes/main_nav.html' with mobile=False %}
                 {% comment %} <a href="{% url 'articles:article_list' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/articles/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
-                    ARTICLES
+                    {% trans "ARTICLES" %}
                 </a>
                 <a href="{% url 'editorial_board:public_list' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/about/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
-                    ABOUT
+                    {% trans "ABOUT" %}
                 </a>
                 <a href="{% url 'pitches:pitch_create' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if '/pitches/' in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
-                    PITCH A STORY
+                    {% trans "PITCH A STORY" %}
                 </a> {% endcomment %}
             </nav>
         </div>
@@ -397,34 +406,34 @@
                        class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
             </form>
             <nav class="px-4 py-4 space-y-1">
-                <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' or path == '/index/' %}text-accent{% endif %}">HOME</a>
+                <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' or path == '/index/' %}text-accent{% endif %}">{% trans "HOME" %}</a>
                 {% include 'includes/main_nav.html' with mobile=True %}
-                <a href="{% url 'articles:article_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">ARTICLES</a>
-                <a href="{% url 'editorial_board:public_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">ABOUT</a>
-                <a href="{% url 'pitches:pitch_create' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/pitches/' in path %}text-accent{% endif %}">PITCH A STORY</a>
+                <a href="{% url 'articles:article_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">{% trans "ARTICLES" %}</a>
+                <a href="{% url 'editorial_board:public_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">{% trans "ABOUT" %}</a>
+                <a href="{% url 'pitches:pitch_create' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/pitches/' in path %}text-accent{% endif %}">{% trans "PITCH A STORY" %}</a>
             </nav>
             <div class="border-t border-border px-4 py-4">
                 {% if user.is_authenticated %}
                     <p class="font-medium text-sm">{{ user.get_full_name }}</p>
                     <p class="font-mono-editorial text-xs text-muted-foreground mb-3">{{ user.get_role_display }}</p>
                     {% if user.is_editorial_staff %}
-                        <a href="{% url 'admin_custom:dashboard' %}" class="block py-2 text-sm">Dashboard</a>
+                        <a href="{% url 'admin_custom:dashboard' %}" class="block py-2 text-sm">{% trans "Dashboard" %}</a>
                     {% endif %}
-                    <a href="{% url 'articles:for_you' %}" class="block py-2 text-sm">For You</a>
-                    <a href="{% url 'articles:reading_list' %}" class="block py-2 text-sm">Reading List</a>
-                    <a href="{% url 'users:profile' %}" class="block py-2 text-sm">Profile</a>
+                    <a href="{% url 'articles:for_you' %}" class="block py-2 text-sm">{% trans "For You" %}</a>
+                    <a href="{% url 'articles:reading_list' %}" class="block py-2 text-sm">{% trans "Reading List" %}</a>
+                    <a href="{% url 'users:profile' %}" class="block py-2 text-sm">{% trans "Profile" %}</a>
                     <form method="post" action="{% url 'users:logout' %}">
                         {% csrf_token %}
                         <button type="submit" class="w-full text-left py-2 text-sm">{% trans 'Log out' %}</button>
                     </form>
                 {% else %}
-                    <a href="{% url 'users:login' %}" class="block py-2 text-sm">Login</a>
-                    <a href="{% url 'users:register' %}" class="block py-2 text-sm font-semibold">Register</a>
+                    <a href="{% url 'users:login' %}" class="block py-2 text-sm">{% trans "Login" %}</a>
+                    <a href="{% url 'users:register' %}" class="block py-2 text-sm font-semibold">{% trans "Register" %}</a>
                 {% endif %}
                 <form action="{% url 'set_language' %}" method="post" class="mt-3 pt-3 border-t border-border">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">
-                    <select name="language" onchange="this.form.submit()" aria-label="Language"
+                    <select name="language" onchange="this.form.submit()" aria-label="{% trans 'Language' %}"
                             class="font-mono-editorial text-xs tracking-widest bg-transparent border border-border px-2 py-1.5 outline-none cursor-pointer">
                         <option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
                         <option value="ne" {% if request.LANGUAGE_CODE == 'ne' %}selected{% endif %}>नेपाली</option>
@@ -460,7 +469,7 @@
             <div class="border-b border-white/10 pb-8 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-1">{% trans 'NEWSLETTER' %}</p>
-                    <p class="text-sm opacity-70">Free — the latest articles and news, straight to your inbox.</p>
+                    <p class="text-sm opacity-70">{% trans "Free — the latest articles and news, straight to your inbox." %}</p>
                 </div>
                 <form method="post" action="{% url 'newsletter:subscribe' %}" class="flex gap-2 w-full md:w-auto">
                     {% csrf_token %}
@@ -477,24 +486,24 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'SECTIONS' %}</p>
-                    <a href="{% url 'articles:home' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Home</a>
+                    <a href="{% url 'articles:home' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Home" %}</a>
                     {% for section in nav_sections %}
                         <a href="{{ section.nav_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ section.name }}</a>
                     {% endfor %}
-                    <a href="{% url 'billing:plan_browse' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Subscribe</a>
+                    <a href="{% url 'billing:plan_browse' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Subscribe" %}</a>
                 </div>
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'JOURNAL' %}</p>
-                    <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Issue Archive</a>
-                    <a href="{% url 'articles:archive_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Article Archive</a>
-                    <a href="{% url 'articles:article_list' %}?type=original_research" class="block text-sm opacity-60 hover:opacity-100 mb-2">Research</a>
-                    <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">Editorial Policy</a>
+                    <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Issue Archive" %}</a>
+                    <a href="{% url 'articles:archive_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Article Archive" %}</a>
+                    <a href="{% url 'articles:article_list' %}?type=original_research" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Research" %}</a>
+                    <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Policy" %}</a>
                 </div>
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'ABOUT' %}</p>
-                    <a href="{% url 'editorial_board:public_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Editorial Board</a>
-                    <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">Policies</a>
-                    <a href="{% url 'users:register' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">Register</a>
+                    <a href="{% url 'editorial_board:public_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Board" %}</a>
+                    <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Policies" %}</a>
+                    <a href="{% url 'users:register' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Register" %}</a>
                 </div>
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{{ JOURNAL_NAME|upper }}</p>
@@ -504,7 +513,7 @@
             </div>
             <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
                 <p class="font-mono-editorial text-xs opacity-30">
-                    &copy; {% now "Y" %} {{ JOURNAL_NAME }}. All rights reserved.
+                    &copy; {% now "Y" %} {{ JOURNAL_NAME }}. {% trans "All rights reserved." %}
                 </p>
                 <p class="font-mono-editorial text-xs opacity-30">
                     ISSN {{ JOURNAL_ISSN }}

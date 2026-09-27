@@ -4,7 +4,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -13,7 +12,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView
 from django_ratelimit.decorators import ratelimit
 
-from ajna_health_lens.mail import send_notification_email
+from ajna_health_lens.mail import send_templated_email
 from articles.models import Article, ArticleAuthor
 from users.decorators import role_required
 from users.models import User
@@ -139,10 +138,10 @@ def pitch_detail(request, pk):
             # Only fires on an actual change, not every re-save of the same
             # text, and only if there's something to actually tell them.
             if pitch.editor_feedback and pitch.editor_feedback != previous_feedback and pitch.contact_email:
-                body = render_to_string('pitches/email/pitch_feedback.html', {'pitch': pitch})
-                send_notification_email(
+                send_templated_email(
                     subject=f'A note on your story pitch: "{pitch.title}"',
-                    message=body,
+                    template='pitches/email/pitch_feedback',
+                    context={'pitch': pitch},
                     recipient_list=[pitch.contact_email],
                     from_email=SUBMITTER_FROM_EMAIL,
                 )

@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
+from django.utils.translation import gettext as _
 from django_ratelimit.decorators import ratelimit
 
 from ajna_health_lens.comments_views import pop_comment_flash
@@ -722,9 +723,9 @@ def article_bookmark_toggle(request, slug):
     bookmark, created = Bookmark.objects.get_or_create(user=request.user, article=article)
     if not created:
         bookmark.delete()
-        messages.success(request, 'Removed from your reading list.')
+        messages.success(request, _('Removed from your reading list.'))
     else:
-        messages.success(request, 'Saved to your reading list.')
+        messages.success(request, _('Saved to your reading list.'))
     return redirect('articles:article_detail', slug=article.slug)
 
 
@@ -741,9 +742,9 @@ def article_gift_create(request, slug):
     article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
     gift = create_or_get_article_gift(request.user, article)
     if gift is None:
-        messages.error(request, "You don't have a gift available for this article right now.")
+        messages.error(request, _("You don't have a gift available for this article right now."))
     else:
-        messages.success(request, 'Your gift link is ready — copy it below to share.')
+        messages.success(request, _('Your gift link is ready — copy it below to share.'))
     return redirect('articles:article_detail', slug=article.slug)
 
 
@@ -960,12 +961,12 @@ def keyword_follow_toggle(request, slug):
     existing = KeywordFollow.objects.filter(user=request.user, keyword=keyword).first()
     if existing:
         existing.delete()
-        messages.success(request, f'Unfollowed "{keyword.name}".')
+        messages.success(request, _('Unfollowed "%(name)s".') % {'name': keyword.name})
     else:
         if keyword.articles.count() <= KEYWORD_FOLLOW_MIN_ARTICLES:
             raise Http404
         KeywordFollow.objects.create(user=request.user, keyword=keyword)
-        messages.success(request, f'Following "{keyword.name}" — new articles will appear in your feed and weekly digest.')
+        messages.success(request, _('Following "%(name)s" — new articles will appear in your feed and weekly digest.') % {'name': keyword.name})
     return redirect(f"{reverse('articles:article_list')}?keyword={keyword.slug}")
 
 
@@ -1203,7 +1204,18 @@ def article_preview(request):
         # so the preview always shows full text regardless of access_type.
         'show_full_text': True,
         'preview_mode': True,
-        'related_articles': [],
+        # Same rule as the live page (related_articles_for) — editor picks
+        # first, else text similarity — but from the form's unsaved picks,
+        # text and keywords, so the preview matches what saving would show.
+        'related_articles': (
+            [a for a in form.cleaned_data.get('related_articles', []) if a.pk != article.pk][:RELATED_ARTICLES_LIMIT]
+            or [
+                related for related, _score in similar_articles(
+                    article, limit=RELATED_ARTICLES_LIMIT,
+                    keyword_names=[kw.name for kw in form.cleaned_data.get('keywords', [])],
+                )
+            ]
+        ),
         # article.keyword_tags can't be queried — this instance is never
         # saved (see the view's docstring), so it has no pk. Pulled straight
         # from cleaned_data instead of the unsaved instance's M2M.

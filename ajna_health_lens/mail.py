@@ -39,3 +39,27 @@ def send_notification_email(*, subject, message, recipient_list, from_email=None
         # choice here rather than the code smell it usually is.
         logger.exception('Failed to send notification email (subject=%r, recipients=%r)', subject, recipient_list)
         return False
+
+
+def send_templated_email(*, subject, template, context, recipient_list, from_email=None):
+    """Renders `<template>.txt` (plain-text part) and `<template>.html` (the
+    branded HTML part, extending templates/email/base.html) and sends both
+    via send_notification_email — so every transactional email has the same
+    look and the same never-raise behaviour. `template` is the path without
+    extension, e.g. 'pitches/email/pitch_accepted'.
+    """
+    from django.conf import settings
+    from django.template.loader import render_to_string
+
+    context = {
+        'journal_name': settings.JOURNAL_NAME,
+        'site_url': settings.SITE_BASE_URL,
+        **context,
+    }
+    return send_notification_email(
+        subject=subject,
+        message=render_to_string(f'{template}.txt', context),
+        html_message=render_to_string(f'{template}.html', context),
+        recipient_list=recipient_list,
+        from_email=from_email,
+    )

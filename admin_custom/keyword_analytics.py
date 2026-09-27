@@ -2,14 +2,20 @@
 (KeywordAnalyticsView / KeywordAnalyticsDetailView / keyword_analytics_csv_export
 in admin_custom/views.py), built on articles.KeywordEvent.
 
-All day/hour bucketing is done in Python on localtime()'d timestamps, not a
-DB date-truncation query — same reason as admin_custom/views.py:_daily_counts
-and ads/views.py:_bucket_ad_events_by_day: MySQL's CONVERT_TZ() needs
-time-zone tables this project doesn't assume are loaded on the server.
+Day/hour bucketing happens in the database (GROUP BY), so a page load reads
+a few hundred aggregate rows rather than every event in the window — at
+real traffic a 90-day window is millions of impression rows. The catch is
+time zones: a named-zone conversion (CONVERT_TZ to 'Asia/Kathmandu') needs
+MySQL time-zone tables this project doesn't assume are loaded (see
+admin_custom/views.py:_daily_counts). Instead each timestamp is shifted by
+the site's current UTC offset inside the query and then grouped as UTC,
+which needs no tables. That's exact for TIME_ZONE = Asia/Kathmandu (+05:45,
+no daylight saving); a DST zone would be off by an hour around transitions.
 """
 import datetime
 
-from django.db.models import Count, Q
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F, Q
+from django.db.models.functions import ExtractHour, ExtractWeekDay, TruncDate
 from django.utils import timezone
 
 from articles.models import Article, Keyword, KeywordEvent
@@ -75,6 +81,19 @@ def _heat_style(count: int, max_count: int) -> tuple[str, bool]:
     return f'background-color: rgba({HEATMAP_RGB}, {alpha});', alpha > 0.55
 
 
+def _with_local_time(queryset):
+    """Annotates `local_ts`: occurred_at shifted to the site's local time
+    (see module docstring), for grouping with tzinfo=UTC below.
+    """
+    offset = timezone.localtime().utcoffset() or datetime.timedelta(0)
+    return queryset.annotate(
+        local_ts=ExpressionWrapper(F('occurred_at') + offset, output_field=DateTimeField()),
+    )
+
+
+UTC = datetime.timezone.utc
+
+
 def keyword_rows(window_start: datetime.datetime, query: str = '', sort: str = DEFAULT_SORT) -> list[dict]:
     """One row per Keyword: published-article count, followers, and
     impressions/clicks/CTR within the window. Sorted in Python — the CTR
@@ -132,9 +151,16 @@ def weekday_hour_heatmap(events_queryset) -> dict:
     clicks in the window (and, on the detail page, to one keyword).
     """
     grid = [[0] * 24 for _ in range(7)]
-    for occurred_at in events_queryset.values_list('occurred_at', flat=True):
-        local = timezone.localtime(occurred_at)
-        grid[local.weekday()][local.hour] += 1
+    buckets = (
+        _with_local_time(events_queryset)
+        .annotate(weekday=ExtractWeekDay('local_ts', tzinfo=UTC), hour=ExtractHour('local_ts', tzinfo=UTC))
+        .values('weekday', 'hour')
+        .annotate(count=Count('id'))
+        .order_by()
+    )
+    for row in buckets:
+        # ExtractWeekDay is 1=Sunday … 7=Saturday; the grid is Monday-first.
+        grid[(row['weekday'] + 5) % 7][row['hour']] += row['count']
 
     max_count = max(max(row) for row in grid)
     rows = []
@@ -191,14 +217,20 @@ def keyword_time_heatmap(keywords: list[Keyword], days: int) -> dict:
     """
     columns = _columns_for_window(days)
     counts = {kw.pk: [0] * len(columns) for kw in keywords}
-    events = KeywordEvent.objects.filter(
-        keyword__in=keywords, event_type=KeywordEvent.EventType.CLICK,
-        occurred_at__gte=window_start_for(days),
-    ).values_list('keyword_id', 'occurred_at')
-    for keyword_id, occurred_at in events:
-        index = _column_index(columns, timezone.localtime(occurred_at).date())
+    buckets = (
+        _with_local_time(KeywordEvent.objects.filter(
+            keyword__in=keywords, event_type=KeywordEvent.EventType.CLICK,
+            occurred_at__gte=window_start_for(days),
+        ))
+        .annotate(day=TruncDate('local_ts', tzinfo=UTC))
+        .values('keyword_id', 'day')
+        .annotate(count=Count('id'))
+        .order_by()
+    )
+    for row in buckets:
+        index = _column_index(columns, row['day'])
         if index is not None:
-            counts[keyword_id][index] += 1
+            counts[row['keyword_id']][index] += row['count']
 
     max_count = max([c for row in counts.values() for c in row] + [0])
     rows = []
@@ -218,14 +250,19 @@ def daily_trend(events_queryset, days: int) -> list[dict]:
     """
     columns = _columns_for_window(days)
     buckets = [{'label': col['label'], 'impressions': 0, 'clicks': 0} for col in columns]
-    for event_type, occurred_at in events_queryset.filter(
-        occurred_at__gte=window_start_for(days),
-    ).values_list('event_type', 'occurred_at'):
-        index = _column_index(columns, timezone.localtime(occurred_at).date())
+    daily = (
+        _with_local_time(events_queryset.filter(occurred_at__gte=window_start_for(days)))
+        .annotate(day=TruncDate('local_ts', tzinfo=UTC))
+        .values('event_type', 'day')
+        .annotate(count=Count('id'))
+        .order_by()
+    )
+    for row in daily:
+        index = _column_index(columns, row['day'])
         if index is None:
             continue
-        key = 'impressions' if event_type == KeywordEvent.EventType.IMPRESSION else 'clicks'
-        buckets[index][key] += 1
+        key = 'impressions' if row['event_type'] == KeywordEvent.EventType.IMPRESSION else 'clicks'
+        buckets[index][key] += row['count']
 
     max_value = max([b['impressions'] for b in buckets] + [b['clicks'] for b in buckets] + [1])
     for b in buckets:

@@ -8,6 +8,7 @@ from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView
+from django.utils.translation import gettext as _
 from django_q.models import Task
 from django_q.tasks import async_task
 from django_ratelimit.decorators import ratelimit
@@ -43,18 +44,18 @@ def subscribe(request):
                 email=email, defaults={'user': user},
             )
             if subscriber.status == Subscriber.Status.CONFIRMED:
-                messages.info(request, "You're already subscribed.")
+                messages.info(request, _("You're already subscribed."))
             else:
                 if not created and subscriber.status == Subscriber.Status.UNSUBSCRIBED:
                     subscriber.status = Subscriber.Status.PENDING
                     subscriber.save(update_fields=['status'])
                 send_confirmation_email(subscriber)
-                messages.success(request, 'Check your email to confirm your subscription.')
+                messages.success(request, _('Check your email to confirm your subscription.'))
         elif form.errors.get('website'):
             # Honeypot tripped — pretend it worked, don't tell the bot why.
-            messages.success(request, 'Check your email to confirm your subscription.')
+            messages.success(request, _('Check your email to confirm your subscription.'))
         else:
-            messages.error(request, 'Enter a valid email address.')
+            messages.error(request, _('Enter a valid email address.'))
     # `next` is attacker-controllable POST data on a public, unauthenticated
     # endpoint — url_has_allowed_host_and_scheme rejects an absolute/external
     # URL (open-redirect guard) rather than trusting it just because it was present.

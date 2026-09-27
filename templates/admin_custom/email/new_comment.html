@@ -1,0 +1,14 @@
+{% extends 'email/base.html' %}
+{% block title %}New comment{% endblock %}
+{% block preheader %}{{ comment.name }} commented on “{{ target }}”.{% endblock %}
+{% block eyebrow %}Editorial · Comments{% endblock %}
+{% block heading %}New comment on “{{ target }}”{% endblock %}
+{% block content %}
+    <p style="font-family: Arial, Helvetica, sans-serif; font-size:14px; color:#6b6860;">
+        {{ comment.name }}{% if comment.user_email %} &lt;{{ comment.user_email }}&gt;{% endif %}{% if not comment.user_id %} · confirmed by email{% endif %}
+    </p>
+    {% include 'email/includes/quote.html' with text=comment.comment|truncatewords:150 attribution=comment.name attribution_date=comment.submit_date %}
+    {% include 'email/includes/button.html' with url=comment_url label='View on the article' %}
+    <p style="font-size:14px; color:#6b6860;">Needs removing? <a href="{{ moderation_url }}" style="color:#c0392b;">Open comment moderation</a>.</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you're senior editorial staff on {{ journal_name }}.{% endblock %}

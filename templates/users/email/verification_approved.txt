@@ -1,0 +1,7 @@
+Hi {{ user.first_name }},
+
+Good news — your {{ journal_name }} account has been verified. You now have Verified Author status, and your profile shows as verified.
+
+View your profile: {{ profile_url }}
+
+— {{ journal_name }} Editorial Team

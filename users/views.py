@@ -90,6 +90,9 @@ class RateLimitedPasswordResetView(PasswordResetView):
     # submission of the un-rate-limited stock view would have crashed with
     # NoReverseMatch too; caught while adding this class's own tests.
     success_url = reverse_lazy('users:password_reset_done')
+    # Branded HTML part (templates/email/base.html layout); the plain-text
+    # part stays Django's default registration/password_reset_email.html.
+    html_email_template_name = 'registration/password_reset_email_html.html'
 
 
 @method_decorator(ratelimit(key='ip', rate='10/h', method='POST', block=True), name='dispatch')
