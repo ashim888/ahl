@@ -1321,6 +1321,93 @@ class ArticleCommentsTests(TestCase):
         self.assertEqual(mail.outbox[0].to, ['anon@example.com'])
         self.assertIn('confirm', mail.outbox[0].body)
 
+    def test_comment_count_is_per_article(self):
+        """"Comments (N)" counts only this article's comments — it used
+        get_xtdcomment_count "for articles.article", which is sitewide.
+        """
+        other = make_article('other-commented-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.client.force_login(self.reader)
+        for text in ('First on other.', 'Second on other.'):
+            self.client.post(reverse('comments-post-comment'), _comment_post_data(other, text))
+        self.client.post(reverse('comments-post-comment'), _comment_post_data(self.article, 'Only one here.'))
+        response = self.client.get(self.article.get_absolute_url())
+        self.assertContains(response, 'Comments (1)')
+        self.assertNotContains(response, 'Comments (3)')
+
+    def test_logged_in_post_redirects_to_comments_with_posted_notice(self):
+        from django_comments_xtd.models import XtdComment
+
+        self.client.force_login(self.reader)
+        response = self.client.post(
+            reverse('comments-post-comment'), _comment_post_data(self.article, 'Feedback please.'),
+        )
+        self.assertRedirects(response, f'{self.article.get_absolute_url()}#comments', fetch_redirect_response=False)
+        comment = XtdComment.objects.get(comment='Feedback please.')
+
+        page = self.client.get(self.article.get_absolute_url())
+        self.assertContains(page, 'Your comment has been posted.')
+        self.assertContains(page, f'href="#c{comment.pk}"')
+        # One-shot: gone on the next load.
+        self.assertNotContains(self.client.get(self.article.get_absolute_url()), 'Your comment has been posted.')
+
+    def test_anonymous_post_redirects_to_comments_with_check_email_notice(self):
+        response = self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(self.article, 'Pending comment.', name='Anon Reader', email='anon3@example.com'),
+        )
+        self.assertRedirects(response, f'{self.article.get_absolute_url()}#comments', fetch_redirect_response=False)
+        page = self.client.get(self.article.get_absolute_url())
+        self.assertContains(page, 'please confirm your email')
+        self.assertContains(page, 'anon3@example.com')
+
+    def test_confirmation_link_redirects_to_comments_with_live_notice(self):
+        import re
+
+        from django.core import mail
+
+        self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(self.article, 'Confirm-notice comment.', name='Anon Reader', email='anon5@example.com'),
+        )
+        self.client.get(self.article.get_absolute_url())  # consume the "check your email" notice
+        confirm_path = re.search(r'(/comments/confirm/\S+/)', mail.outbox[0].body).group(1)
+        response = self.client.get(confirm_path)
+        self.assertRedirects(response, f'{self.article.get_absolute_url()}#comments', fetch_redirect_response=False)
+        self.assertContains(self.client.get(self.article.get_absolute_url()), 'your comment is now live')
+
+    def test_notice_only_shows_on_the_commented_article(self):
+        other = make_article('notice-other-article', Article.ArticleType.NEWS_COMMENTARY)
+        self.client.force_login(self.reader)
+        self.client.post(reverse('comments-post-comment'), _comment_post_data(self.article, 'Here only.'))
+        self.assertNotContains(self.client.get(other.get_absolute_url()), 'Your comment has been posted.')
+        self.assertContains(self.client.get(self.article.get_absolute_url()), 'Your comment has been posted.')
+
+    def test_invalid_post_is_not_redirected(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('comments-post-comment'), _comment_post_data(self.article, ''))
+        self.assertEqual(response.status_code, 200)
+
+    def test_confirmed_anonymous_comment_appears_in_editorial_list(self):
+        import re
+
+        from django.core import mail
+
+        from users.models import User
+
+        self.client.post(
+            reverse('comments-post-comment'),
+            _comment_post_data(self.article, 'Moderate-me comment.', name='Anon Reader', email='anon4@example.com'),
+        )
+        confirm_path = re.search(r'(/comments/confirm/\S+/)', mail.outbox[0].body).group(1)
+        self.client.get(confirm_path)
+
+        editor = User.objects.create_user(
+            email='comment-list-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        response = self.client.get(reverse('admin_custom:manage_comment_list'))
+        self.assertContains(response, 'Moderate-me comment.')
+
     def test_confirming_anonymous_comment_publishes_it(self):
         import re
 

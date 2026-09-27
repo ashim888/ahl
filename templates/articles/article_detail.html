@@ -317,11 +317,36 @@
             </div>
 
             {% if not preview_mode %}
-                <div class="mt-12 pt-8 border-t-2 border-foreground">
-                    {% get_xtdcomment_count as comment_count for articles.article %}
+                <div id="comments" class="mt-12 pt-8 border-t-2 border-foreground">
+                    {% get_comment_count for article as comment_count %}
                     <h2 class="font-display text-xl font-bold mb-6" style="letter-spacing: -0.015em;">
                         Comments{% if comment_count %} ({{ comment_count }}){% endif %}
                     </h2>
+                    {% comment %}
+                    One-shot notice after posting/confirming a comment — set by
+                    ajna_health_lens/comments_views.py, which also redirects here
+                    (#comments) instead of the top of the page.
+                    {% endcomment %}
+                    {% if comment_flash %}
+                        <div role="status" class="mb-6 px-4 py-3 border text-sm
+                                    {% if comment_flash.status == 'pending' %}border-accent bg-accent/10{% else %}border-foreground bg-secondary{% endif %}">
+                            {% if comment_flash.status == 'pending' %}
+                                <p class="font-semibold">Almost there — please confirm your email.</p>
+                                <p class="mt-1 text-muted-foreground">
+                                    We've sent a confirmation link to
+                                    {% if comment_flash.email %}<span class="font-medium text-foreground">{{ comment_flash.email }}</span>{% else %}your email address{% endif %}.
+                                    Your comment will appear here once you click it. Can't find it? Check your spam folder.
+                                </p>
+                            {% else %}
+                                <p class="font-semibold">
+                                    {% if comment_flash.status == 'confirmed' %}Thanks for confirming — your comment is now live.{% else %}Your comment has been posted.{% endif %}
+                                </p>
+                                {% if comment_flash.comment_id %}
+                                    <a href="#c{{ comment_flash.comment_id }}" class="mt-1 inline-block font-mono-editorial text-xs underline hover:text-accent">View your comment ↓</a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% endif %}
                     {% render_comment_form for article %}
                     <div class="mt-2">
                         {% render_xtdcomment_tree for article %}
@@ -532,6 +557,17 @@ document.addEventListener('DOMContentLoaded', function () {
         var btn = document.getElementById(id);
         if (btn) btn.addEventListener('click', function () { copyLink(btn); });
     });
+
+    // Highlight the reader's just-posted/confirmed comment (see the
+    // comment_flash notice above the comment form).
+    {% if comment_flash.comment_id %}
+    var newComment = document.getElementById('c{{ comment_flash.comment_id }}');
+    if (newComment) {
+        newComment.style.transition = 'background-color 2s ease';
+        newComment.style.backgroundColor = 'rgba(250, 204, 21, 0.18)';
+        setTimeout(function () { newComment.style.backgroundColor = ''; }, 4000);
+    }
+    {% endif %}
 
     // Keyword Analytics (/editorial/keywords/) — reports a pill click in the
     // background while the link navigates as normal. sendBeacon survives the

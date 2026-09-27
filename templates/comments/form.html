@@ -14,10 +14,12 @@ styling from templates/base.html, so no per-field classes are needed here.
         {% if field.is_hidden %}{{ field }}{% endif %}
     {% endfor %}
     {% comment %}
-    Where to redirect after a successful post — back to the article, not
-    django_comments' generic "posted" page. Used from both
-    article_detail.html (where `article` is in scope) and reply.html
-    (where only `comment`, the parent being replied to, is).
+    Where to redirect after a successful post. ajna_health_lens/comments_views.py
+    overrides the redirect anyway (back to the article's #comments section,
+    with a "posted" / "check your email" notice), so this is only the
+    package-level fallback. Used from both article_detail.html (where
+    `article` is in scope) and reply.html (where only `comment`, the parent
+    being replied to, is).
     {% endcomment %}
     <input type="hidden" name="next" value="{% if article %}{% url 'articles:article_detail' article.slug %}{% elif comment %}{{ comment.content_object.get_absolute_url }}{% endif %}">
     {# Honeypot — real visitors never see this field; a bot that fills every field trips it. #}

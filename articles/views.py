@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 from django_ratelimit.decorators import ratelimit
 
+from ajna_health_lens.comments_views import pop_comment_flash
 from billing.access import (
     FREE_SAMPLE_LIMIT_PER_MONTH, GIFTABLE_ACCESS_TYPES, METERED_ACCESS_TYPES, article_is_accessible,
     consume_free_sample, create_or_get_article_gift, free_sample_reads_used, get_existing_article_gift,
@@ -511,6 +512,9 @@ class ArticleDetailView(DetailView):
                     context['gift_link'] = self.request.build_absolute_uri(
                         reverse('articles:article_gift_view', args=[self.object.slug, existing_gift.token]),
                     )
+        # One-shot "comment posted / check your email / now live" notice
+        # from ajna_health_lens/comments_views.py, shown in the comments section.
+        context['comment_flash'] = pop_comment_flash(self.request, self.request.path)
         context['keyword_list'] = list(self.object.keyword_tags.all())
         if view_counted:
             _record_keyword_impressions(self.request, self.object, context['keyword_list'])
