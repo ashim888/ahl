@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load news_time %}
 {% load i18n %}
 {% load ads_tags %}
 
@@ -13,7 +14,7 @@
         <a href="{% url 'articles:article_detail' hero_article.slug %}"
            class="lg:col-span-3 relative overflow-hidden bg-muted block" style="min-height: 480px;">
             {% if hero_article.featured_image %}
-                <img src="{{ hero_article.featured_image.url }}" alt="{{ hero_article.title }}"
+                <img src="{{ hero_article.featured_image.url }}" alt="{{ hero_article.featured_image_alt|default:hero_article.title }}"
                      class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             {% else %}
@@ -51,7 +52,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3 mt-4">
-                    <span class="font-mono-editorial text-xs text-muted-foreground">{{ hero_article.publication_date|date:"F j, Y" }}</span>
+                    <span class="font-mono-editorial text-xs text-muted-foreground">{{ hero_article.published_at|news_time }}</span>
                     <span class="text-border">·</span>
                     <span class="font-mono-editorial text-xs text-muted-foreground">{{ hero_article.estimated_read_minutes }} {% trans "min read" %}</span>
                 </div>
@@ -142,7 +143,7 @@ zone) fill the row, centered as a group.
         <div class="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-border">
             {% for article in opinion_pieces %}
                 <article class="article-link px-0 md:px-8 first:pl-0 last:pr-0 pb-8 md:pb-0">
-                    <div class="font-mono-editorial text-xs text-muted-foreground mb-3 pt-6 md:pt-0">{{ article.publication_date|date:"M j, Y" }}</div>
+                    <div class="font-mono-editorial text-xs text-muted-foreground mb-3 pt-6 md:pt-0">{{ article.published_at|news_time }}</div>
                     <h4 class="font-display text-xl font-bold leading-snug article-title mb-3" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h4>
@@ -246,7 +247,7 @@ zone) fill the row, centered as a group.
                             <h3 class="font-display text-xl font-bold leading-tight group-hover:text-accent transition-colors" style="letter-spacing: -0.01em;">{{ issue.title }}</h3>
                             {% if issue.editorial_note %}<p class="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-3">{{ issue.editorial_note }}</p>{% endif %}
                             <p class="mt-auto pt-4 font-mono-editorial text-xs text-muted-foreground">
-                                {% if issue.publication_date %}{{ issue.publication_date|date:"F Y" }}{% else %}{% trans "Available Now" %}{% endif %} · {% trans "READ →" %}
+                                {% if issue.published_at %}{{ issue.published_at|news_time }}{% else %}{% trans "Available Now" %}{% endif %} · {% trans "READ →" %}
                             </p>
                         </div>
                     </a>

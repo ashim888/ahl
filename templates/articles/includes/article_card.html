@@ -1,3 +1,4 @@
+{% load news_time %}
 {% load i18n %}
 {% comment %}
 Cover card for an article, matching the training course cards (cover on
@@ -7,7 +8,7 @@ Expects `article` with articleauthor_set prefetched (…__user).
 <article class="group relative flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all">
     <div class="aspect-video bg-secondary overflow-hidden">
         {% if article.featured_image %}
-            <img src="{{ article.featured_image.url }}" alt="{{ article.title }}" loading="lazy"
+            <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
                  class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
         {% else %}
             <div class="w-full h-full relative overflow-hidden" style="background: linear-gradient(135deg, #e8e4de 0%, #cfc9c0 100%);">
@@ -32,7 +33,7 @@ Expects `article` with articleauthor_set prefetched (…__user).
             {% endwith %}
             <span class="text-border">·</span>
             <span class="shrink-0">{{ article.estimated_read_minutes }} {% trans "min read" %}</span>
-            {% if article.publication_date %}<span class="text-border">·</span><span class="shrink-0">{{ article.publication_date|date:"M j" }}</span>{% endif %}
+            {% if article.published_at %}<span class="text-border">·</span><span class="shrink-0">{{ article.published_at|news_time }}</span>{% endif %}
         </div>
     </div>
 </article>

@@ -8,6 +8,7 @@ from django.urls import reverse
 def journal_settings(request):
     from issues.models import Issue  # local import: avoids a project->app import at module load time
 
+    from articles.breaking import current_breaking
     from articles.seo import sitewide_structured_data
     from sections.models import Section
 
@@ -29,6 +30,8 @@ def journal_settings(request):
         # meta_image_url (see templates/base.html) — Open Graph requires an
         # absolute URL, not a relative /static/ path.
         'default_og_image_url': default_og_image_url,
+        # Site-wide breaking-news banner (templates/base.html) — see articles/breaking.py.
+        'breaking_news': current_breaking(),
         # Fallback canonical URL for any page that doesn't set its own
         # canonical_url — request.path only, deliberately dropping the
         # querystring. Without this, base.html's old fallback

@@ -9,11 +9,14 @@ from django.core.cache import cache
 from django.db import IntegrityError
 from django.db.models import Case, Count, F, FloatField, IntegerField, Q, Value, When, prefetch_related_objects
 from django.db.models.expressions import RawSQL
-from django.http import HttpResponse, Http404, JsonResponse
+from django.core.exceptions import PermissionDenied
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.formats import date_format
+from django.utils.html import strip_tags
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
@@ -21,6 +24,7 @@ from django.utils.translation import gettext as _
 from django_ratelimit.decorators import ratelimit
 
 from ajna_health_lens.comments_views import pop_comment_flash
+from ajna_health_lens.mail import send_templated_email
 from billing.access import (
     FREE_SAMPLE_LIMIT_PER_MONTH, GIFTABLE_ACCESS_TYPES, METERED_ACCESS_TYPES, article_is_accessible,
     consume_free_sample, create_or_get_article_gift, free_sample_reads_used, get_existing_article_gift,
@@ -38,10 +42,15 @@ from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
-from .forms import ArticleAuthorFormSet, ArticleForm, DraftArticleForm, LenientArticleForm, PublishArticleForm
-from .models import (
-    HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Author, Bookmark, Keyword, KeywordEvent, KeywordFollow,
+from .forms import (
+    ArticleAuthorFormSet, ArticleCorrectionForm, ArticleForm, ArticleNoteForm, DraftArticleForm, LenientArticleForm,
+    PublishArticleForm, ScheduleArticleForm, edit_token_for,
 )
+from .models import (
+    HOME_SECTIONS_CACHE_KEY, Article, ArticleCorrection, ArticleNote, ArticleRevision, ArticleView, Author, Bookmark,
+    Keyword, KeywordEvent, KeywordFollow,
+)
+from .revisions import compare, record_revision, restore_revision
 
 # A keyword used on this many articles or fewer has nothing meaningful to
 # "follow" yet — a keyword used exactly once is structurally guaranteed to
@@ -174,7 +183,7 @@ def related_articles_for(article, limit: int = RELATED_ARTICLES_LIMIT) -> list:
     """
     curated = list(
         article.related_articles.filter(status=Article.Status.PUBLISHED)
-        .exclude(pk=article.pk).order_by('-publication_date', '-created_at')[:limit],
+        .exclude(pk=article.pk).order_by('-published_at', '-created_at')[:limit],
     )
     if curated:
         return curated
@@ -236,7 +245,7 @@ class HomeView(TemplateView):
         # -created_at as a tiebreaker: articles that share a publication_date
         # (or have none) still sort newest-first instead of by arbitrary DB order.
         published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
-            '-is_pinned', '-publication_date', '-created_at',
+            '-is_pinned', '-published_at', '-created_at',
         )
         used_pks = set()
 
@@ -341,7 +350,7 @@ class ArticleListView(ListView):
 
     def get_queryset(self):
         queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
-            '-is_pinned', '-publication_date', '-created_at',
+            '-is_pinned', '-published_at', '-created_at',
         ).prefetch_related('articleauthor_set__author__user')
         article_type = self.request.GET.get('type')
         if article_type:
@@ -413,7 +422,7 @@ class ArchiveListView(ListView):
     def get_queryset(self):
         return Article.objects.filter(
             status=Article.Status.ARCHIVED,
-        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -451,7 +460,7 @@ class ForYouView(ListView):
             Q(section_id__in=followed_section_ids) | Q(keyword_tags__in=followed_keyword_ids),
             status=Article.Status.PUBLISHED,
         ).distinct().order_by(
-            '-is_pinned', '-publication_date', '-created_at',
+            '-is_pinned', '-published_at', '-created_at',
         ).prefetch_related('articleauthor_set__author__user')
 
     def get_context_data(self, **kwargs):
@@ -543,6 +552,7 @@ class ArticleDetailView(DetailView):
         # from ajna_health_lens/comments_views.py, shown in the comments section.
         context['comment_flash'] = pop_comment_flash(self.request, self.request.path)
         context['keyword_list'] = list(self.object.keyword_tags.all())
+        context['corrections'] = list(self.object.corrections.all())
         if view_counted:
             _record_keyword_impressions(self.request, self.object, context['keyword_list'])
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
@@ -566,8 +576,9 @@ class ArticleDetailView(DetailView):
         # and search-engine structured data — the article page is the one
         # place on the site actually shared/linked out, so it's the one that
         # gets real per-page metadata rather than the sitewide default.
-        context['meta_title'] = self.object.title
-        context['meta_description'] = self.object.summary[:200]
+        # Search & social overrides (editor's "Search & social" card) win when set.
+        context['meta_title'] = self.object.seo_title or self.object.title
+        context['meta_description'] = self.object.seo_description or self.object.summary[:200]
         context['og_type'] = 'article'
         context['canonical_url'] = self.request.build_absolute_uri(self.request.path)
         context['short_url'] = self.request.build_absolute_uri(
@@ -576,11 +587,12 @@ class ArticleDetailView(DetailView):
         image_url = None
         if self.object.featured_image:
             image_url = self.request.build_absolute_uri(self.object.featured_image.url)
-        context['meta_image_url'] = image_url
+        share_image = self.object.social_image or self.object.featured_image
+        context['meta_image_url'] = self.request.build_absolute_uri(share_image.url) if share_image else None
         context['structured_data_json'] = news_article_structured_data(
             self.object, journal_name=settings.JOURNAL_NAME, canonical_url=context['canonical_url'],
             image_url=image_url, publisher_logo_url=self.request.build_absolute_uri(static('images/logo.png')),
-            authors=article_authors, keywords=context['keyword_list'],
+            authors=article_authors, keywords=context['keyword_list'], corrections=context['corrections'],
         )
         context['breadcrumb_json'] = breadcrumb_list_structured_data([
             ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
@@ -633,7 +645,7 @@ class AuthorDetailView(DetailView):
         author = self.object
         context['author_articles'] = author.articles.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user')
         context['board_membership'] = (
             author.user.board_memberships.filter(is_active=True).first() if author.user_id else None
         )
@@ -876,9 +888,9 @@ class SearchView(ListView):
             # the primary sort.
             queryset = queryset.distinct().annotate(
                 title_match=Case(When(title__icontains=self.query, then=0), default=1, output_field=IntegerField()),
-            ).order_by('title_match', '-relevance', '-publication_date', '-created_at')
+            ).order_by('title_match', '-relevance', '-published_at', '-created_at')
         else:
-            queryset = queryset.order_by('-publication_date', '-created_at')
+            queryset = queryset.order_by('-published_at', '-created_at')
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -929,7 +941,7 @@ def related_article_autocomplete(request):
     exclude = request.GET.get('exclude', '')
     if exclude.isdigit():
         articles = articles.exclude(pk=int(exclude))
-    articles = articles.order_by('-publication_date', '-created_at')[:20]
+    articles = articles.order_by('-published_at', '-created_at')[:20]
     return JsonResponse(
         [{'value': a.title, 'id': a.pk, 'type': a.get_article_type_display()} for a in articles], safe=False,
     )
@@ -998,13 +1010,15 @@ class ArticleManageListView(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = Article.objects.select_related('issue').order_by('-updated_at')
+        queryset = Article.objects.select_related('issue', 'assigned_to').order_by('-updated_at')
         status = self.request.GET.get('status')
         article_type = self.request.GET.get('type')
         homepage_section = self.request.GET.get('homepage_section')
         q = self.request.GET.get('q')
         if status:
             queryset = queryset.filter(status=status)
+        if self.request.GET.get('assigned') == 'me':
+            queryset = queryset.filter(assigned_to=self.request.user)
         if article_type:
             queryset = queryset.filter(article_type=article_type)
         if homepage_section:
@@ -1017,9 +1031,13 @@ class ArticleManageListView(ListView):
         context = super().get_context_data(**kwargs)
         context['article_types'] = Article.ArticleType.choices
         context['statuses'] = Article.Status.choices
+        # A scheduled article still waiting 3+ minutes past its time means the
+        # every-minute publish job isn't running (qcluster down) — flagged in the list.
+        context['overdue_before'] = timezone.now() - datetime.timedelta(minutes=3)
         context['homepage_sections'] = Article.HomepageSection.choices
         context['selected_type'] = self.request.GET.get('type', '')
         context['selected_status'] = self.request.GET.get('status', '')
+        context['selected_assigned'] = self.request.GET.get('assigned', '')
         context['selected_homepage_section'] = self.request.GET.get('homepage_section', '')
         context['selected_q'] = self.request.GET.get('q', '')
         return context
@@ -1038,10 +1056,117 @@ def article_quick_publish(request, slug):
         article.status = Article.Status.DRAFT
         messages.success(request, f'"{article.title}" moved back to draft.')
     else:
+        # Same rule as the editor's Publish button (PublishArticleForm):
+        # nothing goes live without something to read.
+        if not strip_tags(article.html_content or '').strip() and not article.pdf_file:
+            messages.error(request, f'"{article.title}" has no article text yet — open it and add the text before publishing.')
+            return redirect('articles:manage_article_list')
+        # A Scheduled article published from here goes live now — save()
+        # pulls its future published_at back to the current time.
         article.status = Article.Status.PUBLISHED
         messages.success(request, f'"{article.title}" published.')
     article.save()
+    record_revision(
+        article, request.user,
+        ArticleRevision.Action.PUBLISHED if article.status == Article.Status.PUBLISHED else ArticleRevision.Action.UNPUBLISHED,
+    )
     return redirect('articles:manage_article_list')
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_correction_add(request, slug):
+    """Appends a correction/clarification/update note to an article and
+    stamps its last_updated_at — readers see "Updated" plus the note."""
+    article = get_object_or_404(Article, slug=slug)
+    form = ArticleCorrectionForm(request.POST)
+    if form.is_valid():
+        correction = form.save(commit=False)
+        correction.article = article
+        correction.created_by = request.user
+        correction.save()
+        if article.status == Article.Status.PUBLISHED:
+            Article.objects.filter(pk=article.pk).update(last_updated_at=correction.created_at)
+        messages.success(request, f'{correction.get_kind_display()} added — it now shows on the article.')
+    else:
+        messages.error(request, 'Write the note before adding it.')
+    return redirect(f"{reverse('articles:manage_article_update', args=[article.slug])}#corrections")
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_correction_delete(request, pk):
+    """Removes a note added by mistake (e.g. a typo in the note itself)."""
+    correction = get_object_or_404(ArticleCorrection, pk=pk)
+    slug = correction.article.slug
+    correction.delete()
+    messages.success(request, 'Note removed.')
+    return redirect(f"{reverse('articles:manage_article_update', args=[slug])}#corrections")
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_note_add(request, slug):
+    """Internal editorial note — for the team, never shown to readers."""
+    article = get_object_or_404(Article, slug=slug)
+    form = ArticleNoteForm(request.POST)
+    if form.is_valid():
+        note = form.save(commit=False)
+        note.article = article
+        note.author = request.user
+        note.save()
+        messages.success(request, 'Note added.')
+    else:
+        messages.error(request, 'Write the note before adding it.')
+    return redirect(f"{reverse('articles:manage_article_update', args=[article.slug])}#notes")
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_note_delete(request, pk):
+    """Notes can be removed by whoever wrote them, or by senior staff."""
+    note = get_object_or_404(ArticleNote, pk=pk)
+    if note.author_id != request.user.pk and not request.user.is_senior_staff:
+        raise PermissionDenied
+    slug = note.article.slug
+    note.delete()
+    messages.success(request, 'Note removed.')
+    return redirect(f"{reverse('articles:manage_article_update', args=[slug])}#notes")
+
+
+@role_required(*EDITORIAL_ROLES)
+def article_history(request, slug):
+    """Revision history: every save, who made it and what they did, with a
+    word-level comparison against the previous version (?compare=<pk>)."""
+    article = get_object_or_404(Article, slug=slug)
+    revisions = list(article.revisions.select_related('user'))
+    selected = None
+    changes = []
+    compare_pk = request.GET.get('compare')
+    if compare_pk:
+        selected = next((r for r in revisions if str(r.pk) == compare_pk), None)
+        if selected is None:
+            raise Http404
+    elif revisions:
+        selected = revisions[0]
+    if selected:
+        index = revisions.index(selected)
+        previous = revisions[index + 1] if index + 1 < len(revisions) else None
+        changes = compare(previous, selected)
+    return render(request, 'articles/manage/article_history.html', {
+        'article': article, 'revisions': revisions, 'selected': selected, 'changes': changes,
+    })
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def article_revision_restore(request, pk):
+    """Puts an earlier version's words back. On a live article this changes
+    what readers see immediately (the button says so)."""
+    revision = get_object_or_404(ArticleRevision, pk=pk)
+    article = restore_revision(revision, request.user)
+    messages.success(request, f'Restored the version from {_format_local(revision.created_at)}.')
+    return redirect('articles:manage_article_update', slug=article.slug)
 
 
 @role_required(*EDITORIAL_ROLES)
@@ -1060,8 +1185,15 @@ def article_autosave(request):
     # Autosave only ever touches drafts: writing half-typed edits straight
     # into a live article would publish them. Published/archived articles
     # change only through the explicit Update button.
-    if instance is not None and instance.status != Article.Status.DRAFT:
+    if instance is not None and instance.status in LIVE_OR_QUEUED:
         return JsonResponse({'ok': False, 'errors': {'__all__': ['Autosave is off for published articles.']}}, status=409)
+    # Same overwrite protection as a real save: a stale tab must not
+    # silently replace someone else's newer changes in the background.
+    token = request.POST.get('edit_token')
+    if instance is not None and token and token != edit_token_for(instance):
+        return JsonResponse({'ok': False, 'conflict': True, 'errors': {'__all__': [
+            'Someone else saved this article after you opened it — autosave is paused. Reload to see their changes.',
+        ]}}, status=409)
     if not request.POST.get('title', '').strip():
         return JsonResponse({'ok': False, 'errors': {'title': ['Add a title to start saving.']}}, status=400)
 
@@ -1083,55 +1215,166 @@ def article_autosave(request):
             {'ok': False, 'errors': {'__all__': ['Could not save — check the slug and DOI are unique.']}}, status=400,
         )
 
+    record_revision(article, request.user, ArticleRevision.Action.AUTOSAVED)
     return JsonResponse({
-        'ok': True, 'article_pk': article.pk, 'slug': article.slug,
+        'ok': True, 'article_pk': article.pk, 'slug': article.slug, 'edit_token': edit_token_for(article),
         'edit_url': reverse('articles:manage_article_update', kwargs={'slug': article.slug}),
     })
 
 
-class ArticleFormMixin:
-    """Shared by create/update: the per-type content-template picker, and
-    the action buttons (name="action") that decide both the status and how
-    strictly the form is checked — there's no status dropdown that could
-    disagree with the button the editor actually clicked:
+def _format_local(value) -> str:
+    """"Sep 29, 2026 at 6:00 AM" in the site's time zone, for messages."""
+    return date_format(timezone.localtime(value), 'M j, Y \\a\\t g:i A')
 
-    - "draft"   → Save draft (or Unpublish on a live article): status Draft,
-                  only a title required (DraftArticleForm).
-    - "publish" → Publish (or Update on a live article): status Published,
-                  full checks incl. body text (PublishArticleForm).
-    - "keep"    → Save without changing status (an archived article):
-                  full checks.
+
+# action (the button's name="action" value) → (form class, new status).
+# None keeps the current status. See ArticleFormMixin.
+ARTICLE_ACTIONS = {
+    'draft': ('DraftArticleForm', Article.Status.DRAFT),        # Save draft / Back to draft / Unpublish
+    'save': ('DraftArticleForm', None),                         # Save (in review / ready — stays there)
+    'review': ('DraftArticleForm', Article.Status.IN_REVIEW),   # Send for review
+    'ready': ('PublishArticleForm', Article.Status.READY),      # Mark ready — must be publishable
+    'schedule': ('ScheduleArticleForm', Article.Status.SCHEDULED),
+    'publish': ('PublishArticleForm', Article.Status.PUBLISHED),  # Publish / Update live article
+    'keep': ('PublishArticleForm', None),                       # Save an archived article
+}
+LIVE_OR_QUEUED = (Article.Status.PUBLISHED, Article.Status.SCHEDULED, Article.Status.ARCHIVED)
+
+
+def _revision_action(previous_status, action):
+    """Which history entry a save produces, e.g. "publish" on an already
+    live article is an Update, on anything else a first Publish."""
+    Action = ArticleRevision.Action
+    if action == 'publish':
+        return Action.UPDATED if previous_status == Article.Status.PUBLISHED else Action.PUBLISHED
+    if action == 'draft' and previous_status in LIVE_OR_QUEUED:
+        return Action.UNPUBLISHED
+    return {
+        'review': Action.SUBMITTED, 'ready': Action.APPROVED, 'schedule': Action.SCHEDULED,
+    }.get(action, Action.SAVED if previous_status else Action.CREATED)
+
+
+class ArticleFormMixin:
+    """Shared by create/update. The buttons (name="action") decide both the
+    new status and how strictly the form is checked — there's no status
+    dropdown that could disagree with the button the editor clicked (see
+    ARTICLE_ACTIONS): a draft or a story in review needs only a title;
+    "Mark ready", Publish and Schedule need everything a reader will see.
+
+    Every save also records a revision (articles/revisions.py) and, when a
+    story is assigned to or sent for review to another editor, emails them.
+    Saves are refused if someone else saved the article since this editor
+    opened it (the hidden edit_token), instead of silently overwriting.
     """
 
-    def get_form_class(self):
+    def _action(self):
         action = self.request.POST.get('action')
-        if action == 'draft':
-            return DraftArticleForm
-        if action in ('publish', 'keep'):
-            return PublishArticleForm
-        return ArticleForm
+        previous = getattr(self, '_previous', None)
+        # "Save" never relaxes the checks on something live or queued.
+        if action == 'save' and previous and previous.status in LIVE_OR_QUEUED:
+            return 'keep'
+        return action if action in ARTICLE_ACTIONS else None
+
+    def get_form_class(self):
+        action = self._action()
+        if not action:
+            return ArticleForm
+        return {'DraftArticleForm': DraftArticleForm, 'PublishArticleForm': PublishArticleForm,
+                'ScheduleArticleForm': ScheduleArticleForm}[ARTICLE_ACTIONS[action][0]]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['content_templates'] = {str(k): v for k, v in ARTICLE_TYPE_CONTENT_TEMPLATES.items()}
+        context['correction_form'] = ArticleCorrectionForm()
         return context
 
     def get_success_url(self):
         return reverse('articles:manage_article_update', kwargs={'slug': self.object.slug})
 
     def form_valid(self, form):
-        action = self.request.POST.get('action')
+        action = self._action()
+        previous = getattr(self, '_previous', None)
+        previous_status = previous.status if previous else None
+
+        if previous is not None:
+            token = form.cleaned_data.get('edit_token')
+            if token and token != edit_token_for(previous):
+                latest = previous.revisions.select_related('user').first()
+                who = (latest.user.get_full_name() or latest.user.email) if latest and latest.user else 'Someone'
+                when = _format_local(previous.updated_at)
+                form.add_error(None, (
+                    f'{who} saved changes to this article at {when}, after you opened it. '
+                    'Your changes were NOT saved, to avoid overwriting theirs. Copy anything you need, then reload the page.'
+                ))
+                return self.form_invalid(form)
+
+        new_status = ARTICLE_ACTIONS[action][1] if action else None
+        if new_status:
+            form.instance.status = new_status
+        if action == 'publish' and previous_status == Article.Status.PUBLISHED:
+            form.instance.last_updated_at = timezone.now()
+        if action == 'schedule':
+            form.instance.published_at = form.cleaned_data['schedule_at']
+        breaking = form.cleaned_data.get('breaking_hours')
+        if breaking == 'off':
+            form.instance.breaking_until = None
+        elif breaking:
+            form.instance.breaking_until = timezone.now() + datetime.timedelta(hours=int(breaking))
+
+        response = super().form_valid(form)
+        record_revision(self.object, self.request.user, _revision_action(previous_status, action))
+        self._notify_assignee(previous, action)
+        messages.success(self.request, f'"{self.object.title}" {self._message(previous_status, action, form)}.')
+        return response
+
+    def _message(self, previous_status, action, form):
+        was_live = previous_status == Article.Status.PUBLISHED
         if action == 'publish':
-            form.instance.status = Article.Status.PUBLISHED
-        elif action == 'draft':
-            form.instance.status = Article.Status.DRAFT
-        return super().form_valid(form)
+            return 'updated — the live article now shows your changes' if was_live else 'published'
+        if action == 'schedule':
+            return f'scheduled for {_format_local(form.cleaned_data["schedule_at"])}'
+        if action == 'review':
+            assignee = self.object.assigned_to
+            return f'sent for review{f" to {assignee.get_full_name() or assignee.email}" if assignee else ""}'
+        if action == 'ready':
+            return 'marked ready to publish'
+        if action == 'draft':
+            if was_live:
+                return 'unpublished and moved back to draft'
+            if previous_status == Article.Status.SCHEDULED:
+                return 'unscheduled and moved back to draft'
+            if previous_status in (Article.Status.IN_REVIEW, Article.Status.READY):
+                return 'moved back to draft'
+            return 'saved as a draft' if previous_status is None else 'draft saved'
+        return 'saved'
+
+    def _notify_assignee(self, previous, action):
+        """Email the assigned editor when a story is newly assigned to them
+        or sent to them for review — never for their own actions."""
+        assignee = self.object.assigned_to
+        if not assignee or assignee == self.request.user or not assignee.email:
+            return
+        newly_assigned = previous is None or previous.assigned_to_id != assignee.pk
+        if not (newly_assigned or action == 'review'):
+            return
+        send_templated_email(
+            subject=f'{"Review requested" if action == "review" else "Assigned to you"}: {self.object.title}',
+            template='articles/email/assigned',
+            context={
+                'article': self.object, 'assignee': assignee, 'by': self.request.user,
+                'for_review': action == 'review',
+                'edit_url': f"{settings.SITE_BASE_URL}{reverse('articles:manage_article_update', args=[self.object.slug])}",
+            },
+            recipient_list=[assignee.email],
+        )
 
     def form_invalid(self, form):
-        if self.request.POST.get('action') == 'draft':
-            messages.error(self.request, 'The draft wasn\'t saved — a title is required.')
-        else:
-            messages.error(self.request, 'Not published yet — fix the highlighted fields below.')
+        action = self._action()
+        if not form.non_field_errors():
+            if action in ('draft', 'save', 'review'):
+                messages.error(self.request, 'Not saved — a title is required.')
+            else:
+                messages.error(self.request, 'Not saved yet — fix the highlighted fields below.')
         return super().form_invalid(form)
 
 
@@ -1146,11 +1389,6 @@ class ArticleCreateView(ArticleFormMixin, CreateView):
         context['is_create'] = True
         return context
 
-    def form_valid(self, form):
-        published = self.request.POST.get('action') == 'publish'
-        messages.success(self.request, f'"{form.instance.title}" {"published" if published else "saved as a draft"}.')
-        return super().form_valid(form)
-
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
 class ArticleUpdateView(ArticleFormMixin, UpdateView):
@@ -1160,22 +1398,19 @@ class ArticleUpdateView(ArticleFormMixin, UpdateView):
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
 
+    def post(self, request, *args, **kwargs):
+        # The article as saved before this request — for the status the
+        # buttons move it from, the conflict check, and assignee changes.
+        self._previous = self.get_object()
+        return super().post(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_create'] = False
+        context['note_form'] = ArticleNoteForm()
+        context['notes'] = self.object.notes.select_related('author')
+        context['revision_count'] = self.object.revisions.count()
         return context
-
-    def form_valid(self, form):
-        action = self.request.POST.get('action')
-        was_published = self.object.status == Article.Status.PUBLISHED
-        if action == 'publish':
-            message = 'updated — the live article now shows your changes' if was_published else 'published'
-        elif action == 'draft':
-            message = 'unpublished and moved back to draft' if was_published else 'draft saved'
-        else:
-            message = 'saved'
-        messages.success(self.request, f'"{form.instance.title}" {message}.')
-        return super().form_valid(form)
 
 
 @role_required(*EDITORIAL_ROLES)

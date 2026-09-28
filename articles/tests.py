@@ -305,7 +305,8 @@ class NewsSitemapTests(TestCase):
         self.assertIn('<news:news>', content)
         self.assertIn('<news:name>Ajna Health Lens</news:name>', content)
         self.assertIn('<news:language>en</news:language>', content)
-        self.assertIn(f'<news:publication_date>{timezone.localdate().isoformat()}</news:publication_date>', content)
+        # Full W3C timestamp (published_at), not just the day.
+        self.assertIn(f'<news:publication_date>{timezone.localtime(article.published_at).isoformat()}</news:publication_date>', content)
 
     def test_article_older_than_two_days_is_excluded(self):
         old_article = make_article(
@@ -2753,3 +2754,388 @@ class ArticleEditorSavingTests(TestCase):
         abstract_label = content[content.index('for="id_abstract"'):content.index('</label>', content.index('for="id_abstract"'))]
         self.assertIn('*</span>', title_label)
         self.assertNotIn('*</span>', abstract_label)
+
+
+class SchedulingAndTimestampTests(TestCase):
+    """Scheduled publishing, real publish times and the "Updated" label."""
+
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='scheduler@example.com', password='pw', first_name='S', last_name='E', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def _form(self, **extra):
+        data = {
+            'title': 'Morning Briefing', 'article_type': 'news_commentary', 'access_type': 'open_access',
+            'html_content': '<p>Today in health.</p>',
+        }
+        data.update(extra)
+        return data
+
+    def test_schedule_keeps_article_off_the_site_until_its_time(self):
+        when = timezone.localtime() + datetime.timedelta(hours=3)
+        response = self.client.post(reverse('articles:manage_article_create'), self._form(
+            action='schedule', schedule_at=when.strftime('%Y-%m-%dT%H:%M'),
+        ))
+        self.assertEqual(response.status_code, 302)
+        article = Article.objects.get(title='Morning Briefing')
+        self.assertEqual(article.status, Article.Status.SCHEDULED)
+        self.assertEqual(timezone.localtime(article.published_at).strftime('%H:%M'), when.strftime('%H:%M'))
+        self.assertIsNone(article.publication_date)
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse('articles:article_detail', args=[article.slug])).status_code, 404)
+
+    def test_schedule_in_the_past_is_rejected(self):
+        when = timezone.localtime() - datetime.timedelta(hours=1)
+        response = self.client.post(reverse('articles:manage_article_create'), self._form(
+            action='schedule', schedule_at=when.strftime('%Y-%m-%dT%H:%M'),
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('schedule_at', response.context['form'].errors)
+
+    def test_publish_due_articles_publishes_only_due_ones(self):
+        from .tasks import publish_due_articles
+
+        due = Article.objects.create(
+            title='Due', slug='due-story', status=Article.Status.SCHEDULED, html_content='<p>x</p>',
+            published_at=timezone.now() - datetime.timedelta(minutes=2),
+        )
+        later = Article.objects.create(
+            title='Later', slug='later-story', status=Article.Status.SCHEDULED, html_content='<p>x</p>',
+            published_at=timezone.now() + datetime.timedelta(hours=2),
+        )
+        self.assertEqual(publish_due_articles(), 1)
+        due.refresh_from_db()
+        later.refresh_from_db()
+        self.assertEqual(due.status, Article.Status.PUBLISHED)
+        self.assertEqual(due.publication_date, timezone.localdate(due.published_at))
+        self.assertEqual(later.status, Article.Status.SCHEDULED)
+
+    def test_publish_now_on_a_scheduled_article_uses_the_current_time(self):
+        article = Article.objects.create(
+            title='Early', slug='early-story', status=Article.Status.SCHEDULED, html_content='<p>x</p>',
+            published_at=timezone.now() + datetime.timedelta(days=1),
+        )
+        self.client.post(reverse('articles:manage_article_update', args=[article.slug]), self._form(
+            title='Early', slug='early-story', action='publish',
+        ))
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.PUBLISHED)
+        self.assertLessEqual(article.published_at, timezone.now())
+
+    def test_update_live_article_shows_updated_label(self):
+        article = Article.objects.create(
+            title='Live Story', slug='live-story', status=Article.Status.PUBLISHED, html_content='<p>x</p>',
+        )
+        self.assertIsNone(article.last_updated_at)
+        self.client.post(reverse('articles:manage_article_update', args=[article.slug]), self._form(
+            title='Live Story (corrected)', slug='live-story', action='publish',
+        ))
+        article.refresh_from_db()
+        self.assertIsNotNone(article.last_updated_at)
+        page = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(page, 'Updated')
+
+    def test_quick_publish_refuses_article_without_text(self):
+        article = Article.objects.create(title='Empty', slug='empty-story', status=Article.Status.DRAFT)
+        self.client.post(reverse('articles:manage_article_quick_publish', args=[article.slug]))
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.DRAFT)
+
+    def test_news_time_filter(self):
+        from .templatetags.news_time import news_time
+
+        now = timezone.now()
+        self.assertEqual(news_time(now), 'Just now')
+        self.assertEqual(news_time(now - datetime.timedelta(minutes=12)), '12 min ago')
+        self.assertEqual(news_time(now - datetime.timedelta(hours=3)), '3 hours ago')
+        self.assertEqual(news_time(now - datetime.timedelta(hours=1, minutes=5)), '1 hour ago')
+        self.assertNotIn('ago', news_time(now - datetime.timedelta(days=3)))
+        self.assertEqual(news_time(None), '')
+
+
+class CorrectionsAndImageCreditTests(TestCase):
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='corrections@example.com', password='pw', first_name='C', last_name='E', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='reader-corr@example.com', password='pw', first_name='R', last_name='D')
+        self.article = Article.objects.create(
+            title='Clinic Opens', slug='clinic-opens', status=Article.Status.PUBLISHED,
+            html_content='<p>The clinic opened in 2019.</p>',
+            featured_image='articles/images/test.jpg', featured_image_alt='Nurses outside the new clinic',
+            featured_image_caption='The clinic on opening day.', featured_image_credit='Ram Shrestha',
+        )
+
+    def test_caption_credit_and_alt_on_article_page(self):
+        page = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertContains(page, 'alt="Nurses outside the new clinic"')
+        self.assertContains(page, 'The clinic on opening day.')
+        self.assertContains(page, 'Photo: Ram Shrestha')
+
+    def test_editor_adds_correction_shown_to_readers_and_marks_updated(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_article_correction_add', args=[self.article.slug]), {
+            'kind': 'correction', 'note': 'An earlier version said 2019. The clinic opened in 2021.',
+        })
+        self.article.refresh_from_db()
+        self.assertIsNotNone(self.article.last_updated_at)
+        correction = self.article.corrections.get()
+        self.assertEqual(correction.created_by, self.editor)
+        self.client.logout()
+        page = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertContains(page, 'id="corrections"')
+        self.assertContains(page, 'The clinic opened in 2021.')
+        self.assertContains(page, 'Correction appended')
+        self.assertContains(page, '"@type": "CorrectionComment"')
+
+    def test_empty_note_is_rejected(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_article_correction_add', args=[self.article.slug]), {'kind': 'update', 'note': ''})
+        self.assertFalse(self.article.corrections.exists())
+
+    def test_editor_can_remove_a_note(self):
+        from .models import ArticleCorrection
+
+        correction = ArticleCorrection.objects.create(article=self.article, note='Typo in note')
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_article_correction_delete', args=[correction.pk]))
+        self.assertFalse(self.article.corrections.exists())
+
+    def test_readers_cannot_add_corrections(self):
+        self.client.force_login(self.reader)
+        response = self.client.post(reverse('articles:manage_article_correction_add', args=[self.article.slug]), {
+            'kind': 'correction', 'note': 'Sneaky',
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(self.article.corrections.exists())
+
+
+class ReviewWorkflowAndHistoryTests(TestCase):
+    """Draft → In review → Ready → Publish, assignee emails, internal notes,
+    revision history/restore, and refusing to overwrite someone's newer save."""
+
+    def setUp(self):
+        from django.core import mail  # noqa: F401 — outbox reset per test
+        from users.models import User
+
+        self.writer = User.objects.create_user(
+            email='writer@example.com', password='pw', first_name='Wri', last_name='Ter', role=User.Role.EDITOR,
+        )
+        self.chief = User.objects.create_user(
+            email='chief@example.com', password='pw', first_name='Chi', last_name='Ef', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        self.client.force_login(self.writer)
+
+    def _data(self, article=None, **extra):
+        data = {
+            'title': 'Flu Season Guide', 'article_type': 'news_commentary', 'access_type': 'open_access',
+            'html_content': '<p>Get vaccinated.</p>',
+        }
+        if article:
+            from .forms import edit_token_for
+
+            data.update({'slug': article.slug, 'edit_token': edit_token_for(article)})
+        data.update(extra)
+        return data
+
+    def _create(self, **extra):
+        self.client.post(reverse('articles:manage_article_create'), self._data(**extra))
+        return Article.objects.get(title=extra.get('title', 'Flu Season Guide'))
+
+    def _update(self, article, **extra):
+        return self.client.post(reverse('articles:manage_article_update', args=[article.slug]), self._data(article, **extra))
+
+    def test_full_workflow_and_history(self):
+        from django.core import mail
+
+        from .models import ArticleRevision
+
+        article = self._create(action='review', assigned_to=self.chief.pk)
+        self.assertEqual(article.status, Article.Status.IN_REVIEW)
+        # (setUp's user creation also emails senior staff a verification alert — ignored here.)
+        review_mail = [m for m in mail.outbox if m.to == ['chief@example.com'] and 'Flu Season Guide' in m.subject]
+        self.assertEqual(len(review_mail), 1)
+        self.assertIn('Review requested', review_mail[0].subject)
+
+        self.client.force_login(self.chief)
+        self._update(article, action='ready', assigned_to=self.chief.pk)
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.READY)
+        self._update(article, action='publish', assigned_to=self.chief.pk)
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.PUBLISHED)
+
+        actions = list(article.revisions.values_list('action', flat=True))
+        self.assertEqual(actions, [ArticleRevision.Action.PUBLISHED, ArticleRevision.Action.APPROVED, ArticleRevision.Action.SUBMITTED])
+        self.assertEqual(article.revisions.first().user, self.chief)
+
+    def test_save_in_review_keeps_status_and_needs_only_title(self):
+        article = self._create(action='review')
+        self._update(article, action='save', html_content='')
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.IN_REVIEW)
+
+    def test_mark_ready_requires_publishable_article(self):
+        article = self._create(action='review', html_content='')
+        response = self._update(article, action='ready', html_content='')
+        self.assertEqual(response.status_code, 200)
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.IN_REVIEW)
+
+    def test_no_email_for_assigning_yourself(self):
+        from django.core import mail
+
+        self._create(action='review', assigned_to=self.writer.pk)
+        self.assertFalse([m for m in mail.outbox if 'Flu Season Guide' in m.subject])
+
+    def test_stale_save_is_refused_instead_of_overwriting(self):
+        article = self._create(action='draft')
+        from .forms import edit_token_for
+
+        stale_token = edit_token_for(article)
+        # The chief saves a newer version first...
+        self.client.force_login(self.chief)
+        self._update(article, action='save', title='Flu Season Guide (chief edit)')
+        # ...then the writer saves from the tab they opened earlier.
+        self.client.force_login(self.writer)
+        response = self.client.post(
+            reverse('articles:manage_article_update', args=[article.slug]),
+            self._data(article, action='draft', title='Writer version', edit_token=stale_token),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'after you opened it')
+        article.refresh_from_db()
+        self.assertEqual(article.title, 'Flu Season Guide (chief edit)')
+
+    def test_autosave_coalesces_into_one_history_entry(self):
+        from .models import ArticleRevision
+
+        article = self._create(action='draft')
+        from .forms import edit_token_for
+
+        for n in range(3):
+            response = self.client.post(reverse('articles:manage_article_autosave'), {
+                'article_pk': article.pk, 'title': f'Flu Season Guide v{n}', 'article_type': 'news_commentary',
+                'access_type': 'open_access', 'edit_token': edit_token_for(Article.objects.get(pk=article.pk)),
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('edit_token', response.json())
+        self.assertEqual(article.revisions.filter(action=ArticleRevision.Action.AUTOSAVED).count(), 1)
+        self.assertEqual(article.revisions.first().title, 'Flu Season Guide v2')
+
+    def test_history_shows_word_diff_and_restore_brings_back_old_words(self):
+        article = self._create(action='draft', html_content='<p>The clinic opened in 2019.</p>')
+        self._update(Article.objects.get(pk=article.pk), action='draft', html_content='<p>The clinic opened in 2021.</p>')
+        history = self.client.get(reverse('articles:manage_article_history', args=[article.slug]))
+        self.assertContains(history, '<del>2019.</del>')
+        self.assertContains(history, '<ins>2021.</ins>')
+        first = article.revisions.last()
+        self.client.post(reverse('articles:manage_article_revision_restore', args=[first.pk]))
+        article.refresh_from_db()
+        self.assertIn('2019', article.html_content)
+        self.assertEqual(article.revisions.first().action, 'restored')
+
+    def test_internal_notes_are_not_public(self):
+        article = self._create(action='publish')
+        self.client.post(reverse('articles:manage_article_note_add', args=[article.slug]), {'body': 'Check the vaccine stock figure.'})
+        self.assertEqual(article.notes.get().author, self.writer)
+        self.client.logout()
+        page = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(page, 'Check the vaccine stock figure.')
+
+    def test_only_author_or_senior_staff_delete_notes(self):
+        from users.models import User
+
+        other = User.objects.create_user(
+            email='other-ed@example.com', password='pw', first_name='O', last_name='E', role=User.Role.EDITOR,
+        )
+        article = self._create(action='draft')
+        self.client.post(reverse('articles:manage_article_note_add', args=[article.slug]), {'body': 'Mine'})
+        note = article.notes.get()
+        self.client.force_login(other)
+        self.assertEqual(self.client.post(reverse('articles:manage_article_note_delete', args=[note.pk])).status_code, 403)
+        self.client.force_login(self.chief)
+        self.client.post(reverse('articles:manage_article_note_delete', args=[note.pk]))
+        self.assertFalse(article.notes.exists())
+
+    def test_review_queue_badge_and_assigned_filter(self):
+        article = self._create(action='review', assigned_to=self.chief.pk)
+        self.client.force_login(self.chief)
+        listing = self.client.get(reverse('articles:manage_article_list'), {'assigned': 'me'})
+        self.assertEqual(list(listing.context['articles']), [article])
+        self.assertContains(listing, 'Review queue')
+
+
+class SearchSocialAndBreakingNewsTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        from users.models import User
+
+        cache.clear()
+        self.editor = User.objects.create_user(
+            email='breaking@example.com', password='pw', first_name='B', last_name='E', role=User.Role.EDITOR,
+        )
+
+    def _live(self, **fields):
+        defaults = {'title': 'Flood Warning Issued', 'slug': 'flood-warning', 'status': Article.Status.PUBLISHED,
+                    'html_content': '<p>Rivers are rising.</p>', 'abstract': 'Rivers are rising fast.'}
+        defaults.update(fields)
+        return Article.objects.create(**defaults)
+
+    def test_search_overrides_replace_meta_title_and_description(self):
+        article = self._live(seo_title='Flood warning: what to do now', seo_description='Five steps to stay safe.')
+        page = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(page, '<meta property="og:title" content="Flood warning: what to do now">')
+        self.assertContains(page, 'content="Five steps to stay safe."')
+        self.assertContains(page, '<title>Flood warning: what to do now')
+        # The on-page headline is unchanged.
+        self.assertContains(page, 'Flood Warning Issued')
+
+    def test_without_overrides_meta_falls_back_to_headline_and_summary(self):
+        article = self._live()
+        page = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(page, '<meta property="og:title" content="Flood Warning Issued">')
+        self.assertContains(page, 'content="Rivers are rising fast."')
+
+    def test_breaking_banner_shows_site_wide_while_active(self):
+        from django.core.cache import cache
+
+        article = self._live(breaking_until=timezone.now() + datetime.timedelta(hours=2))
+        home = self.client.get(reverse('articles:home'))
+        self.assertContains(home, 'id="breaking-banner"')
+        self.assertContains(home, article.get_absolute_url())
+        page = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(page, 'BREAKING')
+        # Expired → gone (even with the cached entry still present).
+        Article.objects.filter(pk=article.pk).update(breaking_until=timezone.now() - datetime.timedelta(minutes=1))
+        cache.clear()
+        self.assertNotContains(self.client.get(reverse('articles:home')), 'id="breaking-banner"')
+
+    def test_breaking_draft_does_not_show(self):
+        self._live(status=Article.Status.DRAFT, breaking_until=timezone.now() + datetime.timedelta(hours=2))
+        self.assertNotContains(self.client.get(reverse('articles:home')), 'id="breaking-banner"')
+
+    def test_editor_sets_and_stops_breaking(self):
+        from .forms import edit_token_for
+
+        article = self._live()
+        self.client.force_login(self.editor)
+        url = reverse('articles:manage_article_update', args=[article.slug])
+        base = {'title': article.title, 'slug': article.slug, 'article_type': 'news_commentary',
+                'access_type': 'open_access', 'html_content': '<p>Rivers are rising.</p>', 'action': 'publish'}
+        self.client.post(url, {**base, 'breaking_hours': '3', 'edit_token': edit_token_for(article)})
+        article.refresh_from_db()
+        self.assertTrue(article.is_breaking)
+        self.assertAlmostEqual(
+            (article.breaking_until - timezone.now()).total_seconds(), 3 * 3600, delta=120,
+        )
+        self.client.post(url, {**base, 'breaking_hours': 'off', 'edit_token': edit_token_for(article)})
+        article.refresh_from_db()
+        self.assertFalse(article.is_breaking)
+        self.assertIsNone(article.breaking_until)

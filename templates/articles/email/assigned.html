@@ -1,0 +1,13 @@
+{% extends 'email/base.html' %}
+{% block title %}{% if for_review %}Review requested{% else %}Assigned to you{% endif %}{% endblock %}
+{% block preheader %}{{ by.get_full_name|default:by.email }} {% if for_review %}sent you a story to review{% else %}assigned you a story{% endif %}: {{ article.title }}{% endblock %}
+{% block eyebrow %}Editorial workflow{% endblock %}
+{% block heading %}{% if for_review %}A story is waiting for your review{% else %}A story was assigned to you{% endif %}{% endblock %}
+{% block content %}
+    <p>Hi {{ assignee.first_name|default:assignee.email }},</p>
+    <p><strong>{{ by.get_full_name|default:by.email }}</strong> {% if for_review %}sent this story to you for review{% else %}assigned this story to you{% endif %}:</p>
+    <p style="font-size:18px;"><strong>{{ article.title }}</strong><br><span style="color:#6b6860;">Status: {{ article.get_status_display }}</span></p>
+    {% include 'email/includes/button.html' with url=edit_url label='Open the story' %}
+    {% include 'email/includes/link_fallback.html' with url=edit_url %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you're an editor on {{ journal_name }} and this story is assigned to you.{% endblock %}

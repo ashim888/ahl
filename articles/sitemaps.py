@@ -26,13 +26,12 @@ class NewsArticleSitemap(Sitemap):
     limit = 1000
 
     def items(self):
-        # publication_date is a plain DateField (no time-of-day), so "2 days"
-        # is the closest approximation of Google's ~48-hour window this data
-        # can express — see the model's help_text in articles/models.py.
-        cutoff = timezone.localdate() - datetime.timedelta(days=2)
+        # Google News only wants stories from roughly the last 48 hours —
+        # published_at has the time of day, so this is the exact window.
+        cutoff = timezone.now() - datetime.timedelta(hours=48)
         return Article.objects.filter(
-            status=Article.Status.PUBLISHED, publication_date__gte=cutoff,
-        ).order_by('-publication_date')
+            status=Article.Status.PUBLISHED, published_at__gte=cutoff,
+        ).order_by('-published_at')
 
     def location(self, item):
         return reverse('articles:article_detail', args=[item.slug])
@@ -43,7 +42,7 @@ class ArticleSitemap(Sitemap):
     priority = 0.8
 
     def items(self):
-        return Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-publication_date')
+        return Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-published_at')
 
     def lastmod(self, item):
         return item.updated_at

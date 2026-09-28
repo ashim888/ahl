@@ -76,7 +76,7 @@ def send_topic_digests():
                 Article.objects.filter(
                     Q(section_id__in=section_ids) | Q(keyword_tags__in=keyword_ids),
                     status=Article.Status.PUBLISHED, publication_date__gte=cutoff_date,
-                ).distinct().order_by('-publication_date', '-created_at'),
+                ).distinct().order_by('-published_at', '-created_at'),
             )
             if not articles:
                 continue

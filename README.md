@@ -72,8 +72,10 @@ to `runserver` locally, and as its own service in production:
 python manage.py qcluster
 ```
 
-It runs newsletter sends, the weekly digests, and the daily analytics clean-up (below). Without
-it, those jobs queue up but never run.
+It publishes scheduled articles (every minute), runs newsletter sends, the weekly digests, and the
+daily analytics clean-up (below). Without it, those jobs queue up but never run — including
+scheduled articles, which then stay unpublished (`python manage.py publish_scheduled` does it by
+hand).
 
 ### Email
 

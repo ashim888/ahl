@@ -26,6 +26,7 @@ def pending_work_counts():
 
     from django.utils import timezone
     from django_comments_xtd.models import XtdComment
+    from articles.models import Article
     from pitches.models import StoryPitch
     from users.models import User
 
@@ -40,6 +41,8 @@ def pending_work_counts():
         'pending_verifications': User.objects.filter(
             verification_status=User.VerificationStatus.PENDING,
         ).count(),
+        # Stories waiting on an editor's review (see Article.Status).
+        'articles_in_review': Article.objects.filter(status=Article.Status.IN_REVIEW).count(),
         'open_pitches': StoryPitch.objects.filter(
             status__in=[StoryPitch.Status.SUBMITTED, StoryPitch.Status.IN_REVIEW],
         ).count(),

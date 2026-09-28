@@ -198,6 +198,71 @@ required to publish.
    are shown automatically. Similarity compares wording, so it only matches articles in the same
    language.
 
+**Review workflow:** a story moves **Draft → In review → Ready to publish → Published** (or
+Scheduled). In the right-hand panel:
+- **Send for review** (on a draft) — pick an **Assigned editor** in the *Review* card first; they
+  get an email with a link to the story. Only a title is needed at this point.
+- **Mark ready to publish** (on a story in review) — runs the same checks as Publish, so "ready"
+  really means ready.
+- **Save (stays in review / stays ready)** keeps the story where it is; **Back to draft** returns it.
+- **Publish** and **Schedule** work from any of these steps. Every editor can still publish — the
+  workflow is guidance and a record, not a lock.
+- **Internal notes** in the *Review* card are for the team only ("check the 2021 figure with the
+  ministry") and never appear on the site. You can delete your own notes; senior staff can delete
+  any.
+- The sidebar's **Review queue** shows how many stories are waiting in review; the article list
+  has an **Assigned → Assigned to me** filter and shows each story's assignee.
+
+**History:** every save is recorded — who, when, what they did (saved, sent for review, published,
+updated…) and the words at that point. Open **History** at the bottom of the panel to see the list;
+pick a version to see what changed (added words in green, removed in red). **Restore this version**
+puts those words back (on a live article, readers see them immediately) — the current words stay in
+the history, so a restore can be undone. Background autosaves by the same person within 15 minutes
+count as one entry.
+
+**Two people editing the same story:** if someone else saved the article after you opened it, your
+save is stopped with a message saying who saved and when — nothing is overwritten. Copy anything you
+need, reload the page to get their version, and re-apply your change. Autosave pauses in the same
+situation.
+
+**Scheduling:** open **Schedule for later…** under the buttons, pick a date and time (Nepal
+time) and click **Schedule**. The same checks as Publish apply. The article then shows as
+**Scheduled** (with its go-live time) in the article list and goes live automatically at that
+time. To change it, open the article: **Update schedule** saves a new time or edits, **Publish now**
+skips the wait, and **Unschedule** moves it back to drafts. If a scheduled article is still waiting
+a few minutes past its time, the list marks it "overdue" — that means the background worker isn't
+running (see §18).
+
+**Times readers see:** article pages show the publish date and time; cards and lists show
+"12 min ago" / "3 hours ago" for the last day, then the date. When you **Update** a live article,
+it shows "Updated <time>" under the date — pinning or changing the homepage spot doesn't count as an
+update.
+
+**Featured image details:** under the image upload, fill in the **Image description (alt
+text)** — what the picture shows, for screen readers and search engines (it falls back to the
+headline) — plus an optional **Caption** and **Credit** ("Ram Shrestha / Ajna Health Lens"). The
+caption and "Photo: <credit>" appear under the image on the article page.
+
+**Corrections & updates:** on a saved article, the **Corrections & updates** panel (right-hand
+side) adds a dated note for readers — pick **Correction** (a factual error was fixed),
+**Clarification**, or **Update** (new information), write a sentence or two, and click **Add
+note**. It appears at the end of the article under "Corrections & updates", with a "Correction
+appended ↓" link under the date, and the article is marked "Updated". Fix the article text itself
+with **Update live article** as usual — the note is what tells readers it changed. **Remove**
+deletes a note added by mistake.
+
+**Search & social (optional):** the collapsed **Search & social** card lets you write a different
+**search headline** (~60 characters) and **search description** (~155) for Google results and
+share cards, with a live Google-style preview, and upload a separate **share image** (1200×630)
+for Facebook/X/WhatsApp. Leave them empty and the headline, summary and featured image are used.
+The headline on the article page itself never changes.
+
+**Breaking news:** in the *Placement* card, set **Breaking news** to 1–24 hours. Once the story is
+live, a red **BREAKING** banner appears under the site header on every page, linking to it (readers
+can close it), and the article shows a BREAKING label. It switches itself off when the time is up;
+choose **Stop breaking-news banner** to end it early. Only one story is shown at a time — the most
+recently published breaking one.
+
 **Editing a published article:** the panel shows **Update live article** instead of Save draft
 — your changes go live only when you click it (autosave is off for live articles, so half-typed
 edits never appear on the site). **Unpublish** (bottom of the panel) takes it off the site and
@@ -480,8 +545,10 @@ For whoever installs and deploys the site. The settings live in the server's `.e
   in every email (comment confirmation, newsletter confirm/unsubscribe, password reset) is
   built from it. `python manage.py check --deploy` flags a `localhost` or non-`https` value.
 - **The background worker** (`python manage.py qcluster`) must run all the time, as its own
-  service next to the web app. It sends newsletters and weekly digests and runs the daily
-  analytics clean-up. If it isn't running, those silently never happen.
+  service next to the web app. It publishes **scheduled articles** (checked every minute), sends
+  newsletters and weekly digests, and runs the daily analytics clean-up. If it isn't running,
+  those silently never happen — scheduled articles show as "overdue" in the article list. To
+  publish due articles by hand: `python manage.py publish_scheduled`.
 - **Analytics clean-up.** Page views, ad impressions/clicks and keyword impressions/clicks older
   than `ANALYTICS_RETENTION_DAYS` (default 400 days) are deleted once a day by the worker. To run
   it by hand: `python manage.py prune_analytics_events` (add `--days 180` to keep less).

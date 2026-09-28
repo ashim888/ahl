@@ -47,7 +47,7 @@ class SectionDetailView(DetailView):
         section_ids = [self.object.pk] + list(self.object.children.values_list('pk', flat=True))
         articles = Article.objects.filter(
             section_id__in=section_ids, status=Article.Status.PUBLISHED,
-        ).order_by('-is_pinned', '-publication_date', '-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-is_pinned', '-published_at', '-created_at').prefetch_related('articleauthor_set__author__user')
         page_obj = Paginator(articles, self.paginate_by).get_page(self.request.GET.get('page'))
         context['articles'] = page_obj
         context['page_obj'] = page_obj

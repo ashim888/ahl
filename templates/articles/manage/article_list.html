@@ -35,6 +35,13 @@
             </select>
         </div>
         <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Assigned</label>
+            <select name="assigned" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                <option value="">Anyone</option>
+                <option value="me" {% if selected_assigned == 'me' %}selected{% endif %}>Assigned to me</option>
+            </select>
+        </div>
+        <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">Homepage section</label>
             <select name="homepage_section" onchange="this.form.submit()"
                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
@@ -71,7 +78,18 @@
                         </td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_article_type_display }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ article.get_access_type_display }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ article.get_status_display }}</td>
+                        <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
+                            {% if article.status == 'scheduled' %}
+                                <span class="inline-flex rounded-full bg-indigo-50 text-indigo-700 px-2 py-0.5 text-xs font-medium">Scheduled</span>
+                                <p class="text-[11px] mt-0.5 {% if article.published_at < overdue_before %}text-red-600 font-medium{% else %}text-gray-400{% endif %}">
+                                    {{ article.published_at|date:"M j, g:i A" }}{% if article.published_at < overdue_before %} · overdue — is the worker running?{% endif %}
+                                </p>
+                            {% else %}
+                                {{ article.get_status_display }}
+                                {% if article.assigned_to and article.status != 'published' %}<p class="text-[11px] text-sky-700 mt-0.5">→ {{ article.assigned_to.get_full_name|default:article.assigned_to.email }}</p>{% endif %}
+                                {% if article.status == 'published' and article.published_at %}<p class="text-[11px] text-gray-400 mt-0.5">{{ article.published_at|date:"M j, g:i A" }}</p>{% endif %}
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3 text-gray-600">
                             {% if article.homepage_section %}
                                 <span class="inline-block px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">

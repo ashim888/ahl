@@ -451,6 +451,31 @@
             </div>
         </div>
     </header>
+
+    {% if breaking_news %}
+        {# Breaking-news banner — articles/breaking.py. Dismissal is remembered per story on this device. #}
+        <div id="breaking-banner" data-breaking-id="{{ breaking_news.pk }}" class="bg-accent text-white">
+            <div class="max-w-7xl mx-auto px-6 py-2.5 flex items-center gap-3">
+                <span class="shrink-0 inline-flex items-center gap-1.5 font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-white text-accent px-2 py-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" aria-hidden="true"></span>{% trans "BREAKING" %}
+                </span>
+                <a href="{{ breaking_news.url }}" class="flex-1 min-w-0 truncate text-sm font-semibold hover:underline underline-offset-2">{{ breaking_news.title }}</a>
+                <button type="button" id="breaking-dismiss" class="shrink-0 text-white/80 hover:text-white text-lg leading-none" aria-label="{% trans 'Dismiss' %}">&times;</button>
+            </div>
+        </div>
+        <script>
+            (function () {
+                var banner = document.getElementById('breaking-banner');
+                var key = 'ahl:breaking-dismissed';
+                try { if (localStorage.getItem(key) === banner.dataset.breakingId) banner.remove(); } catch (e) {}
+                var btn = document.getElementById('breaking-dismiss');
+                if (btn) btn.addEventListener('click', function () {
+                    try { localStorage.setItem(key, banner.dataset.breakingId); } catch (e) {}
+                    banner.remove();
+                });
+            })();
+        </script>
+    {% endif %}
     {% endwith %}
 
     {% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}

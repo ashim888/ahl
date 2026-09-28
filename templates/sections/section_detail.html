@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load news_time %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -77,7 +78,7 @@
                     {% with summary=article.summary %}{% if summary %}<p class="mt-3 text-muted-foreground leading-relaxed line-clamp-4">{{ summary }}</p>{% endif %}{% endwith %}
                     <p class="mt-auto pt-6 text-sm text-muted-foreground">
                         {% with a=article.articleauthor_set.all|first %}<span class="font-medium text-foreground">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>{% endwith %}
-                        · {{ article.estimated_read_minutes }} {% trans "min read" %}{% if article.publication_date %} · {{ article.publication_date|date:"M j, Y" }}{% endif %}
+                        · {{ article.estimated_read_minutes }} {% trans "min read" %}{% if article.published_at %} · {{ article.published_at|news_time }}{% endif %}
                     </p>
                 </div>
             </article>

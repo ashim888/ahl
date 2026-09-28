@@ -1,7 +1,9 @@
+import datetime
 import json
 
 from django import forms
 from django.forms import inlineformset_factory
+from django.utils import timezone
 from django.utils.html import strip_tags
 from django.utils.text import slugify
 from django_ckeditor_5.widgets import CKEditor5Widget
@@ -9,7 +11,7 @@ from django_ckeditor_5.widgets import CKEditor5Widget
 from sections.models import Section
 from users.models import User
 
-from .models import Article, ArticleAuthor, Author, Keyword
+from .models import Article, ArticleAuthor, ArticleCorrection, ArticleNote, Author, Keyword
 from .sanitize import sanitize_editorial_html
 
 
@@ -81,6 +83,11 @@ class TagifyRelatedArticlesField(forms.CharField):
         return [found[pk] for pk in ids if pk in found]
 
 
+def edit_token_for(article) -> str:
+    """The version marker the editor carries in its hidden edit_token field."""
+    return f'{article.updated_at.timestamp():.6f}' if article.updated_at else ''
+
+
 class ArticleForm(forms.ModelForm):
     """Front-end editorial CRUD form. Authors (ArticleAuthor byline rows
     pointing at Author profiles, with ordering/corresponding-author flags) are edited separately
@@ -111,6 +118,28 @@ class ArticleForm(forms.ModelForm):
                   'the most similar articles automatically (see suggestions below).',
     )
 
+    # Not a model field: the go-live time for the Schedule button (stored in
+    # Article.published_at with status Scheduled — see ArticleFormMixin).
+    # A datetime-local input is read in the site's time zone (TIME_ZONE).
+    schedule_at = forms.DateTimeField(
+        required=False, label='Publish at',
+        input_formats=['%Y-%m-%dT%H:%M'],
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+    )
+
+    # Breaking news: how long the site-wide banner should run. "" leaves
+    # the current setting alone, "off" ends it early (see ArticleFormMixin).
+    BREAKING_CHOICES = [
+        ('', '— No change —'), ('1', 'Breaking for 1 hour'), ('3', 'Breaking for 3 hours'), ('6', 'Breaking for 6 hours'),
+        ('12', 'Breaking for 12 hours'), ('24', 'Breaking for 24 hours'), ('off', 'Stop breaking-news banner'),
+    ]
+    breaking_hours = forms.ChoiceField(choices=BREAKING_CHOICES, required=False, label='Breaking news')
+
+    # Which saved version the editor opened (Article.updated_at, as a
+    # timestamp). If someone else saves in the meantime, ArticleFormMixin
+    # refuses the save instead of silently overwriting their changes.
+    edit_token = forms.CharField(required=False, widget=forms.HiddenInput)
+
     class Meta:
         model = Article
         # No date fields here on purpose — created_at covers "when was this
@@ -119,7 +148,8 @@ class ArticleForm(forms.ModelForm):
         fields = [
             'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned', 'homepage_section',
             'abstract', 'issue', 'section', 'volume', 'page_numbers', 'doi',
-            'html_content', 'references', 'featured_image', 'pdf_file',
+            'html_content', 'references', 'featured_image', 'featured_image_alt', 'featured_image_caption',
+            'featured_image_credit', 'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
         ]
         widgets = {
             'abstract': forms.Textarea(attrs={'rows': 5}),
@@ -141,6 +171,7 @@ class ArticleForm(forms.ModelForm):
             'pdf_file': 'PDF version',
             'slug': 'URL slug',
             'doi': 'DOI',
+            'assigned_to': 'Assigned editor',
         }
         help_texts = {
             'title': '',
@@ -153,6 +184,7 @@ class ArticleForm(forms.ModelForm):
             'slug': 'Leave empty to create it from the headline.',
             'pdf_file': 'Optional. Readers can download it from the article page.',
             'references': 'One source per line. Cite them in the text as [1], [2], …',
+            'assigned_to': 'Who reviews this story. They get an email when it is sent to them for review.',
         }
 
     def __init__(self, *args, **kwargs):
@@ -160,6 +192,15 @@ class ArticleForm(forms.ModelForm):
         self.fields['homepage_section'].choices = [('', "Auto (don't feature)")] + list(Article.HomepageSection.choices)
         self.fields['section'].required = False
         self.fields['issue'].empty_label = '— No issue —'
+        self.fields['assigned_to'].queryset = User.objects.filter(
+            is_active=True, role__in=User.EDITORIAL_ROLES,
+        ).order_by('first_name', 'last_name')
+        self.fields['assigned_to'].empty_label = '— Unassigned —'
+        self.fields['assigned_to'].label_from_instance = lambda user: user.get_full_name() or user.email
+        if self.instance.pk and self.instance.updated_at:
+            self.fields['edit_token'].initial = edit_token_for(self.instance)
+        if self.instance.pk and self.instance.status == Article.Status.SCHEDULED and self.instance.published_at:
+            self.fields['schedule_at'].initial = timezone.localtime(self.instance.published_at)
         # Grouped <optgroup> choices, not a plain flat list — visually
         # matches the two-level hierarchy an editor is actually picking
         # from. Overriding .choices on a ModelChoiceField only changes what
@@ -289,6 +330,19 @@ class PublishArticleForm(ArticleForm):
         return cleaned_data
 
 
+class ScheduleArticleForm(PublishArticleForm):
+    """Schedule: everything Publish checks, plus a go-live time that's at
+    least a minute away (anything sooner is just "Publish now")."""
+
+    def clean_schedule_at(self):
+        value = self.cleaned_data.get('schedule_at')
+        if not value:
+            raise forms.ValidationError('Pick the date and time it should go live.')
+        if value <= timezone.now() + datetime.timedelta(minutes=1):
+            raise forms.ValidationError('Pick a time in the future — or use Publish to publish now.')
+        return value
+
+
 class AuthorChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         label = obj.name
@@ -402,3 +456,20 @@ class AuthorForm(forms.ModelForm):
         if email and Author.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError('Another author already uses this email address.')
         return email
+
+
+class ArticleCorrectionForm(forms.ModelForm):
+    """Adding a correction/clarification/update note to a live article."""
+
+    class Meta:
+        model = ArticleCorrection
+        fields = ['kind', 'note']
+        widgets = {'note': forms.Textarea(attrs={'rows': 3, 'placeholder': 'e.g. An earlier version said the clinic opened in 2019. It opened in 2021.'})}
+
+
+class ArticleNoteForm(forms.ModelForm):
+    """Internal editorial note on an article — never shown to readers."""
+
+    class Meta:
+        model = ArticleNote
+        fields = ['body']

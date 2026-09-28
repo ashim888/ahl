@@ -8,7 +8,7 @@
 <news:name>{{ JOURNAL_NAME }}</news:name>
 <news:language>en</news:language>
 </news:publication>
-<news:publication_date>{{ url.item.publication_date|date:"Y-m-d" }}</news:publication_date>
+<news:publication_date>{{ url.item.published_at|date:"c" }}</news:publication_date>
 <news:title>{{ url.item.title }}</news:title>
 </news:news>
 </url>

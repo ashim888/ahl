@@ -60,11 +60,12 @@
 {% block content %}
 {% with status=form.instance.status %}
 <form method="post" enctype="multipart/form-data" id="article-form" novalidate
-      data-autosave="{% if is_create or status == 'draft' %}on{% else %}off{% endif %}">
+      data-autosave="{% if is_create or status == 'draft' or status == 'in_review' or status == 'ready' %}on{% else %}off{% endif %}">
     {% csrf_token %}
     <input type="hidden" name="preview_source_pk" id="preview-source-pk" value="{{ form.instance.pk|default:'' }}">
     <input type="hidden" name="article_pk" id="article-pk" value="{{ form.instance.pk|default:'' }}">
     <input type="hidden" id="edit-url" value="">
+    {{ form.edit_token }}
 
     {% if form.errors %}
         <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700" role="alert">
@@ -139,18 +140,16 @@
         <aside class="space-y-4 xl:sticky xl:top-6">
             {# Actions #}
             <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-semibold text-gray-900">
-                        {% if is_create %}New article{% elif status == 'published' %}Published{% elif status == 'archived' %}Archived{% else %}Draft{% endif %}
-                    </h2>
-                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium
-                        {% if status == 'published' and not is_create %}bg-green-50 text-green-700{% elif status == 'archived' %}bg-gray-100 text-gray-500{% else %}bg-amber-50 text-amber-700{% endif %}">
-                        {% if status == 'published' and not is_create %}Live{% elif status == 'archived' %}Archived{% else %}Not published{% endif %}
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-gray-900">{% if is_create %}New article{% else %}{{ form.instance.get_status_display }}{% endif %}</h2>
+                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap
+                        {% if is_create or status == 'draft' %}bg-amber-50 text-amber-700{% elif status == 'in_review' %}bg-sky-50 text-sky-700{% elif status == 'ready' %}bg-emerald-50 text-emerald-700{% elif status == 'published' %}bg-green-50 text-green-700{% elif status == 'scheduled' %}bg-indigo-50 text-indigo-700{% else %}bg-gray-100 text-gray-500{% endif %}">
+                        {% if status == 'published' and not is_create %}Live{% elif status == 'archived' %}Archived{% else %}Not live yet{% endif %}
                     </span>
                 </div>
                 {% if not is_create %}
                     <p class="mt-1 text-xs text-gray-400">
-                        {% if form.instance.publication_date %}Published {{ form.instance.publication_date|date:"M j, Y" }} · {% endif %}Last saved {{ form.instance.updated_at|date:"M j, g:i A" }}
+                        {% if status == 'scheduled' and form.instance.published_at %}<span class="text-indigo-700 font-medium">Goes live {{ form.instance.published_at|date:"M j, Y, g:i A" }}</span> · {% elif form.instance.published_at %}Published {{ form.instance.published_at|date:"M j, Y, g:i A" }} · {% endif %}{% if form.instance.last_updated_at %}Updated {{ form.instance.last_updated_at|date:"M j, g:i A" }} · {% endif %}Last saved {{ form.instance.updated_at|date:"M j, g:i A" }}
                     </p>
                 {% endif %}
 
@@ -161,30 +160,102 @@
                     {% elif status == 'published' and not is_create %}
                         <button type="submit" name="action" value="publish" data-full-save
                                 class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Update live article</button>
+                    {% elif status == 'scheduled' and not is_create %}
+                        <div>
+                            <label for="{{ form.schedule_at.id_for_label }}" class="block text-xs font-medium text-gray-500 mb-1">Goes live at <span class="text-gray-400">(Nepal time)</span></label>
+                            {{ form.schedule_at }}
+                            {% for error in form.schedule_at.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                        </div>
+                        <button type="submit" name="action" value="schedule" data-full-save
+                                class="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Update schedule</button>
+                        <button type="submit" name="action" value="publish"
+                                onclick="return confirm('Publish this article now instead of at the scheduled time?');"
+                                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Publish now</button>
                     {% else %}
+                        {# Draft → In review → Ready → Publish/Schedule #}
                         <button type="submit" name="action" value="publish" data-full-save
                                 onclick="return confirm('Publish this article now? It will appear on the site immediately.');"
                                 class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Publish</button>
-                        <button type="submit" name="action" value="draft" id="save-draft-btn"
-                                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Save draft</button>
+                        {% if is_create or status == 'draft' %}
+                            <button type="submit" name="action" value="review"
+                                    class="w-full rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700">Send for review</button>
+                            <button type="submit" name="action" value="draft" id="save-draft-btn"
+                                    class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Save draft</button>
+                        {% elif status == 'in_review' %}
+                            <button type="submit" name="action" value="ready"
+                                    class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">Mark ready to publish</button>
+                            <button type="submit" name="action" value="save" id="save-draft-btn"
+                                    class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Save (stays in review)</button>
+                        {% else %}
+                            <button type="submit" name="action" value="save" id="save-draft-btn"
+                                    class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Save (stays ready)</button>
+                        {% endif %}
+                        <details class="rounded-xl border border-gray-100 px-3 py-2" {% if form.schedule_at.errors %}open{% endif %}>
+                            <summary class="cursor-pointer select-none text-sm text-gray-700">Schedule for later…</summary>
+                            <div class="mt-3 space-y-2">
+                                <label for="{{ form.schedule_at.id_for_label }}" class="block text-xs font-medium text-gray-500">Publish at <span class="text-gray-400">(Nepal time)</span></label>
+                                {{ form.schedule_at }}
+                                {% for error in form.schedule_at.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                                <button type="submit" name="action" value="schedule"
+                                        class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Schedule</button>
+                                <p class="text-[11px] text-gray-400">It goes live automatically at that time. Same checks as Publish.</p>
+                            </div>
+                        </details>
                     {% endif %}
                     <button type="button" id="preview-btn"
                             class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Preview</button>
                 </div>
 
                 <p id="autosave-status" class="mt-3 text-xs text-gray-400 min-h-[1rem]" aria-live="polite">
-                    {% if is_create or status == 'draft' %}Drafts save automatically.{% else %}Changes go live only when you click Update.{% endif %}
+                    {% if is_create or status == 'draft' or status == 'in_review' or status == 'ready' %}Saves automatically while you type.{% elif status == 'scheduled' %}Edits are saved when you click Update schedule.{% else %}Changes go live only when you click Update.{% endif %}
                 </p>
 
-                <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                    <a href="{% url 'articles:manage_article_list' %}" class="text-gray-500 hover:text-gray-900">← All articles</a>
+                <div class="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span class="flex items-center gap-3">
+                        <a href="{% url 'articles:manage_article_list' %}" class="text-gray-500 hover:text-gray-900">← All articles</a>
+                        {% if not is_create %}<a href="{% url 'articles:manage_article_history' form.instance.slug %}" class="text-gray-500 hover:text-gray-900">History{% if revision_count %} ({{ revision_count }}){% endif %}</a>{% endif %}
+                    </span>
                     {% if status == 'published' and not is_create %}
                         <button type="submit" name="action" value="draft"
                                 onclick="return confirm('Unpublish this article? It will be taken off the site and moved back to drafts.');"
                                 class="text-red-600 hover:text-red-700">Unpublish</button>
+                    {% elif status == 'scheduled' and not is_create %}
+                        <button type="submit" name="action" value="draft"
+                                onclick="return confirm('Cancel the schedule? The article goes back to drafts and won\'t be published.');"
+                                class="text-red-600 hover:text-red-700">Unschedule</button>
+                    {% elif status == 'in_review' or status == 'ready' %}
+                        <button type="submit" name="action" value="draft" class="text-gray-500 hover:text-gray-900">Back to draft</button>
                     {% endif %}
                 </div>
                 <p class="mt-3 text-[11px] text-gray-400"><span class="text-red-500">*</span> required to publish · Ctrl/⌘ + S saves</p>
+            </section>
+
+            {# Review: assignee + internal notes (notes post to #note-form below, via the form attribute) #}
+            <section id="notes" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+                <h2 class="text-sm font-semibold text-gray-900">Review</h2>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.assigned_to %}
+                {% if not is_create %}
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 mb-2">Internal notes <span class="font-normal text-gray-400">(team only — never shown to readers)</span></p>
+                        <ul class="space-y-2">
+                            {% for note in notes %}
+                                <li class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                                    <span class="font-semibold">{{ note.author.get_full_name|default:note.author.email|default:"(deleted user)" }}</span>
+                                    <span class="text-gray-400"> · {{ note.created_at|date:"M j, g:i A" }}</span>
+                                    <p class="mt-1 whitespace-pre-line">{{ note.body }}</p>
+                                    {% if note.author_id == request.user.pk or request.user.is_senior_staff %}
+                                        <button type="submit" form="note-delete-form" formaction="{% url 'articles:manage_article_note_delete' note.pk %}"
+                                                onclick="return confirm('Delete this note?');" class="mt-1 text-red-600 hover:text-red-700">Delete</button>
+                                    {% endif %}
+                                </li>
+                            {% empty %}
+                                <li class="text-xs text-gray-400">No notes yet.</li>
+                            {% endfor %}
+                        </ul>
+                        <textarea name="body" form="note-form" rows="2" required placeholder="e.g. Please double-check the 2021 figure with the ministry." class="mt-2 w-full"></textarea>
+                        <button type="submit" form="note-form" class="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Add note</button>
+                    </div>
+                {% endif %}
             </section>
 
             {# Placement #}
@@ -195,6 +266,14 @@
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.homepage_section %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
+                <div>
+                    <label for="{{ form.breaking_hours.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">Breaking news</label>
+                    {% if form.instance.is_breaking %}
+                        <p class="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">Breaking banner is on until {{ form.instance.breaking_until|date:"M j, g:i A" }}.</p>
+                    {% endif %}
+                    {{ form.breaking_hours }}
+                    <p class="mt-1.5 text-xs text-gray-400">Shows a red “Breaking” banner across the whole site, linking here, once the story is live. It switches itself off.</p>
+                </div>
             </section>
 
             {# Access #}
@@ -215,7 +294,45 @@
                 {{ form.featured_image }}
                 {% if form.featured_image.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.featured_image.help_text }}</p>{% endif %}
                 {% for error in form.featured_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                <div class="mt-4 space-y-4">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.featured_image_alt %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.featured_image_caption %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.featured_image_credit %}
+                </div>
             </section>
+
+            {# Search & social #}
+            <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+                     {% if form.seo_title.value or form.seo_description.value or form.seo_title.errors or form.seo_description.errors %}open{% endif %}>
+                <summary class="cursor-pointer select-none flex items-center justify-between text-sm font-semibold text-gray-900">
+                    Search &amp; social <span class="font-normal text-gray-400 text-xs">(optional)</span>
+                    <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="mt-4 space-y-4">
+                    <p class="text-xs text-gray-500">Leave empty to use the headline, summary and featured image.</p>
+                    <div>
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.seo_title %}
+                        <p class="text-right text-[11px] text-gray-400"><span data-count-for="id_seo_title">0</span> / 60</p>
+                    </div>
+                    <div>
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.seo_description %}
+                        <p class="text-right text-[11px] text-gray-400"><span data-count-for="id_seo_description">0</span> / 155</p>
+                    </div>
+                    <div class="rounded-xl border border-gray-100 p-3" aria-label="Search result preview">
+                        <p class="text-[11px] text-gray-400 mb-1">Google preview</p>
+                        <p id="serp-title" class="text-[#1a0dab] text-base leading-snug truncate"></p>
+                        <p class="text-[#006621] text-xs">{{ request.get_host }}/articles/…</p>
+                        <p id="serp-desc" class="text-xs text-gray-600 line-clamp-2"></p>
+                    </div>
+                    <div>
+                        <label for="{{ form.social_image.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.social_image.label }}</label>
+                        {% if form.instance.social_image %}<img src="{{ form.instance.social_image.url }}" alt="" class="mb-2 w-full aspect-[1200/630] object-cover rounded-lg border border-gray-100">{% endif %}
+                        {{ form.social_image }}
+                        <p class="mt-1.5 text-xs text-gray-400">{{ form.social_image.help_text }}</p>
+                        {% for error in form.social_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    </div>
+                </div>
+            </details>
 
             {# Authors #}
             <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -229,6 +346,41 @@
                     <a href="{% url 'articles:manage_article_authors' form.instance.slug %}" class="mt-3 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800">Edit authors →</a>
                 {% endif %}
             </section>
+
+            {# Corrections & updates — inputs belong to #correction-form (outside the
+               article form, below) via the HTML form attribute, so they're never
+               part of the article's own save/autosave. #}
+            {% if not is_create %}
+                <section id="corrections" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <h2 class="text-sm font-semibold text-gray-900">Corrections &amp; updates</h2>
+                    <p class="mt-1 text-xs text-gray-500">Dated notes shown to readers at the end of the article, with a flag under the headline. Adding one marks the article “Updated”.</p>
+                    {% with corrections=form.instance.corrections.all %}
+                        {% if corrections %}
+                            <ul class="mt-3 space-y-2">
+                                {% for correction in corrections %}
+                                    <li class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                                        <span class="font-semibold">{{ correction.get_kind_display }}</span> · {{ correction.created_at|date:"M j, g:i A" }}
+                                        <p class="mt-1">{{ correction.note }}</p>
+                                        <button type="submit" form="correction-delete-form"
+                                                formaction="{% url 'articles:manage_article_correction_delete' correction.pk %}"
+                                                onclick="return confirm('Remove this note from the article?');"
+                                                class="mt-1 text-red-600 hover:text-red-700">Remove</button>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    {% endwith %}
+                    <div class="mt-3 space-y-2">
+                        <select name="kind" form="correction-form" class="w-full">
+                            {% for value, label in correction_form.fields.kind.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                        </select>
+                        <textarea name="note" form="correction-form" rows="3" required
+                                  placeholder="{{ correction_form.fields.note.widget.attrs.placeholder }}" class="w-full"></textarea>
+                        <button type="submit" form="correction-form"
+                                class="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Add note</button>
+                    </div>
+                </section>
+            {% endif %}
 
             {# More details #}
             <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
@@ -258,6 +410,12 @@
         </aside>
     </div>
 </form>
+{% if not is_create %}
+    <form id="correction-form" method="post" action="{% url 'articles:manage_article_correction_add' form.instance.slug %}">{% csrf_token %}</form>
+    <form id="correction-delete-form" method="post">{% csrf_token %}</form>
+    <form id="note-form" method="post" action="{% url 'articles:manage_article_note_add' form.instance.slug %}">{% csrf_token %}</form>
+    <form id="note-delete-form" method="post">{% csrf_token %}</form>
+{% endif %}
 {% endwith %}
 
 {{ content_templates|json_script:"content-templates-data" }}
@@ -318,10 +476,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     var slugField = document.getElementById('id_slug');
                     if (slugField && !slugField.value) slugField.value = data.slug;
                     savedSnapshot = pending;
+                    var tokenField = document.getElementById('id_edit_token');
+                    if (tokenField && data.edit_token) tokenField.value = data.edit_token;
                     var now = new Date();
                     showStatus('Draft saved at ' + now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), false);
+                } else if (data.conflict) {
+                    autosaveEnabled = false;
+                    showStatus(data.errors.__all__[0], true);
                 } else {
-                    showStatus('Autosave paused — use Save draft to see what needs fixing.', true);
+                    showStatus('Autosave paused — use Save to see what needs fixing.', true);
                 }
             })
             .catch(function () { showStatus('Autosave failed (check your connection).', true); })
@@ -346,6 +509,27 @@ document.addEventListener('DOMContentLoaded', function () {
         submitting = true;
         if (editUrlInput.value) form.action = editUrlInput.value;
     });
+
+    // Search & social: character counters + a live Google-style preview that
+    // falls back to the headline/summary exactly like the real meta tags.
+    function textOf(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+    function updateSerp() {
+        document.querySelectorAll('[data-count-for]').forEach(function (counter) {
+            var n = textOf(counter.dataset.countFor).length;
+            counter.textContent = n;
+            var limit = counter.dataset.countFor === 'id_seo_title' ? 60 : 155;
+            counter.classList.toggle('text-red-600', n > limit);
+        });
+        var titleEl = document.getElementById('serp-title');
+        var descEl = document.getElementById('serp-desc');
+        if (titleEl) titleEl.textContent = (textOf('id_seo_title') || textOf('id_title') || 'Your headline') + ' — {{ JOURNAL_NAME|escapejs }}';
+        if (descEl) descEl.textContent = textOf('id_seo_description') || textOf('id_abstract') || 'The opening of the article text is used when there is no summary.';
+    }
+    ['id_seo_title', 'id_seo_description', 'id_title', 'id_abstract'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateSerp);
+    });
+    updateSerp();
 
     // Price only matters (and is only required) for the pay-per-article tier.
     var accessTypeField = document.getElementById('id_access_type');

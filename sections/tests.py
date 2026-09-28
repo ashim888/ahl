@@ -392,8 +392,9 @@ class TopicDigestTests(TestCase):
     def test_article_older_than_the_lookback_window_is_excluded(self):
         SectionFollow.objects.create(user=self.reader, section=self.section)
         old_article = make_article('test-digest-old', section=self.section)
-        old_article.publication_date = timezone.localdate() - datetime.timedelta(days=30)
-        old_article.save(update_fields=['publication_date'])
+        # published_at is the source of truth; save() re-derives publication_date from it.
+        old_article.published_at = timezone.now() - datetime.timedelta(days=30)
+        old_article.save()
         sent = send_topic_digests()
         self.assertEqual(sent, 0)
 

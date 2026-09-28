@@ -67,4 +67,10 @@ urlpatterns = [
     path('manage/accounts/<int:user_pk>/author-profile/', author_views.author_from_account, name='manage_author_from_account'),
     path('manage/articles/<slug:slug>/delete/', views.ArticleDeleteView.as_view(), name='manage_article_delete'),
     path('manage/articles/<slug:slug>/quick-publish/', views.article_quick_publish, name='manage_article_quick_publish'),
+    path('manage/articles/<slug:slug>/corrections/add/', views.article_correction_add, name='manage_article_correction_add'),
+    path('manage/corrections/<int:pk>/delete/', views.article_correction_delete, name='manage_article_correction_delete'),
+    path('manage/articles/<slug:slug>/notes/add/', views.article_note_add, name='manage_article_note_add'),
+    path('manage/notes/<int:pk>/delete/', views.article_note_delete, name='manage_article_note_delete'),
+    path('manage/articles/<slug:slug>/history/', views.article_history, name='manage_article_history'),
+    path('manage/revisions/<int:pk>/restore/', views.article_revision_restore, name='manage_article_revision_restore'),
 ]

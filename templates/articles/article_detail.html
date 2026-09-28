@@ -3,7 +3,7 @@
 {% load i18n %}
 {% load text_filters ads_tags comments comments_xtd %}
 
-{% block title %}{{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{{ article.seo_title|default:article.title }} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block extra_head %}
     {% if show_full_text and article.html_content %}
@@ -32,10 +32,17 @@
 {% endif %}
 
 {% if article.featured_image %}
-    <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 520px);">
-        <img src="{{ article.featured_image.url }}" alt="{{ article.title }}"
-             class="w-full h-full object-cover" style="filter: grayscale(15%);">
-    </div>
+    <figure>
+        <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 520px);">
+            <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}"
+                 class="w-full h-full object-cover" style="filter: grayscale(15%);">
+        </div>
+        {% if article.featured_image_caption or article.featured_image_credit %}
+            <figcaption class="max-w-7xl mx-auto px-6 pt-2 text-xs text-muted-foreground">
+                {{ article.featured_image_caption }}{% if article.featured_image_caption and article.featured_image_credit %} {% endif %}{% if article.featured_image_credit %}<span class="font-mono-editorial tracking-wide opacity-80">{% blocktrans with credit=article.featured_image_credit %}Photo: {{ credit }}{% endblocktrans %}</span>{% endif %}
+            </figcaption>
+        {% endif %}
+    </figure>
 {% endif %}
 
 <div class="max-w-7xl mx-auto px-6">
@@ -74,6 +81,7 @@
             <script>try { var s = parseFloat(localStorage.getItem('ahl:reader-text-scale')); if (s) document.getElementById('article-main').style.setProperty('--reader-scale', s); } catch (e) {}</script>
 
             <div class="flex items-center gap-3 mb-5">
+                {% if article.is_breaking %}<span class="font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-accent text-white px-2 py-0.5">{% trans "BREAKING" %}</span>{% endif %}
                 <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
                 {% if article.issue %}
                     <span class="text-border">·</span>
@@ -128,8 +136,20 @@
                 </div>
                 <div class="text-right flex-shrink-0">
                     <p class="font-mono-editorial text-xs text-muted-foreground">
-                        {% if article.publication_date %}{{ article.publication_date|date:"F j, Y" }}{% endif %}
+                        {% if article.published_at %}<time datetime="{{ article.published_at|date:'c' }}">{% if article.published_at|date:"Hi" == "0000" %}{{ article.published_at|date:"F j, Y" }}{% else %}{{ article.published_at|date:"F j, Y · g:i A" }}{% endif %}</time>{% endif %}
                     </p>
+                    {% if article.last_updated_at %}
+                        <p class="font-mono-editorial text-xs text-accent mt-0.5">
+                            {% trans "Updated" %} <time datetime="{{ article.last_updated_at|date:'c' }}">{{ article.last_updated_at|date:"M j, g:i A" }}</time>
+                        </p>
+                    {% endif %}
+                    {% if corrections %}
+                        {% with latest=corrections|last %}
+                            <a href="#corrections" class="block font-mono-editorial text-xs text-accent underline underline-offset-2 mt-0.5">
+                                {% blocktrans with kind=latest.get_kind_display %}{{ kind }} appended ↓{% endblocktrans %}
+                            </a>
+                        {% endwith %}
+                    {% endif %}
                     <p class="font-mono-editorial text-xs text-muted-foreground mt-0.5">{{ article.estimated_read_minutes }} {% trans "min read" %}</p>
                 </div>
             </div>
@@ -301,6 +321,21 @@
                         {% endif %}
                     </div>
                 </div>
+            {% endif %}
+
+            {% if corrections %}
+                <section id="corrections" class="mt-12 border-l-2 border-accent bg-secondary px-5 py-4">
+                    <h2 class="section-label text-accent mb-3">{% trans "CORRECTIONS & UPDATES" %}</h2>
+                    <ul class="space-y-3 text-sm leading-relaxed">
+                        {% for correction in corrections %}
+                            <li>
+                                <span class="font-semibold">{{ correction.get_kind_display }}</span>
+                                <span class="font-mono-editorial text-xs text-muted-foreground"> · <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|date:"M j, Y, g:i A" }}</time></span>
+                                <p class="mt-0.5 text-foreground">{{ correction.note }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
             {% endif %}
 
             {% if references_list %}

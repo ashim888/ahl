@@ -106,7 +106,9 @@ def sitewide_structured_data(journal_name, logo_url, site_url, search_url):
     })
 
 
-def news_article_structured_data(article, journal_name, canonical_url, image_url, publisher_logo_url, authors, keywords):
+def news_article_structured_data(
+    article, journal_name, canonical_url, image_url, publisher_logo_url, authors, keywords, corrections=(),
+):
     """schema.org NewsArticle — powers rich results/Google News eligibility.
     `authors`/`keywords` are already-fetched lists (see ArticleDetailView),
     so this never issues its own query.
@@ -117,8 +119,8 @@ def news_article_structured_data(article, journal_name, canonical_url, image_url
         'headline': article.title[:110],
         'description': article.summary or None,
         'image': [image_url] if image_url else None,
-        'datePublished': article.publication_date.isoformat() if article.publication_date else None,
-        'dateModified': article.updated_at.isoformat(),
+        'datePublished': article.published_at.isoformat() if article.published_at else None,
+        'dateModified': (article.last_updated_at or article.published_at or article.updated_at).isoformat(),
         'mainEntityOfPage': {'@type': 'WebPage', '@id': canonical_url},
         'author': [
             {'@type': 'Person', 'name': aa.display_name} for aa in authors
@@ -136,4 +138,10 @@ def news_article_structured_data(article, journal_name, canonical_url, image_url
         'isAccessibleForFree': article.access_type == article.AccessType.OPEN_ACCESS,
         'articleSection': article.get_article_type_display(),
         'keywords': ', '.join(kw.name for kw in keywords) or None,
+        # schema.org CorrectionComment — how Google and news aggregators
+        # recognise a published correction.
+        'correction': [
+            {'@type': 'CorrectionComment', 'text': c.note, 'datePublished': c.created_at.isoformat()}
+            for c in corrections
+        ] or None,
     })

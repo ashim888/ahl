@@ -122,7 +122,7 @@ def send_weekly_digest_issue():
     articles = list(
         Article.objects.filter(
             status=Article.Status.PUBLISHED, publication_date__gte=cutoff_date,
-        ).order_by('-publication_date', '-created_at')[:DIGEST_ARTICLE_LIMIT],
+        ).order_by('-published_at', '-created_at')[:DIGEST_ARTICLE_LIMIT],
     )
     if not articles:
         return None

@@ -1,0 +1,10 @@
+Hi {{ assignee.first_name|default:assignee.email }},
+
+{{ by.get_full_name|default:by.email }} {% if for_review %}sent this story to you for review{% else %}assigned this story to you{% endif %}:
+
+{{ article.title }}
+Status: {{ article.get_status_display }}
+
+Open the story: {{ edit_url }}
+
+— {{ journal_name }}

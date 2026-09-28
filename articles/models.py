@@ -1,3 +1,4 @@
+import datetime
 import secrets
 import string
 
@@ -20,6 +21,9 @@ from .validators import (
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
 HOME_SECTIONS_CACHE_KEY = 'home:sections:v2'
+# The current breaking-news article (or None) for the site-wide banner —
+# see ajna_health_lens/context_processors.py; cleared on every Article.save().
+BREAKING_CACHE_KEY = 'articles:breaking:v1'
 
 # 5 lowercase-alphanumeric chars, e.g. "3f2a4" — short enough to be a usable
 # permalink (/articles/3f2a4/, see articles/converters.py + urls.py), long
@@ -86,6 +90,9 @@ class Article(models.Model):
 
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
+        IN_REVIEW = 'in_review', 'In review'
+        READY = 'ready', 'Ready to publish'
+        SCHEDULED = 'scheduled', 'Scheduled'
         PUBLISHED = 'published', 'Published'
         ARCHIVED = 'archived', 'Archived'
 
@@ -155,6 +162,38 @@ class Article(models.Model):
     # save() the moment status becomes Published (see below) — no manual
     # submission/acceptance dates to track without an OJS integration.
     publication_date = models.DateField(null=True, blank=True)
+    # The real go-live moment (date *and* time) — what listings sort by and
+    # readers see. Set automatically on publish; for a Scheduled article
+    # it's the future time articles.tasks.publish_due_articles will publish
+    # it at. publication_date above is kept as its local calendar date,
+    # since digests, sitemaps and citations only need the day.
+    published_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Set only when an editor clicks "Update live article" — not by every
+    # save (pinning, homepage placement and counters don't count as an
+    # update a reader should be told about).
+    last_updated_at = models.DateTimeField(null=True, blank=True)
+    # Search & social overrides — optional; empty means use the headline,
+    # summary and featured image (see ArticleDetailView's meta tags).
+    seo_title = models.CharField(
+        'Search headline', max_length=70, blank=True,
+        help_text='Shown in Google results and browser tabs. Up to ~60 characters reads best.',
+    )
+    seo_description = models.CharField(
+        'Search description', max_length=160, blank=True,
+        help_text='The snippet under the headline in search results and share cards. ~150 characters.',
+    )
+    social_image = models.ImageField(
+        'Share image', upload_to='articles/social/', null=True, blank=True,
+        validators=[article_image_extension_validator, validate_featured_image_size],
+        help_text='Image for Facebook/X/WhatsApp previews (1200×630 works best). Falls back to the featured image.',
+    )
+    # Breaking news: while now < breaking_until (and the article is live),
+    # a site-wide banner links to it. Expires on its own.
+    breaking_until = models.DateTimeField(null=True, blank=True, db_index=True)
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_articles',
+        help_text='The editor responsible for reviewing this story.',
+    )
 
     doi = models.CharField(max_length=100, unique=True, null=True, blank=True)
     pdf_file = models.FileField(
@@ -167,6 +206,16 @@ class Article(models.Model):
         validators=[article_image_extension_validator, validate_featured_image_size],
         help_text='Hero/thumbnail image shown on the homepage, listing cards, and related-article links. '
                    'JPG or PNG, up to 10 MB.',
+    )
+    featured_image_alt = models.CharField(
+        'Image description (alt text)', max_length=250, blank=True,
+        help_text='What the image shows, for screen readers and search engines. Falls back to the headline.',
+    )
+    featured_image_caption = models.CharField(
+        'Caption', max_length=300, blank=True, help_text='Shown under the image on the article page.',
+    )
+    featured_image_credit = models.CharField(
+        'Credit', max_length=150, blank=True, help_text='Photographer or source, e.g. "Ram Shrestha / Ajna Health Lens".',
     )
     html_content = models.TextField(
         null=True, blank=True,
@@ -250,11 +299,22 @@ class Article(models.Model):
         if not self.slug:
             base = slugify(self.title) or 'article'
             self.slug = f'{base}-{self.short_code}'
-        # publication_date is entirely automatic — stamped the moment status
-        # becomes Published, never editor-facing. Doesn't re-stamp on a later
-        # save (e.g. an edit to an already-published article).
-        if self.status == self.Status.PUBLISHED and not self.publication_date:
-            self.publication_date = timezone.localdate()
+        # published_at/publication_date are automatic — stamped the moment
+        # status becomes Published and never re-stamped by a later edit. A
+        # time still in the future (left over from a schedule that was
+        # overridden with "Publish now") is pulled back to now, so a live
+        # article never claims to have been published later than it was.
+        if self.status == self.Status.PUBLISHED:
+            now = timezone.now()
+            if self.published_at is None and self.publication_date:
+                # A date set directly (seed data, back-dated imports) wins:
+                # start of that local day.
+                self.published_at = timezone.make_aware(
+                    datetime.datetime.combine(self.publication_date, datetime.time.min),
+                )
+            if self.published_at is None or self.published_at > now:
+                self.published_at = now
+            self.publication_date = timezone.localdate(self.published_at)
         super().save(*args, **kwargs)
         # Cheap and unconditional rather than trying to detect exactly which
         # field changes matter (status, homepage_section, is_pinned, or just
@@ -263,9 +323,16 @@ class Article(models.Model):
         # of tracking which changes actually affect the homepage. See
         # articles/views.py HomeView.CACHE_KEY.
         cache.delete(HOME_SECTIONS_CACHE_KEY)
+        cache.delete(BREAKING_CACHE_KEY)
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_breaking(self) -> bool:
+        return bool(
+            self.status == self.Status.PUBLISHED and self.breaking_until and self.breaking_until > timezone.now()
+        )
 
     def get_absolute_url(self):
         # Required by django_comments_xtd (comment confirmation/moderation
@@ -420,6 +487,86 @@ class ArticleAuthor(models.Model):
     @property
     def display_affiliation(self) -> str:
         return self.author.display_affiliation
+
+
+class ArticleCorrection(models.Model):
+    """A dated note appended to a published article — a correction of a
+    factual error, a clarification, or an update with new information.
+    Shown on the article page (and flagged under the headline) and in its
+    NewsArticle structured data. Adding one also stamps the article's
+    last_updated_at, since readers should see it changed.
+    """
+
+    class Kind(models.TextChoices):
+        CORRECTION = 'correction', _('Correction')
+        CLARIFICATION = 'clarification', _('Clarification')
+        UPDATE = 'update', _('Update')
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='corrections')
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.CORRECTION)
+    note = models.TextField(help_text='What changed and why, in a sentence or two. Shown to readers.')
+    created_at = models.DateTimeField(default=timezone.now)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.get_kind_display()} on {self.article}'
+
+
+class ArticleNote(models.Model):
+    """Internal editorial discussion on an article ("check the 2021 figure
+    with the ministry") — never shown to readers."""
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='notes')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'Note on {self.article} by {self.author}'
+
+
+class ArticleRevision(models.Model):
+    """A snapshot of an article's words at one save — who, when, what they
+    did, and the title/summary/text/references as they stood afterwards.
+    Recorded by ArticleFormMixin/article_autosave (see
+    articles/revisions.py); the History page compares and restores them.
+    """
+
+    class Action(models.TextChoices):
+        CREATED = 'created', 'Created'
+        AUTOSAVED = 'autosaved', 'Autosaved'
+        SAVED = 'saved', 'Saved draft'
+        SUBMITTED = 'submitted', 'Sent for review'
+        APPROVED = 'approved', 'Marked ready'
+        SCHEDULED = 'scheduled', 'Scheduled'
+        PUBLISHED = 'published', 'Published'
+        UPDATED = 'updated', 'Updated live article'
+        UNPUBLISHED = 'unpublished', 'Moved back to draft'
+        RESTORED = 'restored', 'Restored an earlier version'
+
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='revisions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    action = models.CharField(max_length=20, choices=Action.choices)
+    status = models.CharField(max_length=20, choices=Article.Status.choices)
+    title = models.CharField(max_length=500)
+    abstract = models.TextField(blank=True)
+    html_content = models.TextField(blank=True)
+    references = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+
+    def __str__(self):
+        return f'{self.get_action_display()} — {self.article} ({self.created_at:%Y-%m-%d %H:%M})'
 
 
 class ArticleView(models.Model):
