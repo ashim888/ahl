@@ -34,3 +34,5 @@ frontend/
 # static/css/tailwind.css (the compiled output) IS committed, same as any
 # other static/ asset; only the regenerable install directory is ignored.
 node_modules/
+
+z_payment_instruction/
