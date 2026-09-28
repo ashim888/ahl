@@ -24,10 +24,13 @@ urlpatterns = [
         views.verification_decide, name='verification_decide',
     ),
 
-    path('manage/authors/', views.AuthorManageListView.as_view(), name='manage_author_list'),
-    path('manage/authors/new/', views.AuthorCreateView.as_view(), name='manage_author_create'),
-    path('manage/authors/<int:pk>/edit/', views.AuthorUpdateView.as_view(), name='manage_author_update'),
-    path('manage/authors/<int:pk>/toggle-active/', views.author_toggle_active, name='manage_author_toggle_active'),
+    # Reader/author *login* accounts. Byline profiles (no account needed)
+    # live at /manage/authors/ in the articles app.
+    path('manage/accounts/', views.AccountManageListView.as_view(), name='manage_account_list'),
+    path('manage/accounts/new/', views.AccountCreateView.as_view(), name='manage_account_create'),
+    path('manage/accounts/<int:pk>/edit/', views.AccountUpdateView.as_view(), name='manage_account_update'),
+    path('manage/accounts/<int:pk>/toggle-active/', views.account_toggle_active, name='manage_account_toggle_active'),
+    path('manage/accounts/<int:pk>/resend-invite/', views.account_resend_invite, name='manage_account_resend_invite'),
 
     path('manage/staff/', views.StaffManageListView.as_view(), name='manage_staff_list'),
     path('manage/staff/new/', views.StaffCreateView.as_view(), name='manage_staff_create'),

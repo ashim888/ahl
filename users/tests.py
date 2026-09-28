@@ -319,32 +319,92 @@ class VerificationQueueAccessTests(TestCase):
 
 
 @FAST_PASSWORD_HASHERS
-class AuthorManagementAccessTests(TestCase):
+class AccountManagementAccessTests(TestCase):
+    """/manage/accounts/ — reader and author login accounts (bylines are
+    articles.Author, managed separately)."""
+
     def setUp(self):
         self.editor = make_user('editor2@example.com', User.Role.EDITOR)
         self.author = make_user('author2@example.com', User.Role.VERIFIED_AUTHOR)
 
-    def test_editor_can_list_authors(self):
+    def _create(self, **overrides):
+        data = {
+            'first_name': 'New', 'last_name': 'Person', 'email': 'new.person@example.com',
+            'role': User.Role.VERIFIED_AUTHOR, 'password1': '', 'password2': '',
+        }
+        data.update(overrides)
         self.client.force_login(self.editor)
-        response = self.client.get(reverse('users:manage_author_list'))
+        return self.client.post(reverse('users:manage_account_create'), data)
+
+    def test_editor_can_list_accounts(self):
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse('users:manage_account_list'))
         self.assertEqual(response.status_code, 200)
 
-    def test_verified_author_cannot_manage_authors(self):
+    def test_verified_author_cannot_manage_accounts(self):
         self.client.force_login(self.author)
-        response = self.client.get(reverse('users:manage_author_list'))
+        response = self.client.get(reverse('users:manage_account_list'))
         self.assertEqual(response.status_code, 403)
 
-    def test_editor_can_toggle_author_active(self):
+    def test_editor_can_toggle_account_active(self):
         self.client.force_login(self.editor)
-        self.client.post(reverse('users:manage_author_toggle_active', args=[self.author.pk]))
+        self.client.post(reverse('users:manage_account_toggle_active', args=[self.author.pk]))
         self.author.refresh_from_db()
         self.assertFalse(self.author.is_active)
 
     def test_search_filters_by_name_or_email(self):
         other_author = make_user('findme-author@example.com', User.Role.VERIFIED_AUTHOR)
         self.client.force_login(self.editor)
-        response = self.client.get(reverse('users:manage_author_list'), {'q': 'findme'})
-        self.assertEqual(list(response.context['authors']), [other_author])
+        response = self.client.get(reverse('users:manage_account_list'), {'q': 'findme'})
+        self.assertEqual(list(response.context['accounts']), [other_author])
+
+    @override_settings(SITE_BASE_URL='https://example.org')
+    def test_create_without_password_sends_set_password_invite(self):
+        response = self._create()
+        self.assertRedirects(response, reverse('users:manage_account_list'))
+        user = User.objects.get(email='new.person@example.com')
+        self.assertFalse(user.has_usable_password())
+        self.assertEqual(user.verification_status, User.VerificationStatus.APPROVED)
+        invite = [m for m in mail.outbox if m.to == ['new.person@example.com']]
+        self.assertEqual(len(invite), 1)
+        self.assertIn('https://example.org/reset/', invite[0].body)
+
+    @override_settings(SITE_BASE_URL='https://example.org')
+    def test_invite_link_lets_the_person_choose_a_password(self):
+        from .invites import set_password_url
+
+        self._create()
+        user = User.objects.get(email='new.person@example.com')
+        path = set_password_url(user).removeprefix('https://example.org')
+        self.client.logout()
+        form_url = self.client.get(path, follow=True).redirect_chain[-1][0]
+        self.client.post(form_url, {'new_password1': 'A-strong-pass-123', 'new_password2': 'A-strong-pass-123'})
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('A-strong-pass-123'))
+
+    def test_create_with_password_sends_no_invite(self):
+        self._create(password1='A-strong-pass-123', password2='A-strong-pass-123')
+        user = User.objects.get(email='new.person@example.com')
+        self.assertTrue(user.check_password('A-strong-pass-123'))
+        self.assertFalse([m for m in mail.outbox if m.to == ['new.person@example.com']])
+
+    def test_mismatched_passwords_rejected(self):
+        response = self._create(password1='A-strong-pass-123', password2='different-pass-456')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(email='new.person@example.com').exists())
+
+    def test_create_account_for_author_links_it(self):
+        from articles.models import Author
+
+        author = Author.objects.create(name='Maya Gurung', email='maya@example.com')
+        self.client.force_login(self.editor)
+        form_page = self.client.get(reverse('users:manage_account_create'), {'author': author.pk})
+        self.assertEqual(form_page.context['form'].initial['first_name'], 'Maya')
+        self.assertEqual(form_page.context['form'].initial['email'], 'maya@example.com')
+        response = self._create(first_name='Maya', last_name='Gurung', email='maya@example.com', author=author.pk)
+        self.assertRedirects(response, reverse('articles:manage_author_list'))
+        author.refresh_from_db()
+        self.assertEqual(author.user.email, 'maya@example.com')
 
 
 @FAST_PASSWORD_HASHERS

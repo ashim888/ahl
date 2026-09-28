@@ -8,7 +8,7 @@ from django_ckeditor_5.widgets import CKEditor5Widget
 from sections.models import Section
 from users.models import User
 
-from .models import Article, ArticleAuthor, Keyword
+from .models import Article, ArticleAuthor, Author, Keyword
 from .sanitize import sanitize_editorial_html
 
 
@@ -81,8 +81,8 @@ class TagifyRelatedArticlesField(forms.CharField):
 
 
 class ArticleForm(forms.ModelForm):
-    """Front-end editorial CRUD form. Authors (ArticleAuthor byline rows —
-    an account or a name-only label — with ordering/corresponding-author flags) are edited separately
+    """Front-end editorial CRUD form. Authors (ArticleAuthor byline rows
+    pointing at Author profiles, with ordering/corresponding-author flags) are edited separately
     via ArticleAuthorFormSet below (see manage_article_authors) — a plain
     multi-select here can't represent that ordering cleanly, so this form
     sticks to the article's own fields.
@@ -235,36 +235,68 @@ class LenientArticleForm(ArticleForm):
         return forms.ModelForm.clean(self)
 
 
+class AuthorChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        label = obj.name
+        if obj.affiliation:
+            label += f' — {obj.affiliation}'
+        return label
+
+
 class ArticleAuthorForm(forms.ModelForm):
-    """One byline row: pick a site account, or type a name for a contributor
-    who has no account (see ArticleAuthor's docstring). One of the two is
-    required; when both are filled the account wins and the typed name is
-    dropped, so the stored row never carries two conflicting names.
+    """One byline row: pick an existing author profile, or type a new name
+    to create one on the spot (no site account involved — see Author). When
+    a typed name matches an existing author's name exactly (ignoring case),
+    that author is reused instead of creating a duplicate.
     """
+
+    new_author_name = forms.CharField(
+        required=False, max_length=255, label='Or add a new author',
+        widget=forms.TextInput(attrs={'placeholder': 'Full name'}),
+    )
+    new_author_affiliation = forms.CharField(
+        required=False, max_length=255, label='Affiliation',
+        widget=forms.TextInput(attrs={'placeholder': 'Optional'}),
+    )
 
     class Meta:
         model = ArticleAuthor
-        fields = ['user', 'name', 'affiliation', 'order', 'is_corresponding']
-        labels = {'user': 'Account', 'name': 'Or name (no account)'}
+        fields = ['author', 'order', 'is_corresponding']
+        field_classes = {'author': AuthorChoiceField}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['user'].queryset = User.objects.order_by('first_name', 'last_name')
-        self.fields['user'].required = False
-        self.fields['user'].empty_label = '— No account —'
+        queryset = Author.objects.filter(is_active=True)
+        if self.instance.pk and self.instance.author_id:
+            queryset = queryset | Author.objects.filter(pk=self.instance.author_id)
+        self.fields['author'].queryset = queryset.order_by('name')
+        self.fields['author'].required = False
+        self.fields['author'].empty_label = '— Choose an author —'
 
     def clean(self):
         cleaned_data = super().clean()
-        user = cleaned_data.get('user')
-        name = (cleaned_data.get('name') or '').strip()
-        if not user and not name:
-            raise forms.ValidationError('Choose an account or type the author\'s name.')
-        if user:
-            cleaned_data['name'] = ''
-            cleaned_data['affiliation'] = ''
-        else:
-            cleaned_data['name'] = name
+        author = cleaned_data.get('author')
+        new_name = ' '.join((cleaned_data.get('new_author_name') or '').split())
+        if not author and not new_name:
+            raise forms.ValidationError('Choose an author or type a new author\'s name.')
+        self._new_author = None
+        if not author:
+            existing = Author.objects.filter(name__iexact=new_name).first()
+            if existing is not None:
+                cleaned_data['author'] = existing
+            else:
+                # Created in save(), not here — the formset may still be
+                # rejected, and a failed save shouldn't leave a stray author.
+                self._new_author = Author(
+                    name=new_name, affiliation=(cleaned_data.get('new_author_affiliation') or '').strip(),
+                )
         return cleaned_data
+
+    def save(self, commit=True):
+        if getattr(self, '_new_author', None) is not None:
+            self._new_author.save()
+            self.instance.author = self._new_author
+        return super().save(commit=commit)
 
 
 # Byline editor for an article — mirrors what the Django admin's
@@ -273,3 +305,46 @@ class ArticleAuthorForm(forms.ModelForm):
 ArticleAuthorFormSet = inlineformset_factory(
     Article, ArticleAuthor, form=ArticleAuthorForm, extra=2, can_delete=True,
 )
+
+
+class AuthorForm(forms.ModelForm):
+    """Editorial create/edit of an Author byline profile — no login fields.
+    Giving the author an account is a separate action (Create user account
+    on /manage/authors/), so creating a byline never requires a password.
+    """
+
+    class Meta:
+        model = Author
+        fields = [
+            'name', 'affiliation', 'department', 'email', 'bio', 'photo', 'orcid', 'research_interests',
+            'website_url', 'linkedin_url', 'researchgate_url', 'is_active',
+        ]
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 5}),
+            'research_interests': forms.Textarea(attrs={'rows': 2}),
+        }
+        help_texts = {
+            'name': 'As it should appear in bylines, e.g. "Dr. Sunita Rai".',
+        }
+
+    # Fields that fall back to the linked account's profile when left blank
+    # (Author.display_*) — shown as greyed placeholders so an editor can see
+    # what the public page will use.
+    ACCOUNT_FALLBACK_FIELDS = [
+        'affiliation', 'department', 'bio', 'orcid', 'research_interests', 'linkedin_url', 'researchgate_url',
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.instance.user if self.instance.pk and self.instance.user_id else None
+        if user:
+            for name in self.ACCOUNT_FALLBACK_FIELDS:
+                value = getattr(user, name, None)
+                if value:
+                    self.fields[name].widget.attrs['placeholder'] = f'From account: {value}'[:200]
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if email and Author.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('Another author already uses this email address.')
+        return email

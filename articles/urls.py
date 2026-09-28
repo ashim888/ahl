@@ -1,7 +1,7 @@
 from django.urls import path, register_converter
 from django.views.generic import RedirectView
 
-from . import views
+from . import author_views, views
 from .converters import ShortCodeConverter
 from .feeds import LatestArticlesAtomFeed, LatestArticlesFeed
 
@@ -30,7 +30,10 @@ urlpatterns = [
     # never just the code alone. Django tries patterns in list order.
     path('articles/<shortcode:code>/', views.article_short_link, name='article_short_link'),
     path('articles/<slug:slug>/', views.ArticleDetailView.as_view(), name='article_detail'),
-    path('authors/<int:pk>/', views.AuthorDetailView.as_view(), name='author_detail'),
+    # Numeric form first: the old user-id URLs keep redirecting. Author.save()
+    # never generates an all-digit slug, so no author page is shadowed.
+    path('authors/<int:pk>/', views.legacy_author_redirect, name='legacy_author_detail'),
+    path('authors/<slug:slug>/', views.AuthorDetailView.as_view(), name='author_detail'),
     path(
         'articles/<slug:slug>/cite/<str:citation_format>/',
         views.article_citation, name='article_citation',
@@ -55,6 +58,13 @@ urlpatterns = [
     ),
     path('manage/articles/<slug:slug>/edit/', views.ArticleUpdateView.as_view(), name='manage_article_update'),
     path('manage/articles/<slug:slug>/authors/', views.article_manage_authors, name='manage_article_authors'),
+    # Author byline profiles — no login account needed (see author_views.py).
+    path('manage/authors/', author_views.AuthorManageListView.as_view(), name='manage_author_list'),
+    path('manage/authors/new/', author_views.AuthorCreateView.as_view(), name='manage_author_create'),
+    path('manage/authors/<int:pk>/edit/', author_views.AuthorUpdateView.as_view(), name='manage_author_update'),
+    path('manage/authors/<int:pk>/toggle-active/', author_views.author_toggle_active, name='manage_author_toggle_active'),
+    path('manage/authors/<int:pk>/link-account/', author_views.author_link_account, name='manage_author_link_account'),
+    path('manage/accounts/<int:user_pk>/author-profile/', author_views.author_from_account, name='manage_author_from_account'),
     path('manage/articles/<slug:slug>/delete/', views.ArticleDeleteView.as_view(), name='manage_article_delete'),
     path('manage/articles/<slug:slug>/quick-publish/', views.article_quick_publish, name='manage_article_quick_publish'),
 ]

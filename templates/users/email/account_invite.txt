@@ -1,0 +1,10 @@
+Hi {{ user.first_name|default:user.email }},
+
+The {{ journal_name }} editorial team has created an account for you{% if invited_by %} ({{ invited_by.get_full_name }}){% endif %}. Your login is {{ user.email }}.
+
+Choose a password to activate it:
+{{ set_password_url }}
+
+This link works once and expires after a few days. If it has expired, use "Forgot password" on the login page: {{ login_url }}
+
+— {{ journal_name }} Editorial Team

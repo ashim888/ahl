@@ -1,9 +1,50 @@
 {% extends 'admin_dashboard/base.html' %}
 
-{% block title %}{% if is_create %}New Author{% else %}Edit Author{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
-{% block page_title %}{% if is_create %}New Author{% else %}Edit Author{% endif %}{% endblock %}
+{% block title %}{% if is_create %}New account{% else %}Edit account{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if author %}Create user account for {{ author.name }}{% elif is_create %}New account{% else %}Edit account{% endif %}{% endblock %}
 
 {% block content %}
+{% if is_create %}
+<div class="max-w-2xl">
+    <p class="text-sm text-gray-500 mb-4">
+        {% if author %}
+            Gives <strong class="text-gray-700">{{ author.name }}</strong> a login. Their author profile and bylines stay as they are — the new account is linked to them.
+        {% else %}
+            A login account for a reader or contributor. To credit someone on an article you don't need one — add them under
+            <a href="{% url 'articles:manage_author_list' %}" class="underline">Authors</a> instead.
+        {% endif %}
+    </p>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        <form method="post">
+            {% csrf_token %}
+            {% if author %}<input type="hidden" name="author" value="{{ author.pk }}">{% endif %}
+            {% if form.non_field_errors %}
+                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.first_name %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.last_name %}
+                </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.email %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.role %}
+                <div class="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                    <p class="text-sm font-medium text-gray-700">Password <span class="font-normal text-gray-400">(optional)</span></p>
+                    <p class="text-xs text-gray-500 mt-1 mb-4">Leave empty and we'll email them a link to choose their own password.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.password1 %}
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.password2 %}
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+                <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">Create account</button>
+                <a href="{% if author %}{% url 'articles:manage_author_list' %}{% else %}{% url 'users:manage_account_list' %}{% endif %}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
 <div class="">
     {% if not is_create %}
         <p class="text-sm text-gray-500 mb-4">
@@ -88,9 +129,9 @@
             <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
                 <button type="submit"
                         class="flex-1 sm:flex-none inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
-                    {% if is_create %}Create author{% else %}Save changes{% endif %}
+                    Save changes
                 </button>
-                <a href="{% url 'users:manage_author_list' %}"
+                <a href="{% url 'users:manage_account_list' %}"
                    class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
                     Cancel
                 </a>
@@ -98,4 +139,5 @@
         </form>
     </div>
 </div>
+{% endif %}
 {% endblock %}

@@ -14,7 +14,7 @@ from django.views.generic import CreateView, DeleteView, ListView, TemplateView,
 from django.views.generic.detail import DetailView
 from django_ratelimit.decorators import ratelimit
 
-from articles.models import Article, Bookmark, KeywordFollow
+from articles.models import Article, Author, Bookmark, KeywordFollow
 from billing.models import ArticleGift
 from pitches.models import StoryPitch
 from sections.models import Section
@@ -22,9 +22,10 @@ from training.models import Enrollment
 
 from .decorators import role_required
 from .forms import (
-    AuthorCreateForm, AuthorManageForm, ChangeRoleForm, GroupForm, ProfileUpdateForm,
+    AccountCreateForm, AccountManageForm, ChangeRoleForm, GroupForm, ProfileUpdateForm,
     RegistrationForm, STAFF_ROLES, StaffCreateForm, StaffManageForm, UserGroupsForm,
 )
+from .invites import send_account_invite
 from .models import User
 
 # Single source of truth for both is User.EDITORIAL_ROLES / User.SENIOR_STAFF_ROLES
@@ -257,26 +258,24 @@ def verification_bulk_decide(request):
     return redirect('users:verification_queue')
 
 
-# -- Editorial author management (CRUD, not public browsing) ---------------
-# Scoped to User.VERIFICATION_QUEUE_ROLES (unverified, verified_author) — the
-# same "author-tier" accounts the verification queue governs. Editor/EiC/Admin
-# accounts are managed via Django admin, not this screen.
+# -- Editorial account management (login accounts, not bylines) -----------
+# Scoped to User.VERIFICATION_QUEUE_ROLES (unverified, verified_author) —
+# reader and author *login* accounts. Public byline profiles are
+# articles.Author (see articles/author_views.py, /manage/authors/): an author
+# needs no account, and gets one here only when they need to log in.
+# Editor/EiC/Admin accounts are managed under Staff below.
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
-class AuthorManageListView(ListView):
+class AccountManageListView(ListView):
     model = User
-    template_name = 'users/manage/author_list.html'
-    context_object_name = 'authors'
+    template_name = 'users/manage/account_list.html'
+    context_object_name = 'accounts'
     paginate_by = 30
 
     def get_queryset(self):
         queryset = User.objects.filter(
             role__in=User.VERIFICATION_QUEUE_ROLES,
-        ).annotate(
-            published_article_count=Count(
-                'authored_articles', filter=Q(authored_articles__status=Article.Status.PUBLISHED), distinct=True,
-            ),
-        ).order_by('-date_joined')
+        ).select_related('author_profile').order_by('-date_joined')
         role = self.request.GET.get('role')
         q = self.request.GET.get('q')
         if role:
@@ -297,34 +296,75 @@ class AuthorManageListView(ListView):
         return context
 
 
-class AuthorFormMixin:
-    def get_success_url(self):
-        return reverse('users:manage_author_list')
-
-
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
-class AuthorCreateView(AuthorFormMixin, CreateView):
+class AccountCreateView(CreateView):
+    """New login account. With ?author=<pk> it's the "Create user account"
+    action for an Author profile: the form is prefilled from the author and
+    the new account is linked to it on save.
+    """
+
     model = User
-    form_class = AuthorCreateForm
-    template_name = 'users/manage/author_form.html'
+    form_class = AccountCreateForm
+    template_name = 'users/manage/account_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.author = None
+        author_pk = request.GET.get('author') or request.POST.get('author')
+        if author_pk:
+            self.author = get_object_or_404(Author, pk=author_pk)
+            if self.author.user_id:
+                messages.info(request, f'"{self.author.name}" already has an account ({self.author.user.email}).')
+                return redirect('articles:manage_author_update', pk=self.author.pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.author:
+            first, _, last = self.author.name.rpartition(' ')
+            initial.update({'first_name': first or last, 'last_name': last if first else '', 'email': self.author.email})
+        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_create'] = True
+        context['author'] = self.author
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, f'"{form.instance.get_full_name()}" added as a verified author.')
-        return super().form_valid(form)
+        user = form.save()
+        self.object = user
+        if self.author:
+            self.author.user = user
+            if not self.author.email:
+                self.author.email = user.email
+            self.author.save(update_fields=['user', 'email'])
+        if form.sends_invite:
+            sent = send_account_invite(user, invited_by=self.request.user)
+            if sent:
+                messages.success(self.request, f'Account created for {user.email} — they\'ve been emailed a link to set their password.')
+            else:
+                messages.warning(
+                    self.request,
+                    f'Account created for {user.email}, but the invitation email could not be sent. '
+                    'Ask them to use "Forgot password" on the login page.',
+                )
+        else:
+            messages.success(self.request, f'Account created for {user.email}.')
+        if self.author:
+            return redirect('articles:manage_author_list')
+        return redirect('users:manage_account_list')
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
-class AuthorUpdateView(AuthorFormMixin, UpdateView):
-    form_class = AuthorManageForm
-    template_name = 'users/manage/author_form.html'
+class AccountUpdateView(UpdateView):
+    form_class = AccountManageForm
+    template_name = 'users/manage/account_form.html'
 
     def get_queryset(self):
         return User.objects.filter(role__in=User.VERIFICATION_QUEUE_ROLES)
+
+    def get_success_url(self):
+        return reverse('users:manage_account_list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -337,18 +377,33 @@ class AuthorUpdateView(AuthorFormMixin, UpdateView):
 
 
 @role_required(*EDITORIAL_ROLES)
-def author_toggle_active(request, pk):
+def account_toggle_active(request, pk):
     """Reversible deactivate/reactivate — the "delete" action for this screen.
-    Never hard-deletes the User row, which would cascade through their
-    authorship links on any articles they've written.
+    Never hard-deletes the User row. Bylines are unaffected either way: they
+    point at the Author profile, not the login.
     """
     if request.method != 'POST':
         raise PermissionDenied
-    author = get_object_or_404(User, pk=pk, role__in=User.VERIFICATION_QUEUE_ROLES)
-    author.is_active = not author.is_active
-    author.save(update_fields=['is_active'])
-    messages.success(request, f'{author.email} {"reactivated" if author.is_active else "deactivated"}.')
-    return redirect('users:manage_author_list')
+    account = get_object_or_404(User, pk=pk, role__in=User.VERIFICATION_QUEUE_ROLES)
+    account.is_active = not account.is_active
+    account.save(update_fields=['is_active'])
+    messages.success(request, f'{account.email} {"reactivated" if account.is_active else "deactivated"}.')
+    return redirect('users:manage_account_list')
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+def account_resend_invite(request, pk):
+    """Re-sends the set-your-password email — only for accounts that still
+    have no usable password (an invite that expired or went missing)."""
+    account = get_object_or_404(User, pk=pk, role__in=User.VERIFICATION_QUEUE_ROLES)
+    if account.has_usable_password():
+        messages.info(request, f'{account.email} has already set a password.')
+    elif send_account_invite(account, invited_by=request.user):
+        messages.success(request, f'Invitation re-sent to {account.email}.')
+    else:
+        messages.error(request, f'The invitation email to {account.email} could not be sent.')
+    return redirect('users:manage_account_list')
 
 
 # -- Staff account management (Editor / Editor-in-Chief / Admin) -----------
@@ -430,7 +485,7 @@ class StaffUpdateView(StaffFormViewMixin, UpdateView):
 
 @role_required(*STAFF_MANAGE_ROLES)
 def staff_toggle_active(request, pk):
-    """Reversible deactivate/reactivate, same pattern as author_toggle_active
+    """Reversible deactivate/reactivate, same pattern as account_toggle_active
     above — never hard-deletes the account."""
     if request.method != 'POST':
         raise PermissionDenied
@@ -473,7 +528,7 @@ def change_role(request, pk):
                 target.verification_status = User.VerificationStatus.APPROVED
             target.save()
             messages.success(request, f'{target.get_full_name()} is now {target.get_role_display()}.')
-            return redirect('users:manage_staff_list' if new_role in STAFF_ROLES else 'users:manage_author_list')
+            return redirect('users:manage_staff_list' if new_role in STAFF_ROLES else 'users:manage_account_list')
     else:
         form = ChangeRoleForm(initial={'role': target.role}, acting_user=request.user)
 

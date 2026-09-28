@@ -12,7 +12,7 @@ from sections.models import Section, SectionFollow
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .forms import ArticleForm, TagifyKeywordsField
-from .models import Article, Bookmark, Keyword, KeywordEvent, KeywordFollow
+from .models import Article, ArticleAuthor, Author, Bookmark, Keyword, KeywordEvent, KeywordFollow
 from .toc import extract_toc
 
 
@@ -205,9 +205,12 @@ class SEOMetaTagsTests(TestCase):
             role=User.Role.VERIFIED_AUTHOR, affiliation='Analytical Engines Inc.', bio='Writes about computing.',
         )
         article = make_article('author-schema-article', Article.ArticleType.NEWS_COMMENTARY)
-        ArticleAuthor.objects.create(article=article, user=author, order=0, is_corresponding=True)
+        # Author profile left blank on purpose — the page falls back to the
+        # linked account's own profile (affiliation, bio) — see Author.display_*.
+        profile = Author.for_user(author)
+        ArticleAuthor.objects.create(article=article, author=profile, order=0, is_corresponding=True)
 
-        response = self.client.get(reverse('articles:author_detail', args=[author.pk]))
+        response = self.client.get(reverse('articles:author_detail', args=[profile.slug]))
         content = response.content.decode()
         self.assertIn('<title>Ada Lovelace', content)
         self.assertIn('Writes about computing.', content)
@@ -224,9 +227,10 @@ class SEOMetaTagsTests(TestCase):
             role=User.Role.VERIFIED_AUTHOR,
         )
         article = make_article('author-schema-article2', Article.ArticleType.NEWS_COMMENTARY)
-        ArticleAuthor.objects.create(article=article, user=author, order=0, is_corresponding=True)
+        profile = Author.for_user(author)
+        ArticleAuthor.objects.create(article=article, author=profile, order=0, is_corresponding=True)
 
-        response = self.client.get(reverse('articles:author_detail', args=[author.pk]))
+        response = self.client.get(reverse('articles:author_detail', args=[profile.slug]))
         self.assertNotContains(response, '"sameAs"')
 
     def test_non_article_page_falls_back_to_sitewide_defaults(self):
@@ -2509,10 +2513,8 @@ class OptionalAbstractTests(TestCase):
         self.assertContains(listing, 'Opening line of the story.')
 
 
-class NameOnlyAuthorTests(TestCase):
-    """Byline authors don't need a site account — an ArticleAuthor row can
-    carry just a name (and affiliation), shown as unlinked text.
-    """
+class AuthorProfileTests(TestCase):
+    """Bylines point at Author profiles, which need no login account."""
 
     def setUp(self):
         from users.models import User
@@ -2527,70 +2529,125 @@ class NameOnlyAuthorTests(TestCase):
             role=User.Role.EDITOR,
         )
 
-    def test_row_requires_account_or_name(self):
-        from django.db import transaction
+    def _byline_post(self, **row):
+        data = {
+            'articleauthor_set-TOTAL_FORMS': '1', 'articleauthor_set-INITIAL_FORMS': '0',
+            'articleauthor_set-MIN_NUM_FORMS': '0', 'articleauthor_set-MAX_NUM_FORMS': '1000',
+            'articleauthor_set-0-author': '', 'articleauthor_set-0-new_author_name': '',
+            'articleauthor_set-0-new_author_affiliation': '', 'articleauthor_set-0-order': '0',
+        }
+        data.update({f'articleauthor_set-0-{key}': value for key, value in row.items()})
+        self.client.force_login(self.editor)
+        return self.client.post(reverse('articles:manage_article_authors', args=[self.article.slug]), data)
 
-        from .models import ArticleAuthor
+    def test_author_without_account_gets_byline_and_public_page(self):
+        author = Author.objects.create(name='Dr. Guest Writer', affiliation='Kathmandu University')
+        ArticleAuthor.objects.create(article=self.article, author=author, is_corresponding=True)
+        detail = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
+        self.assertContains(detail, 'Dr. Guest Writer')
+        self.assertContains(detail, 'Kathmandu University')
+        self.assertContains(detail, reverse('articles:author_detail', args=[author.slug]))
+        page = self.client.get(reverse('articles:author_detail', args=[author.slug]))
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(list(page.context['author_articles']), [self.article])
 
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            ArticleAuthor.objects.create(article=self.article, name='')
+    def test_author_without_published_bylines_has_no_page(self):
+        author = Author.objects.create(name='Not Yet Published')
+        self.assertEqual(self.client.get(reverse('articles:author_detail', args=[author.slug])).status_code, 404)
 
-    def test_name_only_author_renders_unlinked_in_byline(self):
-        from .models import ArticleAuthor
-
-        ArticleAuthor.objects.create(
-            article=self.article, name='Dr. Guest Writer', affiliation='Kathmandu University', is_corresponding=True,
-        )
-        response = self.client.get(reverse('articles:article_detail', args=[self.article.slug]))
-        self.assertContains(response, 'Dr. Guest Writer')
-        self.assertContains(response, 'Kathmandu University')
-        self.assertNotContains(response, '/authors/')
-        listing = self.client.get(reverse('articles:article_list'))
-        self.assertContains(listing, 'Dr. Guest Writer')
-
-    def test_name_only_author_in_citation_and_search(self):
-        from .models import ArticleAuthor
-
-        ArticleAuthor.objects.create(article=self.article, name='Sita Guest')
+    def test_author_name_in_citation_and_search(self):
+        ArticleAuthor.objects.create(article=self.article, author=Author.objects.create(name='Sita Guest'))
         citation = self.client.get(reverse('articles:article_citation', args=[self.article.slug, 'text']))
         self.assertIn('Sita Guest', citation.content.decode())
         search = self.client.get(reverse('articles:search'), {'q': 'Sita Guest'})
         self.assertIn(self.article, list(search.context['articles']))
 
-    def test_byline_editor_saves_name_only_row(self):
-        self.client.force_login(self.editor)
-        url = reverse('articles:manage_article_authors', args=[self.article.slug])
-        data = {
-            'articleauthor_set-TOTAL_FORMS': '1', 'articleauthor_set-INITIAL_FORMS': '0',
-            'articleauthor_set-MIN_NUM_FORMS': '0', 'articleauthor_set-MAX_NUM_FORMS': '1000',
-            'articleauthor_set-0-user': '', 'articleauthor_set-0-name': ' Ram Contributor ',
-            'articleauthor_set-0-affiliation': 'Freelance', 'articleauthor_set-0-order': '0',
-        }
-        response = self.client.post(url, data)
+    def test_byline_editor_creates_new_author_from_typed_name(self):
+        response = self._byline_post(new_author_name=' Ram  Contributor ', new_author_affiliation='Freelance')
         self.assertEqual(response.status_code, 302)
-        row = self.article.articleauthor_set.get()
-        self.assertIsNone(row.user)
-        self.assertEqual(row.display_name, 'Ram Contributor')
+        author = self.article.articleauthor_set.get().author
+        self.assertEqual((author.name, author.affiliation, author.user), ('Ram Contributor', 'Freelance', None))
+
+    def test_byline_editor_reuses_existing_author_with_same_name(self):
+        existing = Author.objects.create(name='Ram Contributor')
+        self._byline_post(new_author_name='ram contributor')
+        self.assertEqual(self.article.articleauthor_set.get().author, existing)
+        self.assertEqual(Author.objects.count(), 1)
 
     def test_byline_editor_rejects_row_with_neither(self):
-        self.client.force_login(self.editor)
-        url = reverse('articles:manage_article_authors', args=[self.article.slug])
-        data = {
-            'articleauthor_set-TOTAL_FORMS': '1', 'articleauthor_set-INITIAL_FORMS': '0',
-            'articleauthor_set-MIN_NUM_FORMS': '0', 'articleauthor_set-MAX_NUM_FORMS': '1000',
-            'articleauthor_set-0-user': '', 'articleauthor_set-0-name': '',
-            'articleauthor_set-0-affiliation': 'Only an affiliation', 'articleauthor_set-0-order': '0',
-        }
-        response = self.client.post(url, data)
+        response = self._byline_post(new_author_affiliation='Only an affiliation')
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.article.articleauthor_set.exists())
+        self.assertFalse(Author.objects.exists())
 
-    def test_linking_an_account_drops_the_typed_name(self):
-        from .forms import ArticleAuthorForm
+    def test_legacy_user_id_url_redirects_to_author_page(self):
+        profile = Author.for_user(self.editor)
+        ArticleAuthor.objects.create(article=self.article, author=profile)
+        response = self.client.get(f'/authors/{self.editor.pk}/')
+        self.assertRedirects(response, reverse('articles:author_detail', args=[profile.slug]), status_code=301)
 
-        form = ArticleAuthorForm(data={'user': self.editor.pk, 'name': 'Stale Name', 'order': 0})
-        self.assertTrue(form.is_valid(), form.errors)
-        self.assertEqual(form.cleaned_data['name'], '')
+    def test_numeric_name_never_gets_an_all_digit_slug(self):
+        self.assertEqual(Author.objects.create(name='2024').slug, 'author-2024')
+
+
+class AuthorManagementTests(TestCase):
+    """/manage/authors/ — byline profiles, no password anywhere."""
+
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='author-admin@example.com', password='pw', first_name='A', last_name='E', role=User.Role.EDITOR,
+        )
+        self.reader = User.objects.create_user(email='just-reader@example.com', password='pw', first_name='R', last_name='D')
+
+    def test_editor_creates_author_with_name_only(self):
+        self.client.force_login(self.editor)
+        form_page = self.client.get(reverse('articles:manage_author_create'))
+        self.assertFalse([name for name in form_page.context['form'].fields if 'password' in name])
+        self.assertNotContains(form_page, 'name="password')
+        response = self.client.post(reverse('articles:manage_author_create'), {'name': 'Hari Bahadur', 'is_active': 'on'})
+        self.assertRedirects(response, reverse('articles:manage_author_list'))
+        author = Author.objects.get(name='Hari Bahadur')
+        self.assertIsNone(author.user)
+        self.assertEqual(author.slug, 'hari-bahadur')
+
+    def test_non_editor_cannot_manage_authors(self):
+        self.client.force_login(self.reader)
+        self.assertEqual(self.client.get(reverse('articles:manage_author_list')).status_code, 403)
+
+    def test_link_and_unlink_existing_account(self):
+        author = Author.objects.create(name='Linkable')
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_author_link_account', args=[author.pk]), {'user': self.reader.pk})
+        author.refresh_from_db()
+        self.assertEqual(author.user, self.reader)
+        self.client.post(reverse('articles:manage_author_link_account', args=[author.pk]), {'user': ''})
+        author.refresh_from_db()
+        self.assertIsNone(author.user)
+
+    def test_an_account_backs_at_most_one_author(self):
+        Author.objects.create(name='First', user=self.reader)
+        second = Author.objects.create(name='Second')
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_author_link_account', args=[second.pk]), {'user': self.reader.pk})
+        second.refresh_from_db()
+        self.assertIsNone(second.user)
+
+    def test_deactivate_keeps_bylines(self):
+        article = make_article('kept-byline', Article.ArticleType.NEWS_COMMENTARY)
+        author = Author.objects.create(name='Retiring Writer')
+        ArticleAuthor.objects.create(article=article, author=author)
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_author_toggle_active', args=[author.pk]))
+        author.refresh_from_db()
+        self.assertFalse(author.is_active)
+        self.assertTrue(article.articleauthor_set.filter(author=author).exists())
+
+    def test_create_author_profile_from_account(self):
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_author_from_account', args=[self.reader.pk]))
+        self.assertEqual(self.reader.author_profile.name, 'R D')
 
 
 class HomepageRoutingTests(TestCase):

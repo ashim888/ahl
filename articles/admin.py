@@ -1,11 +1,21 @@
 from django.contrib import admin
 
-from .models import Article, ArticleAuthor
+from .models import Article, ArticleAuthor, Author
 
 
 class ArticleAuthorInline(admin.TabularInline):
     model = ArticleAuthor
     extra = 1
+    autocomplete_fields = ['author']
+
+
+@admin.register(Author)
+class AuthorAdmin(admin.ModelAdmin):
+    list_display = ['name', 'affiliation', 'user', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['name', 'affiliation', 'email', 'user__email']
+    prepopulated_fields = {'slug': ('name',)}
+    raw_id_fields = ['user']
 
 
 @admin.register(Article)

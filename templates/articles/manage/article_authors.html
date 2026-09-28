@@ -13,9 +13,9 @@
         byline; the corresponding author is highlighted on the article page.
     </p>
     <p class="text-sm text-gray-500 mb-6">
-        Authors don't need an account: leave <em>Account</em> empty and type their name (and affiliation) instead.
-        Name-only authors appear in the byline as plain text. If they later need an account, create it under
-        <a href="{% url 'users:manage_author_create' %}" class="underline">Authors → New</a> and pick it here.
+        Authors don't need a site account. Pick an existing author, or type a new name to create an author
+        profile as you go. Manage profiles (bio, photo, links) and give an author a login under
+        <a href="{% url 'articles:manage_author_list' %}" class="underline">Authors</a>.
     </p>
 
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
@@ -34,18 +34,17 @@
                         {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
                         {% for error in form.non_field_errors %}<p class="sm:col-span-12 text-xs text-red-600">{{ error }}</p>{% endfor %}
                         <div class="sm:col-span-6">
-                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Account</label>
-                            {{ form.user }}
-                            {% for error in form.user.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Author</label>
+                            {{ form.author }}
+                            {% for error in form.author.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
                         </div>
-                        <div class="sm:col-span-6">
-                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Or name (no account)</label>
-                            {{ form.name }}
-                            {% for error in form.name.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                        <div class="sm:col-span-3">
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Or add a new author</label>
+                            {{ form.new_author_name }}
                         </div>
-                        <div class="sm:col-span-6">
-                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Affiliation (name-only authors)</label>
-                            {{ form.affiliation }}
+                        <div class="sm:col-span-3">
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Affiliation (new author)</label>
+                            {{ form.new_author_affiliation }}
                         </div>
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-medium text-gray-500 mb-1.5">Order</label>

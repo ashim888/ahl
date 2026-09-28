@@ -1,0 +1,15 @@
+{% extends 'email/base.html' %}
+{% block title %}Your account is ready{% endblock %}
+{% block preheader %}Choose a password to start using your {{ journal_name }} account.{% endblock %}
+{% block eyebrow %}Your account{% endblock %}
+{% block heading %}Your account is ready{% endblock %}
+{% block content %}
+    <p>Hi {{ user.first_name|default:user.email }},</p>
+    <p>The {{ journal_name }} editorial team has created an account for you{% if invited_by %} ({{ invited_by.get_full_name }}){% endif %}. Your login is <strong>{{ user.email }}</strong>.</p>
+    <p>Choose a password to activate it:</p>
+    {% include 'email/includes/button.html' with url=set_password_url label='Set your password' %}
+    {% include 'email/includes/link_fallback.html' with url=set_password_url %}
+    <p>This link works once and expires after a few days. If it has expired, use “Forgot password” on the <a href="{{ login_url }}">login page</a>.</p>
+    <p>— {{ journal_name }} Editorial Team</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because an editor created a {{ journal_name }} account with this email address. If you weren't expecting it, you can ignore this email.{% endblock %}

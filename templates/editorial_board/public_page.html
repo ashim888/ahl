@@ -108,8 +108,8 @@
                         {% if member.bio %}
                             <p class="text-sm text-muted-foreground leading-relaxed">{{ member.bio }}</p>
                         {% endif %}
-                        {% if member.user_id %}
-                            <a href="{% url 'articles:author_detail' member.user_id %}"
+                        {% if member.user.author_profile.is_active %}
+                            <a href="{% url 'articles:author_detail' member.user.author_profile.slug %}"
                                class="inline-block mt-4 font-mono-editorial text-xs border-b border-muted-foreground hover:border-accent hover:text-accent pb-0.5">
                                 VIEW AUTHOR PROFILE →
                             </a>

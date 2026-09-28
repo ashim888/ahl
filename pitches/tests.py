@@ -329,7 +329,7 @@ class PitchDecisionTests(TestCase):
         self.assertEqual(article.title, self.pitch.title)
         self.assertEqual(article.abstract, self.pitch.summary)
         self.assertEqual(article.status, Article.Status.DRAFT)
-        self.assertTrue(ArticleAuthor.objects.filter(article=article, user=self.author, is_corresponding=True).exists())
+        self.assertTrue(ArticleAuthor.objects.filter(article=article, author__user=self.author, is_corresponding=True).exists())
         self.assertEqual(response.status_code, 302)
         self.assertEqual(len(mail.outbox), 1)
 

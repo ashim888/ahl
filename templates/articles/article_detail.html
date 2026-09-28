@@ -106,8 +106,8 @@
             {% endif %}
 
             <div class="flex items-start gap-4 py-6 border-t-2 border-foreground border-b border-border mb-10">
-                {% if featured_author.user.photo %}
-                    <img src="{{ featured_author.user.photo.url }}" alt="" class="w-12 h-12 flex-shrink-0 object-cover">
+                {% if featured_author.author.display_photo %}
+                    <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-12 h-12 flex-shrink-0 object-cover">
                 {% else %}
                     <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center"
                          style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
@@ -118,7 +118,7 @@
                 {% endif %}
                 <div class="flex-1 min-w-0">
                     <p class="font-semibold text-sm">
-                        {% for aa in article_authors %}{% if aa.user_id and not preview_mode %}<a href="{% url 'articles:author_detail' aa.user_id %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
+                        {% for aa in article_authors %}{% if aa.author.is_active and not preview_mode %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
                     </p>
                     {% if featured_author %}
                         <p class="text-xs text-muted-foreground">
@@ -406,8 +406,8 @@
                     <div class="border-t-2 border-foreground pt-6 mb-8">
                         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-4">{% trans "ABOUT THE AUTHOR" %}</p>
                         <div class="flex items-start gap-3 mb-4">
-                            {% if featured_author.user.photo %}
-                                <img src="{{ featured_author.user.photo.url }}" alt="" class="w-14 h-14 flex-shrink-0 object-cover">
+                            {% if featured_author.author.display_photo %}
+                                <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-14 h-14 flex-shrink-0 object-cover">
                             {% else %}
                                 <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center"
                                      style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
@@ -415,20 +415,19 @@
                                 </div>
                             {% endif %}
                             <div>
-                                {% if featured_author.user_id and not preview_mode %}
-                                    <a href="{% url 'articles:author_detail' featured_author.user_id %}" class="font-semibold text-sm hover:text-accent">{{ featured_author.display_name }}</a>
+                                {% if featured_author.author.is_active and not preview_mode %}
+                                    <a href="{% url 'articles:author_detail' featured_author.author.slug %}" class="font-semibold text-sm hover:text-accent">{{ featured_author.display_name }}</a>
                                 {% else %}
                                     <p class="font-semibold text-sm">{{ featured_author.display_name }}</p>
                                 {% endif %}
-                                {% if featured_author.user_id %}<p class="font-mono-editorial text-xs text-accent">{{ featured_author.user.get_role_display }}</p>{% endif %}
                                 <p class="font-mono-editorial text-xs text-muted-foreground">{{ featured_author.display_affiliation }}</p>
                             </div>
                         </div>
-                        {% if featured_author.user.bio %}
-                            <p class="text-sm text-muted-foreground leading-relaxed">{{ featured_author.user.bio }}</p>
+                        {% if featured_author.author.display_bio %}
+                            <p class="text-sm text-muted-foreground leading-relaxed">{{ featured_author.author.display_bio }}</p>
                         {% endif %}
-                        {% if featured_author.user_id and not preview_mode %}
-                            <a href="{% url 'articles:author_detail' featured_author.user_id %}"
+                        {% if featured_author.author.is_active and not preview_mode %}
+                            <a href="{% url 'articles:author_detail' featured_author.author.slug %}"
                                class="inline-block mt-4 font-mono-editorial text-xs border-b border-muted-foreground hover:border-accent hover:text-accent pb-0.5">
                                 {% trans "MORE BY THIS AUTHOR →" %}
                             </a>

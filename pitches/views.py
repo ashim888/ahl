@@ -13,7 +13,7 @@ from django.views.generic import CreateView, ListView
 from django_ratelimit.decorators import ratelimit
 
 from ajna_health_lens.mail import send_templated_email
-from articles.models import Article, ArticleAuthor
+from articles.models import Article, ArticleAuthor, Author
 from users.decorators import role_required
 from users.models import User
 
@@ -187,12 +187,13 @@ def pitch_decide(request, pk, decision):
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
             html_content=linebreaks(pitch.body, autoescape=True) if pitch.body else None,
         )
-        # An anonymous pitch (no submitter account) can't get an automatic
-        # byline — nobody to link. The editor adds authorship by hand (the
-        # existing "Authors" screen on the article) once they've followed up
-        # via pitch.contact_email, e.g. if that person registers an account.
+        # An anonymous pitch gets no automatic byline — the editor decides
+        # whether and how to credit the person, and can add them by name on
+        # the article's Authors screen (no account needed, see Author).
         if pitch.submitter:
-            ArticleAuthor.objects.create(article=article, user=pitch.submitter, order=0, is_corresponding=True)
+            ArticleAuthor.objects.create(
+                article=article, author=Author.for_user(pitch.submitter), order=0, is_corresponding=True,
+            )
         pitch.article = article
         pitch.status = StoryPitch.Status.ACCEPTED
         pitch.reviewed_by = request.user
@@ -238,7 +239,9 @@ def pitch_bulk_decide(request):
                 html_content=linebreaks(pitch.body, autoescape=True) if pitch.body else None,
             )
             if pitch.submitter:
-                ArticleAuthor.objects.create(article=article, user=pitch.submitter, order=0, is_corresponding=True)
+                ArticleAuthor.objects.create(
+                    article=article, author=Author.for_user(pitch.submitter), order=0, is_corresponding=True,
+                )
             pitch.article = article
             pitch.status = StoryPitch.Status.ACCEPTED
             pitch.reviewed_by = request.user

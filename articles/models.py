@@ -179,9 +179,7 @@ class Article(models.Model):
         help_text='Bibliography, one formatted citation per line. Rendered as a numbered list.',
     )
 
-    authors = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, through='ArticleAuthor', related_name='authored_articles',
-    )
+    authors = models.ManyToManyField('Author', through='ArticleAuthor', related_name='articles')
     issue = models.ForeignKey(
         'issues.Issue', on_delete=models.SET_NULL, null=True, blank=True, related_name='articles',
         help_text='Optional story trail / issue this article belongs to.',
@@ -276,58 +274,152 @@ class Article(models.Model):
         return reverse('articles:article_detail', args=[self.slug])
 
 
+class Author(models.Model):
+    """A public byline profile — the person credited on articles. Needs no
+    site account: editors create one for any contributor from
+    /manage/authors/. `user` is set only when the author also gets (or
+    already has) a login — see users/views.py author_create_account.
+
+    Profile fields here are what the byline and the public author page show.
+    For an author linked to an account, a blank field falls back to the
+    account's own profile (the display_* properties), so an author who keeps
+    their account profile up to date doesn't need it copied here too.
+    """
+
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    email = models.EmailField(
+        blank=True, help_text='Contact address for editors. Never shown publicly. Used as the login if an account is created.',
+    )
+    affiliation = models.CharField(max_length=255, blank=True)
+    department = models.CharField(max_length=255, blank=True)
+    bio = models.TextField(blank=True)
+    photo = models.ImageField(
+        upload_to='authors/', null=True, blank=True,
+        validators=[article_image_extension_validator, validate_featured_image_size],
+    )
+    orcid = models.CharField('ORCID', max_length=19, blank=True, help_text='e.g. 0000-0002-1825-0097')
+    research_interests = models.TextField(blank=True)
+    website_url = models.URLField(blank=True)
+    linkedin_url = models.URLField(blank=True)
+    researchgate_url = models.URLField(blank=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='author_profile',
+        help_text='Linked login account, if any.',
+    )
+    is_active = models.BooleanField(
+        default=True, help_text='Inactive authors are hidden from the byline picker and have no public page.',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name) or 'author'
+            if base.isdigit():  # /authors/<int>/ is the legacy user-id redirect
+                base = f'author-{base}'
+            slug, n = base, 2
+            while Author.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug, n = f'{base}-{n}', n + 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse('articles:author_detail', args=[self.slug])
+
+    def _fallback(self, field: str):
+        value = getattr(self, field)
+        if value:
+            return value
+        return (getattr(self.user, field, None) or '') if self.user_id else ''
+
+    @property
+    def display_affiliation(self) -> str:
+        return self._fallback('affiliation')
+
+    @property
+    def display_department(self) -> str:
+        return self._fallback('department')
+
+    @property
+    def display_bio(self) -> str:
+        return self._fallback('bio')
+
+    @property
+    def display_orcid(self) -> str:
+        return self._fallback('orcid')
+
+    @property
+    def display_research_interests(self) -> str:
+        return self._fallback('research_interests')
+
+    @property
+    def display_linkedin_url(self) -> str:
+        return self._fallback('linkedin_url')
+
+    @property
+    def display_researchgate_url(self) -> str:
+        return self._fallback('researchgate_url')
+
+    @property
+    def display_photo(self):
+        """The author's photo, else the linked account's, else None."""
+        if self.photo:
+            return self.photo
+        if self.user_id and self.user.photo:
+            return self.user.photo
+        return None
+
+    @property
+    def initial(self) -> str:
+        words = [w for w in self.name.split() if w.rstrip('.').lower() not in {'dr', 'prof', 'mr', 'mrs', 'ms'}]
+        return (words[0][0] if words else self.name[:1]).upper()
+
+    @classmethod
+    def for_user(cls, user) -> 'Author':
+        """The account's author profile, created from its profile fields on
+        first use (e.g. when a pitch from that account is accepted).
+        """
+        try:
+            return user.author_profile
+        except cls.DoesNotExist:
+            return cls.objects.create(
+                user=user, name=user.get_full_name() or user.email, email=user.email,
+            )
+
+
 class ArticleAuthor(models.Model):
-    """One byline entry. Either linked to a site account (`user`) or a plain
-    name label (`name`) — contributors don't need an account to be credited.
-    An account can be linked later, when one is actually needed (the author
-    wants to log in, pitch, or get a public author page); until then the
-    byline shows `name` as unlinked text.
+    """One byline entry: an Author (see above — no site account needed) in
+    a given position on an article.
     """
 
     article = models.ForeignKey(Article, on_delete=models.CASCADE)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
-        help_text='Linked site account. Leave empty to credit a name without an account.',
-    )
-    name = models.CharField(
-        max_length=255, blank=True,
-        help_text='Byline name for an author without an account. Ignored when an account is linked.',
-    )
-    affiliation = models.CharField(
-        max_length=255, blank=True,
-        help_text="Shown under the byline for name-only authors (linked accounts use their profile's affiliation).",
-    )
+    # PROTECT: an author with bylines is deactivated, never deleted out
+    # from under the articles that credit them.
+    author = models.ForeignKey(Author, on_delete=models.PROTECT, related_name='bylines')
     order = models.IntegerField(default=0, help_text='Author ordering on the article byline.')
     is_corresponding = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['order']
-        # MySQL unique indexes allow repeated NULLs, so several name-only
-        # rows on one article don't collide here.
-        unique_together = ('article', 'user')
-        constraints = [
-            models.CheckConstraint(
-                condition=Q(user__isnull=False) | ~Q(name=''),
-                name='articleauthor_user_or_name',
-            ),
-        ]
+        unique_together = ('article', 'author')
 
     def __str__(self):
-        return f'{self.display_name} on {self.article}'
+        return f'{self.author} on {self.article}'
 
     @property
     def display_name(self) -> str:
-        """The byline text — the account's full name, or the name label."""
-        if self.user_id:
-            return self.user.get_full_name()
-        return self.name
+        return self.author.name
 
     @property
     def display_affiliation(self) -> str:
-        """Affiliation under the byline, from the account or the label row."""
-        if self.user_id:
-            return self.user.affiliation or ''
-        return self.affiliation
+        return self.author.display_affiliation
 
 
 class ArticleView(models.Model):

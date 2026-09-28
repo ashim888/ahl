@@ -1,0 +1,100 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{% if object %}Edit author{% else %}New author{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if object %}{{ object.name }}{% else %}New author{% endif %}{% endblock %}
+{% block page_actions %}
+    {% if object and object.is_active and object.bylines.exists %}
+        <a href="{% url 'articles:author_detail' object.slug %}" target="_blank" class="text-sm text-gray-500 hover:text-gray-900">View public page ↗</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <form method="post" enctype="multipart/form-data" class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+        {% csrf_token %}
+        {% if not object %}
+            <p class="text-sm text-gray-500 mb-6">Only the name is required. No login or password is created — add one later with <em>Create user account</em> if this person needs to sign in.</p>
+        {% endif %}
+        {% if form.non_field_errors %}
+            <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="space-y-5">
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.name %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.affiliation %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.department %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.email %}
+            <div>
+                <label for="{{ form.photo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.photo.label }}</label>
+                {% if object.photo %}<img src="{{ object.photo.url }}" alt="" class="w-16 h-16 rounded-full object-cover mb-2.5">{% endif %}
+                {{ form.photo }}
+                {% for error in form.photo.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.bio %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.research_interests %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.orcid %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.website_url %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.linkedin_url %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.researchgate_url %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.is_active %}
+        </div>
+        {% if object.user %}
+            <p class="mt-6 text-xs text-gray-400">Empty fields fall back to the linked account's own profile on the public author page.</p>
+        {% endif %}
+        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                {% if object %}Save changes{% else %}Create author{% endif %}
+            </button>
+            <a href="{% url 'articles:manage_author_list' %}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</a>
+        </div>
+    </form>
+
+    {% if object %}
+        <aside class="space-y-6">
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h2 class="text-sm font-semibold text-gray-900">Login account</h2>
+                {% if object.user %}
+                    <p class="mt-2 text-sm text-gray-700">{{ object.user.email }}</p>
+                    <p class="text-xs text-gray-400">{{ object.user.get_role_display }}{% if not object.user.has_usable_password %} · invited, no password yet{% endif %}</p>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <a href="{% if object.user.is_editorial_staff %}{% url 'users:manage_staff_update' object.user.pk %}{% else %}{% url 'users:manage_account_update' object.user.pk %}{% endif %}" class="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Edit account</a>
+                        <form method="post" action="{% url 'articles:manage_author_link_account' object.pk %}" onsubmit="return confirm('Unlink this account? The author and their bylines stay; the account just stops being connected to them.');">
+                            {% csrf_token %}<input type="hidden" name="user" value="">
+                            <button type="submit" class="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">Unlink</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p class="mt-2 text-sm text-gray-500">No login. That's fine for crediting them — they only need one to sign in.</p>
+                    <a href="{% url 'users:manage_account_create' %}?author={{ object.pk }}"
+                       class="mt-4 inline-flex rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white hover:bg-gray-800">Create user account</a>
+                    {% if linkable_accounts %}
+                        <form method="post" action="{% url 'articles:manage_author_link_account' object.pk %}" class="mt-4 pt-4 border-t border-gray-100">
+                            {% csrf_token %}
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">Or link an existing account</label>
+                            <select name="user" required class="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+                                <option value="">— Choose account —</option>
+                                {% for account in linkable_accounts %}<option value="{{ account.pk }}">{{ account.get_full_name }} · {{ account.email }}</option>{% endfor %}
+                            </select>
+                            <button type="submit" class="mt-2 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Link account</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </section>
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <h2 class="text-sm font-semibold text-gray-900">Bylines</h2>
+                <ul class="mt-3 space-y-2 text-sm">
+                    {% for byline in bylines %}
+                        <li><a href="{% url 'articles:manage_article_update' byline.article.slug %}" class="text-gray-700 hover:underline">{{ byline.article.title }}</a>
+                            <span class="text-xs text-gray-400">· {{ byline.article.get_status_display }}</span></li>
+                    {% empty %}
+                        <li class="text-gray-400">Not credited on any article yet.</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </aside>
+    {% endif %}
+</div>
+{% endblock %}

@@ -39,7 +39,9 @@ from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
 from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
-from .models import HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Bookmark, Keyword, KeywordEvent, KeywordFollow
+from .models import (
+    HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Author, Bookmark, Keyword, KeywordEvent, KeywordFollow,
+)
 
 # A keyword used on this many articles or fewer has nothing meaningful to
 # "follow" yet — a keyword used exactly once is structurally guaranteed to
@@ -193,7 +195,7 @@ def _trending_articles(limit=5):
     )
     view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
     articles = list(
-        Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__user'),
+        Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__author__user'),
     )
     articles.sort(key=lambda article: -view_counts_by_pk[article.pk])
     for article in articles:
@@ -263,7 +265,7 @@ class HomeView(TemplateView):
         hero_article = hero_picks[0] if hero_picks else None
         sections['hero_article'] = hero_article
         sections['hero_authors'] = (
-            list(hero_article.articleauthor_set.select_related('user').order_by('order')) if hero_article else []
+            list(hero_article.articleauthor_set.select_related('author__user').order_by('order')) if hero_article else []
         )
 
         latest_news = pick(HomepageSection.LATEST_NEWS, 3, Q(article_type=Article.ArticleType.NEWS_COMMENTARY))
@@ -273,9 +275,9 @@ class HomeView(TemplateView):
         # Sections are built as plain lists (picks + autofill concatenated),
         # not querysets, so prefetching happens post-hoc via
         # prefetch_related_objects instead of queryset.prefetch_related().
-        prefetch_related_objects(latest_news, 'articleauthor_set__user')
-        prefetch_related_objects(opinion_pieces, 'articleauthor_set__user')
-        prefetch_related_objects(research_highlights, 'articleauthor_set__user', 'issue')
+        prefetch_related_objects(latest_news, 'articleauthor_set__author__user')
+        prefetch_related_objects(opinion_pieces, 'articleauthor_set__author__user')
+        prefetch_related_objects(research_highlights, 'articleauthor_set__author__user', 'issue')
 
         sections['latest_news'] = latest_news
         sections['opinion_pieces'] = opinion_pieces
@@ -340,7 +342,7 @@ class ArticleListView(ListView):
     def get_queryset(self):
         queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
             '-is_pinned', '-publication_date', '-created_at',
-        ).prefetch_related('articleauthor_set__user')
+        ).prefetch_related('articleauthor_set__author__user')
         article_type = self.request.GET.get('type')
         if article_type:
             queryset = queryset.filter(article_type=article_type)
@@ -411,7 +413,7 @@ class ArchiveListView(ListView):
     def get_queryset(self):
         return Article.objects.filter(
             status=Article.Status.ARCHIVED,
-        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__user')
+        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__author__user')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -450,7 +452,7 @@ class ForYouView(ListView):
             status=Article.Status.PUBLISHED,
         ).distinct().order_by(
             '-is_pinned', '-publication_date', '-created_at',
-        ).prefetch_related('articleauthor_set__user')
+        ).prefetch_related('articleauthor_set__author__user')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -485,7 +487,7 @@ class ArticleDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         view_counted = _record_article_view(self.request, self.object)
 
-        article_authors = list(self.object.articleauthor_set.select_related('user').order_by('order'))
+        article_authors = list(self.object.articleauthor_set.select_related('author__user').order_by('order'))
         context['article_authors'] = article_authors
         context['featured_author'] = next(
             (aa for aa in article_authors if aa.is_corresponding), article_authors[0] if article_authors else None,
@@ -551,7 +553,7 @@ class ArticleDetailView(DetailView):
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
             ]
         context['related_articles'] = related_articles_for(self.object)
-        prefetch_related_objects(context['related_articles'], 'articleauthor_set__user')
+        prefetch_related_objects(context['related_articles'], 'articleauthor_set__author__user')
 
         # Fetch one extra and trim, so excluding the article being viewed
         # (it'd be a strange thing to see "trending" on its own page) still
@@ -610,42 +612,51 @@ def article_short_link(request, code):
 
 
 class AuthorDetailView(DetailView):
-    """Public byline page for a contributor. Deliberately not a general user
-    directory — the queryset only includes users with at least one published
-    byline OR an active editorial board listing linked to their account, so
-    unverified/no-byline accounts 404 here rather than exposing profile
-    fields (bio, affiliation) never meant to be public. The board-membership
-    branch matters for editors/EiC who are publicly featured on the board
-    page but may not have authored any articles themselves — that link is
-    only ever set by an editor (EDITORIAL_ROLES) editing the board member,
-    so it's already a deliberate, trusted editorial decision.
+    """Public byline page for an Author profile (/authors/<slug>/) — with or
+    without a site account. Only active authors with at least one published
+    byline, or whose linked account has an active editorial-board listing,
+    have a page; anyone else 404s, so an author profile an editor is still
+    setting up is never public by accident.
     """
 
-    model = User
+    model = Author
     template_name = 'articles/author_detail.html'
     context_object_name = 'author'
 
     def get_queryset(self):
-        return User.objects.filter(
-            Q(authored_articles__status=Article.Status.PUBLISHED) | Q(board_memberships__is_active=True),
-        ).distinct()
+        return Author.objects.filter(is_active=True).filter(
+            Q(articles__status=Article.Status.PUBLISHED) | Q(user__board_memberships__is_active=True),
+        ).select_related('user').distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['author_articles'] = self.object.authored_articles.filter(
+        author = self.object
+        context['author_articles'] = author.articles.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-publication_date', '-created_at')
-        context['board_membership'] = self.object.board_memberships.filter(is_active=True).first()
-        context['meta_title'] = f'{self.object.get_full_name()} — {settings.JOURNAL_NAME}'
-        byline = self.object.get_full_name()
-        if self.object.affiliation:
-            byline += f', {self.object.affiliation}'
-        context['meta_description'] = (self.object.bio or '')[:200] or f'{byline} — articles on {settings.JOURNAL_NAME}.'
-        image_url = self.request.build_absolute_uri(self.object.photo.url) if self.object.photo else None
+        ).order_by('-publication_date', '-created_at').prefetch_related('articleauthor_set__author__user')
+        context['board_membership'] = (
+            author.user.board_memberships.filter(is_active=True).first() if author.user_id else None
+        )
+        context['meta_title'] = f'{author.name} — {settings.JOURNAL_NAME}'
+        byline = author.name
+        if author.display_affiliation:
+            byline += f', {author.display_affiliation}'
+        context['meta_description'] = author.display_bio[:200] or f'{byline} — articles on {settings.JOURNAL_NAME}.'
+        photo = author.display_photo
+        image_url = self.request.build_absolute_uri(photo.url) if photo else None
         if image_url:
             context['meta_image_url'] = image_url
-        context['structured_data_json'] = person_structured_data(self.object, image_url=image_url)
+        context['structured_data_json'] = person_structured_data(author, image_url=image_url)
         return context
+
+
+def legacy_author_redirect(request, pk):
+    """/authors/<int>/ was keyed by *user* id before author pages moved to
+    Author profiles (/authors/<slug>/). Old links and bookmarks still land:
+    the account's author profile, permanently redirected, or a 404.
+    """
+    author = get_object_or_404(Author, user_id=pk, is_active=True)
+    return redirect(author, permanent=True)
 
 
 CITATION_FORMATS = ('bibtex', 'ris', 'text')
@@ -656,7 +667,7 @@ def article_citation(request, slug, citation_format):
         raise Http404
 
     article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
-    authors = [aa.display_name for aa in article.articleauthor_set.select_related('user').order_by('order')]
+    authors = [aa.display_name for aa in article.articleauthor_set.select_related('author__user').order_by('order')]
     year = article.publication_date.year if article.publication_date else ''
 
     if citation_format == 'bibtex':
@@ -777,7 +788,7 @@ class ReadingListView(ListView):
         preserved_order = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(bookmarked_article_ids)])
         return Article.objects.filter(
             pk__in=bookmarked_article_ids, status=Article.Status.PUBLISHED,
-        ).order_by(preserved_order).prefetch_related('articleauthor_set__user')
+        ).order_by(preserved_order).prefetch_related('articleauthor_set__author__user')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -837,16 +848,14 @@ class SearchView(ListView):
         # would make grants_full_archive largely undiscoverable.
         queryset = Article.objects.filter(
             status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED],
-        ).prefetch_related('articleauthor_set__user')
+        ).prefetch_related('articleauthor_set__author__user')
         if self.query:
             boolean_query = _fulltext_boolean_query(self.query)
             icontains_filter = (
                 Q(title__icontains=self.query)
                 | Q(abstract__icontains=self.query)
                 | Q(keyword_tags__name__icontains=self.query)
-                | Q(authors__first_name__icontains=self.query)
-                | Q(authors__last_name__icontains=self.query)
-                | Q(articleauthor__name__icontains=self.query)
+                | Q(authors__name__icontains=self.query)
             )
             if boolean_query:
                 relevance = RawSQL(
@@ -1197,7 +1206,7 @@ def article_preview(request):
     # existing article, pull its real authors so the preview byline is accurate.
     article_authors = []
     if source:
-        article_authors = list(source.articleauthor_set.select_related('user').order_by('order'))
+        article_authors = list(source.articleauthor_set.select_related('author__user').order_by('order'))
 
     context = {
         'article': article,

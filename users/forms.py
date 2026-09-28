@@ -43,11 +43,13 @@ class ProfileUpdateForm(ModelForm):
         apply_tailwind_widgets(self, skip=('cv_file', 'file', 'photo'))
 
 
-# Fields shared by the editorial "manage authors" create/update forms below.
-# Deliberately excludes role/verification_status/is_verified — those stay
-# owned by the verification queue (users/views.py verification_decide) so
-# there's one place that keeps them in sync, not two flows that can drift.
-AUTHOR_PROFILE_FIELDS = [
+# Fields shared by the editorial account create/update forms below
+# (/manage/accounts/ — reader and author login accounts; public byline
+# profiles are articles.Author, managed separately under /manage/authors/).
+# Deliberately excludes role/verification_status/is_verified on edit —
+# those stay owned by the verification queue (users/views.py
+# verification_decide) so there's one place that keeps them in sync.
+ACCOUNT_PROFILE_FIELDS = [
     'first_name', 'last_name', 'email',
     'orcid', 'affiliation', 'department', 'bio', 'photo', 'cv_file',
     'research_interests', 'linkedin_url', 'researchgate_url', 'publications',
@@ -55,44 +57,86 @@ AUTHOR_PROFILE_FIELDS = [
 ]
 
 
-class AuthorManageForm(ModelForm):
-    """Editorial edit of an existing author's profile — content fields plus
-    is_active as a reversible deactivate/reactivate toggle (not a hard
-    delete of the account or their authorship history).
+class AccountManageForm(ModelForm):
+    """Editorial edit of an existing reader/author account — content fields
+    plus is_active as a reversible deactivate/reactivate toggle (not a hard
+    delete of the account).
     """
 
     class Meta:
         model = User
-        fields = AUTHOR_PROFILE_FIELDS
+        fields = ACCOUNT_PROFILE_FIELDS
 
 
-class AuthorCreateForm(UserCreationForm):
-    """Editorial creation of a new author account (e.g. a contributor who
-    hasn't self-registered). Skips the pending-verification queue — an
-    editor creating the account directly is already vouching for it — so
-    the account is created as an approved Verified Author, not Unverified.
+class AccountCreateForm(ModelForm):
+    """Editorial creation of a login account (a contributor who hasn't
+    self-registered, or an Author profile that now needs to log in).
+
+    The password is optional. Set one here and the account works right
+    away; leave both boxes empty and the account is created without a
+    usable password and the person is emailed a link to choose their own
+    (users/invites.py) — so an editor never has to invent and pass on a
+    password. Skips the pending-verification queue: an editor creating the
+    account is already vouching for it.
     """
+
+    ROLE_CHOICES = [
+        (User.Role.VERIFIED_AUTHOR, 'Verified author'),
+        (User.Role.UNVERIFIED, 'Reader (unverified)'),
+    ]
+
+    role = forms.ChoiceField(choices=ROLE_CHOICES, initial=User.Role.VERIFIED_AUTHOR)
+    password1 = forms.CharField(
+        label='Password', required=False, strip=False, widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+        help_text='Optional. Leave both password boxes empty to email them a link to set their own.',
+    )
+    password2 = forms.CharField(
+        label='Confirm password', required=False, strip=False,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+    )
 
     class Meta:
         model = User
-        fields = AUTHOR_PROFILE_FIELDS
+        fields = ['first_name', 'last_name', 'email', 'role']
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['is_active'].initial = True
+    def clean(self):
+        from django.contrib.auth import password_validation
+
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1') or ''
+        password2 = cleaned_data.get('password2') or ''
+        if password1 or password2:
+            if password1 != password2:
+                self.add_error('password2', 'The two passwords don\'t match.')
+            else:
+                try:
+                    password_validation.validate_password(password1, self.instance)
+                except forms.ValidationError as error:
+                    self.add_error('password1', error)
+        return cleaned_data
+
+    @property
+    def sends_invite(self) -> bool:
+        """True when no password was set — the view then emails an invite."""
+        return not self.cleaned_data.get('password1')
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.role = User.Role.VERIFIED_AUTHOR
-        user.is_verified = True
-        user.verification_status = User.VerificationStatus.APPROVED
+        if self.cleaned_data.get('password1'):
+            user.set_password(self.cleaned_data['password1'])
+        else:
+            user.set_unusable_password()
+        user.role = self.cleaned_data['role']
+        if user.role == User.Role.VERIFIED_AUTHOR:
+            user.is_verified = True
+            user.verification_status = User.VerificationStatus.APPROVED
         if commit:
             user.save()
         return user
 
 
 # Editorial staff accounts (Editor / Editor-in-Chief / Admin) — deliberately a
-# smaller field set than AUTHOR_PROFILE_FIELDS: staff don't need the
+# smaller field set than ACCOUNT_PROFILE_FIELDS: staff don't need the
 # academic-author fields (ORCID, affiliation, CV, publications, etc.), just
 # who they are and what they're allowed to do.
 # Same composition as User.EDITORIAL_ROLES (see users/models.py) — kept as a

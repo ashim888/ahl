@@ -156,7 +156,7 @@ Each Django app owns one concern:
 | App | Concern |
 |---|---|
 | `users` | Custom `User` model, auth, roles, verification |
-| `articles` | Articles, bylines (account or name-only authors), keywords, related reading, search, sitemaps/feeds, SEO structured data |
+| `articles` | Articles, author profiles and bylines (no login account needed), keywords, related reading, search, sitemaps/feeds, SEO structured data |
 | `sections` | Two-level subject taxonomy (Journal, Policy & Economy, ...) driving the primary nav |
 | `issues` | Curated article collections ("issues") |
 | `editorial_board` | Public editorial board profiles |

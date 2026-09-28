@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 17:18+0545\n"
+"POT-Creation-Date: 2026-09-27 18:40+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -107,28 +107,28 @@ msgstr ""
 msgid "Pay-per-article (special)"
 msgstr ""
 
-#: articles/views.py:730
+#: articles/views.py:741
 msgid "Removed from your reading list."
 msgstr ""
 
-#: articles/views.py:732
+#: articles/views.py:743
 msgid "Saved to your reading list."
 msgstr ""
 
-#: articles/views.py:749
+#: articles/views.py:760
 msgid "You don't have a gift available for this article right now."
 msgstr ""
 
-#: articles/views.py:751
+#: articles/views.py:762
 msgid "Your gift link is ready — copy it below to share."
 msgstr ""
 
-#: articles/views.py:969 sections/views.py:87
+#: articles/views.py:978 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr ""
 
-#: articles/views.py:974 sections/views.py:89
+#: articles/views.py:983 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -405,23 +405,23 @@ msgstr ""
 msgid "ABOUT THE AUTHOR"
 msgstr ""
 
-#: templates/articles/article_detail.html:435
+#: templates/articles/article_detail.html:434
 msgid "MORE BY THIS AUTHOR →"
 msgstr ""
 
-#: templates/articles/article_detail.html:443 templates/home.html:81
+#: templates/articles/article_detail.html:442 templates/home.html:81
 msgid "TRENDING THIS WEEK"
 msgstr ""
 
-#: templates/articles/article_detail.html:469
+#: templates/articles/article_detail.html:468
 msgid "Download full-text PDF →"
 msgstr ""
 
-#: templates/articles/article_detail.html:482
+#: templates/articles/article_detail.html:481
 msgid "KEEP READING"
 msgstr ""
 
-#: templates/articles/article_detail.html:482
+#: templates/articles/article_detail.html:481
 msgid "Related reading"
 msgstr ""
 
@@ -476,6 +476,45 @@ msgstr ""
 
 #: templates/articles/article_list.html:110
 msgid "No articles published yet."
+msgstr ""
+
+#: templates/articles/author_detail.html:22
+msgid "AUTHOR"
+msgstr ""
+
+#: templates/articles/author_detail.html:28 templates/issues/issue_list.html:24
+#: templates/issues/issue_list.html:45
+#: templates/sections/section_detail.html:27
+#, python-format
+msgid "%(counter)s ARTICLE"
+msgid_plural "%(counter)s ARTICLES"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/articles/author_detail.html:31
+msgid "EDITORIAL BOARD"
+msgstr ""
+
+#: templates/articles/author_detail.html:37
+msgid "WEBSITE"
+msgstr ""
+
+#: templates/articles/author_detail.html:48 templates/base.html:424
+#: templates/base.html:515 templates/training/course_detail.html:94
+msgid "ABOUT"
+msgstr ""
+
+#: templates/articles/author_detail.html:54
+msgid "RESEARCH INTERESTS"
+msgstr ""
+
+#: templates/articles/author_detail.html:61
+#, python-format
+msgid "Articles by %(name)s"
+msgstr ""
+
+#: templates/articles/author_detail.html:67
+msgid "No published articles yet."
 msgstr ""
 
 #: templates/articles/includes/article_card.html:22
@@ -556,11 +595,6 @@ msgstr ""
 
 #: templates/base.html:423
 msgid "ARTICLES"
-msgstr ""
-
-#: templates/base.html:424 templates/base.html:515
-#: templates/training/course_detail.html:94
-msgid "ABOUT"
 msgstr ""
 
 #: templates/base.html:425
@@ -985,14 +1019,6 @@ msgstr ""
 #: templates/issues/issue_list.html:7
 msgid "Curated story trails — ongoing coverage grouped by topic."
 msgstr ""
-
-#: templates/issues/issue_list.html:24 templates/issues/issue_list.html:45
-#: templates/sections/section_detail.html:27
-#, python-format
-msgid "%(counter)s ARTICLE"
-msgid_plural "%(counter)s ARTICLES"
-msgstr[0] ""
-msgstr[1] ""
 
 #: templates/issues/issue_list.html:30
 msgid "More issues"

@@ -90,15 +90,16 @@ No account needed for any of this.
 1. Go to `/register/` and sign up with your email (email is your login — there's no separate
    username). You're logged in immediately after registering.
 2. New accounts start as **Unverified**. You can already comment, subscribe, enroll in training,
-   and pitch stories. Verification is what gives you a **public author page** — a profile
-   (affiliation, bio, ORCID) listing your published articles. You don't need an account at all
-   to be credited on an article: editors can add any author to a byline by name (see §6).
+   and pitch stories. Verification marks you as a **Verified Author**. You don't need an account
+   at all to be credited on an article: editors credit contributors through author profiles,
+   which need no login (see §6).
 3. To request verification, fill out your profile (`/profile/edit/`) with your affiliation, bio,
    ORCID, publication history, etc., then submit for review from the "pending verification" page.
 4. An Editor-in-Chief or Admin reviews your request (§15). You'll get an email either way. If
    rejected, you can reapply after 30 days.
-5. Once approved, your role becomes **Verified Author**, and bylines linked to your account
-   point to your author page.
+5. Once approved, your role becomes **Verified Author**. If your account is linked to an author
+   profile, the public author page shows your account's affiliation, bio and photo wherever the
+   profile itself leaves them blank.
 
 ---
 
@@ -197,19 +198,11 @@ filterable by type/status/homepage section.
 
 **After creating an article:**
 - **Authors** — go to the article's "Authors" screen (a separate step from the article form).
-  Each byline row is either:
-  - **an account** — pick it from the *Account* list. Their name, photo, affiliation and bio
-    come from their profile, and the byline links to their author page; or
-  - **a name only** — leave *Account* empty and type the author's *name* (and *affiliation*
-    if you like). Nobody needs to sign up for this. The name shows in the byline, citations,
-    feeds and search, as plain text with no author page.
-
-  Set the order and mark the corresponding author, then **Save authors**. A row needs an
-  account or a name. If both are filled, the account wins.
-
-  **Giving a name-only author an account later** — only when they actually need one (to log
-  in, pitch, or get an author page): create it under **Authors → New** (`/manage/authors/new/`),
-  then on each of their articles' Authors screens, pick the new account in their row.
+  In each row, **pick an existing author** from the list, or **type a new author's name** (and
+  affiliation) to create their author profile on the spot. If an author with exactly that name
+  already exists, that author is used instead of making a duplicate. Set the order and mark the
+  corresponding author, then **Save authors**. Every credited author gets a public author page
+  at `/authors/<name>/`, with or without a login account.
 - **Quick publish/unpublish** — a one-click toggle right from the article list, with a
   confirmation prompt.
 - **Delete** — permanent, with a confirmation page. If you just want to stop showing an article,
@@ -424,8 +417,23 @@ payment provider is integrated).
 
 Editor-in-Chief and Admin only, with one carve-out noted below.
 
-- **Authors** (`/manage/authors/`) — manage Unverified/Verified Author accounts: search, filter
-  by role, deactivate/reactivate. Any Editor+ can access this screen.
+- **Authors** (`/manage/authors/`) — everyone who can be credited on articles. Any Editor+ can
+  use it.
+  - **New author** needs only a name. There is no password or login involved. You can add
+    affiliation, bio, photo, ORCID and links.
+  - **Create user account** (on an author without one) gives them a login when they need to sign
+    in. The form is prefilled from the author. The password is optional: leave it empty and
+    they're emailed a link to choose their own.
+  - **Link an existing account** attaches a login that already exists; **Unlink** detaches it.
+    Bylines never change either way.
+  - **Deactivate** hides an author from the byline picker and removes their public page. Their
+    existing bylines stay. Authors are never deleted.
+  - Filter by *has an account / no account* and active/inactive.
+- **Accounts** (`/manage/accounts/`) — reader and author **login** accounts: search, filter by
+  role, deactivate/reactivate. **New account** has an optional password (leave it empty to email
+  an invite link). Accounts still waiting to set a password are marked *Invited*, with a
+  **resend invite** link. **Create author profile** makes an account creditable on articles.
+  Any Editor+ can access this screen.
 - **Staff** (`/manage/staff/`) — manage Editor/Editor-in-Chief/Admin accounts. An Editor-in-Chief
   can create new Editor/EiC accounts but **cannot** grant the Admin role — only an existing Admin
   can create another Admin.

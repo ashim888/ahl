@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 17:18+0545\n"
+"POT-Creation-Date: 2026-09-27 18:40+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -107,28 +107,28 @@ msgstr "सदस्यता"
 msgid "Pay-per-article (special)"
 msgstr "प्रति लेख भुक्तानी (विशेष)"
 
-#: articles/views.py:730
+#: articles/views.py:741
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:732
+#: articles/views.py:743
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:749
+#: articles/views.py:760
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:751
+#: articles/views.py:762
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:969 sections/views.py:87
+#: articles/views.py:978 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:974 sections/views.py:89
+#: articles/views.py:983 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -419,23 +419,23 @@ msgstr "यस लेखमा"
 msgid "ABOUT THE AUTHOR"
 msgstr "लेखकबारे"
 
-#: templates/articles/article_detail.html:435
+#: templates/articles/article_detail.html:434
 msgid "MORE BY THIS AUTHOR →"
 msgstr "यी लेखकका थप लेख →"
 
-#: templates/articles/article_detail.html:443 templates/home.html:81
+#: templates/articles/article_detail.html:442 templates/home.html:81
 msgid "TRENDING THIS WEEK"
 msgstr "यो हप्ता चर्चामा"
 
-#: templates/articles/article_detail.html:469
+#: templates/articles/article_detail.html:468
 msgid "Download full-text PDF →"
 msgstr "पूर्ण पाठ PDF डाउनलोड गर्नुहोस् →"
 
-#: templates/articles/article_detail.html:482
+#: templates/articles/article_detail.html:481
 msgid "KEEP READING"
 msgstr "थप पढ्नुहोस्"
 
-#: templates/articles/article_detail.html:482
+#: templates/articles/article_detail.html:481
 msgid "Related reading"
 msgstr "सम्बन्धित सामग्री"
 
@@ -490,6 +490,45 @@ msgstr "मिनेट"
 
 #: templates/articles/article_list.html:110
 msgid "No articles published yet."
+msgstr "अहिलेसम्म कुनै लेख प्रकाशित भएको छैन।"
+
+#: templates/articles/author_detail.html:22
+msgid "AUTHOR"
+msgstr "लेखक"
+
+#: templates/articles/author_detail.html:28 templates/issues/issue_list.html:24
+#: templates/issues/issue_list.html:45
+#: templates/sections/section_detail.html:27
+#, python-format
+msgid "%(counter)s ARTICLE"
+msgid_plural "%(counter)s ARTICLES"
+msgstr[0] "%(counter)s लेख"
+msgstr[1] "%(counter)s लेख"
+
+#: templates/articles/author_detail.html:31
+msgid "EDITORIAL BOARD"
+msgstr "सम्पादक मण्डल"
+
+#: templates/articles/author_detail.html:37
+msgid "WEBSITE"
+msgstr "वेबसाइट"
+
+#: templates/articles/author_detail.html:48 templates/base.html:424
+#: templates/base.html:515 templates/training/course_detail.html:94
+msgid "ABOUT"
+msgstr "बारेमा"
+
+#: templates/articles/author_detail.html:54
+msgid "RESEARCH INTERESTS"
+msgstr "अनुसन्धान रुचि"
+
+#: templates/articles/author_detail.html:61
+#, python-format
+msgid "Articles by %(name)s"
+msgstr "%(name)s का लेखहरू"
+
+#: templates/articles/author_detail.html:67
+msgid "No published articles yet."
 msgstr "अहिलेसम्म कुनै लेख प्रकाशित भएको छैन।"
 
 #: templates/articles/includes/article_card.html:22
@@ -571,11 +610,6 @@ msgstr "गृहपृष्ठ"
 #: templates/base.html:423
 msgid "ARTICLES"
 msgstr "लेखहरू"
-
-#: templates/base.html:424 templates/base.html:515
-#: templates/training/course_detail.html:94
-msgid "ABOUT"
-msgstr "बारेमा"
 
 #: templates/base.html:425
 msgid "PITCH A STORY"
@@ -1008,14 +1042,6 @@ msgstr "अंकहरू"
 #: templates/issues/issue_list.html:7
 msgid "Curated story trails — ongoing coverage grouped by topic."
 msgstr "चयन गरिएका कथा शृङ्खला — विषयअनुसार समूहबद्ध निरन्तर कभरेज।"
-
-#: templates/issues/issue_list.html:24 templates/issues/issue_list.html:45
-#: templates/sections/section_detail.html:27
-#, python-format
-msgid "%(counter)s ARTICLE"
-msgid_plural "%(counter)s ARTICLES"
-msgstr[0] "%(counter)s लेख"
-msgstr[1] "%(counter)s लेख"
 
 #: templates/issues/issue_list.html:30
 msgid "More issues"

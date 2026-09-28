@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from ads.models import AdSlot
-from articles.models import Article, ArticleAuthor, ArticleView, Keyword
+from articles.models import Article, ArticleAuthor, ArticleView, Author, Keyword
 from billing.models import PlanFeature, SubscriptionPlan
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
@@ -392,7 +392,7 @@ class Command(BaseCommand):
             if created:
                 for order, (author, is_corresponding) in enumerate(authors):
                     ArticleAuthor.objects.get_or_create(
-                        article=article, user=author,
+                        article=article, author=Author.for_user(author),
                         defaults=dict(order=order, is_corresponding=is_corresponding),
                     )
             # Re-applied even on an already-seeded DB (unlike the rest of

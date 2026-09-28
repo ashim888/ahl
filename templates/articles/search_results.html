@@ -33,7 +33,7 @@
                 <div class="flex items-center gap-2 mt-3">
                     {% with a=article.articleauthor_set.all|first %}
                         {% if a %}
-                            {% if a.user_id %}<a href="{% url 'articles:author_detail' a.user_id %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.display_name }}</a>{% else %}<span class="text-xs text-muted-foreground font-medium">{{ a.display_name }}</span>{% endif %}
+                            {% if a.author.is_active %}<a href="{% url 'articles:author_detail' a.author.slug %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.display_name }}</a>{% else %}<span class="text-xs text-muted-foreground font-medium">{{ a.display_name }}</span>{% endif %}
                         {% else %}
                             <span class="text-xs text-muted-foreground font-medium">{% trans "Editorial staff" %}</span>
                         {% endif %}

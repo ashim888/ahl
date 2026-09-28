@@ -36,7 +36,7 @@ class LatestArticlesFeed(Feed):
         return timezone.make_aware(datetime.datetime.combine(item.publication_date, datetime.time.min))
 
     def item_author_name(self, item):
-        first_author = item.articleauthor_set.select_related('user').first()
+        first_author = item.articleauthor_set.select_related('author__user').first()
         return first_author.display_name if first_author else settings.JOURNAL_NAME
 
     def item_categories(self, item):

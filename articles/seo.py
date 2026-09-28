@@ -48,26 +48,25 @@ def breadcrumb_list_structured_data(items):
     })
 
 
-def person_structured_data(user, image_url):
+def person_structured_data(author, image_url):
     """schema.org Person — for a contributor's public byline page
-    (AuthorDetailView). `sameAs` collects every external profile link the
-    User model actually has (ORCID/LinkedIn/ResearchGate), omitting whichever
-    ones this particular contributor hasn't filled in.
+    (AuthorDetailView). `sameAs` collects whichever external profile links
+    this author has (ORCID/LinkedIn/ResearchGate/website), including ones
+    that fall back to a linked account's profile (see Author.display_*).
     """
     same_as = []
-    if user.orcid:
-        same_as.append(f'https://orcid.org/{user.orcid}')
-    if user.linkedin_url:
-        same_as.append(user.linkedin_url)
-    if user.researchgate_url:
-        same_as.append(user.researchgate_url)
-
+    if author.display_orcid:
+        same_as.append(f'https://orcid.org/{author.display_orcid}')
+    for url in (author.display_linkedin_url, author.display_researchgate_url, author.website_url):
+        if url:
+            same_as.append(url)
+    affiliation = author.display_affiliation
     return ld_json({
         '@context': 'https://schema.org',
         '@type': 'Person',
-        'name': user.get_full_name(),
-        'description': user.bio or None,
-        'affiliation': {'@type': 'Organization', 'name': user.affiliation} if user.affiliation else None,
+        'name': author.name,
+        'description': author.display_bio or None,
+        'affiliation': {'@type': 'Organization', 'name': affiliation} if affiliation else None,
         'image': image_url,
         'sameAs': same_as or None,
     })
