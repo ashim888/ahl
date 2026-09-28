@@ -58,48 +58,32 @@
 {% endblock %}
 
 {% block content %}
-<div class="">
-    {% if not is_create %}
-        <p class="text-sm text-gray-500 mb-4">
-            <a href="{% url 'articles:manage_article_authors' form.instance.slug %}" class="underline font-medium text-gray-700">Manage authors →</a>
-            — add authors (with or without a site account), set their order and the corresponding-author flag on that page.
-            Archiving an article is still a Django admin action — from here you can only save it as a draft or publish it.
-        </p>
+{% with status=form.instance.status %}
+<form method="post" enctype="multipart/form-data" id="article-form" novalidate
+      data-autosave="{% if is_create or status == 'draft' %}on{% else %}off{% endif %}">
+    {% csrf_token %}
+    <input type="hidden" name="preview_source_pk" id="preview-source-pk" value="{{ form.instance.pk|default:'' }}">
+    <input type="hidden" name="article_pk" id="article-pk" value="{{ form.instance.pk|default:'' }}">
+    <input type="hidden" id="edit-url" value="">
+
+    {% if form.errors %}
+        <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700" role="alert">
+            {% if form.non_field_errors %}{{ form.non_field_errors }}{% else %}Some fields need attention — they're highlighted below.{% endif %}
+        </div>
     {% endif %}
 
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
-        <form method="post" enctype="multipart/form-data" id="article-form" novalidate>
-            {% csrf_token %}
-            <input type="hidden" name="preview_source_pk" id="preview-source-pk" value="{{ form.instance.pk|default:'' }}">
-            <input type="hidden" name="article_pk" id="article-pk" value="{{ form.instance.pk|default:'' }}">
-            <input type="hidden" id="edit-url" value="">
-            {% if form.non_field_errors %}
-                <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
-                    {{ form.non_field_errors }}
-                </div>
-            {% endif %}
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
 
-            <div class="flex gap-1 p-1 bg-gray-100 rounded-xl mb-8" role="tablist">
-                <button type="button" data-tab="content" data-tab-index="0" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Content</button>
-                <button type="button" data-tab="publishing" data-tab-index="1" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Publishing</button>
-                <button type="button" data-tab="media" data-tab-index="2" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Media</button>
-                <button type="button" data-tab="related" data-tab-index="3" class="tab-btn flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors">Related</button>
-            </div>
-
-            <div data-panel="content" class="space-y-5"
-                 {% if form.title.errors or form.slug.errors or form.article_type.errors or form.abstract.errors or form.keywords.errors or form.html_content.errors or form.references.errors %}data-has-error="true"{% endif %}>
+        {# ---------------- Writing ---------------- #}
+        <div class="space-y-6 min-w-0">
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8 space-y-5">
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.title %}
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.article_type %}
-                </div>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.abstract %}
-                {% include 'admin_dashboard/includes/form_field.html' with field=form.keywords %}
 
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="block text-sm font-medium text-gray-700" for="{{ form.html_content.id_for_label }}">
-                            {{ form.html_content.label }}
+                            Article text<span class="text-red-500 ml-0.5" aria-hidden="true">*</span><span class="sr-only"> (required to publish)</span>
                         </label>
                         <button type="button" id="insert-template-btn"
                                 class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -107,192 +91,185 @@
                         </button>
                     </div>
                     {{ form.html_content }}
-                    {% if form.html_content.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.html_content.help_text }}</p>{% endif %}
+                    <p class="mt-1.5 text-xs text-gray-400">Needed to publish (or attach a PDF under “More details”). A draft can be saved without it.</p>
                     {% for error in form.html_content.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
 
-                {% include 'admin_dashboard/includes/form_field.html' with field=form.references %}
-            </div>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.keywords %}
 
-            <div data-panel="publishing" class="space-y-5 hidden"
-                 {% if form.access_type.errors or form.price.errors or form.homepage_section.errors or form.section.errors or form.issue.errors or form.volume.errors or form.page_numbers.errors or form.doi.errors %}data-has-error="true"{% endif %}>
-                {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
-                <div id="price-field" class="hidden">
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.price %}
+                <details class="group" {% if form.references.errors or form.instance.references %}open{% endif %}>
+                    <summary class="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 select-none">References <span class="font-normal text-gray-400">(optional)</span></summary>
+                    <div class="mt-4">{% include 'admin_dashboard/includes/form_field.html' with field=form.references %}</div>
+                </details>
+            </section>
+
+            {# Related articles #}
+            <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8" id="related-panel"
+                     {% if form.related_articles.errors or form.initial.related_articles %}open{% endif %}>
+                <summary class="cursor-pointer select-none flex items-center justify-between">
+                    <span class="text-base font-semibold text-gray-900">Related articles <span class="text-sm font-normal text-gray-400">(optional)</span></span>
+                    <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="mt-5 space-y-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.related_articles %}
+                    {% comment %}
+                    Filled by the script below from articles:manage_related_article_suggestions
+                    (articles/similarity.py) — loaded when this panel is opened.
+                    {% endcomment %}
+                    <div class="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900">Suggested by text similarity</h3>
+                                <p class="mt-1 text-xs text-gray-500 max-w-xl">
+                                    Most similar published articles by title, keywords, summary and text. If you don't pick any
+                                    above, the top matches are shown to readers automatically.
+                                </p>
+                            </div>
+                            <button type="button" id="refresh-suggestions-btn" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">↻ Refresh</button>
+                        </div>
+                        <div id="related-suggestions" class="mt-4 space-y-2 text-sm">
+                            <p class="text-gray-400 text-xs">Open this panel to load suggestions.</p>
+                        </div>
+                    </div>
                 </div>
+            </details>
+        </div>
+
+        {# ---------------- Sidebar ---------------- #}
+        <aside class="space-y-4 xl:sticky xl:top-6">
+            {# Actions #}
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-900">
+                        {% if is_create %}New article{% elif status == 'published' %}Published{% elif status == 'archived' %}Archived{% else %}Draft{% endif %}
+                    </h2>
+                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium
+                        {% if status == 'published' and not is_create %}bg-green-50 text-green-700{% elif status == 'archived' %}bg-gray-100 text-gray-500{% else %}bg-amber-50 text-amber-700{% endif %}">
+                        {% if status == 'published' and not is_create %}Live{% elif status == 'archived' %}Archived{% else %}Not published{% endif %}
+                    </span>
+                </div>
+                {% if not is_create %}
+                    <p class="mt-1 text-xs text-gray-400">
+                        {% if form.instance.publication_date %}Published {{ form.instance.publication_date|date:"M j, Y" }} · {% endif %}Last saved {{ form.instance.updated_at|date:"M j, g:i A" }}
+                    </p>
+                {% endif %}
+
+                <div class="mt-4 grid gap-2">
+                    {% if status == 'archived' and not is_create %}
+                        <button type="submit" name="action" value="keep" data-full-save
+                                class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Save changes</button>
+                    {% elif status == 'published' and not is_create %}
+                        <button type="submit" name="action" value="publish" data-full-save
+                                class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Update live article</button>
+                    {% else %}
+                        <button type="submit" name="action" value="publish" data-full-save
+                                onclick="return confirm('Publish this article now? It will appear on the site immediately.');"
+                                class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Publish</button>
+                        <button type="submit" name="action" value="draft" id="save-draft-btn"
+                                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Save draft</button>
+                    {% endif %}
+                    <button type="button" id="preview-btn"
+                            class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Preview</button>
+                </div>
+
+                <p id="autosave-status" class="mt-3 text-xs text-gray-400 min-h-[1rem]" aria-live="polite">
+                    {% if is_create or status == 'draft' %}Drafts save automatically.{% else %}Changes go live only when you click Update.{% endif %}
+                </p>
+
+                <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                    <a href="{% url 'articles:manage_article_list' %}" class="text-gray-500 hover:text-gray-900">← All articles</a>
+                    {% if status == 'published' and not is_create %}
+                        <button type="submit" name="action" value="draft"
+                                onclick="return confirm('Unpublish this article? It will be taken off the site and moved back to drafts.');"
+                                class="text-red-600 hover:text-red-700">Unpublish</button>
+                    {% endif %}
+                </div>
+                <p class="mt-3 text-[11px] text-gray-400"><span class="text-red-500">*</span> required to publish · Ctrl/⌘ + S saves</p>
+            </section>
+
+            {# Placement #}
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+                <h2 class="text-sm font-semibold text-gray-900">Placement</h2>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.article_type %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.section %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.homepage_section %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.volume %}
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.page_numbers %}
+            </section>
+
+            {# Access #}
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+                <h2 class="text-sm font-semibold text-gray-900">Access</h2>
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
+                <div id="price-field" class="hidden">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.price mark_required=True %}
                 </div>
-                {% include 'admin_dashboard/includes/form_field.html' with field=form.doi %}
-                {% if not is_create and object.publication_date %}
-                    <p class="text-xs text-gray-400">Published {{ object.publication_date|date:"M j, Y" }} (set automatically).</p>
+            </section>
+
+            {# Featured image #}
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <label for="{{ form.featured_image.id_for_label }}" class="block text-sm font-semibold text-gray-900 mb-3">Featured image</label>
+                {% if form.instance.featured_image %}
+                    <img src="{{ form.instance.featured_image.url }}" alt="" class="mb-3 w-full aspect-video object-cover rounded-xl border border-gray-100">
                 {% endif %}
-            </div>
+                {{ form.featured_image }}
+                {% if form.featured_image.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.featured_image.help_text }}</p>{% endif %}
+                {% for error in form.featured_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </section>
 
-            <div data-panel="media" class="space-y-6 hidden"
-                 {% if form.featured_image.errors or form.pdf_file.errors %}data-has-error="true"{% endif %}>
-                <div>
-                    <label for="{{ form.featured_image.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.featured_image.label }}</label>
-                    {% if form.instance.featured_image %}
-                        <img src="{{ form.instance.featured_image.url }}" alt="" class="mb-2.5 h-20 w-auto rounded-xl border border-gray-100">
-                    {% endif %}
-                    {{ form.featured_image }}
-                    {% if form.featured_image.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.featured_image.help_text }}</p>{% endif %}
-                    {% for error in form.featured_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
-                </div>
-                <div>
-                    <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.pdf_file.label }}</label>
-                    {% if form.instance.pdf_file %}
-                        <p class="mb-1.5 text-xs text-gray-600">
-                            Current: <a href="{{ form.instance.pdf_file.url }}" target="_blank" rel="noopener" class="underline">{{ form.instance.pdf_file.name }}</a>
-                        </p>
-                    {% endif %}
-                    {{ form.pdf_file }}
-                    {% if form.pdf_file.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.pdf_file.help_text }}</p>{% endif %}
-                    {% for error in form.pdf_file.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
-                </div>
-            </div>
+            {# Authors #}
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 class="text-sm font-semibold text-gray-900">Authors</h2>
+                {% if is_create %}
+                    <p class="mt-2 text-xs text-gray-500">Save the draft first, then add authors.</p>
+                {% else %}
+                    <ul class="mt-2 space-y-1 text-sm text-gray-700">
+                        {% for byline in form.instance.articleauthor_set.all %}<li>{{ byline.display_name }}{% if byline.is_corresponding %} <span class="text-xs text-gray-400">· corresponding</span>{% endif %}</li>{% empty %}<li class="text-xs text-gray-400">No authors yet — shown as “Editorial staff”.</li>{% endfor %}
+                    </ul>
+                    <a href="{% url 'articles:manage_article_authors' form.instance.slug %}" class="mt-3 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800">Edit authors →</a>
+                {% endif %}
+            </section>
 
-            <div data-panel="related" class="space-y-6 hidden"
-                 {% if form.related_articles.errors %}data-has-error="true"{% endif %}>
-                {% include 'admin_dashboard/includes/form_field.html' with field=form.related_articles %}
-
-                {% comment %}
-                Filled by the script below from articles:manage_related_article_suggestions
-                (articles/similarity.py). Fetched when this tab opens — the
-                Next/Prev autosave that got the editor here has just saved
-                the latest text, so scores reflect the current draft.
-                {% endcomment %}
-                <div class="rounded-2xl border border-gray-100 bg-gray-50/60 p-5">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-900">Suggested by text similarity</h3>
-                            <p class="mt-1 text-xs text-gray-500 max-w-xl">
-                                Ranked by cosine similarity of TF-IDF term vectors built from each article's title,
-                                keywords, abstract and full text. If you don't pick any related articles above,
-                                the top matches are shown to readers automatically.
-                            </p>
-                        </div>
-                        <button type="button" id="refresh-suggestions-btn" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">↻ Refresh</button>
+            {# More details #}
+            <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+                     {% if form.slug.errors or form.doi.errors or form.volume.errors or form.page_numbers.errors or form.pdf_file.errors %}open{% endif %}>
+                <summary class="cursor-pointer select-none flex items-center justify-between text-sm font-semibold text-gray-900">
+                    More details
+                    <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="mt-4 space-y-4">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
+                    <div>
+                        <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.pdf_file.label }}</label>
+                        {% if form.instance.pdf_file %}
+                            <p class="mb-1.5 text-xs text-gray-600">Current: <a href="{{ form.instance.pdf_file.url }}" target="_blank" rel="noopener" class="underline">{{ form.instance.pdf_file.name }}</a></p>
+                        {% endif %}
+                        {{ form.pdf_file }}
+                        {% for error in form.pdf_file.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
                     </div>
-                    <div id="related-suggestions" class="mt-4 space-y-2 text-sm">
-                        <p class="text-gray-400 text-xs">Open this tab to load suggestions.</p>
+                    <p class="text-xs font-medium text-gray-500 pt-2 border-t border-gray-100">Journal fields</p>
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.doi %}
+                    <div class="grid grid-cols-2 gap-3">
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.volume %}
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.page_numbers %}
                     </div>
                 </div>
-            </div>
-
-            <div class="mt-8 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
-                <button type="button" id="prev-btn"
-                        class="hidden inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    ← Back
-                </button>
-                <button type="button" id="next-btn"
-                        class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
-                    Next →
-                </button>
-                <button type="submit" name="action" value="draft" id="save-draft-btn"
-                        class="hidden inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    Save as Draft
-                </button>
-                <button type="submit" name="action" value="publish" id="save-publish-btn"
-                        class="hidden inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
-                    Save &amp; Publish
-                </button>
-                <button type="button" id="preview-btn"
-                        class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    Preview
-                </button>
-                <a href="{% url 'articles:manage_article_list' %}"
-                   class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    Cancel
-                </a>
-                <span id="autosave-status" class="text-xs text-gray-400 ml-auto"></span>
-            </div>
-        </form>
+            </details>
+        </aside>
     </div>
-</div>
+</form>
+{% endwith %}
 
 {{ content_templates|json_script:"content-templates-data" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.getElementById('article-form');
-    var TAB_ORDER = ['content', 'publishing', 'media', 'related'];
-    var isCreate = {{ is_create|yesno:"true,false" }};
-
-    var tabButtons = Array.prototype.slice.call(form.querySelectorAll('.tab-btn'));
-    var panels = Array.prototype.slice.call(form.querySelectorAll('[data-panel]'));
-    var prevBtn = document.getElementById('prev-btn');
-    var nextBtn = document.getElementById('next-btn');
-    var saveDraftBtn = document.getElementById('save-draft-btn');
-    var savePublishBtn = document.getElementById('save-publish-btn');
+    var autosaveEnabled = form.dataset.autosave === 'on';
     var autosaveStatus = document.getElementById('autosave-status');
     var articlePkInput = document.getElementById('article-pk');
     var previewSourcePkInput = document.getElementById('preview-source-pk');
     var editUrlInput = document.getElementById('edit-url');
-
-    // Editing an already-saved article starts with every tab unlocked —
-    // the step-by-step gating below only matters for a brand-new article,
-    // where each tab's required fields must be entered before the next one
-    // unlocks. Re-editing shouldn't force re-walking tabs that are already filled in.
-    var maxReachedIndex = isCreate ? 0 : TAB_ORDER.length - 1;
-    var currentIndex = 0;
-
-    function currentPanel() { return panels[currentIndex]; }
-
-    function render() {
-        tabButtons.forEach(function (btn) {
-            var idx = parseInt(btn.dataset.tabIndex, 10);
-            var active = idx === currentIndex;
-            var locked = idx > maxReachedIndex;
-            btn.classList.toggle('bg-white', active);
-            btn.classList.toggle('shadow-sm', active);
-            btn.classList.toggle('text-gray-900', active && !locked);
-            btn.classList.toggle('text-gray-500', !active && !locked);
-            btn.classList.toggle('text-gray-300', locked);
-            btn.classList.toggle('cursor-not-allowed', locked);
-            btn.disabled = locked;
-        });
-        panels.forEach(function (panel, idx) {
-            panel.classList.toggle('hidden', idx !== currentIndex);
-        });
-        var atLast = currentIndex === TAB_ORDER.length - 1;
-        prevBtn.classList.toggle('hidden', currentIndex === 0);
-        nextBtn.classList.toggle('hidden', atLast);
-        saveDraftBtn.classList.toggle('hidden', !atLast);
-        savePublishBtn.classList.toggle('hidden', !atLast);
-    }
-
-    function goTo(idx) {
-        currentIndex = idx;
-        maxReachedIndex = Math.max(maxReachedIndex, idx);
-        render();
-        if (TAB_ORDER[idx] === 'related' && window.loadRelatedSuggestions) window.loadRelatedSuggestions();
-    }
-
-    tabButtons.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var idx = parseInt(btn.dataset.tabIndex, 10);
-            if (idx > maxReachedIndex) return;
-            goTo(idx);
-        });
-    });
-
-    function validateCurrentTab() {
-        var invalid = null;
-        currentPanel().querySelectorAll('[required]').forEach(function (el) {
-            if (!invalid && !el.value.trim()) invalid = el;
-        });
-        if (invalid) {
-            invalid.reportValidity();
-            return false;
-        }
-        return true;
-    }
+    var AUTOSAVE_MS = 20000;
 
     function showStatus(text, isError) {
         autosaveStatus.textContent = text;
@@ -300,10 +277,38 @@ document.addEventListener('DOMContentLoaded', function () {
         autosaveStatus.classList.toggle('text-gray-400', !isError);
     }
 
-    function autosave(onDone) {
+    // --- Unsaved-changes tracking -------------------------------------
+    // CKEditor writes its content back into the textarea on change, and
+    // Tagify updates its input — both fire input/change on the form or are
+    // caught by the periodic snapshot comparison below.
+    function snapshot() {
+        var data = new FormData(form);
+        var parts = [];
+        data.forEach(function (value, key) {
+            if (key === 'csrfmiddlewaretoken' || value instanceof File) return;
+            parts.push(key + '=' + value);
+        });
+        return parts.join('&');
+    }
+    var savedSnapshot = snapshot();
+    var submitting = false;
+    function isDirty() { return snapshot() !== savedSnapshot; }
+
+    window.addEventListener('beforeunload', function (e) {
+        if (!submitting && isDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // --- Autosave (drafts only) ---------------------------------------
+    // Published articles never autosave — half-typed edits would go live.
+    var saving = false;
+    function autosave() {
+        if (!autosaveEnabled || saving || !isDirty()) return;
+        var titleField = document.getElementById('id_title');
+        if (!titleField || !titleField.value.trim()) { showStatus('Add a title to start saving.', false); return; }
+        saving = true;
+        var pending = snapshot();
         showStatus('Saving…', false);
-        var formData = new FormData(form);
-        fetch('{% url "articles:manage_article_autosave" %}', { method: 'POST', body: formData })
+        fetch('{% url "articles:manage_article_autosave" %}', { method: 'POST', body: new FormData(form) })
             .then(function (resp) { return resp.json(); })
             .then(function (data) {
                 if (data.ok) {
@@ -312,42 +317,35 @@ document.addEventListener('DOMContentLoaded', function () {
                     editUrlInput.value = data.edit_url || '';
                     var slugField = document.getElementById('id_slug');
                     if (slugField && !slugField.value) slugField.value = data.slug;
-                    showStatus('Saved as draft ✓', false);
-                    onDone(true);
+                    savedSnapshot = pending;
+                    var now = new Date();
+                    showStatus('Draft saved at ' + now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), false);
                 } else {
-                    showStatus('Could not save — check this tab for errors', true);
-                    onDone(false);
+                    showStatus('Autosave paused — use Save draft to see what needs fixing.', true);
                 }
             })
-            .catch(function () {
-                showStatus('Could not save (check your connection)', true);
-                onDone(false);
-            });
+            .catch(function () { showStatus('Autosave failed (check your connection).', true); })
+            .then(function () { saving = false; });
     }
+    if (autosaveEnabled) setInterval(autosave, AUTOSAVE_MS);
 
-    nextBtn.addEventListener('click', function () {
-        if (!validateCurrentTab()) return;
-        autosave(function (ok) {
-            if (ok) goTo(currentIndex + 1);
-        });
+    // Ctrl/Cmd+S → Save draft (or Update on a live article).
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            var target = document.getElementById('save-draft-btn') || form.querySelector('[data-full-save]');
+            if (target) target.click();
+        }
     });
 
-    prevBtn.addEventListener('click', function () {
-        autosave(function () {
-            goTo(currentIndex - 1);
-        });
-    });
-
-    // Once autosave has created a real row, the final Save as Draft / Save &
-    // Publish submit must UPDATE that same row instead of the Create view
-    // making a second, duplicate one — redirect the form to the edit URL
-    // right before a real submit. form.submit() (used by Preview, below)
-    // doesn't fire this event, so it can't interfere with that flow.
+    // Once autosave has created a real row, a real submit must UPDATE that
+    // row rather than the Create view making a duplicate — point the form
+    // at the edit URL right before submitting. form.submit() (Preview,
+    // below) doesn't fire this event, so it can't interfere with that flow.
     form.addEventListener('submit', function () {
+        submitting = true;
         if (editUrlInput.value) form.action = editUrlInput.value;
     });
-
-    render();
 
     // Price only matters (and is only required) for the pay-per-article tier.
     var accessTypeField = document.getElementById('id_access_type');
@@ -360,13 +358,11 @@ document.addEventListener('DOMContentLoaded', function () {
         updatePriceVisibility();
     }
 
-    // Land on whichever tab has a validation error from the last submit,
-    // since `novalidate` means the browser won't jump there on its own.
-    var errorPanelIndex = -1;
-    panels.forEach(function (panel, idx) {
-        if (panel.dataset.hasError === 'true') errorPanelIndex = idx;
-    });
-    if (errorPanelIndex !== -1) goTo(errorPanelIndex);
+    // Bring the first field with an error into view (novalidate means the
+    // browser won't do this on its own).
+    var firstError = form.querySelector('.text-red-600');
+    if (firstError && firstError.closest('details')) firstError.closest('details').open = true;
+    if (firstError) firstError.scrollIntoView({ block: 'center' });
 
     var templates = JSON.parse(document.getElementById('content-templates-data').textContent);
     var typeField = document.getElementById('id_article_type');
@@ -561,7 +557,11 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     var refreshBtn = document.getElementById('refresh-suggestions-btn');
     if (refreshBtn) refreshBtn.addEventListener('click', window.loadRelatedSuggestions);
-    if (TAB_ORDER[currentIndex] === 'related') window.loadRelatedSuggestions();
+    var relatedPanel = document.getElementById('related-panel');
+    if (relatedPanel) {
+        relatedPanel.addEventListener('toggle', function () { if (relatedPanel.open) window.loadRelatedSuggestions(); });
+        if (relatedPanel.open) window.loadRelatedSuggestions();
+    }
 });
 </script>
 {% endblock %}

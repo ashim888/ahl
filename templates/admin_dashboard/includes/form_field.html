@@ -1,6 +1,9 @@
 {% comment %}
 Shared field renderer for the admin form design system. Usage:
     {% include 'admin_dashboard/includes/form_field.html' with field=form.title %}
+A required field (field.required) gets a red * after its label. Pass
+mark_required=True to show it on a field the form only enforces
+conditionally (e.g. body text, required to publish but not for a draft).
 Not used for file inputs — those get a "current file" preview that differs
 per field (image thumbnail vs. filename link), so each form template handles
 its own file fields directly.
@@ -14,7 +17,7 @@ its own file fields directly.
 {% else %}
     <div>
         <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">
-            {{ field.label }}
+            {{ field.label }}{% if field.field.required or mark_required %}<span class="text-red-500 ml-0.5" aria-hidden="true">*</span><span class="sr-only"> (required)</span>{% endif %}
         </label>
         {{ field }}
         {% if field.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ field.help_text }}</p>{% endif %}

@@ -38,7 +38,7 @@ from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
-from .forms import ArticleAuthorFormSet, ArticleForm, LenientArticleForm
+from .forms import ArticleAuthorFormSet, ArticleForm, DraftArticleForm, LenientArticleForm, PublishArticleForm
 from .models import (
     HOME_SECTIONS_CACHE_KEY, Article, ArticleView, Author, Bookmark, Keyword, KeywordEvent, KeywordFollow,
 )
@@ -1047,10 +1047,9 @@ def article_quick_publish(request, slug):
 @role_required(*EDITORIAL_ROLES)
 @require_POST
 def article_autosave(request):
-    """Fires on each "Next"/"Back" tab click in the New/Edit Article wizard —
-    saves whatever's been filled in so far, using LenientArticleForm
-    (nothing required, so a half-finished Content tab doesn't block moving
-    to Publishing/Media). For a brand-new article this defaults status to
+    """Background autosave from the article editor (every ~20s while a draft
+    has unsaved changes) — saves whatever's been filled in so far, using
+    LenientArticleForm (nothing but a title needed). For a brand-new article this defaults status to
     Draft; for an article that already exists, status is left exactly as it
     was — autosaving edits to an already-published article must not
     silently unpublish it. Never *sets* Published — that only ever happens
@@ -1058,6 +1057,13 @@ def article_autosave(request):
     """
     pk = request.POST.get('article_pk')
     instance = get_object_or_404(Article, pk=pk) if pk else None
+    # Autosave only ever touches drafts: writing half-typed edits straight
+    # into a live article would publish them. Published/archived articles
+    # change only through the explicit Update button.
+    if instance is not None and instance.status != Article.Status.DRAFT:
+        return JsonResponse({'ok': False, 'errors': {'__all__': ['Autosave is off for published articles.']}}, status=409)
+    if not request.POST.get('title', '').strip():
+        return JsonResponse({'ok': False, 'errors': {'title': ['Add a title to start saving.']}}, status=400)
 
     form = LenientArticleForm(request.POST, request.FILES, instance=instance)
     if not form.is_valid():
@@ -1084,14 +1090,26 @@ def article_autosave(request):
 
 
 class ArticleFormMixin:
-    """Shared context for create/update — the per-type content-template
-    picker rendered in articles/manage/article_form.html — plus the
-    Save as Draft / Save & Publish action handling. There's no manual
-    status dropdown in this form on purpose: status is decided entirely by
-    which of those two buttons was pressed (name="action", value="draft"
-    or "publish"), so there's no separate control that could disagree with
-    the button the editor actually clicked.
+    """Shared by create/update: the per-type content-template picker, and
+    the action buttons (name="action") that decide both the status and how
+    strictly the form is checked — there's no status dropdown that could
+    disagree with the button the editor actually clicked:
+
+    - "draft"   → Save draft (or Unpublish on a live article): status Draft,
+                  only a title required (DraftArticleForm).
+    - "publish" → Publish (or Update on a live article): status Published,
+                  full checks incl. body text (PublishArticleForm).
+    - "keep"    → Save without changing status (an archived article):
+                  full checks.
     """
+
+    def get_form_class(self):
+        action = self.request.POST.get('action')
+        if action == 'draft':
+            return DraftArticleForm
+        if action in ('publish', 'keep'):
+            return PublishArticleForm
+        return ArticleForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1109,6 +1127,13 @@ class ArticleFormMixin:
             form.instance.status = Article.Status.DRAFT
         return super().form_valid(form)
 
+    def form_invalid(self, form):
+        if self.request.POST.get('action') == 'draft':
+            messages.error(self.request, 'The draft wasn\'t saved — a title is required.')
+        else:
+            messages.error(self.request, 'Not published yet — fix the highlighted fields below.')
+        return super().form_invalid(form)
+
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
 class ArticleCreateView(ArticleFormMixin, CreateView):
@@ -1123,7 +1148,7 @@ class ArticleCreateView(ArticleFormMixin, CreateView):
 
     def form_valid(self, form):
         published = self.request.POST.get('action') == 'publish'
-        messages.success(self.request, f'"{form.instance.title}" created{" and published" if published else " as a draft"}.')
+        messages.success(self.request, f'"{form.instance.title}" {"published" if published else "saved as a draft"}.')
         return super().form_valid(form)
 
 
@@ -1142,13 +1167,14 @@ class ArticleUpdateView(ArticleFormMixin, UpdateView):
 
     def form_valid(self, form):
         action = self.request.POST.get('action')
+        was_published = self.object.status == Article.Status.PUBLISHED
         if action == 'publish':
-            suffix = ' and published'
+            message = 'updated — the live article now shows your changes' if was_published else 'published'
         elif action == 'draft':
-            suffix = ' and moved back to draft'
+            message = 'unpublished and moved back to draft' if was_published else 'draft saved'
         else:
-            suffix = ''
-        messages.success(self.request, f'"{form.instance.title}" updated{suffix}.')
+            message = 'saved'
+        messages.success(self.request, f'"{form.instance.title}" {message}.')
         return super().form_valid(form)
 
 

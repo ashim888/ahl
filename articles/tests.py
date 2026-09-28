@@ -2376,7 +2376,7 @@ class RelatedArticleEndpointsTests(TestCase):
     def test_article_form_has_related_tab(self):
         self.client.force_login(self.editor)
         response = self.client.get(reverse('articles:manage_article_update', args=[self.a.slug]))
-        self.assertContains(response, 'data-panel="related"')
+        self.assertContains(response, 'id="related-panel"')
         self.assertContains(response, 'id="id_related_articles"')
 
 
@@ -2659,3 +2659,97 @@ class HomepageRoutingTests(TestCase):
     def test_old_index_url_redirects_permanently(self):
         response = self.client.get('/index/')
         self.assertRedirects(response, '/', status_code=301)
+
+
+class ArticleEditorSavingTests(TestCase):
+    """Single-page article editor: Save draft needs only a title, Publish
+    needs the full set, live articles get Update/Unpublish, and autosave
+    never touches a live article."""
+
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='editor-saving@example.com', password='pw', first_name='E', last_name='S', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+
+    def _post_create(self, **data):
+        return self.client.post(reverse('articles:manage_article_create'), data)
+
+    def test_draft_saves_with_only_a_title(self):
+        response = self._post_create(title='Just A Headline', action='draft')
+        self.assertEqual(response.status_code, 302)
+        article = Article.objects.get(title='Just A Headline')
+        self.assertEqual(article.status, Article.Status.DRAFT)
+        self.assertEqual(article.article_type, Article.ArticleType.NEWS_COMMENTARY)
+
+    def test_draft_without_title_is_rejected(self):
+        response = self._post_create(title='', abstract='Some notes', action='draft')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Article.objects.exists())
+
+    def test_publish_requires_article_text(self):
+        response = self._post_create(
+            title='Empty Story', article_type='news_commentary', access_type='open_access', action='publish',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('html_content', response.context['form'].errors)
+        self.assertFalse(Article.objects.exists())
+
+    def test_publish_with_text_goes_live(self):
+        self._post_create(
+            title='Real Story', article_type='news_commentary', access_type='open_access',
+            html_content='<p>Clinics reopened.</p>', action='publish',
+        )
+        self.assertEqual(Article.objects.get(title='Real Story').status, Article.Status.PUBLISHED)
+
+    def test_live_article_shows_update_and_unpublish_not_save_draft(self):
+        article = Article.objects.create(
+            title='Live One', slug='live-one', status=Article.Status.PUBLISHED, html_content='<p>x</p>',
+        )
+        response = self.client.get(reverse('articles:manage_article_update', args=[article.slug]))
+        self.assertContains(response, 'Update live article')
+        self.assertContains(response, 'Unpublish')
+        self.assertNotContains(response, 'id="save-draft-btn"')
+        self.assertContains(response, 'data-autosave="off"')
+
+    def test_unpublish_moves_live_article_back_to_draft(self):
+        article = Article.objects.create(
+            title='Live Two', slug='live-two', status=Article.Status.PUBLISHED, html_content='<p>x</p>',
+        )
+        self.client.post(reverse('articles:manage_article_update', args=[article.slug]), {
+            'title': 'Live Two', 'slug': 'live-two', 'article_type': 'news_commentary',
+            'access_type': 'open_access', 'html_content': '<p>x</p>', 'action': 'draft',
+        })
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.DRAFT)
+
+    def test_autosave_refuses_live_article(self):
+        article = Article.objects.create(
+            title='Live Three', slug='live-three', status=Article.Status.PUBLISHED, html_content='<p>original</p>',
+        )
+        response = self.client.post(reverse('articles:manage_article_autosave'), {
+            'article_pk': article.pk, 'title': 'Half-typed edit', 'html_content': '<p>oops</p>',
+            'article_type': 'news_commentary', 'access_type': 'open_access',
+        })
+        self.assertEqual(response.status_code, 409)
+        article.refresh_from_db()
+        self.assertEqual(article.title, 'Live Three')
+
+    def test_autosave_needs_a_title(self):
+        response = self.client.post(reverse('articles:manage_article_autosave'), {'title': '  '})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Article.objects.exists())
+
+    def test_single_page_with_required_markers(self):
+        response = self.client.get(reverse('articles:manage_article_create'))
+        content = response.content.decode()
+        self.assertNotIn('Next →', content)
+        self.assertIn('id="save-draft-btn"', content)
+        self.assertIn('Publish</button>', content)
+        # Title is required → marked; the (optional) summary is not.
+        title_label = content[content.index('for="id_title"'):content.index('</label>', content.index('for="id_title"'))]
+        abstract_label = content[content.index('for="id_abstract"'):content.index('</label>', content.index('for="id_abstract"'))]
+        self.assertIn('*</span>', title_label)
+        self.assertNotIn('*</span>', abstract_label)

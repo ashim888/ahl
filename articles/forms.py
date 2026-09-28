@@ -2,6 +2,7 @@ import json
 
 from django import forms
 from django.forms import inlineformset_factory
+from django.utils.html import strip_tags
 from django.utils.text import slugify
 from django_ckeditor_5.widgets import CKEditor5Widget
 
@@ -130,11 +131,35 @@ class ArticleForm(forms.ModelForm):
             'html_content': CKEditor5Widget(config_name='articles'),
             'references': forms.Textarea(attrs={'rows': 6}),
         }
+        # Editor-facing wording — the model help_texts are written for
+        # developers (they point at code), these are for the newsroom.
+        labels = {
+            'abstract': 'Summary',
+            'is_pinned': 'Pin to top',
+            'homepage_section': 'Homepage spot',
+            'featured_image': 'Featured image',
+            'pdf_file': 'PDF version',
+            'slug': 'URL slug',
+            'doi': 'DOI',
+        }
+        help_texts = {
+            'title': '',
+            'abstract': 'Optional. One or two sentences shown under the headline and on article cards.',
+            'section': 'Where the story appears in the site menu.',
+            'homepage_section': 'Put this story in a specific homepage spot, or leave on Auto.',
+            'is_pinned': 'Keep this story at the top of lists and the homepage.',
+            'issue': 'Optional. Add the story to an ongoing coverage series.',
+            'access_type': 'Who can read the full text.',
+            'slug': 'Leave empty to create it from the headline.',
+            'pdf_file': 'Optional. Readers can download it from the article page.',
+            'references': 'One source per line. Cite them in the text as [1], [2], …',
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['homepage_section'].choices = [('', "Auto (don't feature)")] + list(Article.HomepageSection.choices)
         self.fields['section'].required = False
+        self.fields['issue'].empty_label = '— No issue —'
         # Grouped <optgroup> choices, not a plain flat list — visually
         # matches the two-level hierarchy an editor is actually picking
         # from. Overriding .choices on a ModelChoiceField only changes what
@@ -233,6 +258,35 @@ class LenientArticleForm(ArticleForm):
         # autosave fires on every tab click and must never block on an
         # incomplete draft (that enforcement belongs to the real submit only).
         return forms.ModelForm.clean(self)
+
+
+class DraftArticleForm(LenientArticleForm):
+    """Save draft: only a title is needed, so an editor can park a half-done
+    story at any point. Everything else is checked at publish time
+    (PublishArticleForm) — a draft is allowed to be incomplete.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['title'].required = True
+
+
+class PublishArticleForm(ArticleForm):
+    """Publish / Update: ArticleForm's own rules, plus — the first time an
+    article goes live — there must be something to read (body text or a PDF).
+    """
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.instance.pk and self.instance.status == Article.Status.PUBLISHED:
+            # Already live: don't block fixing a typo in an older article
+            # that was published before this rule existed (e.g. abstract-only).
+            return cleaned_data
+        body = cleaned_data.get('html_content') or ''
+        has_pdf = bool(cleaned_data.get('pdf_file') or self.instance.pdf_file)
+        if not strip_tags(body).strip() and '<img' not in body and not has_pdf:
+            self.add_error('html_content', 'Add the article text (or attach a PDF) before publishing.')
+        return cleaned_data
 
 
 class AuthorChoiceField(forms.ModelChoiceField):

@@ -172,29 +172,36 @@ On `/editorial/keywords/`:
 `/manage/articles/` — every article regardless of publish status, searchable by title and
 filterable by type/status/homepage section.
 
-**Creating an article** (`+ New Article`):
-1. Fill in title, type, keywords (type-to-add tags — start typing and pick an existing keyword or
-   create a new one) and, optionally, the abstract. Short news pieces can leave the abstract
-   empty: the article page then goes straight from the headline to the byline, and listings,
-   feeds and search-engine snippets use the opening words of the body instead — for free
-   (open-access) articles only, so paid text never leaks into a listing.
-2. Write the body in the rich-text editor. Use the "Source" toggle in the toolbar if you need to
-   drop into raw HTML (e.g. an embedded chart). Code blocks are supported with language labels.
-3. Click **Preview** any time to see exactly how the article will render publicly, in a new tab —
-   including citation links and any embedded chart — without saving.
-4. Your work **autosaves** as you type (see the status indicator near the Save buttons), so a
-   closed tab or crash won't lose a draft.
-5. Choose **Save as Draft** or **Save & Publish**. Draft articles are never publicly visible.
-6. **Access tier**: every article is Free (open access), Subscription, or Pay-per-article
-   ("special", with its own price) — set this on the article form; it's an editorial call per
-   article, not automatic from the article type.
-7. **Related articles** (the **Related** tab): choose the articles to show under "Related
-   reading" (the page shows three at most, newest first, so pick three or fewer). Type to search
-   published articles by title. Below the picker, a
-   **suggestions** list shows the most similar published articles, each with a similarity bar
-   and a **+ Add** button. If you pick nothing, the site shows the top suggestions
-   automatically. Similarity compares the words used in titles, keywords, abstracts and bodies,
-   so it only matches articles written in the same language.
+**Creating an article** (`+ New Article`) — everything is on one page. You write on the left;
+the right-hand panel has the buttons and the settings. Fields marked with a red <span>*</span> are
+required to publish.
+1. **Title** is the only thing needed to save a draft. Add a **Summary** if you want one: one or
+   two sentences under the headline and on article cards. Short news pieces can skip it; cards
+   then use the opening words of the text (for free articles only, so paid text never leaks).
+2. Write the **Article text** in the editor. Use the "Source" toggle if you need raw HTML (e.g.
+   an embedded chart). Add **Keywords** (type and press Enter), and **References** under the
+   collapsed "References" link if the story cites sources as [1], [2], ….
+3. **Save draft** any time — only a title is needed. Drafts also **save automatically** every
+   ~20 seconds while you type (the panel shows "Draft saved at …"), and **Ctrl/⌘ + S** saves.
+   If you try to leave with unsaved changes, the browser warns you.
+4. **Preview** opens the article exactly as readers will see it, in a new tab, without saving.
+5. **Publish** puts it on the site (you'll be asked to confirm). Publishing checks the rest: an
+   article type, an access type (plus a price for special articles) and article text — or a
+   PDF under "More details". If something's missing, the page scrolls to it.
+6. In the right-hand panel: **Placement** (article type, menu section, homepage spot, coverage
+   series, pin to top), **Access** (Free / Subscribers / Special with its own price),
+   **Featured image**, and **Authors** (available once the draft is saved). **More details**
+   holds the URL slug, a PDF version, and journal fields (DOI, volume, pages).
+7. **Related articles** (the panel under the text): choose the articles to show under "Related
+   reading" (the page shows three at most, newest first). A **suggestions** list shows the most
+   similar published articles with a **+ Add** button; if you pick nothing, the top suggestions
+   are shown automatically. Similarity compares wording, so it only matches articles in the same
+   language.
+
+**Editing a published article:** the panel shows **Update live article** instead of Save draft
+— your changes go live only when you click it (autosave is off for live articles, so half-typed
+edits never appear on the site). **Unpublish** (bottom of the panel) takes it off the site and
+back to drafts.
 
 **After creating an article:**
 - **Authors** — go to the article's "Authors" screen (a separate step from the article form).

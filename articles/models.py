@@ -124,7 +124,7 @@ class Article(models.Model):
         'self', symmetrical=False, blank=True, related_name='related_from',
         help_text='Hand-picked related reading. Leave empty to let the site suggest articles by text similarity.',
     )
-    article_type = models.CharField(max_length=30, choices=ArticleType.choices)
+    article_type = models.CharField(max_length=30, choices=ArticleType.choices, default=ArticleType.NEWS_COMMENTARY)
     # A per-article editorial/business call, independent of article_type —
     # see ROADMAP.md Phase 7 "Business model (revised — three access tiers)".
     # No longer derived from article_type (that was a leftover academic-journal
