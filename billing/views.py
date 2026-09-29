@@ -1,7 +1,9 @@
 import datetime
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -15,9 +17,12 @@ from users.models import User
 
 from .access import user_has_active_subscription, user_has_purchased_article
 from .forms import GrantPurchaseForm, GrantSubscriptionForm, SubscriptionPlanForm
+from . import fonepay, payments
 from .gateway import charge_safely
-from .models import ArticlePurchase, SubscriptionPlan, UserSubscription
+from .models import ArticlePurchase, Payment, SubscriptionPlan, UserSubscription
 from .services import record_purchase, start_subscription
+
+logger = logging.getLogger(__name__)
 
 # Plans are visible/editable to any editorial staff, same as Article CRUD.
 # Granting/revoking actual paid access is a bigger deal — restricted to
@@ -111,6 +116,10 @@ def subscribe_checkout(request, pk):
         messages.info(request, "You already have an active subscription.")
         return redirect('billing:plan_browse')
 
+    if request.method == 'POST' and payments.uses_fonepay():
+        return _start_fonepay(
+            request, kind=Payment.Kind.SUBSCRIPTION, amount=plan.price, description=f'Subscription — {plan.name}', plan=plan,
+        )
     if request.method == 'POST':
         result = charge_safely(
             request.user, plan.price, f'Subscription — {plan.name}',
@@ -133,6 +142,10 @@ def purchase_checkout(request, slug):
     if user_has_active_subscription(request.user) or user_has_purchased_article(request.user, article):
         return redirect('articles:article_detail', slug=article.slug)
 
+    if request.method == 'POST' and payments.uses_fonepay():
+        return _start_fonepay(
+            request, kind=Payment.Kind.ARTICLE, amount=article.price, description=f'Article — {article.title}', article=article,
+        )
     if request.method == 'POST':
         result = charge_safely(request.user, article.price, f'Article — {article.title}')
         if result.success:
@@ -142,6 +155,52 @@ def purchase_checkout(request, slug):
         messages.error(request, result.error or 'Payment failed — please try again.')
 
     return render(request, 'billing/purchase_checkout.html', {'article': article})
+
+
+def _start_fonepay(request, **payment_kwargs):
+    """Shared by every checkout: create the Fonepay payment and send the
+    reader to the payment page, or back with an error if Fonepay is down."""
+    try:
+        payment = payments.start_payment(request.user, **payment_kwargs)
+    except fonepay.FonepayError:
+        logger.exception('Could not start Fonepay payment for %s', request.user)
+        messages.error(request, 'We couldn\'t start the payment with Fonepay right now. Please try again in a moment.')
+        return redirect(request.path)
+    return redirect('billing:payment_page', reference=payment.reference)
+
+
+@login_required
+def payment_page(request, reference):
+    """Pay with Fonepay: QR to scan (desktop) or bank-app buttons (mobile),
+    live status over Fonepay's WebSocket, and a server-confirmed result."""
+    payment = get_object_or_404(Payment, reference=reference, user=request.user)
+    if payment.status == Payment.Status.PENDING:
+        payment = payments.verify_payment(payment) if payment.is_expired else payment
+    if payment.status == Payment.Status.SUCCESS:
+        messages.success(request, f'Payment received — {payment.description}.')
+        return redirect(payments.success_url(payment))
+    banks = []
+    if payment.status == Payment.Status.PENDING:
+        try:
+            banks = fonepay.bank_list()
+        except fonepay.FonepayError:
+            logger.warning('Could not load Fonepay bank list')
+    return render(request, 'billing/payment_page.html', {
+        'payment': payment, 'banks': banks, 'retry_url': payments.retry_url(payment),
+        'seconds_left': max(int((payment.expires_at - timezone.now()).total_seconds()), 0),
+    })
+
+
+@login_required
+def payment_check(request, reference):
+    """JSON status for the payment page — always confirmed with Fonepay's
+    status API server-side, never trusted from the browser."""
+    payment = get_object_or_404(Payment, reference=reference, user=request.user)
+    payment = payments.verify_payment(payment)
+    return JsonResponse({
+        'status': payment.status,
+        'redirect': payments.success_url(payment) if payment.status == Payment.Status.SUCCESS else '',
+    })
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
+from .models import ArticlePurchase, Payment, PlanFeature, SubscriptionPlan, UserSubscription
 
 
 @admin.register(PlanFeature)
@@ -30,3 +30,13 @@ class ArticlePurchaseAdmin(admin.ModelAdmin):
     list_display = ['user', 'article', 'amount', 'purchased_at']
     list_select_related = ['user', 'article']
     search_fields = ['user__email', 'article__title']
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    """Fonepay checkouts — read-mostly: status comes from Fonepay, not staff edits."""
+
+    list_display = ['reference', 'user', 'description', 'amount', 'status', 'created_at', 'completed_at']
+    list_filter = ['status', 'kind', 'gateway']
+    search_fields = ['reference', 'user__email', 'description', 'gateway_trace_id']
+    readonly_fields = [f.name for f in Payment._meta.fields]

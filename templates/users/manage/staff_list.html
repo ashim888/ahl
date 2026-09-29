@@ -60,7 +60,10 @@
                         {% if member.pk == user.pk %}<span class="text-xs text-gray-400">(you)</span>{% endif %}
                     </td>
                     <td class="px-4 py-3 text-gray-600">{{ member.email }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ member.get_role_display }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {{ member.get_role_display }}
+                        {% if member.can_publish %}<span class="ml-1 inline-flex rounded-full bg-green-50 text-green-700 px-2 py-0.5 text-[11px] font-medium">Publisher</span>{% endif %}
+                    </td>
                     <td class="px-4 py-3 text-gray-600">{% if member.is_active %}Yes{% else %}No{% endif %}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <a href="{% url 'users:manage_staff_update' member.pk %}" class="icon-action-btn" title="Edit" aria-label="Edit">

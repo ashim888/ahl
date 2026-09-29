@@ -58,9 +58,13 @@
                                class="block text-center font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
                                 {% trans "SUBSCRIBE NOW" %}
                             </a>
+                            {% if PAYMENTS_LIVE %}
+                                <p class="mt-4 text-xs text-muted-foreground leading-relaxed">{% trans "You'll pay securely with Fonepay — scan a QR or approve in your bank app." %}</p>
+                            {% else %}
                             <p class="text-xs text-muted-foreground leading-relaxed mt-4">
                                 {% trans "Payment processing isn't live yet — checkout runs in test mode and activates access immediately." %}
                             </p>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>

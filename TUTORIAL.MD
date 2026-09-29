@@ -80,6 +80,11 @@ No account needed for any of this.
 - **Browse training programs** at `/training/`. Enrolling requires an account (see §3) —
   checkout is currently a stub payment flow (always succeeds; a real gateway isn't wired up yet).
 - **Browse subscription plans** at `/subscribe/`.
+- **Paying** (subscriptions, special articles, paid courses): once Fonepay is switched on, checkout
+  opens a **Pay with Fonepay** page — scan the QR with any bank or wallet app, or on a phone tap your
+  bank to open its app and approve. The page confirms automatically and takes you to what you
+  bought. If you close it after paying, access is still added within a few minutes. An unpaid
+  request expires after 15 minutes; **Try again** starts a new one.
 - **About / editorial board / policies** at `/about/editorial-board/` (tabbed: About, Editorial
   Board, Policies).
 
@@ -205,8 +210,15 @@ Scheduled). In the right-hand panel:
 - **Mark ready to publish** (on a story in review) — runs the same checks as Publish, so "ready"
   really means ready.
 - **Save (stays in review / stays ready)** keeps the story where it is; **Back to draft** returns it.
-- **Publish** and **Schedule** work from any of these steps. Every editor can still publish — the
-  workflow is guidance and a record, not a lock.
+- **Publish** and **Schedule** work from any of these steps — for **publishers** only (see below).
+
+**Who can publish:** the Editor-in-Chief and Admins always can. Any other Editor can publish only if
+an Editor-in-Chief or Admin ticks **Can publish articles** on their account (Staff → edit; publishers
+show a "Publisher" badge in the staff list). Publishing covers: Publish, Schedule, Update live
+article, Unpublish/Unschedule, breaking news, public corrections on live stories, restoring a live
+story's history, and deleting a live story. Editors without it still write, save, **Send for
+review** and **Mark ready** — marking a story ready emails every publisher, and publishers see a
+**Ready to publish** link with a count in the sidebar.
 - **Internal notes** in the *Review* card are for the team only ("check the 2021 figure with the
   ministry") and never appear on the site. You can delete your own notes; senior staff can delete
   any.

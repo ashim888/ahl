@@ -462,7 +462,9 @@ class StaffCreateView(StaffFormViewMixin, CreateView):
 
     def form_valid(self, form):
         messages.success(self.request, f'"{form.instance.get_full_name()}" added as {form.instance.get_role_display()}.')
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        form.apply_publish_permission(self.object)
+        return response
 
 
 @method_decorator(role_required(*STAFF_MANAGE_ROLES), name='dispatch')
@@ -480,7 +482,9 @@ class StaffUpdateView(StaffFormViewMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, f'"{form.instance.get_full_name()}" updated.')
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        form.apply_publish_permission(self.object)
+        return response
 
 
 @role_required(*STAFF_MANAGE_ROLES)

@@ -162,6 +162,24 @@ class StaffFormMixin:
         if acting_user and acting_user.role != User.Role.ADMIN and current_role != User.Role.ADMIN:
             choices = [(v, l) for v, l in choices if v != User.Role.ADMIN]
         self.fields['role'].choices = choices
+        # Publishing rights for Editors (EiC/Admin always have them) — see
+        # User.can_publish. Applied by the view after the account is saved.
+        self.fields['can_publish'] = forms.BooleanField(
+            required=False, label='Can publish articles',
+            help_text='Publish, schedule, update or unpublish live articles and add public corrections. '
+                      'Editors-in-Chief and Admins can always publish.',
+            initial=bool(self.instance.pk and self.instance.user_permissions.filter(
+                codename='publish_article', content_type__app_label='articles',
+            ).exists()),
+        )
+
+    def apply_publish_permission(self, user):
+        """Grant/revoke articles.publish_article to match the checkbox."""
+        permission = Permission.objects.get(codename='publish_article', content_type__app_label='articles')
+        if self.cleaned_data.get('can_publish'):
+            user.user_permissions.add(permission)
+        else:
+            user.user_permissions.remove(permission)
 
 
 class StaffManageForm(StaffFormMixin, ModelForm):

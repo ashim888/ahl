@@ -43,6 +43,8 @@ def pending_work_counts():
         ).count(),
         # Stories waiting on an editor's review (see Article.Status).
         'articles_in_review': Article.objects.filter(status=Article.Status.IN_REVIEW).count(),
+        # Marked ready, waiting on a publisher (shown to publishers only).
+        'articles_ready': Article.objects.filter(status=Article.Status.READY).count(),
         'open_pitches': StoryPitch.objects.filter(
             status__in=[StoryPitch.Status.SUBMITTED, StoryPitch.Status.IN_REVIEW],
         ).count(),

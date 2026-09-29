@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load i18n money_tags %}
+
+{% block title %}{% trans "Pay with Fonepay" %} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-12">
+    <a href="{{ retry_url }}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "← BACK" %}</a>
+    <h1 class="font-display text-3xl font-bold mt-4" style="letter-spacing: -0.02em;">{% trans "Pay with Fonepay" %}</h1>
+    <p class="mt-2 text-muted-foreground">{{ payment.description }} · <strong class="text-foreground">{{ payment.amount|money }}</strong></p>
+
+    {% if payment.status == 'pending' %}
+        <div id="pay-panel" class="mt-8 grid md:grid-cols-2 gap-6"
+             data-check-url="{% url 'billing:payment_check' payment.reference %}"
+             data-websocket-url="{{ payment.websocket_url }}"
+             data-seconds-left="{{ seconds_left }}">
+            {# Desktop: scan the QR with any bank or wallet app #}
+            <section class="border border-border bg-card p-6 text-center">
+                <p class="section-label text-accent">{% trans "SCAN TO PAY" %}</p>
+                <div id="fonepay-qr" class="mt-4 inline-block bg-white p-3" data-qr="{{ payment.qr_message }}"></div>
+                <p class="mt-3 text-sm text-muted-foreground">{% trans "Open your bank or wallet app and scan this Fonepay QR." %}</p>
+            </section>
+
+            {# Mobile: open the bank app directly #}
+            <section class="border border-border bg-card p-6">
+                <p class="section-label text-accent">{% trans "PAY WITH YOUR BANK APP" %}</p>
+                {% if banks %}
+                    <ul class="mt-4 space-y-2">
+                        {% for bank in banks %}
+                            {% if bank.intentScheme %}
+                                <li>
+                                    <a href="{{ bank.intentScheme }}/?qrPayload={{ payment.qr_message|urlencode }}"
+                                       class="flex items-center gap-3 border border-border px-3 py-2.5 hover:border-foreground transition-colors">
+                                        {% if bank.bankIcon %}<img src="{{ bank.bankIcon }}" alt="" class="w-8 h-8 object-contain shrink-0" loading="lazy">{% endif %}
+                                        <span class="text-sm font-medium">{{ bank.bankName }}</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                    <p class="mt-3 text-xs text-muted-foreground">{% trans "On your phone: tap your bank, approve the payment in its app, then come back here." %}</p>
+                {% else %}
+                    <p class="mt-4 text-sm text-muted-foreground">{% trans "Scan the QR with your bank or wallet app." %}</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="mt-6 flex flex-wrap items-center gap-3 border-l-2 border-accent bg-secondary px-4 py-3" aria-live="polite">
+            <span class="w-2 h-2 rounded-full bg-accent animate-pulse" aria-hidden="true"></span>
+            <p id="pay-status" class="text-sm">{% trans "Waiting for your payment…" %}</p>
+            <p class="ml-auto font-mono-editorial text-xs text-muted-foreground">{% trans "Expires in" %} <span id="pay-countdown">--:--</span></p>
+        </div>
+        <p class="mt-3 text-xs text-muted-foreground">{% trans "Don't close this page until the payment is confirmed. If you already paid and closed it, your access is added automatically within a few minutes." %}</p>
+    {% else %}
+        <div class="mt-8 border border-border bg-card p-6">
+            <p class="font-semibold">
+                {% if payment.status == 'failed' %}{% trans "The payment didn't go through." %}{% else %}{% trans "This payment request has expired." %}{% endif %}
+            </p>
+            <p class="mt-2 text-sm text-muted-foreground">{% trans "No money was taken for this request. You can start a new payment." %}</p>
+            <a href="{{ retry_url }}" class="inline-block mt-5 font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90">{% trans "TRY AGAIN" %}</a>
+        </div>
+    {% endif %}
+</div>
+
+{% if payment.status == 'pending' %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function () {
+    var panel = document.getElementById('pay-panel');
+    var statusEl = document.getElementById('pay-status');
+    var qrEl = document.getElementById('fonepay-qr');
+    if (window.QRCode && qrEl) {
+        new QRCode(qrEl, { text: qrEl.dataset.qr, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+    }
+
+    var done = false;
+    // The browser never decides the outcome: every signal just asks our
+    // server, which confirms with Fonepay's status API.
+    function check() {
+        if (done) return;
+        fetch(panel.dataset.checkUrl, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.status === 'success') {
+                    done = true;
+                    statusEl.textContent = '{% trans "Payment confirmed — taking you there…" as s %}{{ s|escapejs }}';
+                    window.location.href = data.redirect;
+                } else if (data.status !== 'pending') {
+                    done = true;
+                    window.location.reload();
+                }
+            })
+            .catch(function () {});
+    }
+
+    // Live updates from Fonepay (QR scanned / payment made) trigger a check.
+    if (panel.dataset.websocketUrl && window.WebSocket) {
+        try {
+            var socket = new WebSocket(panel.dataset.websocketUrl);
+            socket.onmessage = function (event) {
+                if (/QRVerified|VERIFIED/.test(event.data)) {
+                    statusEl.textContent = '{% trans "QR scanned — approve the payment in your app…" as s %}{{ s|escapejs }}';
+                }
+                check();
+            };
+        } catch (e) {}
+    }
+    // Fallback in case the socket is blocked or drops.
+    setInterval(check, 5000);
+
+    var left = parseInt(panel.dataset.secondsLeft, 10);
+    var countdown = document.getElementById('pay-countdown');
+    function tick() {
+        if (left <= 0) { countdown.textContent = '0:00'; check(); return; }
+        countdown.textContent = Math.floor(left / 60) + ':' + ('0' + (left % 60)).slice(-2);
+        left -= 1;
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
+{% endif %}
+{% endblock %}

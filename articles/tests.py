@@ -24,6 +24,18 @@ def make_article(slug, article_type, status=Article.Status.PUBLISHED, homepage_s
     )
 
 
+def grant_publish(user):
+    """Give an Editor the "Can publish" permission (EiC/Admin have it implicitly)."""
+    from django.contrib.auth.models import Permission
+
+    user.user_permissions.add(Permission.objects.get(codename='publish_article', content_type__app_label='articles'))
+    # Drop Django's cached permission set so has_perm sees the new grant.
+    for attr in ('_perm_cache', '_user_perm_cache'):
+        if hasattr(user, attr):
+            delattr(user, attr)
+    return user
+
+
 class HomeViewSectionCurationTests(TestCase):
     """Article.homepage_section lets an editor override the previously fully
     automatic (most-recent-by-type) homepage section selection — these cover
@@ -2673,6 +2685,7 @@ class ArticleEditorSavingTests(TestCase):
         self.editor = User.objects.create_user(
             email='editor-saving@example.com', password='pw', first_name='E', last_name='S', role=User.Role.EDITOR,
         )
+        grant_publish(self.editor)
         self.client.force_login(self.editor)
 
     def _post_create(self, **data):
@@ -2765,6 +2778,7 @@ class SchedulingAndTimestampTests(TestCase):
         self.editor = User.objects.create_user(
             email='scheduler@example.com', password='pw', first_name='S', last_name='E', role=User.Role.EDITOR,
         )
+        grant_publish(self.editor)
         self.client.force_login(self.editor)
 
     def _form(self, **extra):
@@ -2864,6 +2878,7 @@ class CorrectionsAndImageCreditTests(TestCase):
         self.editor = User.objects.create_user(
             email='corrections@example.com', password='pw', first_name='C', last_name='E', role=User.Role.EDITOR,
         )
+        grant_publish(self.editor)
         self.reader = User.objects.create_user(email='reader-corr@example.com', password='pw', first_name='R', last_name='D')
         self.article = Article.objects.create(
             title='Clinic Opens', slug='clinic-opens', status=Article.Status.PUBLISHED,
@@ -3042,6 +3057,7 @@ class ReviewWorkflowAndHistoryTests(TestCase):
         self.assertEqual(article.revisions.first().action, 'restored')
 
     def test_internal_notes_are_not_public(self):
+        grant_publish(self.writer)
         article = self._create(action='publish')
         self.client.post(reverse('articles:manage_article_note_add', args=[article.slug]), {'body': 'Check the vaccine stock figure.'})
         self.assertEqual(article.notes.get().author, self.writer)
@@ -3081,6 +3097,7 @@ class SearchSocialAndBreakingNewsTests(TestCase):
         self.editor = User.objects.create_user(
             email='breaking@example.com', password='pw', first_name='B', last_name='E', role=User.Role.EDITOR,
         )
+        grant_publish(self.editor)
 
     def _live(self, **fields):
         defaults = {'title': 'Flood Warning Issued', 'slug': 'flood-warning', 'status': Article.Status.PUBLISHED,
@@ -3139,3 +3156,85 @@ class SearchSocialAndBreakingNewsTests(TestCase):
         article.refresh_from_db()
         self.assertFalse(article.is_breaking)
         self.assertIsNone(article.breaking_until)
+
+
+class PublishPermissionTests(TestCase):
+    """Only publishers (EiC/Admin, or Editors granted "Can publish") put
+    things in front of readers; any editor can write, review and mark ready."""
+
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='plain-editor@example.com', password='pw', first_name='P', last_name='E', role=User.Role.EDITOR,
+        )
+        self.chief = User.objects.create_user(
+            email='pub-chief@example.com', password='pw', first_name='C', last_name='H', role=User.Role.EDITOR_IN_CHIEF,
+        )
+        self.data = {
+            'title': 'Heatwave Advice', 'article_type': 'news_commentary', 'access_type': 'open_access',
+            'html_content': '<p>Drink water.</p>',
+        }
+
+    def test_roles_and_grant(self):
+        self.assertFalse(self.editor.can_publish)
+        self.assertTrue(self.chief.can_publish)
+        grant_publish(self.editor)
+        self.assertTrue(self.editor.can_publish)
+
+    def test_plain_editor_cannot_publish_but_can_mark_ready(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('articles:manage_article_create'), {**self.data, 'action': 'publish'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Only publishers can publish')
+        self.assertFalse(Article.objects.filter(status=Article.Status.PUBLISHED).exists())
+        self.client.post(reverse('articles:manage_article_create'), {**self.data, 'action': 'ready'})
+        self.assertEqual(Article.objects.get().status, Article.Status.READY)
+
+    def test_marking_ready_emails_publishers(self):
+        from django.core import mail
+
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_article_create'), {**self.data, 'action': 'ready'})
+        ready = [m for m in mail.outbox if m.subject.startswith('Ready to publish')]
+        self.assertEqual(len(ready), 1)
+        self.assertIn('pub-chief@example.com', ready[0].to)
+        self.assertNotIn('plain-editor@example.com', ready[0].to)
+
+    def test_plain_editor_cannot_change_or_unpublish_live_article(self):
+        from .forms import edit_token_for
+
+        article = Article.objects.create(title='Live', slug='live-perm', status=Article.Status.PUBLISHED, html_content='<p>x</p>')
+        self.client.force_login(self.editor)
+        url = reverse('articles:manage_article_update', args=[article.slug])
+        for action in ('publish', 'draft', 'save'):
+            self.client.post(url, {**self.data, 'slug': article.slug, 'title': 'Hacked', 'action': action,
+                                   'edit_token': edit_token_for(article)})
+        article.refresh_from_db()
+        self.assertEqual((article.title, article.status), ('Live', Article.Status.PUBLISHED))
+        self.client.post(reverse('articles:manage_article_quick_publish', args=[article.slug]))
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.PUBLISHED)
+        self.assertEqual(self.client.post(reverse('articles:manage_article_delete', args=[article.slug])).status_code, 403)
+        self.assertEqual(self.client.post(reverse('articles:manage_article_correction_add', args=[article.slug]),
+                                          {'kind': 'correction', 'note': 'x'}).status_code, 403)
+        page = self.client.get(url)
+        self.assertContains(page, 'Only publishers can change it')
+        self.assertNotContains(page, 'Update live article')
+
+    def test_publisher_editor_can_publish(self):
+        grant_publish(self.editor)
+        self.client.force_login(self.editor)
+        self.client.post(reverse('articles:manage_article_create'), {**self.data, 'action': 'publish'})
+        self.assertEqual(Article.objects.get().status, Article.Status.PUBLISHED)
+
+    def test_staff_screen_grants_and_revokes(self):
+        from users.models import User
+
+        self.client.force_login(self.chief)
+        url = reverse('users:manage_staff_update', args=[self.editor.pk])
+        base = {'first_name': 'P', 'last_name': 'E', 'email': self.editor.email, 'role': User.Role.EDITOR, 'is_active': 'on'}
+        self.client.post(url, {**base, 'can_publish': 'on'})
+        self.assertTrue(User.objects.get(pk=self.editor.pk).can_publish)
+        self.client.post(url, base)
+        self.assertFalse(User.objects.get(pk=self.editor.pk).can_publish)

@@ -280,6 +280,11 @@ class Article(models.Model):
         # without an index, that's a full-table-scan on the busiest table in
         # the schema for nearly every page view.
         indexes = [models.Index(fields=['status'])]
+        # Putting something in front of readers (publish, schedule, update or
+        # unpublish a live article, add a public correction) is limited to
+        # "publishers": Editor-in-Chief/Admin always, other editors only if
+        # granted this on the Staff screen. See User.can_publish.
+        permissions = [('publish_article', 'Can publish, schedule and change live articles')]
 
     def save(self, *args, **kwargs):
         # short_code first — a blank slug is built from it below, so it must

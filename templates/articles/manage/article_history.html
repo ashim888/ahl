@@ -47,14 +47,16 @@
                         {% if selected.user %}{{ selected.user.get_full_name|default:selected.user.email }}{% else %}system{% endif %}
                     </p>
                 </div>
-                {% if selected != revisions.0 %}
+                {% if selected == revisions.0 %}
+                    <span class="rounded-full bg-green-50 text-green-700 px-2.5 py-1 text-xs font-medium">Current version</span>
+                {% elif user.can_publish or article.status == 'draft' or article.status == 'in_review' or article.status == 'ready' %}
                     <form method="post" action="{% url 'articles:manage_article_revision_restore' selected.pk %}"
                           onsubmit="return confirm('{% if article.status == 'published' %}Restore this version? The live article will change right away — readers will see these words.{% else %}Restore this version? The article\'s current words are kept in the history, so you can switch back.{% endif %}');">
                         {% csrf_token %}
                         <button type="submit" class="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Restore this version</button>
                     </form>
                 {% else %}
-                    <span class="rounded-full bg-green-50 text-green-700 px-2.5 py-1 text-xs font-medium">Current version</span>
+                    <span class="text-xs text-gray-400">Only publishers can restore a live article.</span>
                 {% endif %}
             </div>
 

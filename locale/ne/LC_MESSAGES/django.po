@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-28 12:06+0545\n"
+"POT-Creation-Date: 2026-09-29 09:26+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -107,15 +107,15 @@ msgstr "सदस्यता"
 msgid "Pay-per-article (special)"
 msgstr "प्रति लेख भुक्तानी (विशेष)"
 
-#: articles/models.py:501
+#: articles/models.py:506
 msgid "Correction"
 msgstr "सच्याइ"
 
-#: articles/models.py:502
+#: articles/models.py:507
 msgid "Clarification"
 msgstr "स्पष्टीकरण"
 
-#: articles/models.py:503
+#: articles/models.py:508
 msgid "Update"
 msgstr "अद्यावधिक"
 
@@ -384,7 +384,7 @@ msgid "SUBSCRIBE"
 msgstr "सदस्यता लिनुहोस्"
 
 #: templates/articles/article_detail.html:319
-#: templates/billing/purchase_checkout.html:30
+#: templates/billing/purchase_checkout.html:33
 msgid "Log in"
 msgstr "लग इन"
 
@@ -732,6 +732,77 @@ msgstr "नीतिहरू"
 msgid "All rights reserved."
 msgstr "सर्वाधिकार सुरक्षित।"
 
+#: templates/billing/payment_page.html:4 templates/billing/payment_page.html:9
+msgid "Pay with Fonepay"
+msgstr "फोनपेबाट भुक्तानी गर्नुहोस्"
+
+#: templates/billing/payment_page.html:8
+msgid "← BACK"
+msgstr "← फर्कनुहोस्"
+
+#: templates/billing/payment_page.html:19
+msgid "SCAN TO PAY"
+msgstr "स्क्यान गरी भुक्तानी गर्नुहोस्"
+
+#: templates/billing/payment_page.html:21
+msgid "Open your bank or wallet app and scan this Fonepay QR."
+msgstr "आफ्नो बैंक वा वालेट एप खोलेर यो फोनपे QR स्क्यान गर्नुहोस्।"
+
+#: templates/billing/payment_page.html:26
+msgid "PAY WITH YOUR BANK APP"
+msgstr "आफ्नो बैंक एपबाट भुक्तानी गर्नुहोस्"
+
+#: templates/billing/payment_page.html:41
+msgid ""
+"On your phone: tap your bank, approve the payment in its app, then come back "
+"here."
+msgstr ""
+"फोनमा: आफ्नो बैंक छान्नुहोस्, त्यसको एपमा भुक्तानी स्वीकृत गर्नुहोस्, अनि यहाँ फर्कनुहोस्।"
+
+#: templates/billing/payment_page.html:43
+msgid "Scan the QR with your bank or wallet app."
+msgstr "आफ्नो बैंक वा वालेट एपले QR स्क्यान गर्नुहोस्।"
+
+#: templates/billing/payment_page.html:50
+msgid "Waiting for your payment…"
+msgstr "तपाईंको भुक्तानी पर्खँदै…"
+
+#: templates/billing/payment_page.html:51
+msgid "Expires in"
+msgstr "समय बाँकी"
+
+#: templates/billing/payment_page.html:53
+msgid ""
+"Don't close this page until the payment is confirmed. If you already paid "
+"and closed it, your access is added automatically within a few minutes."
+msgstr ""
+"भुक्तानी पुष्टि नहुन्जेल यो पेज बन्द नगर्नुहोस्। भुक्तानी गरिसकेर पेज बन्द भएमा पनि केही "
+"मिनेटभित्र तपाईंको पहुँच आफैं थपिन्छ।"
+
+#: templates/billing/payment_page.html:57
+msgid "The payment didn't go through."
+msgstr "भुक्तानी सफल भएन।"
+
+#: templates/billing/payment_page.html:57
+msgid "This payment request has expired."
+msgstr "यो भुक्तानी अनुरोधको समय सकियो।"
+
+#: templates/billing/payment_page.html:59
+msgid "No money was taken for this request. You can start a new payment."
+msgstr "यस अनुरोधमा कुनै रकम काटिएको छैन। तपाईं नयाँ भुक्तानी सुरु गर्न सक्नुहुन्छ।"
+
+#: templates/billing/payment_page.html:60
+msgid "TRY AGAIN"
+msgstr "फेरि प्रयास गर्नुहोस्"
+
+#: templates/billing/payment_page.html:86
+msgid "Payment confirmed — taking you there…"
+msgstr "भुक्तानी पुष्टि भयो — अगाडि लैजाँदै…"
+
+#: templates/billing/payment_page.html:102
+msgid "QR scanned — approve the payment in your app…"
+msgstr "QR स्क्यान भयो — आफ्नो एपमा भुक्तानी स्वीकृत गर्नुहोस्…"
+
 #: templates/billing/plan_browse.html:8
 msgid "Read without limits"
 msgstr "बिना सीमा पढ्नुहोस्"
@@ -805,6 +876,16 @@ msgid "SUBSCRIBE NOW"
 msgstr "अहिले सदस्यता लिनुहोस्"
 
 #: templates/billing/plan_detail.html:62
+#: templates/billing/purchase_checkout.html:29
+#: templates/billing/subscribe_checkout.html:25
+#: templates/training/course_checkout.html:32
+msgid ""
+"You'll pay securely with Fonepay — scan a QR or approve in your bank app."
+msgstr ""
+"तपाईं फोनपेमार्फत सुरक्षित रूपमा भुक्तानी गर्नुहुनेछ — QR स्क्यान गर्नुहोस् वा बैंक एपमा स्वीकृत "
+"गर्नुहोस्।"
+
+#: templates/billing/plan_detail.html:65
 msgid ""
 "Payment processing isn't live yet — checkout runs in test mode and activates "
 "access immediately."
@@ -832,7 +913,7 @@ msgstr "विशेष लेख"
 msgid "One-time purchase"
 msgstr "एक पटकको खरिद"
 
-#: templates/billing/purchase_checkout.html:29
+#: templates/billing/purchase_checkout.html:32
 msgid ""
 "Payment processing isn't live yet — confirming below unlocks this article "
 "immediately at no charge while checkout is in test mode."
@@ -840,15 +921,21 @@ msgstr ""
 "भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — तल पुष्टि गर्दा कुनै शुल्क नलागी यो लेख तुरुन्तै "
 "खुल्नेछ।"
 
-#: templates/billing/purchase_checkout.html:30
+#: templates/billing/purchase_checkout.html:33
 msgid "Already subscribed?"
 msgstr "पहिले नै सदस्य हुनुहुन्छ?"
 
-#: templates/billing/purchase_checkout.html:30
+#: templates/billing/purchase_checkout.html:33
 msgid "for free access instead."
 msgstr "र निःशुल्क पढ्नुहोस्।"
 
-#: templates/billing/purchase_checkout.html:37
+#: templates/billing/purchase_checkout.html:41
+#: templates/billing/subscribe_checkout.html:36
+#: templates/training/course_checkout.html:43
+msgid "CONTINUE TO FONEPAY"
+msgstr "फोनपेमा अगाडि बढ्नुहोस्"
+
+#: templates/billing/purchase_checkout.html:41
 msgid "CONFIRM & UNLOCK ARTICLE"
 msgstr "पुष्टि गरी लेख खोल्नुहोस्"
 
@@ -861,7 +948,7 @@ msgstr "← योजनामा फर्कनुहोस्"
 msgid "%(days)s days access"
 msgstr "%(days)s दिनको पहुँच"
 
-#: templates/billing/subscribe_checkout.html:25
+#: templates/billing/subscribe_checkout.html:28
 msgid ""
 "Payment processing isn't live yet — confirming below activates your "
 "subscription immediately at no charge while checkout is in test mode."
@@ -869,7 +956,7 @@ msgstr ""
 "भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — तल पुष्टि गर्दा कुनै शुल्क नलागी तपाईंको सदस्यता "
 "तुरुन्तै सक्रिय हुनेछ।"
 
-#: templates/billing/subscribe_checkout.html:32
+#: templates/billing/subscribe_checkout.html:36
 msgid "CONFIRM & SUBSCRIBE"
 msgstr "पुष्टि गरी सदस्यता लिनुहोस्"
 
@@ -1187,7 +1274,7 @@ msgstr "%(date)s देखि सुरु"
 msgid "One-time enrollment"
 msgstr "एक पटकको भर्ना शुल्क"
 
-#: templates/training/course_checkout.html:32
+#: templates/training/course_checkout.html:35
 msgid ""
 "Payment processing isn't live yet — confirming below enrolls you immediately "
 "at no charge while checkout is in test mode."
@@ -1195,7 +1282,7 @@ msgstr ""
 "भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — तल पुष्टि गर्दा कुनै शुल्क नलागी तुरुन्तै भर्ना "
 "हुनुहुनेछ।"
 
-#: templates/training/course_checkout.html:39
+#: templates/training/course_checkout.html:43
 msgid "CONFIRM & ENROLL"
 msgstr "पुष्टि गरी भर्ना हुनुहोस्"
 

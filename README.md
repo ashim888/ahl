@@ -103,6 +103,26 @@ All emails share one branded layout (`templates/email/base.html`) with HTML and 
 versions: comment confirmation and follow-up, newsletter confirmation, welcome and issues,
 account verification, pitch status updates, password reset, and staff alerts for new comments.
 
+### Payments (Fonepay)
+
+Checkout runs in **test mode** by default (`PAYMENT_GATEWAY=stub`: it always succeeds and no money
+moves). To take real payments with Fonepay Checkout, set in `.env`:
+
+```bash
+PAYMENT_GATEWAY=fonepay
+FONEPAY_API_URL=https://…/api/merchant/third-party/v2   # from Fonepay (dev/UAT/production differ)
+FONEPAY_USERNAME=…
+FONEPAY_PASSWORD=…
+FONEPAY_PRIVATE_KEY=…      # Base64 PKCS#8 RSA key, without the BEGIN/END lines
+FONEPAY_TERMINAL_ID=…      # your 16-digit merchant terminal ID
+```
+
+Readers then pay by scanning a Fonepay QR (desktop) or opening their bank app (mobile). Access is
+granted only after the server confirms the payment with Fonepay's status API — never on the
+browser's word — and only once. A background job (on the `qcluster` worker) settles payments whose
+reader paid but closed the page. Payments are listed in Django admin under Billing → Payments.
+Never commit Fonepay credentials; the `z_payment_instruction/` folder is git-ignored.
+
 ### Analytics retention
 
 Article views, ad impressions/clicks and keyword impressions/clicks are recorded first-party.

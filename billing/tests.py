@@ -1,7 +1,7 @@
 import datetime
 from unittest.mock import patch
 
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -858,3 +858,184 @@ class MoneyFormatTests(TestCase):
         self.assertIn('Rs. 1,499', content)
         self.assertNotIn('₹', content)
         self.assertEqual(str(plan), 'Rs Plan (Rs. 1,499)')
+
+
+FONEPAY_TEST_SETTINGS = dict(
+    PAYMENT_GATEWAY='fonepay', FONEPAY_API_URL='https://fonepay.test/api', FONEPAY_USERNAME='u', FONEPAY_PASSWORD='p',
+    FONEPAY_TERMINAL_ID='1234567890123456', FONEPAY_PAYMENT_TIMEOUT_MINUTES=15,
+)
+
+
+def _test_private_key_b64():
+    import base64
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    der = key.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
+    return key, base64.b64encode(der).decode()
+
+
+class FonepaySigningTests(TestCase):
+    def test_signature_verifies_with_the_matching_public_key(self):
+        import base64
+
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import padding
+
+        from . import fonepay
+
+        key, b64 = _test_private_key_b64()
+        with self.settings(FONEPAY_PRIVATE_KEY=b64):
+            payload = '{"username":"u","password":"p"}'
+            signature = base64.b64decode(fonepay.sign(payload))
+        key.public_key().verify(signature, payload.encode(), padding.PKCS1v15(), hashes.SHA256())  # raises if wrong
+
+    def test_bad_key_is_a_clear_configuration_error(self):
+        from . import fonepay
+
+        with self.settings(FONEPAY_PRIVATE_KEY='not-a-key'):
+            with self.assertRaises(fonepay.FonepayError):
+                fonepay.sign('{}')
+
+
+@override_settings(**FONEPAY_TEST_SETTINGS)
+class FonepayCheckoutTests(TestCase):
+    """Checkout with PAYMENT_GATEWAY=fonepay: access only after Fonepay's
+    status API confirms payment — once, for the right amount."""
+
+    QR = {'qrMessage': '000201010212FAKEQR', 'websocketId': 'wss://ws.fonepay.test/x', 'status': 'Success'}
+
+    def setUp(self):
+        self.reader = User.objects.create_user(email='payer@example.com', password='pw', first_name='P', last_name='R')
+        self.other = User.objects.create_user(email='other-payer@example.com', password='pw', first_name='O', last_name='P')
+        self.plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=499, duration_days=30,
+        )
+        self.client.force_login(self.reader)
+
+    def _start(self):
+        with patch('billing.fonepay.generate_intent_qr', return_value=self.QR) as generate:
+            response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        return response, generate
+
+    def _status(self, **data):
+        return patch('billing.fonepay.payment_status', return_value=data)
+
+    def test_checkout_redirects_to_payment_page_without_granting_anything(self):
+        from .models import Payment
+
+        response, generate = self._start()
+        payment = Payment.objects.get()
+        self.assertRedirects(response, reverse('billing:payment_page', args=[payment.reference]), fetch_redirect_response=False)
+        self.assertEqual(generate.call_args.kwargs['reference'], payment.reference)
+        self.assertTrue(payment.reference.isalnum() and len(payment.reference) <= 30)
+        self.assertFalse(UserSubscription.objects.filter(user=self.reader).exists())
+        with patch('billing.fonepay.bank_list', return_value=[{'bankName': 'Test Bank', 'intentScheme': 'TESTNPKA://payment'}]):
+            page = self.client.get(reverse('billing:payment_page', args=[payment.reference]))
+        self.assertContains(page, 'data-qr="000201010212FAKEQR"')
+        self.assertContains(page, 'TESTNPKA://payment/?qrPayload=000201010212FAKEQR')
+
+    def test_confirmed_payment_grants_exactly_once(self):
+        from .models import Payment
+
+        self._start()
+        payment = Payment.objects.get()
+        url = reverse('billing:payment_check', args=[payment.reference])
+        with self._status(paymentStatus='success', totalTransactionAmount='499.00', fonepayTraceId=3301232):
+            first = self.client.get(url).json()
+            second = self.client.get(url).json()
+        self.assertEqual(first['status'], 'success')
+        self.assertEqual(second['status'], 'success')
+        self.assertEqual(UserSubscription.objects.filter(user=self.reader).count(), 1)
+        payment.refresh_from_db()
+        self.assertEqual(payment.gateway_trace_id, '3301232')
+        self.assertEqual(UserSubscription.objects.get(user=self.reader).payment_reference, payment.reference)
+
+    def test_pending_grants_nothing(self):
+        from .models import Payment
+
+        self._start()
+        payment = Payment.objects.get()
+        with self._status(paymentStatus='pending'):
+            data = self.client.get(reverse('billing:payment_check', args=[payment.reference])).json()
+        self.assertEqual(data['status'], 'pending')
+        self.assertFalse(UserSubscription.objects.exists())
+
+    def test_underpaid_is_never_granted(self):
+        from .models import Payment
+
+        self._start()
+        payment = Payment.objects.get()
+        with self._status(paymentStatus='success', totalTransactionAmount='1.00'):
+            data = self.client.get(reverse('billing:payment_check', args=[payment.reference])).json()
+        self.assertEqual(data['status'], 'failed')
+        self.assertFalse(UserSubscription.objects.exists())
+
+    def test_expired_payment_closes(self):
+        import datetime
+
+        from django.utils import timezone
+
+        from .models import Payment
+
+        self._start()
+        Payment.objects.update(expires_at=timezone.now() - datetime.timedelta(minutes=10))
+        with self._status(paymentStatus='pending'):
+            data = self.client.get(reverse('billing:payment_check', args=[Payment.objects.get().reference])).json()
+        self.assertEqual(data['status'], 'expired')
+
+    def test_someone_elses_payment_is_not_visible(self):
+        from .models import Payment
+
+        self._start()
+        reference = Payment.objects.get().reference
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.get(reverse('billing:payment_page', args=[reference])).status_code, 404)
+        self.assertEqual(self.client.get(reverse('billing:payment_check', args=[reference])).status_code, 404)
+
+    def test_fonepay_down_shows_error_and_creates_nothing(self):
+        from . import fonepay
+        from .models import Payment
+
+        with patch('billing.fonepay.generate_intent_qr', side_effect=fonepay.FonepayError('down')):
+            response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]), follow=True)
+        self.assertContains(response, 'couldn')
+        self.assertFalse(Payment.objects.exists())
+
+    def test_background_job_settles_payment_after_page_closed(self):
+        from .models import Payment
+        from .payments import verify_pending_payments
+
+        self._start()
+        with self._status(paymentStatus='success', totalTransactionAmount='499.00'):
+            self.assertEqual(verify_pending_payments(), 1)
+        self.assertEqual(Payment.objects.get().status, Payment.Status.SUCCESS)
+        self.assertTrue(UserSubscription.objects.filter(user=self.reader).exists())
+
+    def test_reopening_checkout_reuses_open_payment(self):
+        from .models import Payment
+
+        self._start()
+        _, generate = self._start()
+        self.assertEqual(Payment.objects.count(), 1)
+        generate.assert_not_called()
+
+    def test_course_payment_enrolls_and_free_course_skips_fonepay(self):
+        from training.models import Enrollment, TrainingCourse
+
+        from .models import Payment
+
+        paid = TrainingCourse.objects.create(title='Paid', description='x', price=2900, duration='2 weeks', instructor='Dr. X')
+        free = TrainingCourse.objects.create(title='Free', description='x', price=0, duration='1 week', instructor='Dr. Y')
+        with patch('billing.fonepay.generate_intent_qr', return_value=self.QR):
+            self.client.post(reverse('training:course_checkout', args=[paid.pk]))
+        payment = Payment.objects.get(kind=Payment.Kind.COURSE)
+        with self._status(paymentStatus='success', totalTransactionAmount='2900.00'):
+            self.client.get(reverse('billing:payment_check', args=[payment.reference]))
+        self.assertEqual(Enrollment.objects.get(user=self.reader, course=paid).payment_status, Enrollment.PaymentStatus.PAID)
+        with patch('billing.fonepay.generate_intent_qr') as generate:
+            self.client.post(reverse('training:course_checkout', args=[free.pk]))
+        generate.assert_not_called()
+        self.assertTrue(Enrollment.objects.filter(user=self.reader, course=free).exists())

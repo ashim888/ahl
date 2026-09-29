@@ -30,6 +30,9 @@ def journal_settings(request):
         # meta_image_url (see templates/base.html) — Open Graph requires an
         # absolute URL, not a relative /static/ path.
         'default_og_image_url': default_og_image_url,
+        # True once checkout goes through a real gateway (settings.PAYMENT_GATEWAY) —
+        # hides the "test mode" notes on checkout pages.
+        'PAYMENTS_LIVE': settings.PAYMENT_GATEWAY == 'fonepay',
         # Site-wide breaking-news banner (templates/base.html) — see articles/breaking.py.
         'breaking_news': current_breaking(),
         # Fallback canonical URL for any page that doesn't set its own

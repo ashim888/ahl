@@ -10,7 +10,9 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from articles.seo import breadcrumb_list_structured_data
+from billing import payments
 from billing.gateway import charge_safely
+from billing.models import Payment
 from users.decorators import role_required
 from users.models import User
 
@@ -153,6 +155,13 @@ def course_checkout(request, pk):
             messages.error(request, 'This course is full.')
             return redirect('training:course_detail', pk=pk)
 
+    # Fonepay's minimum is Rs. 1 — a free course enrolls directly.
+    if request.method == 'POST' and payments.uses_fonepay() and course.price > 0:
+        from billing.views import _start_fonepay
+
+        return _start_fonepay(
+            request, kind=Payment.Kind.COURSE, amount=course.price, description=f'Training — {course.title}', course=course,
+        )
     if request.method == 'POST':
         result = charge_safely(request.user, course.price, f'Training — {course.title}')
         if result.success:

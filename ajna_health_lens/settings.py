@@ -527,6 +527,23 @@ JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahea
 CURRENCY_SYMBOL = 'Rs.'
 CURRENCY_CODE = 'NPR'
 
+# Payment gateway (billing/gateway.py). "stub" = checkout always succeeds
+# with no money moving (development/tests); "fonepay" = real Fonepay
+# Checkout (billing/fonepay.py): the reader pays by QR or their bank app and
+# access is granted only after the server confirms the payment with Fonepay.
+PAYMENT_GATEWAY = os.environ.get('PAYMENT_GATEWAY', 'stub').strip().lower()
+# Fonepay merchant credentials — issued by Fonepay; never commit them.
+# FONEPAY_API_URL is the base URL *including* the API path, e.g.
+# https://dev-external-gateway-new.fonepay.com/merchantThirdparty/api/merchant/third-party/v2
+FONEPAY_API_URL = os.environ.get('FONEPAY_API_URL', '').rstrip('/')
+FONEPAY_USERNAME = os.environ.get('FONEPAY_USERNAME', '')
+FONEPAY_PASSWORD = os.environ.get('FONEPAY_PASSWORD', '')
+# Base64 PKCS#8 RSA private key, without the -----BEGIN/END----- lines.
+FONEPAY_PRIVATE_KEY = os.environ.get('FONEPAY_PRIVATE_KEY', '')
+FONEPAY_TERMINAL_ID = os.environ.get('FONEPAY_TERMINAL_ID', '')
+# How long a generated QR stays payable before the reader must start again.
+FONEPAY_PAYMENT_TIMEOUT_MINUTES = int(os.environ.get('FONEPAY_PAYMENT_TIMEOUT_MINUTES', '15'))
+
 
 # Cloudflare Turnstile (CAPTCHA) — pitches app, story-pitch submission
 # (August 2026: opened to any authenticated account, not just verified

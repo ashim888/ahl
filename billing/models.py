@@ -241,3 +241,57 @@ class ArticleGift(models.Model):
     @property
     def is_expired(self):
         return timezone.now() >= self.expires_at
+
+
+def generate_payment_reference() -> str:
+    """Unique, alphanumeric-only, <= 30 chars — Fonepay's referenceLabel rules."""
+    return 'AHL' + secrets.token_hex(10).upper()
+
+
+class Payment(models.Model):
+    """One checkout through a real gateway (Fonepay): created when the
+    reader starts paying, confirmed only by a server-side status check
+    (billing/payments.py verify_payment). Access — the subscription,
+    article purchase or course enrollment — is granted exactly once, on the
+    transition to Success.
+    """
+
+    class Kind(models.TextChoices):
+        SUBSCRIPTION = 'subscription', 'Subscription'
+        ARTICLE = 'article', 'Article purchase'
+        COURSE = 'course', 'Training course'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Waiting for payment'
+        SUCCESS = 'success', 'Paid'
+        FAILED = 'failed', 'Failed'
+        EXPIRED = 'expired', 'Expired'
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payments')
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
+    article = models.ForeignKey('articles.Article', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
+    course = models.ForeignKey('training.TrainingCourse', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.CharField(max_length=255)
+    gateway = models.CharField(max_length=20, default='fonepay')
+    reference = models.CharField(max_length=30, unique=True, default=generate_payment_reference)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    qr_message = models.TextField(blank=True, help_text='Fonepay QR payload, shown as a QR or passed to a bank app.')
+    websocket_url = models.CharField(max_length=500, blank=True)
+    gateway_trace_id = models.CharField(max_length=64, blank=True)
+    gateway_response = models.JSONField(default=dict, blank=True, help_text='Last status response from the gateway.')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['status', 'created_at'])]
+
+    def __str__(self):
+        return f'{self.reference} — {self.description} ({self.get_status_display()})'
+
+    @property
+    def is_expired(self) -> bool:
+        return self.status == self.Status.PENDING and timezone.now() >= self.expires_at

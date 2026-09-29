@@ -1,0 +1,13 @@
+{% extends 'email/base.html' %}
+{% block title %}Ready to publish{% endblock %}
+{% block preheader %}{{ by.get_full_name|default:by.email }} marked “{{ article.title }}” ready to publish.{% endblock %}
+{% block eyebrow %}Editorial workflow{% endblock %}
+{% block heading %}A story is ready to publish{% endblock %}
+{% block content %}
+    <p><strong>{{ by.get_full_name|default:by.email }}</strong> marked this story ready to publish:</p>
+    <p style="font-size:18px;"><strong>{{ article.title }}</strong></p>
+    <p>It passed the publishing checks and is waiting for a publisher to publish or schedule it.</p>
+    {% include 'email/includes/button.html' with url=edit_url label='Open the story' %}
+    {% include 'email/includes/link_fallback.html' with url=edit_url %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you can publish articles on {{ journal_name }}.{% endblock %}

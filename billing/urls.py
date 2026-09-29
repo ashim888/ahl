@@ -10,6 +10,9 @@ urlpatterns = [
     path('subscribe/<int:pk>/', views.PlanDetailView.as_view(), name='plan_detail'),
     path('subscribe/<int:pk>/checkout/', views.subscribe_checkout, name='subscribe_checkout'),
     path('articles/<slug:slug>/purchase/', views.purchase_checkout, name='purchase_checkout'),
+    # Fonepay checkout (settings.PAYMENT_GATEWAY = "fonepay") — see billing/payments.py
+    path('pay/<str:reference>/', views.payment_page, name='payment_page'),
+    path('pay/<str:reference>/status/', views.payment_check, name='payment_check'),
 
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
     path('manage/billing/plans/', views.PlanListView.as_view(), name='manage_plan_list'),

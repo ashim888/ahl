@@ -160,6 +160,18 @@ class User(AbstractUser):
         return self.is_superuser or self.role in self.SENIOR_STAFF_ROLES
 
     @property
+    def can_publish(self):
+        """May put articles in front of readers: publish, schedule, update or
+        unpublish a live article, add public corrections. Editor-in-Chief and
+        Admin always; an Editor only when granted "Can publish" on the Staff
+        screen (the articles.publish_article permission). Everyone editorial
+        can still write, send for review and mark stories ready.
+        """
+        if not self.is_active:
+            return False
+        return self.is_senior_staff or (self.is_editorial_staff and self.has_perm('articles.publish_article'))
+
+    @property
     def is_admin(self):
         """Admin only — raw Django Group/Permission management (see
         users/views.py GroupManageListView) is more sensitive than granting

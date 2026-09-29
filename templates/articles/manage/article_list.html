@@ -108,6 +108,7 @@
                             <a href="{% url 'articles:manage_article_authors' article.slug %}" class="icon-action-btn" title="Authors" aria-label="Authors">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 14c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/></svg>
                             </a>
+                            {% if user.can_publish %}
                             <form method="post" action="{% url 'articles:manage_article_quick_publish' article.slug %}" class="inline"
                                   onsubmit="return confirm('{% if article.status == 'published' %}Unpublish “{{ article.title|escapejs }}”? It will no longer be visible on the public site.{% else %}Publish “{{ article.title|escapejs }}” now? It will immediately become visible on the public site.{% endif %}');">
                                 {% csrf_token %}
@@ -122,9 +123,12 @@
                                     {% endif %}
                                 </button>
                             </form>
+                            {% endif %}
+                            {% if user.can_publish or article.status == 'draft' or article.status == 'in_review' or article.status == 'ready' %}
                             <a href="{% url 'articles:manage_article_delete' article.slug %}" class="icon-action-btn icon-action-danger" title="Delete" aria-label="Delete">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m2 0v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7h12ZM10 11v6M14 11v6"/></svg>
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}

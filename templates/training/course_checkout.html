@@ -28,15 +28,19 @@
         </div>
     </div>
 
+    {% if PAYMENTS_LIVE %}
+        <p class="mt-4 text-xs text-muted-foreground leading-relaxed">{% trans "You'll pay securely with Fonepay — scan a QR or approve in your bank app." %}</p>
+    {% else %}
     <p class="mt-4 text-xs text-muted-foreground leading-relaxed">
         {% trans "Payment processing isn't live yet — confirming below enrolls you immediately at no charge while checkout is in test mode." %}
     </p>
+    {% endif %}
 
     <form method="post" class="mt-6">
         {% csrf_token %}
         <button type="submit"
                 class="w-full font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
-            {% trans "CONFIRM & ENROLL" %}
+            {% if PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & ENROLL" %}{% endif %}
         </button>
     </form>
 </div>

@@ -154,7 +154,12 @@
                 {% endif %}
 
                 <div class="mt-4 grid gap-2">
-                    {% if status == 'archived' and not is_create %}
+                    {% if not user.can_publish and not is_create and status != 'draft' and status != 'in_review' and status != 'ready' %}
+                        <p class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                            {% if status == 'scheduled' %}This story is scheduled to go live.{% elif status == 'published' %}This story is live.{% else %}This story is archived.{% endif %}
+                            Only publishers can change it — leave an internal note below for a publisher.
+                        </p>
+                    {% elif status == 'archived' and not is_create %}
                         <button type="submit" name="action" value="keep" data-full-save
                                 class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Save changes</button>
                     {% elif status == 'published' and not is_create %}
@@ -173,9 +178,11 @@
                                 class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Publish now</button>
                     {% else %}
                         {# Draft → In review → Ready → Publish/Schedule #}
-                        <button type="submit" name="action" value="publish" data-full-save
-                                onclick="return confirm('Publish this article now? It will appear on the site immediately.');"
-                                class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Publish</button>
+                        {% if user.can_publish %}
+                            <button type="submit" name="action" value="publish" data-full-save
+                                    onclick="return confirm('Publish this article now? It will appear on the site immediately.');"
+                                    class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Publish</button>
+                        {% endif %}
                         {% if is_create or status == 'draft' %}
                             <button type="submit" name="action" value="review"
                                     class="w-full rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700">Send for review</button>
@@ -190,6 +197,7 @@
                             <button type="submit" name="action" value="save" id="save-draft-btn"
                                     class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Save (stays ready)</button>
                         {% endif %}
+                        {% if user.can_publish %}
                         <details class="rounded-xl border border-gray-100 px-3 py-2" {% if form.schedule_at.errors %}open{% endif %}>
                             <summary class="cursor-pointer select-none text-sm text-gray-700">Schedule for later…</summary>
                             <div class="mt-3 space-y-2">
@@ -201,6 +209,11 @@
                                 <p class="text-[11px] text-gray-400">It goes live automatically at that time. Same checks as Publish.</p>
                             </div>
                         </details>
+                        {% else %}
+                            <p class="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                                {% if status == 'ready' %}Ready — waiting for a publisher to publish or schedule it.{% else %}When it's done, send it for review or mark it ready. A publisher will publish it.{% endif %}
+                            </p>
+                        {% endif %}
                     {% endif %}
                     <button type="button" id="preview-btn"
                             class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Preview</button>
@@ -215,7 +228,8 @@
                         <a href="{% url 'articles:manage_article_list' %}" class="text-gray-500 hover:text-gray-900">← All articles</a>
                         {% if not is_create %}<a href="{% url 'articles:manage_article_history' form.instance.slug %}" class="text-gray-500 hover:text-gray-900">History{% if revision_count %} ({{ revision_count }}){% endif %}</a>{% endif %}
                     </span>
-                    {% if status == 'published' and not is_create %}
+                    {% if not user.can_publish and status != 'in_review' and status != 'ready' %}
+                    {% elif status == 'published' and not is_create %}
                         <button type="submit" name="action" value="draft"
                                 onclick="return confirm('Unpublish this article? It will be taken off the site and moved back to drafts.');"
                                 class="text-red-600 hover:text-red-700">Unpublish</button>
@@ -266,6 +280,7 @@
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.homepage_section %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
+                {% if user.can_publish %}
                 <div>
                     <label for="{{ form.breaking_hours.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">Breaking news</label>
                     {% if form.instance.is_breaking %}
@@ -274,6 +289,7 @@
                     {{ form.breaking_hours }}
                     <p class="mt-1.5 text-xs text-gray-400">Shows a red “Breaking” banner across the whole site, linking here, once the story is live. It switches itself off.</p>
                 </div>
+                {% endif %}
             </section>
 
             {# Access #}
@@ -361,15 +377,16 @@
                                     <li class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
                                         <span class="font-semibold">{{ correction.get_kind_display }}</span> · {{ correction.created_at|date:"M j, g:i A" }}
                                         <p class="mt-1">{{ correction.note }}</p>
-                                        <button type="submit" form="correction-delete-form"
+                                        {% if user.can_publish or status != 'published' %}<button type="submit" form="correction-delete-form"
                                                 formaction="{% url 'articles:manage_article_correction_delete' correction.pk %}"
                                                 onclick="return confirm('Remove this note from the article?');"
-                                                class="mt-1 text-red-600 hover:text-red-700">Remove</button>
+                                                class="mt-1 text-red-600 hover:text-red-700">Remove</button>{% endif %}
                                     </li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
                     {% endwith %}
+                    {% if user.can_publish or status != 'published' %}
                     <div class="mt-3 space-y-2">
                         <select name="kind" form="correction-form" class="w-full">
                             {% for value, label in correction_form.fields.kind.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
@@ -379,6 +396,9 @@
                         <button type="submit" form="correction-form"
                                 class="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Add note</button>
                     </div>
+                    {% else %}
+                        <p class="mt-3 text-xs text-gray-400">Only publishers can add notes to a live article.</p>
+                    {% endif %}
                 </section>
             {% endif %}
 

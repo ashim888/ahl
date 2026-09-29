@@ -1052,6 +1052,9 @@ def article_quick_publish(request, slug):
     publication_date via Article.save(), same as saving the full edit form.
     """
     article = get_object_or_404(Article, slug=slug)
+    if not request.user.can_publish:
+        messages.error(request, NOT_A_PUBLISHER)
+        return redirect('articles:manage_article_list')
     if article.status == Article.Status.PUBLISHED:
         article.status = Article.Status.DRAFT
         messages.success(request, f'"{article.title}" moved back to draft.')
@@ -1079,6 +1082,8 @@ def article_correction_add(request, slug):
     """Appends a correction/clarification/update note to an article and
     stamps its last_updated_at — readers see "Updated" plus the note."""
     article = get_object_or_404(Article, slug=slug)
+    if article.status == Article.Status.PUBLISHED and not request.user.can_publish:
+        raise PermissionDenied
     form = ArticleCorrectionForm(request.POST)
     if form.is_valid():
         correction = form.save(commit=False)
@@ -1098,6 +1103,8 @@ def article_correction_add(request, slug):
 def article_correction_delete(request, pk):
     """Removes a note added by mistake (e.g. a typo in the note itself)."""
     correction = get_object_or_404(ArticleCorrection, pk=pk)
+    if correction.article.status == Article.Status.PUBLISHED and not request.user.can_publish:
+        raise PermissionDenied
     slug = correction.article.slug
     correction.delete()
     messages.success(request, 'Note removed.')
@@ -1164,6 +1171,8 @@ def article_revision_restore(request, pk):
     """Puts an earlier version's words back. On a live article this changes
     what readers see immediately (the button says so)."""
     revision = get_object_or_404(ArticleRevision, pk=pk)
+    if revision.article.status in LIVE_OR_QUEUED and not request.user.can_publish:
+        raise PermissionDenied
     article = restore_revision(revision, request.user)
     messages.success(request, f'Restored the version from {_format_local(revision.created_at)}.')
     return redirect('articles:manage_article_update', slug=article.slug)
@@ -1239,6 +1248,17 @@ ARTICLE_ACTIONS = {
     'keep': ('PublishArticleForm', None),                       # Save an archived article
 }
 LIVE_OR_QUEUED = (Article.Status.PUBLISHED, Article.Status.SCHEDULED, Article.Status.ARCHIVED)
+NOT_A_PUBLISHER = (
+    'Only publishers can publish, schedule or change a live article. Send it for review or mark it ready — '
+    'a publisher will take it from there.'
+)
+
+
+def _requires_publisher(action, previous) -> bool:
+    """Actions that put something in front of readers (or take it away)."""
+    if action in ('publish', 'schedule', 'keep'):
+        return True
+    return action == 'draft' and previous is not None and previous.status in LIVE_OR_QUEUED
 
 
 def _revision_action(previous_status, action):
@@ -1296,6 +1316,10 @@ class ArticleFormMixin:
         previous = getattr(self, '_previous', None)
         previous_status = previous.status if previous else None
 
+        if _requires_publisher(action, previous) and not self.request.user.can_publish:
+            form.add_error(None, NOT_A_PUBLISHER)
+            return self.form_invalid(form)
+
         if previous is not None:
             token = form.cleaned_data.get('edit_token')
             if token and token != edit_token_for(previous):
@@ -1315,7 +1339,7 @@ class ArticleFormMixin:
             form.instance.last_updated_at = timezone.now()
         if action == 'schedule':
             form.instance.published_at = form.cleaned_data['schedule_at']
-        breaking = form.cleaned_data.get('breaking_hours')
+        breaking = form.cleaned_data.get('breaking_hours') if self.request.user.can_publish else ''
         if breaking == 'off':
             form.instance.breaking_until = None
         elif breaking:
@@ -1324,6 +1348,8 @@ class ArticleFormMixin:
         response = super().form_valid(form)
         record_revision(self.object, self.request.user, _revision_action(previous_status, action))
         self._notify_assignee(previous, action)
+        if action == 'ready':
+            self._notify_publishers_ready()
         messages.success(self.request, f'"{self.object.title}" {self._message(previous_status, action, form)}.')
         return response
 
@@ -1366,6 +1392,25 @@ class ArticleFormMixin:
                 'edit_url': f"{settings.SITE_BASE_URL}{reverse('articles:manage_article_update', args=[self.object.slug])}",
             },
             recipient_list=[assignee.email],
+        )
+
+    def _notify_publishers_ready(self):
+        """A story marked ready is waiting on a publisher — tell them (except
+        whoever marked it, who can publish it themselves if they're one)."""
+        publishers = [
+            user for user in User.objects.filter(is_active=True, role__in=User.EDITORIAL_ROLES).exclude(pk=self.request.user.pk)
+            if user.can_publish and user.email
+        ]
+        if not publishers:
+            return
+        send_templated_email(
+            subject=f'Ready to publish: {self.object.title}',
+            template='articles/email/ready_to_publish',
+            context={
+                'article': self.object, 'by': self.request.user,
+                'edit_url': f"{settings.SITE_BASE_URL}{reverse('articles:manage_article_update', args=[self.object.slug])}",
+            },
+            recipient_list=[user.email for user in publishers],
         )
 
     def form_invalid(self, form):
@@ -1438,6 +1483,13 @@ class ArticleDeleteView(DeleteView):
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     success_url = reverse_lazy('articles:manage_article_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        # Deleting a live or queued article takes it off the site — a publishing decision.
+        article = self.get_object()
+        if article.status in LIVE_OR_QUEUED and request.user.is_authenticated and not request.user.can_publish:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         messages.success(self.request, f'"{self.object.title}" deleted.')

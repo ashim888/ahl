@@ -1,0 +1,9 @@
+{{ by.get_full_name|default:by.email }} marked this story ready to publish:
+
+{{ article.title }}
+
+It passed the publishing checks and is waiting for a publisher to publish or schedule it.
+
+Open the story: {{ edit_url }}
+
+— {{ journal_name }}
