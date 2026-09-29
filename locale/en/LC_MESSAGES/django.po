@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-29 09:26+0545\n"
+"POT-Creation-Date: 2026-09-29 10:54+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -137,28 +137,28 @@ msgid_plural "%(count)d hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: articles/views.py:753
+#: articles/views.py:754
 msgid "Removed from your reading list."
 msgstr ""
 
-#: articles/views.py:755
+#: articles/views.py:756
 msgid "Saved to your reading list."
 msgstr ""
 
-#: articles/views.py:772
+#: articles/views.py:773
 msgid "You don't have a gift available for this article right now."
 msgstr ""
 
-#: articles/views.py:774
+#: articles/views.py:775
 msgid "Your gift link is ready — copy it below to share."
 msgstr ""
 
-#: articles/views.py:990 sections/views.py:87
+#: articles/views.py:991 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr ""
 
-#: articles/views.py:995 sections/views.py:89
+#: articles/views.py:996 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -212,6 +212,11 @@ msgstr ""
 
 #: templates/articles/article_detail.html:84 templates/base.html:463
 msgid "BREAKING"
+msgstr ""
+
+#: templates/articles/article_detail.html:129 templates/home.html:47
+#: templates/home.html:191
+msgid "and"
 msgstr ""
 
 #: templates/articles/article_detail.html:129
@@ -372,7 +377,7 @@ msgid "SUBSCRIBE"
 msgstr ""
 
 #: templates/articles/article_detail.html:319
-#: templates/billing/purchase_checkout.html:33
+#: templates/billing/purchase_checkout.html:33 templates/users/register.html:52
 msgid "Log in"
 msgstr ""
 
@@ -1539,6 +1544,48 @@ msgstr ""
 msgid "LOG IN TO ENROLL"
 msgstr ""
 
+#: templates/users/register.html:4 templates/users/register.html:9
+msgid "Create an account"
+msgstr ""
+
+#: templates/users/register.html:11
+msgid ""
+"Subscribe, save stories, follow topics and join the conversation. It takes "
+"less than a minute."
+msgstr ""
+
+#: templates/users/register.html:25
+msgid "FIRST NAME"
+msgstr ""
+
+#: templates/users/register.html:25
+msgid "LAST NAME"
+msgstr ""
+
+#: templates/users/register.html:36
+msgid "EMAIL"
+msgstr ""
+
+#: templates/users/register.html:36
+msgid "PASSWORD"
+msgstr ""
+
+#: templates/users/register.html:36
+msgid "CONFIRM PASSWORD"
+msgstr ""
+
+#: templates/users/register.html:40
+msgid "At least 8 characters. Avoid common words and all-number passwords."
+msgstr ""
+
+#: templates/users/register.html:47
+msgid "CREATE ACCOUNT"
+msgstr ""
+
+#: templates/users/register.html:52
+msgid "Already have an account?"
+msgstr ""
+
 #: training/models.py:33
 msgid "Beginner"
 msgstr ""
@@ -1565,4 +1612,9 @@ msgstr ""
 
 #: training/models.py:41
 msgid "Hybrid"
+msgstr ""
+
+#: users/views.py:69
+#, python-format
+msgid "Welcome, %(name)s — your account is ready."
 msgstr ""

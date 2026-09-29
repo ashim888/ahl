@@ -9,6 +9,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 from django.views.generic.detail import DetailView
@@ -47,10 +49,24 @@ class RegisterView(CreateView):
     model = User
     form_class = RegistrationForm
     template_name = 'users/register.html'
-    success_url = reverse_lazy('users:pending_verification')
+    def get_success_url(self):
+        """Back to where the reader was (e.g. a paywalled article or a
+        checkout, via ?next=), otherwise the homepage."""
+        target = self.request.POST.get('next') or self.request.GET.get('next')
+        if target and url_has_allowed_host_and_scheme(
+            target, allowed_hosts={self.request.get_host()}, require_https=self.request.is_secure(),
+        ):
+            return target
+        return reverse('articles:home')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next'] = self.request.GET.get('next', '')
+        return context
 
     def form_valid(self, form):
         response = super().form_valid(form)
+        messages.success(self.request, _('Welcome, %(name)s — your account is ready.') % {'name': self.object.first_name})
         # Explicit backend required since AUTHENTICATION_BACKENDS has more
         # than one entry (axes.backends.AxesStandaloneBackend +
         # ModelBackend, see settings.py §9.6) — login() can only infer the

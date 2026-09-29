@@ -557,6 +557,41 @@
     </footer>
 
     <script>
+    // Ad slots (templates/ads/includes/ad_slot.html): reveal the "AD" tag only
+    // once the creative has loaded and is actually visible; if an ad blocker
+    // blocked the image (error / zero size) or hid it with a cosmetic rule,
+    // remove the whole slot so no orphaned tag or empty gap is left behind.
+    (function () {
+        function settle(slot) {
+            var img = slot.querySelector('img');
+            if (!img) return;  // "Advertise here" placeholder, nothing to check
+            var loaded = img.complete && img.naturalWidth > 0;
+            if (img.complete && !loaded) { slot.remove(); return; }
+            if (!loaded) return;  // still loading; the load/error listeners call back
+            if (!img.offsetWidth || !img.offsetHeight || getComputedStyle(img).visibility === 'hidden') {
+                slot.remove(); return;
+            }
+            var label = slot.querySelector('[data-ad-label]');
+            if (label) label.classList.remove('hidden');
+        }
+        function check() {
+            document.querySelectorAll('[data-ad-slot]').forEach(function (slot) {
+                var img = slot.querySelector('img');
+                if (img && !img.dataset.adWatched) {
+                    img.dataset.adWatched = '1';
+                    img.addEventListener('load', function () { settle(slot); });
+                    img.addEventListener('error', function () { slot.remove(); });
+                }
+                settle(slot);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', check);
+        // Some blockers apply their hiding rules a little later.
+        window.addEventListener('load', function () { check(); setTimeout(check, 1500); });
+    })();
+    </script>
+
+    <script>
     document.addEventListener('DOMContentLoaded', function () {
         var btn = document.getElementById('profile-menu-button');
         var dropdown = document.getElementById('profile-menu-dropdown');

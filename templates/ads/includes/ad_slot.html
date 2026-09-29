@@ -20,16 +20,22 @@ at editorial request. A small "Ad" tag sits in the image's top-right corner
 instead of the old "SPONSORED" header, so readers can still tell a paid
 placement from editorial content on a health news site without the frame.
 rel="sponsored" on the link marks it as paid for search engines.
+
+The "AD" tag starts hidden and is only revealed once the creative has
+actually loaded and is visible (see the ad-slot script at the end of
+base.html). If an ad blocker blocks the image, or hides it, the whole slot
+is removed instead, so neither an orphaned "AD" tag nor an empty gap
+(the header bar, sidebar margins) is left behind.
 {% endcomment %}
 {% if ad %}
-<div class="{{ wrapper_class }}">
+<div class="{{ wrapper_class }}" data-ad-slot>
     <a href="{% url 'ads:click' ad.pk %}" target="_blank" rel="sponsored noopener"
        class="relative block mx-auto max-w-full" style="width: {{ ad.width }}px;">
         <img src="{{ ad.image.url }}" alt="{{ ad.sponsor_name }} (advertisement)"
              width="{{ ad.width }}" height="{{ ad.height }}"
              class="block max-w-full"
              style="width: {{ ad.width }}px; max-width: 100%; aspect-ratio: {{ ad.width }} / {{ ad.height }}; object-fit: cover;">
-        <span class="absolute top-0 right-0 bg-foreground/70 text-primary-foreground font-mono-editorial text-[0.55rem] leading-none px-1.5 py-1 tracking-wider"
+        <span data-ad-label class="hidden absolute top-0 right-0 bg-foreground/70 text-primary-foreground font-mono-editorial text-[0.55rem] leading-none px-1.5 py-1 tracking-wider"
               aria-hidden="true">AD</span>
     </a>
 </div>
@@ -38,7 +44,7 @@ rel="sponsored" on the link marks it as paid for search engines.
 ads/models.py:AdSettings.placeholder_zones, set per zone at /manage/ads/ — never shown to an
 ad-free (subscriber) reader, see ads_tags.py; sized to the zone like a real ad would be.
 {% endcomment %}
-<div class="{{ wrapper_class }}">
+<div class="{{ wrapper_class }}" data-ad-slot>
     <div class="inline-flex flex-col items-center justify-center text-center border border-dashed border-border bg-secondary/40 max-w-full p-4"
          style="width: {{ placeholder.width }}px; max-width: 100%; aspect-ratio: {{ placeholder.width }} / {{ placeholder.height }};">
         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">ADVERTISE HERE</p>

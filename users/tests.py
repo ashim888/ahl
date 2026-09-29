@@ -147,6 +147,25 @@ class RegisterSuccessTests(TestCase):
         profile_response = self.client.get(reverse('users:profile'))
         self.assertEqual(profile_response.status_code, 200)
         self.assertEqual(profile_response.context['profile_user'], user)
+        self.assertEqual(response['Location'], reverse('articles:home'))
+
+    def test_register_form_asks_only_name_email_and_password(self):
+        form = self.client.get(reverse('users:register')).context['form']
+        self.assertEqual(list(form.fields), ['first_name', 'last_name', 'email', 'password1', 'password2'])
+        self.assertTrue(all(field.required for field in form.fields.values()))
+
+    def test_registration_returns_to_next_but_never_off_site(self):
+        data = {
+            'first_name': 'Next', 'last_name': 'Reader',
+            'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
+        }
+        response = self.client.post(reverse('users:register'), {**data, 'email': 'next1@example.com', 'next': '/subscribe/'})
+        self.assertEqual(response['Location'], '/subscribe/')
+        self.client.logout()
+        response = self.client.post(
+            reverse('users:register'), {**data, 'email': 'next2@example.com', 'next': 'https://evil.example/'},
+        )
+        self.assertEqual(response['Location'], reverse('articles:home'))
 
 
 class NewPendingVerificationNotificationTests(TestCase):

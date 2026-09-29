@@ -1,40 +1,55 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Register — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{% trans "Create an account" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-6 py-14">
+<div class="max-w-md mx-auto px-6 py-16">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Create an account</h1>
-    <p class="mt-2 text-muted-foreground">
-        Registration creates an unverified account. An editor reviews your credentials before your
-        profile is fully verified — see the
-        <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">verification process</a>.
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Create an account" %}</h1>
+    <p class="mt-2 text-sm text-muted-foreground">
+        {% trans "Subscribe, save stories, follow topics and join the conversation. It takes less than a minute." %}
     </p>
 
-    <form method="post" enctype="multipart/form-data" class="mt-8 space-y-5">
+    <form method="post" class="mt-8 space-y-5" novalidate>
         {% csrf_token %}
-        {% for field in form %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        {% for error in form.non_field_errors %}
+            <p class="text-sm text-accent">{{ error }}</p>
+        {% endfor %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for field in form %}{% if field.name == 'first_name' or field.name == 'last_name' %}
+                <div>
+                    <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ field.id_for_label }}">
+                        {% if field.name == 'first_name' %}{% trans "FIRST NAME" %}{% else %}{% trans "LAST NAME" %}{% endif %} <span class="text-accent">*</span>
+                    </label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
+                </div>
+            {% endif %}{% endfor %}
+        </div>
+
+        {% for field in form %}{% if field.name != 'first_name' and field.name != 'last_name' %}
             <div>
                 <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ field.id_for_label }}">
-                    {{ field.label|upper }}
+                    {% if field.name == 'email' %}{% trans "EMAIL" %}{% elif field.name == 'password1' %}{% trans "PASSWORD" %}{% else %}{% trans "CONFIRM PASSWORD" %}{% endif %} <span class="text-accent">*</span>
                 </label>
                 {{ field }}
-                {% if field.help_text %}
-                    <p class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
+                {% if field.name == 'password1' %}
+                    <p class="mt-1 text-xs text-muted-foreground">{% trans "At least 8 characters. Avoid common words and all-number passwords." %}</p>
                 {% endif %}
-                {% for error in field.errors %}
-                    <p class="mt-1 text-xs text-accent">{{ error }}</p>
-                {% endfor %}
+                {% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
             </div>
-        {% endfor %}
+        {% endif %}{% endfor %}
+
         <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent transition-colors">
-            REGISTER
+            {% trans "CREATE ACCOUNT" %}
         </button>
     </form>
 
     <p class="mt-6 font-mono-editorial text-xs text-muted-foreground">
-        Already have an account? <a href="{% url 'users:login' %}" class="hover:text-accent">Log in</a>.
+        {% trans "Already have an account?" %} <a href="{% url 'users:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="hover:text-accent">{% trans "Log in" %}</a>.
     </p>
 </div>
 {% endblock %}

@@ -59,6 +59,7 @@ urlpatterns = [
     path('manage/articles/<slug:slug>/edit/', views.ArticleUpdateView.as_view(), name='manage_article_update'),
     path('manage/articles/<slug:slug>/authors/', views.article_manage_authors, name='manage_article_authors'),
     # Author byline profiles — no login account needed (see author_views.py).
+    path('manage/authors/search/', views.author_search, name='manage_author_search'),
     path('manage/authors/', author_views.AuthorManageListView.as_view(), name='manage_author_list'),
     path('manage/authors/new/', author_views.AuthorCreateView.as_view(), name='manage_author_create'),
     path('manage/authors/<int:pk>/edit/', author_views.AuthorUpdateView.as_view(), name='manage_author_update'),

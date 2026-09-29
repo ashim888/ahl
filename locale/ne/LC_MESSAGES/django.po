@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-29 09:26+0545\n"
+"POT-Creation-Date: 2026-09-29 10:54+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -137,28 +137,28 @@ msgid_plural "%(count)d hours ago"
 msgstr[0] "%(count)d घण्टाअघि"
 msgstr[1] "%(count)d घण्टाअघि"
 
-#: articles/views.py:753
+#: articles/views.py:754
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:755
+#: articles/views.py:756
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:772
+#: articles/views.py:773
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:774
+#: articles/views.py:775
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:990 sections/views.py:87
+#: articles/views.py:991 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:995 sections/views.py:89
+#: articles/views.py:996 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -215,6 +215,11 @@ msgstr "छोटो लिंक प्रतिलिपि गर्नुह
 #: templates/articles/article_detail.html:84 templates/base.html:463
 msgid "BREAKING"
 msgstr "ताजा खबर"
+
+#: templates/articles/article_detail.html:129 templates/home.html:47
+#: templates/home.html:191
+msgid "and"
+msgstr "र"
 
 #: templates/articles/article_detail.html:129
 #: templates/articles/article_list.html:98
@@ -384,7 +389,7 @@ msgid "SUBSCRIBE"
 msgstr "सदस्यता लिनुहोस्"
 
 #: templates/articles/article_detail.html:319
-#: templates/billing/purchase_checkout.html:33
+#: templates/billing/purchase_checkout.html:33 templates/users/register.html:52
 msgid "Log in"
 msgstr "लग इन"
 
@@ -1575,6 +1580,50 @@ msgstr "अहिले भर्ना हुनुहोस्"
 msgid "LOG IN TO ENROLL"
 msgstr "भर्ना हुन लग इन गर्नुहोस्"
 
+#: templates/users/register.html:4 templates/users/register.html:9
+msgid "Create an account"
+msgstr "खाता बनाउनुहोस्"
+
+#: templates/users/register.html:11
+msgid ""
+"Subscribe, save stories, follow topics and join the conversation. It takes "
+"less than a minute."
+msgstr ""
+"सदस्यता लिनुहोस्, समाचार सुरक्षित गर्नुहोस्, विषयहरू पछ्याउनुहोस् र छलफलमा सहभागी हुनुहोस्। "
+"यसमा एक मिनेटभन्दा कम समय लाग्छ।"
+
+#: templates/users/register.html:25
+msgid "FIRST NAME"
+msgstr "पहिलो नाम"
+
+#: templates/users/register.html:25
+msgid "LAST NAME"
+msgstr "थर"
+
+#: templates/users/register.html:36
+msgid "EMAIL"
+msgstr "इमेल"
+
+#: templates/users/register.html:36
+msgid "PASSWORD"
+msgstr "पासवर्ड"
+
+#: templates/users/register.html:36
+msgid "CONFIRM PASSWORD"
+msgstr "पासवर्ड पुष्टि गर्नुहोस्"
+
+#: templates/users/register.html:40
+msgid "At least 8 characters. Avoid common words and all-number passwords."
+msgstr "कम्तीमा ८ अक्षर। सामान्य शब्द र अंक मात्रको पासवर्ड नराख्नुहोस्।"
+
+#: templates/users/register.html:47
+msgid "CREATE ACCOUNT"
+msgstr "खाता बनाउनुहोस्"
+
+#: templates/users/register.html:52
+msgid "Already have an account?"
+msgstr "पहिले नै खाता छ?"
+
 #: training/models.py:33
 msgid "Beginner"
 msgstr "सुरुवाती"
@@ -1602,3 +1651,8 @@ msgstr "प्रत्यक्ष (कक्षामा)"
 #: training/models.py:41
 msgid "Hybrid"
 msgstr "मिश्रित (अनलाइन र प्रत्यक्ष)"
+
+#: users/views.py:69
+#, python-format
+msgid "Welcome, %(name)s — your account is ready."
+msgstr "स्वागत छ, %(name)s — तपाईंको खाता तयार छ।"

@@ -2,7 +2,6 @@ import datetime
 import json
 
 from django import forms
-from django.forms import inlineformset_factory
 from django.utils import timezone
 from django.utils.html import strip_tags
 from django.utils.text import slugify
@@ -11,7 +10,8 @@ from django_ckeditor_5.widgets import CKEditor5Widget
 from sections.models import Section
 from users.models import User
 
-from .models import Article, ArticleAuthor, ArticleCorrection, ArticleNote, Author, Keyword
+from . import bylines as byline_utils
+from .models import Article, ArticleCorrection, ArticleNote, Author, Keyword
 from .sanitize import sanitize_editorial_html
 
 
@@ -89,11 +89,10 @@ def edit_token_for(article) -> str:
 
 
 class ArticleForm(forms.ModelForm):
-    """Front-end editorial CRUD form. Authors (ArticleAuthor byline rows
-    pointing at Author profiles, with ordering/corresponding-author flags) are edited separately
-    via ArticleAuthorFormSet below (see manage_article_authors) — a plain
-    multi-select here can't represent that ordering cleanly, so this form
-    sticks to the article's own fields.
+    """Front-end editorial CRUD form. Authors (ArticleAuthor byline rows,
+    with order and the corresponding-author flag) come in through the hidden
+    `bylines` field, edited by the Authors box in the form's sidebar — see
+    articles/bylines.py.
 
     No `status` field on purpose — status is set procedurally by
     ArticleFormMixin.form_valid() based on which submit button (Save as
@@ -139,6 +138,10 @@ class ArticleForm(forms.ModelForm):
     # timestamp). If someone else saves in the meantime, ArticleFormMixin
     # refuses the save instead of silently overwriting their changes.
     edit_token = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    # The Authors box (see articles/bylines.py): the byline as JSON. Absent
+    # from the POST (not just empty) means "leave the bylines alone".
+    bylines = forms.CharField(required=False, widget=forms.HiddenInput)
 
     class Meta:
         model = Article
@@ -199,6 +202,8 @@ class ArticleForm(forms.ModelForm):
         self.fields['assigned_to'].label_from_instance = lambda user: user.get_full_name() or user.email
         if self.instance.pk and self.instance.updated_at:
             self.fields['edit_token'].initial = edit_token_for(self.instance)
+        self.fields['bylines'].initial = byline_utils.initial_json(self.instance)
+        self.created_authors = {}
         if self.instance.pk and self.instance.status == Article.Status.SCHEDULED and self.instance.published_at:
             self.fields['schedule_at'].initial = timezone.localtime(self.instance.published_at)
         # Grouped <optgroup> choices, not a plain flat list — visually
@@ -245,6 +250,11 @@ class ArticleForm(forms.ModelForm):
             self.add_error('price', 'Set a price for pay-per-article articles.')
         return cleaned_data
 
+    def clean_bylines(self):
+        if self.add_prefix('bylines') not in self.data:
+            return None
+        return byline_utils.parse(self.cleaned_data.get('bylines'), self.instance)
+
     def clean_related_articles(self):
         related = self.cleaned_data.get('related_articles', [])
         return [a for a in related if a.pk != self.instance.pk]
@@ -268,11 +278,14 @@ class ArticleForm(forms.ModelForm):
         instance = super().save(commit=False)
         keywords = self.cleaned_data.get('keywords', [])
         related = self.cleaned_data.get('related_articles', [])
+        bylines = self.cleaned_data.get('bylines')
 
         def save_m2m():
             self._save_m2m()
             instance.keyword_tags.set(keywords)
             instance.related_articles.set(related)
+            if bylines is not None:
+                self.created_authors = byline_utils.save(instance, bylines)
 
         if commit:
             instance.save()
@@ -341,78 +354,6 @@ class ScheduleArticleForm(PublishArticleForm):
         if value <= timezone.now() + datetime.timedelta(minutes=1):
             raise forms.ValidationError('Pick a time in the future — or use Publish to publish now.')
         return value
-
-
-class AuthorChoiceField(forms.ModelChoiceField):
-    def label_from_instance(self, obj):
-        label = obj.name
-        if obj.affiliation:
-            label += f' — {obj.affiliation}'
-        return label
-
-
-class ArticleAuthorForm(forms.ModelForm):
-    """One byline row: pick an existing author profile, or type a new name
-    to create one on the spot (no site account involved — see Author). When
-    a typed name matches an existing author's name exactly (ignoring case),
-    that author is reused instead of creating a duplicate.
-    """
-
-    new_author_name = forms.CharField(
-        required=False, max_length=255, label='Or add a new author',
-        widget=forms.TextInput(attrs={'placeholder': 'Full name'}),
-    )
-    new_author_affiliation = forms.CharField(
-        required=False, max_length=255, label='Affiliation',
-        widget=forms.TextInput(attrs={'placeholder': 'Optional'}),
-    )
-
-    class Meta:
-        model = ArticleAuthor
-        fields = ['author', 'order', 'is_corresponding']
-        field_classes = {'author': AuthorChoiceField}
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        queryset = Author.objects.filter(is_active=True)
-        if self.instance.pk and self.instance.author_id:
-            queryset = queryset | Author.objects.filter(pk=self.instance.author_id)
-        self.fields['author'].queryset = queryset.order_by('name')
-        self.fields['author'].required = False
-        self.fields['author'].empty_label = '— Choose an author —'
-
-    def clean(self):
-        cleaned_data = super().clean()
-        author = cleaned_data.get('author')
-        new_name = ' '.join((cleaned_data.get('new_author_name') or '').split())
-        if not author and not new_name:
-            raise forms.ValidationError('Choose an author or type a new author\'s name.')
-        self._new_author = None
-        if not author:
-            existing = Author.objects.filter(name__iexact=new_name).first()
-            if existing is not None:
-                cleaned_data['author'] = existing
-            else:
-                # Created in save(), not here — the formset may still be
-                # rejected, and a failed save shouldn't leave a stray author.
-                self._new_author = Author(
-                    name=new_name, affiliation=(cleaned_data.get('new_author_affiliation') or '').strip(),
-                )
-        return cleaned_data
-
-    def save(self, commit=True):
-        if getattr(self, '_new_author', None) is not None:
-            self._new_author.save()
-            self.instance.author = self._new_author
-        return super().save(commit=commit)
-
-
-# Byline editor for an article — mirrors what the Django admin's
-# ArticleAuthorInline already did (order, is_corresponding, add/remove),
-# just as a standalone page instead of buried in /admin/.
-ArticleAuthorFormSet = inlineformset_factory(
-    Article, ArticleAuthor, form=ArticleAuthorForm, extra=2, can_delete=True,
-)
 
 
 class AuthorForm(forms.ModelForm):

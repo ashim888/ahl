@@ -15,15 +15,22 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
 
+from .bylines import summary as byline_summary
 from .models import Article, ArticleRevision
 
 AUTOSAVE_COALESCE_MINUTES = 15
 SNAPSHOT_FIELDS = ('title', 'abstract', 'html_content', 'references')
-FIELD_LABELS = {'title': 'Title', 'abstract': 'Summary', 'html_content': 'Article text', 'references': 'References'}
+FIELD_LABELS = {
+    'title': 'Title', 'abstract': 'Summary', 'html_content': 'Article text', 'references': 'References',
+    'bylines': 'Authors',
+}
+# Compared on the History page but never restored: a restore brings back
+# the words only, and bylines point at author profiles that may have changed.
+COMPARED_FIELDS = SNAPSHOT_FIELDS + ('bylines',)
 
 
 def _snapshot(article) -> dict:
-    return {field: getattr(article, field) or '' for field in SNAPSHOT_FIELDS}
+    return {**{field: getattr(article, field) or '' for field in SNAPSHOT_FIELDS}, 'bylines': byline_summary(article)}
 
 
 def record_revision(article, user, action) -> ArticleRevision:
@@ -102,7 +109,9 @@ def compare(old, new) -> list[dict]:
     """Per-field differences between two revisions (unchanged fields
     omitted). `old` may be None for the first revision."""
     changes = []
-    for field in SNAPSHOT_FIELDS:
+    for field in COMPARED_FIELDS:
+        if field == 'bylines' and (new.bylines is None or (old is not None and old.bylines is None)):
+            continue  # not recorded on one side (an older revision)
         after = getattr(new, field, '') or ''
         if old is None:
             if after:

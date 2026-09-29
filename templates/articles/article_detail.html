@@ -126,7 +126,7 @@
                 {% endif %}
                 <div class="flex-1 min-w-0">
                     <p class="font-semibold text-sm">
-                        {% for aa in article_authors %}{% if aa.author.is_active and not preview_mode %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
+                        {% for aa in article_authors %}{% if aa.author.is_active and not preview_mode %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
                     </p>
                     {% if featured_author %}
                         <p class="text-xs text-muted-foreground">

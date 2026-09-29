@@ -92,8 +92,9 @@ No account needed for any of this.
 
 ## 3. Creating an account & getting verified
 
-1. Go to `/register/` and sign up with your email (email is your login — there's no separate
-   username). You're logged in immediately after registering.
+1. Go to `/register/` and sign up with just your name, email and a password (email is your
+   login — there's no separate username). You're logged in immediately and taken back to the page
+   you came from.
 2. New accounts start as **Unverified**. You can already comment, subscribe, enroll in training,
    and pitch stories. Verification marks you as a **Verified Author**. You don't need an account
    at all to be credited on an article: editors credit contributors through author profiles,
@@ -280,13 +281,23 @@ recently published breaking one.
 edits never appear on the site). **Unpublish** (bottom of the panel) takes it off the site and
 back to drafts.
 
+**Authors:** the **Authors** box on the right of the article form, usable before the first save.
+- Start typing in **Search authors** and pick someone from the list (it shows their affiliation and
+  whether they have a login). **+ Add me** credits you if you have an author profile.
+- Not in the list? Choose **+ Add "…" as a new author** and fill in the **name** (required),
+  **affiliation** and **email** (both optional; the email is never shown publicly). Their photo,
+  bio and other details can be added later under `/manage/authors/`. The new profile is created
+  when the article is saved; if an author with exactly that name already exists, that author is
+  credited instead of making a duplicate (unless you enter a different email).
+- Add as many authors as needed. Use the ▲/▼ arrows to set the byline order, tick
+  **Corresponding author** for the one featured in the author box under the article, and × to
+  remove someone. The site shows them as "A, B and C".
+- Author changes save with the article (Save draft, autosave, Publish) and appear in the
+  article's **History**. On a live article, only people who can publish can change them.
+- Every credited author gets a public author page at `/authors/<name>/`, with or without a login
+  account.
+
 **After creating an article:**
-- **Authors** — go to the article's "Authors" screen (a separate step from the article form).
-  In each row, **pick an existing author** from the list, or **type a new author's name** (and
-  affiliation) to create their author profile on the spot. If an author with exactly that name
-  already exists, that author is used instead of making a duplicate. Set the order and mark the
-  corresponding author, then **Save authors**. Every credited author gets a public author page
-  at `/authors/<name>/`, with or without a login account.
 - **Quick publish/unpublish** — a one-click toggle right from the article list, with a
   confirmation prompt.
 - **Delete** — permanent, with a confirmation page. If you just want to stop showing an article,
@@ -510,7 +521,7 @@ Editor-in-Chief and Admin only, with one carve-out noted below.
     they're emailed a link to choose their own.
   - **Link an existing account** attaches a login that already exists; **Unlink** detaches it.
     Bylines never change either way.
-  - **Deactivate** hides an author from the byline picker and removes their public page. Their
+  - **Deactivate** hides an author from the article form's author search and removes their public page. Their
     existing bylines stay. Authors are never deleted.
   - Filter by *has an account / no account* and active/inactive.
 - **Accounts** (`/manage/accounts/`) — reader and author **login** accounts: search, filter by

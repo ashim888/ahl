@@ -8,20 +8,24 @@ from .models import User
 
 
 class RegistrationForm(UserCreationForm):
-    """Self-registration. Always creates role=unverified, verification_status=pending
-    (the model defaults already do this) — verification is a manual editorial step.
+    """Reader self-registration: name, email and password only. A news
+    reader signs up to subscribe, buy, comment or enroll, so the old
+    journal-era profile fields (ORCID, CV, affiliation, publications...)
+    aren't asked for here; they remain optional on /profile/edit/.
+    Creates role=unverified (the model default).
     """
 
     class Meta:
         model = User
-        fields = [
-            'email', 'first_name', 'last_name',
-            'orcid', 'affiliation', 'department', 'bio', 'cv_file',
-            'research_interests', 'linkedin_url', 'researchgate_url', 'publications',
-        ]
+        fields = ['first_name', 'last_name', 'email']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        for name in ('first_name', 'last_name', 'email'):
+            self.fields[name].required = True
+        self.fields['first_name'].widget.attrs['autocomplete'] = 'given-name'
+        self.fields['last_name'].widget.attrs['autocomplete'] = 'family-name'
+        self.fields['email'].widget.attrs['autocomplete'] = 'email'
         apply_tailwind_widgets(self)
 
 

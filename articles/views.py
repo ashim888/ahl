@@ -38,12 +38,13 @@ from training.models import TrainingCourse
 from users.decorators import role_required
 from users.models import User
 
+from . import bylines as byline_utils
 from .citations import linkify_citations
 from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
 from .forms import (
-    ArticleAuthorFormSet, ArticleCorrectionForm, ArticleForm, ArticleNoteForm, DraftArticleForm, LenientArticleForm,
+    ArticleCorrectionForm, ArticleForm, ArticleNoteForm, DraftArticleForm, LenientArticleForm,
     PublishArticleForm, ScheduleArticleForm, edit_token_for,
 )
 from .models import (
@@ -1227,6 +1228,7 @@ def article_autosave(request):
     record_revision(article, request.user, ArticleRevision.Action.AUTOSAVED)
     return JsonResponse({
         'ok': True, 'article_pk': article.pk, 'slug': article.slug, 'edit_token': edit_token_for(article),
+        'created_authors': form.created_authors,
         'edit_url': reverse('articles:manage_article_update', kwargs={'slug': article.slug}),
     })
 
@@ -1305,6 +1307,9 @@ class ArticleFormMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['content_templates'] = {str(k): v for k, v in ARTICLE_TYPE_CONTENT_TEMPLATES.items()}
+        my_author = Author.objects.filter(user=self.request.user, is_active=True).first()
+        context['my_author_json'] = json.dumps(byline_utils.author_payload(my_author)) if my_author else ''
+        context['author_search_url'] = reverse('articles:manage_author_search')
         context['correction_form'] = ArticleCorrectionForm()
         return context
 
@@ -1452,6 +1457,9 @@ class ArticleUpdateView(ArticleFormMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_create'] = False
+        # The slug as saved — the form's instance may hold a half-edited or
+        # blank one when the form is shown again with errors.
+        context['saved_slug'] = (getattr(self, '_previous', None) or self.object).slug
         context['note_form'] = ArticleNoteForm()
         context['notes'] = self.object.notes.select_related('author')
         context['revision_count'] = self.object.revisions.count()
@@ -1460,20 +1468,17 @@ class ArticleUpdateView(ArticleFormMixin, UpdateView):
 
 @role_required(*EDITORIAL_ROLES)
 def article_manage_authors(request, slug):
-    """Byline editor — add/remove authors, set ordering and the
-    corresponding-author flag. Replaces the Django admin's
-    ArticleAuthorInline so this never has to be done in /admin/.
-    """
+    """Old separate byline page — authors are now edited in the article
+    form's own Authors box (articles/bylines.py). Kept as a redirect so old
+    links and bookmarks still land somewhere useful."""
     article = get_object_or_404(Article, slug=slug)
-    if request.method == 'POST':
-        formset = ArticleAuthorFormSet(request.POST, instance=article)
-        if formset.is_valid():
-            formset.save()
-            messages.success(request, 'Authors updated.')
-            return redirect('articles:manage_article_authors', slug=article.slug)
-    else:
-        formset = ArticleAuthorFormSet(instance=article)
-    return render(request, 'articles/manage/article_authors.html', {'article': article, 'formset': formset})
+    return redirect(f"{reverse('articles:manage_article_update', args=[article.slug])}#authors")
+
+
+@role_required(*EDITORIAL_ROLES)
+def author_search(request):
+    """Authors box lookup: active author profiles matching ?q=."""
+    return JsonResponse({'results': byline_utils.search(request.GET.get('q', ''))})
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -1515,10 +1520,12 @@ def article_preview(request):
 
     article = form.save(commit=False)
 
-    # Authors aren't editable from this form (see ArticleForm docstring) — for an
-    # existing article, pull its real authors so the preview byline is accurate.
+    # The Authors box's current (unsaved) list; nothing is created for a
+    # preview. Without it in the POST, fall back to the saved bylines.
     article_authors = []
-    if source:
+    if form.cleaned_data.get('bylines') is not None:
+        article_authors = byline_utils.preview_bylines(form.cleaned_data['bylines'])
+    elif source:
         article_authors = list(source.articleauthor_set.select_related('author__user').order_by('order'))
 
     context = {

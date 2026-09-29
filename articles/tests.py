@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from django.db import IntegrityError
 from django.test import TestCase
@@ -2542,17 +2543,6 @@ class AuthorProfileTests(TestCase):
             role=User.Role.EDITOR,
         )
 
-    def _byline_post(self, **row):
-        data = {
-            'articleauthor_set-TOTAL_FORMS': '1', 'articleauthor_set-INITIAL_FORMS': '0',
-            'articleauthor_set-MIN_NUM_FORMS': '0', 'articleauthor_set-MAX_NUM_FORMS': '1000',
-            'articleauthor_set-0-author': '', 'articleauthor_set-0-new_author_name': '',
-            'articleauthor_set-0-new_author_affiliation': '', 'articleauthor_set-0-order': '0',
-        }
-        data.update({f'articleauthor_set-0-{key}': value for key, value in row.items()})
-        self.client.force_login(self.editor)
-        return self.client.post(reverse('articles:manage_article_authors', args=[self.article.slug]), data)
-
     def test_author_without_account_gets_byline_and_public_page(self):
         author = Author.objects.create(name='Dr. Guest Writer', affiliation='Kathmandu University')
         ArticleAuthor.objects.create(article=self.article, author=author, is_corresponding=True)
@@ -2575,24 +2565,6 @@ class AuthorProfileTests(TestCase):
         search = self.client.get(reverse('articles:search'), {'q': 'Sita Guest'})
         self.assertIn(self.article, list(search.context['articles']))
 
-    def test_byline_editor_creates_new_author_from_typed_name(self):
-        response = self._byline_post(new_author_name=' Ram  Contributor ', new_author_affiliation='Freelance')
-        self.assertEqual(response.status_code, 302)
-        author = self.article.articleauthor_set.get().author
-        self.assertEqual((author.name, author.affiliation, author.user), ('Ram Contributor', 'Freelance', None))
-
-    def test_byline_editor_reuses_existing_author_with_same_name(self):
-        existing = Author.objects.create(name='Ram Contributor')
-        self._byline_post(new_author_name='ram contributor')
-        self.assertEqual(self.article.articleauthor_set.get().author, existing)
-        self.assertEqual(Author.objects.count(), 1)
-
-    def test_byline_editor_rejects_row_with_neither(self):
-        response = self._byline_post(new_author_affiliation='Only an affiliation')
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(self.article.articleauthor_set.exists())
-        self.assertFalse(Author.objects.exists())
-
     def test_legacy_user_id_url_redirects_to_author_page(self):
         profile = Author.for_user(self.editor)
         ArticleAuthor.objects.create(article=self.article, author=profile)
@@ -2601,6 +2573,150 @@ class AuthorProfileTests(TestCase):
 
     def test_numeric_name_never_gets_an_all_digit_slug(self):
         self.assertEqual(Author.objects.create(name='2024').slug, 'author-2024')
+
+
+class BylineBoxTests(TestCase):
+    """The Authors box in the article form (articles/bylines.py): pick
+    existing authors, add new ones (name/affiliation/email only), order and
+    corresponding flag — all saved with the article itself."""
+
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='bylines-editor@example.com', password='pw', first_name='B', last_name='E', role=User.Role.EDITOR,
+        )
+        self.client.force_login(self.editor)
+        self.existing = Author.objects.create(name='Dr. Existing Writer', affiliation='TU Teaching Hospital')
+
+    def _create(self, bylines, **data):
+        return self.client.post(reverse('articles:manage_article_create'), {
+            'title': data.pop('title', 'Byline Story'), 'action': 'draft', 'bylines': json.dumps(bylines), **data,
+        })
+
+    def test_new_article_saves_existing_and_new_authors_in_order(self):
+        response = self._create([
+            {'key': 'n1', 'name': ' Sita  Rai ', 'affiliation': 'Freelance', 'email': 'sita@example.com'},
+            {'id': self.existing.pk, 'corresponding': True},
+        ])
+        self.assertEqual(response.status_code, 302)
+        article = Article.objects.get(title='Byline Story')
+        bylines = list(article.articleauthor_set.order_by('order'))
+        self.assertEqual([b.author.name for b in bylines], ['Sita Rai', 'Dr. Existing Writer'])
+        self.assertEqual([b.is_corresponding for b in bylines], [False, True])
+        new_author = bylines[0].author
+        self.assertEqual((new_author.affiliation, new_author.email, new_author.user), ('Freelance', 'sita@example.com', None))
+
+    def test_new_author_with_an_existing_name_is_reused(self):
+        self._create([{'key': 'n1', 'name': 'dr. existing writer'}])
+        self.assertEqual(Author.objects.count(), 1)
+        self.assertEqual(Article.objects.get().articleauthor_set.get().author, self.existing)
+
+    def test_same_name_with_a_different_email_is_a_different_person(self):
+        self.existing.email = 'one@example.com'
+        self.existing.save()
+        self._create([{'key': 'n1', 'name': 'Dr. Existing Writer', 'email': 'two@example.com'}])
+        self.assertEqual(Author.objects.filter(name='Dr. Existing Writer').count(), 2)
+
+    def test_editing_reorders_removes_and_leaves_bylines_alone_when_absent(self):
+        other = Author.objects.create(name='Second Writer')
+        self._create([{'id': self.existing.pk}, {'id': other.pk}])
+        article = Article.objects.get()
+        url = reverse('articles:manage_article_update', args=[article.slug])
+        self.client.post(url, {'title': 'Byline Story', 'action': 'draft', 'bylines': json.dumps([{'id': other.pk}])})
+        self.assertEqual([b.author for b in article.articleauthor_set.all()], [other])
+        # A POST without the field at all (e.g. an old client) changes nothing.
+        self.client.post(url, {'title': 'Byline Story', 'action': 'draft'})
+        self.assertEqual([b.author for b in article.articleauthor_set.all()], [other])
+        self.client.post(url, {'title': 'Byline Story', 'action': 'draft', 'bylines': '[]'})
+        self.assertFalse(article.articleauthor_set.exists())
+
+    def test_invalid_entries_save_nothing(self):
+        response = self._create([{'key': 'n1', 'name': '  '}])
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('bylines', response.context['form'].errors)
+        self.assertFalse(Article.objects.exists())
+        response = self._create([{'key': 'n1', 'name': 'Bad Email', 'email': 'not-an-email'}])
+        self.assertIn('bylines', response.context['form'].errors)
+        self.assertEqual(Author.objects.count(), 1)
+
+    def test_inactive_author_cannot_be_added_but_stays_where_already_credited(self):
+        self._create([{'id': self.existing.pk}])
+        article = Article.objects.get()
+        self.existing.is_active = False
+        self.existing.save()
+        url = reverse('articles:manage_article_update', args=[article.slug])
+        response = self.client.post(url, {'title': 'Byline Story', 'action': 'draft', 'bylines': json.dumps([{'id': self.existing.pk}])})
+        self.assertEqual(response.status_code, 302)
+        response = self._create([{'id': self.existing.pk}], title='Another Story')
+        self.assertIn('bylines', response.context['form'].errors)
+
+    def test_autosave_creates_new_author_once_and_returns_its_id(self):
+        url = reverse('articles:manage_article_autosave')
+        data = self.client.post(url, {
+            'title': 'Autosaved Story', 'bylines': json.dumps([{'key': 'k1', 'name': 'Autosave Author'}]),
+        }).json()
+        author = Author.objects.get(name='Autosave Author')
+        self.assertEqual(data['created_authors'], {'k1': author.pk})
+        self.client.post(url, {
+            'title': 'Autosaved Story', 'article_pk': data['article_pk'], 'edit_token': data['edit_token'],
+            'bylines': json.dumps([{'id': author.pk}]),
+        })
+        self.assertEqual(Author.objects.filter(name='Autosave Author').count(), 1)
+
+    def test_byline_changes_show_in_history(self):
+        from .revisions import compare
+
+        self._create([{'id': self.existing.pk}])
+        article = Article.objects.get()
+        self.client.post(reverse('articles:manage_article_update', args=[article.slug]), {
+            'title': 'Byline Story', 'action': 'draft',
+            'bylines': json.dumps([{'id': self.existing.pk, 'corresponding': True}, {'key': 'n', 'name': 'Added Later'}]),
+        })
+        newer, older = article.revisions.all()[:2]
+        self.assertEqual(newer.bylines, 'Dr. Existing Writer (corresponding), Added Later')
+        changes = compare(older, newer)
+        self.assertEqual([c['label'] for c in changes], ['Authors'])
+
+    def test_non_publisher_cannot_change_bylines_on_a_live_article(self):
+        article = Article.objects.create(
+            title='Live Byline', slug='live-byline', status=Article.Status.PUBLISHED,
+            access_type=Article.AccessType.OPEN_ACCESS, html_content='<p>Text.</p>',
+        )
+        self.client.post(reverse('articles:manage_article_update', args=[article.slug]), {
+            'title': 'Live Byline', 'article_type': article.article_type, 'access_type': 'open_access',
+            'html_content': '<p>Text.</p>', 'action': 'save', 'bylines': json.dumps([{'id': self.existing.pk}]),
+        })
+        self.assertFalse(article.articleauthor_set.exists())
+
+    def test_preview_shows_unsaved_authors_without_creating_them(self):
+        response = self.client.post(reverse('articles:manage_article_preview'), {
+            'title': 'Preview Story', 'article_type': 'news_commentary', 'access_type': 'open_access',
+            'bylines': json.dumps([{'key': 'p', 'name': 'Preview Only Author'}]),
+        })
+        self.assertContains(response, 'Preview Only Author')
+        self.assertFalse(Author.objects.filter(name='Preview Only Author').exists())
+
+    def test_author_search(self):
+        Author.objects.create(name='Existing But Hidden', is_active=False)
+        response = self.client.get(reverse('articles:manage_author_search'), {'q': 'existing'})
+        self.assertEqual([r['name'] for r in response.json()['results']], ['Dr. Existing Writer'])
+        response = self.client.get(reverse('articles:manage_author_search'), {'q': 'teaching'})
+        self.assertEqual(response.json()['results'][0]['affiliation'], 'TU Teaching Hospital')
+        self.client.logout()
+        self.assertNotEqual(self.client.get(reverse('articles:manage_author_search'), {'q': 'x'}).status_code, 200)
+
+    def test_old_authors_page_redirects_to_the_form(self):
+        self._create([])
+        article = Article.objects.get()
+        response = self.client.get(reverse('articles:manage_article_authors', args=[article.slug]))
+        self.assertRedirects(response, reverse('articles:manage_article_update', args=[article.slug]) + '#authors',
+                             fetch_redirect_response=False)
+
+    def test_form_page_renders_the_authors_box(self):
+        response = self.client.get(reverse('articles:manage_article_create'))
+        self.assertContains(response, 'id="byline-search"')
+        self.assertContains(response, 'name="bylines"')
 
 
 class AuthorManagementTests(TestCase):

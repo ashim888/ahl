@@ -565,6 +565,9 @@ class ArticleRevision(models.Model):
     abstract = models.TextField(blank=True)
     html_content = models.TextField(blank=True)
     references = models.TextField(blank=True)
+    # The byline as text ("A (corresponding), B"). Null on revisions saved
+    # before bylines were recorded, so History doesn't show them as changed.
+    bylines = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
