@@ -21,7 +21,14 @@
         </div>
         <div class="flex justify-between items-baseline py-3 border-b border-border">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Verification status</span>
-            <span class="text-sm font-medium text-right">{{ profile_user.get_verification_status_display }}</span>
+            <span class="text-sm font-medium text-right">
+                {{ profile_user.get_verification_status_display }}
+                {% if profile_user == user and user.can_request_verification %}
+                    · <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">Request verification</a>
+                {% elif profile_user == user and user.verification_status == 'pending' %}
+                    · <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">Details</a>
+                {% endif %}
+            </span>
         </div>
         <div class="flex justify-between items-baseline py-3 border-b border-border">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Affiliation</span>

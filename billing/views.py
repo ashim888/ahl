@@ -3,6 +3,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django_ratelimit.decorators import ratelimit
 
 from articles.models import Article
 from users.decorators import role_required
@@ -191,19 +193,35 @@ def payment_page(request, reference):
     })
 
 
+# At most one call to Fonepay per payment in this many seconds, however
+# often the page (or a script) asks — the page polls every 5s and also
+# checks on every WebSocket message.
+PAYMENT_CHECK_MIN_INTERVAL_SECONDS = 4
+
+
 @login_required
+@ratelimit(key='user', rate='30/m', block=False)
 def payment_check(request, reference):
     """JSON status for the payment page — always confirmed with Fonepay's
-    status API server-side, never trusted from the browser."""
+    status API server-side, never trusted from the browser. Throttled so it
+    can't be used to hammer Fonepay: over 30 checks a minute gets a 429, and
+    within PAYMENT_CHECK_MIN_INTERVAL_SECONDS of the last real check the
+    saved status is returned without asking Fonepay again."""
     payment = get_object_or_404(Payment, reference=reference, user=request.user)
-    payment = payments.verify_payment(payment)
+    if getattr(request, 'limited', False):
+        return JsonResponse({'status': payment.status, 'redirect': '', 'retry_after': 10}, status=429)
+    # cache.add is atomic: only the first request in each window gets True.
+    if payment.status == Payment.Status.PENDING and cache.add(
+        f'billing:payment-check:{payment.pk}', 1, PAYMENT_CHECK_MIN_INTERVAL_SECONDS,
+    ):
+        payment = payments.verify_payment(payment)
     return JsonResponse({
         'status': payment.status,
         'redirect': payments.success_url(payment) if payment.status == Payment.Status.SUCCESS else '',
     })
 
 
-@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+@method_decorator(role_required(*User.SENIOR_STAFF_ROLES), name='dispatch')
 class PlanListView(ListView):
     model = SubscriptionPlan
     template_name = 'billing/manage/plan_list.html'
@@ -238,7 +256,7 @@ class PlanFormMixin:
         return reverse('billing:manage_plan_list')
 
 
-@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+@method_decorator(role_required(*User.SENIOR_STAFF_ROLES), name='dispatch')
 class PlanCreateView(PlanFormMixin, CreateView):
     model = SubscriptionPlan
     form_class = SubscriptionPlanForm
@@ -254,7 +272,7 @@ class PlanCreateView(PlanFormMixin, CreateView):
         return super().form_valid(form)
 
 
-@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+@method_decorator(role_required(*User.SENIOR_STAFF_ROLES), name='dispatch')
 class PlanUpdateView(PlanFormMixin, UpdateView):
     model = SubscriptionPlan
     form_class = SubscriptionPlanForm
@@ -270,7 +288,7 @@ class PlanUpdateView(PlanFormMixin, UpdateView):
         return super().form_valid(form)
 
 
-@role_required(*EDITORIAL_ROLES)
+@role_required(*User.SENIOR_STAFF_ROLES)
 @require_POST
 def plan_toggle_active(request, pk):
     plan = get_object_or_404(SubscriptionPlan, pk=pk)

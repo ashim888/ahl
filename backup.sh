@@ -27,6 +27,7 @@ DB_USER="${DB_USER:-ajna_user}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-3306}"
 MEDIA_ROOT="${MEDIA_ROOT:-media}"
+PRIVATE_MEDIA_ROOT="${PRIVATE_MEDIA_ROOT:-private_media}"
 BACKUP_DIR="${BACKUP_DIR:-backups}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 
@@ -41,11 +42,15 @@ MYSQL_PWD="${DB_PASSWORD:-}" mysqldump \
     --single-transaction --routines --triggers \
     "$DB_NAME" | gzip > "$BACKUP_DIR/db-$TIMESTAMP.sql.gz"
 
-echo "==> [2/3] Archiving media directory ($MEDIA_ROOT)"
-if [ -d "$MEDIA_ROOT" ]; then
-    tar -czf "$BACKUP_DIR/media-$TIMESTAMP.tar.gz" "$MEDIA_ROOT"
-else
-    echo "    $MEDIA_ROOT does not exist — nothing to archive yet, skipping"
+echo "==> [2/3] Archiving media directories ($MEDIA_ROOT, $PRIVATE_MEDIA_ROOT)"
+# private_media holds article PDFs and CVs (see ajna_health_lens/storage.py).
+MEDIA_DIRS=""
+for dir in "$MEDIA_ROOT" "$PRIVATE_MEDIA_ROOT"; do
+    if [ -d "$dir" ]; then MEDIA_DIRS="$MEDIA_DIRS $dir"; else echo "    $dir does not exist — skipping"; fi
+done
+if [ -n "$MEDIA_DIRS" ]; then
+    # shellcheck disable=SC2086 — word-splitting the directory list is intended
+    tar -czf "$BACKUP_DIR/media-$TIMESTAMP.tar.gz" $MEDIA_DIRS
 fi
 
 echo "==> [3/3] Pruning backups older than $BACKUP_RETENTION_DAYS days"

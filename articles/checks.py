@@ -34,3 +34,34 @@ def check_site_base_url(app_configs, **kwargs):
             id='ajna.E002',
         ))
     return errors
+
+
+@register(Tags.security, deploy=True)
+def check_payment_gateway(app_configs, **kwargs):
+    """PAYMENT_GATEWAY defaults to 'stub', which treats every payment as
+    successful — on a live server that gives every paid subscription,
+    article and course away free, silently. Opt out only on a staging
+    server with ALLOW_STUB_PAYMENTS=True."""
+    if settings.DEBUG or settings.PAYMENT_GATEWAY != 'stub' or getattr(settings, 'ALLOW_STUB_PAYMENTS', False):
+        return []
+    return [Error(
+        'PAYMENT_GATEWAY is "stub" with DEBUG off — every checkout succeeds without payment.',
+        hint='Set PAYMENT_GATEWAY=fonepay (and the FONEPAY_* values) in the server .env. '
+             'On a staging server only, ALLOW_STUB_PAYMENTS=True silences this.',
+        id='ajna.E003',
+    )]
+
+
+@register(Tags.security, deploy=True)
+def check_debug_off(app_configs, **kwargs):
+    """`check --deploy` only runs on a server (deploy.sh), and every other
+    check here skips itself while DEBUG is on — so a server left in debug
+    mode would pass them all while showing full error pages (code,
+    settings) to the public. Staging can opt out with ALLOW_DEBUG_DEPLOY."""
+    if not settings.DEBUG or getattr(settings, 'ALLOW_DEBUG_DEPLOY', False):
+        return []
+    return [Error(
+        'DEBUG is on — this server would show full debug error pages to the public.',
+        hint='Set DEBUG=False in the server .env (or remove the line).',
+        id='ajna.E004',
+    )]

@@ -722,19 +722,29 @@ def article_download(request, slug):
     2026 gap audit). Same paywall gate as the article page itself.
     """
     article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
-    # Same combined check as ArticleDetailView — a reader who reached this
-    # article's page via a consumed free sample (article_is_accessible alone
-    # is False, but the metered quota granted access) must be able to
-    # download its PDF too, not just read the on-page text. Re-consuming is
-    # a no-op here: consume_free_sample already treats a re-read of the same
-    # article within the same period as free, not a second charge.
-    accessible = article_is_accessible(request.user, article) or (
-        article.access_type in METERED_ACCESS_TYPES and consume_free_sample(request, article)
-    )
-    if not article.pdf_file or not accessible:
+    if not article.pdf_file or not pdf_is_accessible(request, article):
         raise Http404
     Article.objects.filter(pk=article.pk).update(download_count=F('download_count') + 1)
+    # pdf_file.url is /protected-media/..., which runs the same check again
+    # (ajna_health_lens/media_views.py) — so the URL is useless if shared.
     return redirect(article.pdf_file.url)
+
+
+def pdf_is_accessible(request, article) -> bool:
+    """Who may fetch an article's PDF: editorial staff (any status, to
+    check it), otherwise only for a published article the reader can read.
+    Same combined check as ArticleDetailView — a reader who got in via a
+    consumed free sample may download it too. Re-consuming is a no-op:
+    consume_free_sample treats a re-read of the same article within the
+    same period as free, not a second charge."""
+    user = request.user
+    if user.is_authenticated and user.role in EDITORIAL_ROLES:
+        return True
+    if article.status != Article.Status.PUBLISHED:
+        return False
+    return article_is_accessible(user, article) or (
+        article.access_type in METERED_ACCESS_TYPES and consume_free_sample(request, article)
+    )
 
 
 @login_required

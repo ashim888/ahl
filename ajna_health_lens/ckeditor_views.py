@@ -2,7 +2,9 @@ import os
 import uuid
 
 from django.core.files.storage import FileSystemStorage
+from django.http import JsonResponse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django_ckeditor_5.views import upload_file
 
 from users.decorators import role_required
@@ -24,9 +26,17 @@ class InlineImageStorage(FileSystemStorage):
         return super().save(name, content, max_length=max_length)
 
 
+def _upload_file(request):
+    """The package view reads request.FILES['upload'] before validating, so
+    a POST without a file was a 500; answer it with CKEditor's error shape."""
+    if 'upload' not in request.FILES:
+        return JsonResponse({'error': {'message': 'Choose an image to upload.'}}, status=400)
+    return upload_file(request)
+
+
 # Wraps the package's own upload view with this project's RBAC instead of
 # relying on CKEDITOR_5_FILE_UPLOAD_PERMISSION (see the setting's comment in
 # settings.py for why neither of its two built-in modes fits here). This is
 # registered under the exact view name (ck_editor_5_upload_file) the widget
 # already reverses, in place of the package's own urls.py.
-ckeditor5_upload_file = role_required(*User.EDITORIAL_ROLES)(upload_file)
+ckeditor5_upload_file = role_required(*User.EDITORIAL_ROLES)(require_POST(_upload_file))

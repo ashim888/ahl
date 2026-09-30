@@ -95,12 +95,14 @@ No account needed for any of this.
 1. Go to `/register/` and sign up with just your name, email and a password (email is your
    login — there's no separate username). You're logged in immediately and taken back to the page
    you came from.
-2. New accounts start as **Unverified**. You can already comment, subscribe, enroll in training,
-   and pitch stories. Verification marks you as a **Verified Author**. You don't need an account
-   at all to be credited on an article: editors credit contributors through author profiles,
-   which need no login (see §6).
-3. To request verification, fill out your profile (`/profile/edit/`) with your affiliation, bio,
-   ORCID, publication history, etc., then submit for review from the "pending verification" page.
+2. New accounts are ordinary reader accounts: you can comment, subscribe, enroll in training and
+   pitch stories straight away, and you are **not** put in any review queue. You don't need an
+   account at all to be credited on an article: editors credit contributors through author
+   profiles, which need no login (see §6).
+3. Verification (a **Verified Author** badge) is only for contributors who want their
+   credentials shown. Fill in your profile (`/profile/edit/`) with affiliation, bio, ORCID and
+   publications, then use **Request verification** on your profile (or `/pending-verification/`).
+   Only then is your account added to the queue and the Editor-in-Chief/Admin emailed.
 4. An Editor-in-Chief or Admin reviews your request (§15). You'll get an email either way. If
    rejected, you can reapply after 30 days.
 5. Once approved, your role becomes **Verified Author**. If your account is linked to an author
@@ -137,8 +139,9 @@ Everything from here down requires an Editor (or higher) account. The dashboard 
   verifications, active enrollments, active subscriptions with an expiring-soon warning,
   newsletter subscribers, open pitches) and activity charts.
 - **Analytics** (`/editorial/analytics/`) — article readership, subscription/ad/newsletter
-  trends, cross-domain BI view.
-- **Revenue** (`/editorial/revenue/`) — combined training + subscriptions + purchases total, with
+  trends, cross-domain BI view. Money figures (monthly revenue, purchase totals) show only to an
+  Editor-in-Chief or Admin; editors see the counts.
+- **Revenue** (`/editorial/revenue/`, Editor-in-Chief/Admin only) — combined training + subscriptions + purchases total, with
   MRR shown separately since it's a forward-looking projection, not money already collected.
   Cross-links to two focused pages: **Training** (`/editorial/revenue/training/`, collected-revenue
   trend) and **Subscriptions** (`/editorial/revenue/subscriptions/`, per-plan active count and
@@ -512,7 +515,7 @@ verification request (from filling out their profile and submitting for review, 
 Editor-in-Chief and Admin only — this is the money-sensitive tier, one level above general
 editorial access.
 
-- **Plans** (`/manage/billing/plans/`) — anyone Editor+ can create/edit subscription plans
+- **Plans** (`/manage/billing/plans/`) — an Editor-in-Chief or Admin can create/edit subscription plans
   (individual monthly, individual annual, institutional) and toggle them active/inactive.
 - **Subscriptions** (`/manage/billing/subscriptions/`) — every grant, active or not, whether from
   a reader's self-serve checkout or manually granted here. Filter by status or plan, or by
@@ -547,10 +550,12 @@ Editor-in-Chief and Admin only, with one carve-out noted below.
   role, deactivate/reactivate. **New account** has an optional password (leave it empty to email
   an invite link). Accounts still waiting to set a password are marked *Invited*, with a
   **resend invite** link. **Create author profile** makes an account creditable on articles.
-  Any Editor+ can access this screen.
+  Any Editor+ can access this screen, but only an Editor-in-Chief or Admin can change an
+  account's **login email** (changing it plus a password reset would hand over the account).
 - **Staff** (`/manage/staff/`) — manage Editor/Editor-in-Chief/Admin accounts. An Editor-in-Chief
   can create new Editor/EiC accounts but **cannot** grant the Admin role — only an existing Admin
-  can create another Admin.
+  can create another Admin. An EiC also can't edit, deactivate or change the role of an existing
+  Admin; those rows say "Managed by Admins".
 - **Change role** (from a user's row) — move any account to any role. Same Admin-granting
   restriction applies: an EiC can promote up to EiC, never to Admin.
 - **Permissions / Groups** (`/manage/permissions/`, `/manage/groups/`) — Django's underlying

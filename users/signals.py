@@ -35,6 +35,11 @@ def stamp_and_notify_verification_status_change(sender, instance, **kwargs):
 
     instance.verification_status_changed_at = timezone.now()
 
+    # A reader just asked to be verified (or re-applied): tell the people
+    # who review the queue.
+    if instance.verification_status == User.VerificationStatus.PENDING:
+        _notify_senior_staff_of_request(instance)
+
     template = EMAIL_TEMPLATES.get(instance.verification_status)
     if template:
         send_templated_email(
@@ -49,23 +54,13 @@ def stamp_and_notify_verification_status_change(sender, instance, **kwargs):
         )
 
 
-@receiver(post_save, sender=User)
-def notify_editorial_staff_of_new_pending_verification(sender, instance, created, **kwargs):
-    """Previously the only way an EiC/Admin learned about a new pending
-    registration was by visiting the queue or the Dashboard home KPI row —
-    invisible if they landed anywhere else first. Matches VerificationQueueView's
-    own (role-agnostic) filter: any new user defaults to verification_status
-    PENDING regardless of role, so this fires for any newly created account.
-    """
-    if not created or instance.verification_status != User.VerificationStatus.PENDING:
-        return
-
+def _notify_senior_staff_of_request(instance):
     recipients = list(
-        User.objects.filter(role__in=User.SENIOR_STAFF_ROLES, is_active=True).values_list('email', flat=True),
+        User.objects.filter(role__in=User.SENIOR_STAFF_ROLES, is_active=True)
+        .exclude(pk=instance.pk).values_list('email', flat=True),
     )
     if not recipients:
         return
-
     send_templated_email(
         subject=f'New pending verification: {instance.email}',
         template='users/email/new_pending_verification',
@@ -75,3 +70,15 @@ def notify_editorial_staff_of_new_pending_verification(sender, instance, created
         },
         recipient_list=recipients,
     )
+
+
+@receiver(post_save, sender=User)
+def notify_editorial_staff_of_new_pending_verification(sender, instance, created, **kwargs):
+    """An account created already pending (rare now: self-registration
+    starts as "not requested", see User.VerificationStatus) is announced to
+    the EiC/Admin reviewers. A later request is announced by the pre_save
+    handler above instead.
+    """
+    if not created or instance.verification_status != User.VerificationStatus.PENDING:
+        return
+    _notify_senior_staff_of_request(instance)

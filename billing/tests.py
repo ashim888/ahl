@@ -711,7 +711,8 @@ class PlanDetailAndComparisonTests(TestCase):
 class PlanListFilterTests(TestCase):
     def setUp(self):
         self.editor = User.objects.create_user(
-            email='plan-filter-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+            email='plan-filter-editor@example.com', password='pw', first_name='E', last_name='D',
+            role=User.Role.EDITOR_IN_CHIEF,
         )
         self.client.force_login(self.editor)
         self.monthly = SubscriptionPlan.objects.create(
@@ -987,6 +988,27 @@ class FonepayCheckoutTests(TestCase):
         with self._status(paymentStatus='pending'):
             data = self.client.get(reverse('billing:payment_check', args=[Payment.objects.get().reference])).json()
         self.assertEqual(data['status'], 'expired')
+
+    def test_status_checks_are_throttled_before_reaching_fonepay(self):
+        from .models import Payment
+
+        self._start()
+        url = reverse('billing:payment_check', args=[Payment.objects.get().reference])
+        with self._status(paymentStatus='pending') as fonepay_status:
+            for _ in range(5):
+                self.assertEqual(self.client.get(url).json()['status'], 'pending')
+        # Five checks within a few seconds: Fonepay asked once.
+        self.assertEqual(fonepay_status.call_count, 1)
+
+    def test_too_many_status_checks_get_429(self):
+        from .models import Payment
+
+        self._start()
+        url = reverse('billing:payment_check', args=[Payment.objects.get().reference])
+        with self._status(paymentStatus='pending'):
+            codes = [self.client.get(url).status_code for _ in range(31)]
+        self.assertEqual(codes[:30], [200] * 30)
+        self.assertEqual(codes[30], 429)
 
     def test_someone_elses_payment_is_not_visible(self):
         from .models import Payment

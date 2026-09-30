@@ -141,7 +141,8 @@ class RegisterSuccessTests(TestCase):
         self.assertEqual(response.status_code, 302)
         user = User.objects.get(email='newauthor@example.com')
         self.assertEqual(user.role, User.Role.UNVERIFIED)
-        self.assertEqual(user.verification_status, User.VerificationStatus.PENDING)
+        # A reader signing up doesn't enter the verification queue.
+        self.assertEqual(user.verification_status, User.VerificationStatus.NOT_REQUESTED)
         # Registration logs the new account straight in — confirmed by
         # requesting a login-required page and never being bounced to /login/.
         profile_response = self.client.get(reverse('users:profile'))
@@ -169,45 +170,65 @@ class RegisterSuccessTests(TestCase):
 
 
 class NewPendingVerificationNotificationTests(TestCase):
+    """Signing up is just for reading/subscribing — it doesn't enter the
+    verification queue or email anyone. Asking to be verified does."""
+
     def setUp(self):
         self.eic = User.objects.create_user(
             email='notify-eic@example.com', password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF,
         )
 
-    def test_registering_emails_senior_staff(self):
-        mail.outbox = []
-        self.client.post(reverse('users:register'), {
-            'email': 'notify-target@example.com', 'first_name': 'New', 'last_name': 'Reader',
+    def _register(self, email):
+        return self.client.post(reverse('users:register'), {
+            'email': email, 'first_name': 'New', 'last_name': 'Reader',
             'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
         })
+
+    def test_registering_emails_nobody_and_stays_out_of_the_queue(self):
+        mail.outbox = []
+        self._register('notify-target@example.com')
+        self.assertEqual(len(mail.outbox), 0)
+        self.client.force_login(self.eic)
+        queue = self.client.get(reverse('users:verification_queue'))
+        self.assertNotContains(queue, 'notify-target@example.com')
+
+    def test_requesting_verification_queues_and_emails_senior_staff(self):
+        self._register('notify-asks@example.com')
+        mail.outbox = []
+        response = self.client.post(reverse('users:reapply_verification'))
+        self.assertRedirects(response, reverse('users:pending_verification'))
+        user = User.objects.get(email='notify-asks@example.com')
+        self.assertEqual(user.verification_status, User.VerificationStatus.PENDING)
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(self.eic.email, mail.outbox[0].to)
-        self.assertIn('notify-target@example.com', mail.outbox[0].body)
+        self.assertIn('notify-asks@example.com', mail.outbox[0].body)
+        # Asking again while pending changes nothing and sends nothing.
+        mail.outbox = []
+        self.client.post(reverse('users:reapply_verification'))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_request_page_offers_the_button_to_a_new_reader(self):
+        self._register('notify-page@example.com')
+        response = self.client.get(reverse('users:pending_verification'))
+        self.assertContains(response, 'REQUEST VERIFICATION')
+        self.assertContains(self.client.get(reverse('users:profile')), 'Request verification')
 
     def test_no_email_when_no_senior_staff_exists(self):
         self.eic.delete()
+        self._register('notify-target2@example.com')
         mail.outbox = []
-        self.client.post(reverse('users:register'), {
-            'email': 'notify-target2@example.com', 'first_name': 'New', 'last_name': 'Reader',
-            'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
-        })
+        self.client.post(reverse('users:reapply_verification'))
         self.assertEqual(len(mail.outbox), 0)
 
-    def test_registration_succeeds_even_if_the_notification_email_fails(self):
-        # Fault injection: users/signals.py's post_save handler calls
-        # send_notification_email (ajna_health_lens/mail.py), which
-        # swallows a send_mail failure — this confirms that isolation
-        # actually holds end-to-end, not just at the wrapper's own unit
-        # tests. Before that wrapper existed, an SMTP outage here turned a
-        # successful registration into a 500, even though the User row was
-        # already committed by the time the notification email is sent.
+    def test_request_succeeds_even_if_the_notification_email_fails(self):
+        # Fault injection: the notification goes through send_notification_email
+        # (ajna_health_lens/mail.py), which swallows a send_mail failure.
+        self._register('notify-target3@example.com')
         with patch('ajna_health_lens.mail.send_mail', side_effect=OSError('SMTP unreachable')):
-            response = self.client.post(reverse('users:register'), {
-                'email': 'notify-target3@example.com', 'first_name': 'New', 'last_name': 'Reader',
-                'password1': 'a-strong-passw0rd!', 'password2': 'a-strong-passw0rd!',
-            })
+            response = self.client.post(reverse('users:reapply_verification'))
         self.assertNotEqual(response.status_code, 500)
-        self.assertTrue(User.objects.filter(email='notify-target3@example.com').exists())
+        self.assertEqual(User.objects.get(email='notify-target3@example.com').verification_status,
+                         User.VerificationStatus.PENDING)
 
 
 def make_user(email, role, **extra):

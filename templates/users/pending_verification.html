@@ -1,11 +1,28 @@
 {% extends 'base.html' %}
 
-{% block title %}Verification status — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}Verification — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
 <div class="max-w-xl mx-auto px-6 py-24 text-center">
     {% with status=user.verification_status %}
-        {% if status == 'pending' %}
+        {% if status == 'not_requested' %}
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">Become a verified contributor</h1>
+            <p class="mt-4 text-muted-foreground leading-relaxed">
+                You don't need verification to read, subscribe, comment or pitch a story. It's for
+                health professionals and researchers who write for us and want their credentials
+                shown. An editor checks your affiliation, ORCID and publications, so fill those in on
+                your profile first.
+            </p>
+            <form method="post" action="{% url 'users:reapply_verification' %}" class="mt-6">
+                {% csrf_token %}
+                <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
+                    REQUEST VERIFICATION
+                </button>
+            </form>
+            <a href="{% url 'users:profile_edit' %}" class="mt-4 inline-block font-mono-editorial text-xs text-muted-foreground hover:text-accent">
+                Update your profile first
+            </a>
+        {% elif status == 'pending' %}
             <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">Your account is pending verification</h1>
             <p class="mt-4 text-muted-foreground leading-relaxed">
                 An editor reviews your affiliation, ORCID, and publication history before your profile

@@ -64,13 +64,15 @@
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Active Subscriptions</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ active_subscription_count }}</p>
-        <a href="{% url 'billing:manage_subscription_list' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">View →</a>
+        {% if show_money %}<a href="{% url 'billing:manage_subscription_list' %}" class="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">View →</a>{% endif %}
     </div>
+    {% if show_money %}
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Approx. Monthly Revenue</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ mrr_estimate|money }}</p>
         <p class="mt-2 text-xs text-gray-400">Active plans normalized to 30 days</p>
     </div>
+    {% endif %}
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Cancelled Subscriptions</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ cancelled_subscription_count }}</p>
@@ -78,7 +80,7 @@
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Article Purchases</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ purchase_count }}</p>
-        <p class="mt-2 text-xs text-gray-400">{{ purchase_revenue|money }} total</p>
+        {% if show_money %}<p class="mt-2 text-xs text-gray-400">{{ purchase_revenue|money }} total</p>{% endif %}
     </div>
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-8">

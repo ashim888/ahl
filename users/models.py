@@ -5,6 +5,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+from ajna_health_lens.storage import private_storage
+
 from .validators import (
     cv_extension_validator, photo_extension_validator,
     validate_cv_file_size, validate_document_content, validate_photo_size,
@@ -57,6 +59,10 @@ class User(AbstractUser):
         ADMIN = 'admin', 'Admin'
 
     class VerificationStatus(models.TextChoices):
+        # A reader who never asked to be verified — the default for a
+        # self-registered account, so a news site's everyday signups never
+        # land in the verification queue or email the Editor-in-Chief.
+        NOT_REQUESTED = 'not_requested', 'Not requested'
         PENDING = 'pending', 'Pending'
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
@@ -74,7 +80,7 @@ class User(AbstractUser):
     )
     is_verified = models.BooleanField(default=False)
     verification_status = models.CharField(
-        max_length=20, choices=VerificationStatus.choices, default=VerificationStatus.PENDING,
+        max_length=20, choices=VerificationStatus.choices, default=VerificationStatus.NOT_REQUESTED,
     )
     verification_status_changed_at = models.DateTimeField(
         null=True, blank=True,
@@ -94,8 +100,9 @@ class User(AbstractUser):
         validators=[photo_extension_validator, validate_photo_size],
         help_text='JPG or PNG, up to 5 MB.',
     )
+    # Private storage (personal data) — see ajna_health_lens/storage.py.
     cv_file = models.FileField(
-        upload_to='profiles/cvs/', null=True, blank=True,
+        upload_to='profiles/cvs/', null=True, blank=True, storage=private_storage,
         validators=[cv_extension_validator, validate_cv_file_size, validate_document_content],
         help_text='PDF, DOC, or DOCX, up to 10 MB.',
     )
@@ -126,6 +133,13 @@ class User(AbstractUser):
     def can_reapply(self):
         available_at = self.reapply_available_at
         return available_at is not None and timezone.now() >= available_at
+
+    @property
+    def can_request_verification(self):
+        """A reader who has never asked, or a rejected one past the cooldown."""
+        if self.role not in self.VERIFICATION_QUEUE_ROLES:
+            return False
+        return self.verification_status == self.VerificationStatus.NOT_REQUESTED or self.can_reapply
 
     # Roles governed by the self-registration verification queue. Reviewer/Editor/
     # Editor-in-Chief/Admin are assigned manually (see ARCHITECTURE.md §6.1) and are

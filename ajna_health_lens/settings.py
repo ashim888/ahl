@@ -27,14 +27,20 @@ _INSECURE_DEFAULT_SECRET_KEY = 'django-insecure-dev-only-change-me'
 SECRET_KEY = os.environ.get('SECRET_KEY', _INSECURE_DEFAULT_SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env_bool('DEBUG', True)
+# Off unless .env says DEBUG=True (local development). Defaulting to on
+# meant a server whose .env missed the line showed full debug error pages
+# (code, settings, SQL) to anyone who triggered an error.
+DEBUG = env_bool('DEBUG', False)
+# Staging only: lets `check --deploy` (deploy.sh) pass with DEBUG on (ajna.E004).
+ALLOW_DEBUG_DEPLOY = env_bool('ALLOW_DEBUG_DEPLOY', False)
 
 # The fallback above exists only so a fresh dev checkout runs with zero
 # setup — silently reusing it in production would mean every deployment
 # that forgets to set SECRET_KEY shares one publicly-visible key (it's
 # committed to this file's git history), defeating session/CSRF-token
 # signing and password-reset tokens. Fail loudly instead of booting insecure.
-if not DEBUG and SECRET_KEY == _INSECURE_DEFAULT_SECRET_KEY:
+# The .env.example placeholder is refused for the same reason.
+if not DEBUG and SECRET_KEY in (_INSECURE_DEFAULT_SECRET_KEY, 'change-me-to-a-random-secret-key'):
     raise ImproperlyConfigured(
         'SECRET_KEY is not set. Set a real, random SECRET_KEY in the environment before running with DEBUG=False.',
     )
@@ -291,6 +297,16 @@ STATIC_ROOT = Path(os.environ.get('STATIC_ROOT') or BASE_DIR / 'staticfiles')
 # resolving to '' (MEDIA_ROOT='' would silently mean "the cwd").
 MEDIA_URL = os.environ.get('MEDIA_URL') or '/media/'
 MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT') or BASE_DIR / 'media')
+# Uploads that must not be public — article PDFs (paywalled) and CVs
+# (personal data). Served only through /protected-media/, which checks
+# access on every request (ajna_health_lens/storage.py, media_views.py).
+# Must be OUTSIDE anything the web server serves directly.
+PRIVATE_MEDIA_ROOT = Path(os.environ.get('PRIVATE_MEDIA_ROOT') or BASE_DIR / 'private_media')
+# Where `manage.py quarantine_orphan_media --move` puts uploads nothing
+# references any more — out of public reach, not deleted. Not served.
+ORPHAN_MEDIA_ROOT = Path(os.environ.get('ORPHAN_MEDIA_ROOT') or BASE_DIR / 'media_orphans')
+# Tests save uploads into temporary folders, never the real ones above.
+TEST_RUNNER = 'ajna_health_lens.test_runner.IsolatedMediaTestRunner'
 
 
 # CKEditor 5 (django-ckeditor-5) — WYSIWYG editing for the "trusted,
@@ -597,6 +613,9 @@ CURRENCY_CODE = 'NPR'
 # Checkout (billing/fonepay.py): the reader pays by QR or their bank app and
 # access is granted only after the server confirms the payment with Fonepay.
 PAYMENT_GATEWAY = os.environ.get('PAYMENT_GATEWAY', 'stub').strip().lower()
+# Staging servers only: lets DEBUG=False run with the stub gateway without
+# failing the ajna.E003 deploy check (articles/checks.py).
+ALLOW_STUB_PAYMENTS = env_bool('ALLOW_STUB_PAYMENTS', False)
 # Fonepay merchant credentials — issued by Fonepay; never commit them.
 # FONEPAY_API_URL is the base URL *including* the API path, e.g.
 # https://dev-external-gateway-new.fonepay.com/merchantThirdparty/api/merchant/third-party/v2

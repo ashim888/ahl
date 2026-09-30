@@ -8,6 +8,7 @@ from django.urls import include, path
 
 from articles.sitemaps import NewsArticleSitemap, sitemaps
 from ajna_health_lens.ckeditor_views import ckeditor5_upload_file
+from ajna_health_lens.media_views import protected_media
 from ajna_health_lens.comments_views import confirm_comment, rate_limited_post_comment
 from ajna_health_lens.views import robots_txt
 
@@ -47,6 +48,9 @@ urlpatterns = [
         name='news_sitemap',
     ),
     path('robots.txt', robots_txt, name='robots_txt'),
+    # Article PDFs and CVs — access-checked on every request, never public
+    # (ajna_health_lens/storage.py). Deliberately not under /media/.
+    path('protected-media/<path:path>', protected_media, name='protected_media'),
     # Django's built-in set_language view — POST-only, sets the
     # django_language cookie LocaleMiddleware reads (see settings.py), then
     # redirects to ?next=. Powers the language switcher in base.html.

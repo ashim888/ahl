@@ -216,6 +216,7 @@ class DashboardHomeView(TemplateView):
             (User.VerificationStatus.APPROVED, 'Approved', 'bg-green-500'),
             (User.VerificationStatus.PENDING, 'Pending', 'bg-amber-400'),
             (User.VerificationStatus.REJECTED, 'Rejected', 'bg-red-500'),
+            (User.VerificationStatus.NOT_REQUESTED, 'Not requested', 'bg-gray-300'),
         ]
         context['verification_breakdown'] = [
             {
@@ -291,7 +292,8 @@ def _mrr_estimate(active_subs):
     )
 
 
-@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+# Money figures: Editor-in-Chief/Admin only (September 2026 access audit).
+@method_decorator(role_required(*User.SENIOR_STAFF_ROLES), name='dispatch')
 class RevenueTrainingView(TemplateView):
     """Training course revenue only, from Enrollment.payment_status — see
     RevenueOverviewView for the combined picture across training,
@@ -332,7 +334,8 @@ class RevenueTrainingView(TemplateView):
         return context
 
 
-@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+# Money figures: Editor-in-Chief/Admin only (September 2026 access audit).
+@method_decorator(role_required(*User.SENIOR_STAFF_ROLES), name='dispatch')
 class RevenueSubscriptionsView(TemplateView):
     """Subscription + article-purchase revenue — the billing-app side of
     the picture RevenueTrainingView doesn't cover. See RevenueOverviewView
@@ -381,7 +384,8 @@ class RevenueSubscriptionsView(TemplateView):
         return context
 
 
-@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+# Money figures: Editor-in-Chief/Admin only (September 2026 access audit).
+@method_decorator(role_required(*User.SENIOR_STAFF_ROLES), name='dispatch')
 class RevenueOverviewView(TemplateView):
     """Combined revenue across training, subscriptions, and article
     purchases — one headline number and trend, with drill-down links to
@@ -478,7 +482,11 @@ class AnalyticsView(TemplateView):
         context['subscription_breakdown'] = subscription_breakdown
         context['subscription_gradient'] = subscription_gradient
         context['active_subscription_count'] = active_subscription_count
-        context['mrr_estimate'] = _mrr_estimate(active_subs)
+        # Money figures are for Editor-in-Chief/Admin only (the Revenue pages
+        # are too); editors still see the counts.
+        show_money = self.request.user.is_senior_staff
+        context['show_money'] = show_money
+        context['mrr_estimate'] = _mrr_estimate(active_subs) if show_money else None
 
         new_subs_counts = _daily_counts(UserSubscription.objects.all(), 'created_at', days)
         context['new_subscriptions_trend'] = _trend_bars(day_labels, new_subs_counts)
@@ -486,7 +494,9 @@ class AnalyticsView(TemplateView):
             status=UserSubscription.Status.CANCELLED,
         ).count()
         context['purchase_count'] = ArticlePurchase.objects.count()
-        context['purchase_revenue'] = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+        context['purchase_revenue'] = (
+            ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+        ) if show_money else None
 
         # -- Ads ---------------------------------------------------------------
         ads_all_time_impressions = AdSlot.objects.aggregate(total=Sum('impression_count'))['total'] or 0

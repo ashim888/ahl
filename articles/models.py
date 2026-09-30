@@ -12,6 +12,8 @@ from django.utils.html import strip_tags
 from django.utils.text import Truncator, slugify
 from django.utils.translation import gettext_lazy as _
 
+from ajna_health_lens.storage import private_storage
+
 from .validators import (
     article_image_extension_validator, article_pdf_extension_validator,
     validate_article_pdf_size, validate_document_content, validate_featured_image_size,
@@ -196,8 +198,10 @@ class Article(models.Model):
     )
 
     doi = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    # Private storage: never at a public /media/ URL (paywalled content) —
+    # see ajna_health_lens/storage.py.
     pdf_file = models.FileField(
-        upload_to='articles/%Y/%m/', null=True, blank=True,
+        upload_to='articles/%Y/%m/', null=True, blank=True, storage=private_storage,
         validators=[article_pdf_extension_validator, validate_article_pdf_size, validate_document_content],
         help_text='PDF only, up to 100 MB.',
     )

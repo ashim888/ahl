@@ -20,6 +20,11 @@ def make_editor(email='analytics-editor@example.com'):
     return User.objects.create_user(email=email, password='pw', first_name='E', last_name='D', role=User.Role.EDITOR)
 
 
+def make_senior(email='analytics-eic@example.com'):
+    """Money figures (Revenue pages, revenue on Analytics) are EiC/Admin only."""
+    return User.objects.create_user(email=email, password='pw', first_name='E', last_name='C', role=User.Role.EDITOR_IN_CHIEF)
+
+
 def make_reader(email='analytics-reader@example.com'):
     return User.objects.create_user(email=email, password='pw', first_name='R', last_name='D')
 
@@ -97,7 +102,7 @@ class AnalyticsCSVExportTests(TestCase):
 
 class AnalyticsDataTests(TestCase):
     def setUp(self):
-        self.client.force_login(make_editor())
+        self.client.force_login(make_senior())
 
     def test_article_views_are_counted_in_trend_and_top_articles(self):
         article = make_article()
@@ -176,8 +181,22 @@ class RevenueAccessTests(TestCase):
     parametrized-by-hand class rather than three near-duplicate ones.
     """
 
-    def test_editorial_staff_can_view_all_three_pages(self):
+    def test_plain_editor_cannot_view_any_revenue_page(self):
         self.client.force_login(make_editor())
+        for name in ['admin_custom:revenue', 'admin_custom:revenue_training', 'admin_custom:revenue_subscriptions']:
+            self.assertEqual(self.client.get(reverse(name)).status_code, 403, name)
+
+    def test_plain_editor_sees_analytics_counts_but_no_money(self):
+        self.client.force_login(make_editor())
+        response = self.client.get(reverse('admin_custom:analytics'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context['mrr_estimate'])
+        self.assertIsNone(response.context['purchase_revenue'])
+        self.assertNotContains(response, 'Approx. Monthly Revenue')
+        self.assertNotContains(response, reverse('admin_custom:revenue'))
+
+    def test_senior_staff_can_view_all_three_pages(self):
+        self.client.force_login(make_senior())
         for name in ['admin_custom:revenue', 'admin_custom:revenue_training', 'admin_custom:revenue_subscriptions']:
             response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 200, name)
@@ -196,7 +215,7 @@ class RevenueAccessTests(TestCase):
 
 class RevenueTrainingViewTests(TestCase):
     def setUp(self):
-        self.client.force_login(make_editor())
+        self.client.force_login(make_senior())
 
     def test_collected_pending_refunded_totals(self):
         course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')
@@ -220,7 +239,7 @@ class RevenueTrainingViewTests(TestCase):
 
 class RevenueSubscriptionsViewTests(TestCase):
     def setUp(self):
-        self.client.force_login(make_editor())
+        self.client.force_login(make_senior())
 
     def test_per_plan_breakdown_and_active_count(self):
         plan = SubscriptionPlan.objects.create(
@@ -276,7 +295,7 @@ class RevenueSubscriptionsViewTests(TestCase):
 
 class RevenueOverviewViewTests(TestCase):
     def setUp(self):
-        self.client.force_login(make_editor())
+        self.client.force_login(make_senior())
 
     def test_totals_combine_training_subscriptions_and_purchases(self):
         course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')

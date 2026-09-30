@@ -189,13 +189,17 @@ pending_verification_view = login_required(PendingVerificationView.as_view())
 
 @login_required
 def reapply_verification(request):
+    """Ask to be verified (first time), or re-apply after a rejection's
+    cooldown. The EiC/Admin reviewers are emailed (users/signals.py)."""
     user = request.user
-    if request.method == 'POST' and user.can_reapply:
+    if request.method == 'POST' and user.can_request_verification:
+        first_time = user.verification_status == User.VerificationStatus.NOT_REQUESTED
         # Plain save() (no update_fields) so the pre_save signal's
         # verification_status_changed_at stamp is actually persisted.
         user.verification_status = User.VerificationStatus.PENDING
         user.save()
-        messages.success(request, 'Your verification request has been resubmitted.')
+        messages.success(request, 'Your verification request has been sent to the editors.' if first_time
+                         else 'Your verification request has been resubmitted.')
     return redirect('users:pending_verification')
 
 
@@ -379,6 +383,11 @@ class AccountUpdateView(UpdateView):
     def get_queryset(self):
         return User.objects.filter(role__in=User.VERIFICATION_QUEUE_ROLES)
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['acting_user'] = self.request.user
+        return kwargs
+
     def get_success_url(self):
         return reverse('users:manage_account_list')
 
@@ -455,6 +464,17 @@ class StaffManageListView(ListView):
         return context
 
 
+def _staff_manageable_by(user):
+    """Staff accounts `user` may edit or deactivate. An Editor-in-Chief
+    manages Editors and other EiCs but never an Admin: editing an Admin's
+    email and then resetting its password would hand over the Admin
+    account. Only an Admin manages Admins."""
+    queryset = User.objects.filter(role__in=STAFF_ROLES)
+    if user.role != User.Role.ADMIN:
+        queryset = queryset.exclude(role=User.Role.ADMIN)
+    return queryset
+
+
 class StaffFormViewMixin:
     def get_success_url(self):
         return reverse('users:manage_staff_list')
@@ -489,7 +509,7 @@ class StaffUpdateView(StaffFormViewMixin, UpdateView):
     template_name = 'users/manage/staff_form.html'
 
     def get_queryset(self):
-        return User.objects.filter(role__in=STAFF_ROLES)
+        return _staff_manageable_by(self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -509,7 +529,7 @@ def staff_toggle_active(request, pk):
     above — never hard-deletes the account."""
     if request.method != 'POST':
         raise PermissionDenied
-    staff = get_object_or_404(User, pk=pk, role__in=STAFF_ROLES)
+    staff = get_object_or_404(_staff_manageable_by(request.user), pk=pk)
     if staff.pk == request.user.pk:
         messages.error(request, "You can't deactivate your own account.")
         return redirect('users:manage_staff_list')
@@ -528,6 +548,8 @@ def change_role(request, pk):
     demote an Editor back down, etc.
     """
     target = get_object_or_404(User, pk=pk)
+    if target.role == User.Role.ADMIN and request.user.role != User.Role.ADMIN:
+        raise PermissionDenied
     if target.pk == request.user.pk:
         messages.error(request, "You can't change your own role — ask another Editor-in-Chief or Admin.")
         return redirect('users:manage_staff_list')
@@ -542,7 +564,7 @@ def change_role(request, pk):
             # rather than leaving a stale pending/rejected state behind.
             if new_role == User.Role.UNVERIFIED:
                 target.is_verified = False
-                target.verification_status = User.VerificationStatus.PENDING
+                target.verification_status = User.VerificationStatus.NOT_REQUESTED
             else:
                 target.is_verified = True
                 target.verification_status = User.VerificationStatus.APPROVED

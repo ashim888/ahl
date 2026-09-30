@@ -40,7 +40,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# edit .env — at minimum set a real SECRET_KEY and your local DB_* credentials
+# edit .env — at minimum set a real SECRET_KEY and your local DB_* credentials,
+# and DEBUG=True for local development (debug is off unless .env turns it on)
 ```
 
 Create the database and a user matching your `.env` (charset must be `utf8mb4` — this project
@@ -96,8 +97,9 @@ SITE_BASE_URL=https://example.com   # used to build every link inside emails
 
 Restart the app after changing `.env`. With `DEBUG=False`, `python manage.py check --deploy`
 (run at the end of `deploy.sh`) reports an error if `SITE_BASE_URL` is still `localhost` or not
-`https`, since every email link would be broken. `deploy.sh` prints it but doesn't stop, so read
-its output. Each migrate also re-syncs the comments package's site domain from it.
+`https`, since every email link would be broken. `deploy.sh` runs this check first and **stops
+before changing anything** if it finds an error: also when `DEBUG` is on (`ajna.E004`) or the
+payment gateway is still the stub (`ajna.E003`). Warnings are printed and the deploy continues. Each migrate also re-syncs the comments package's site domain from it.
 
 All emails share one branded layout (`templates/email/base.html`) with HTML and plain-text
 versions: comment confirmation and follow-up, newsletter confirmation, welcome and issues,
@@ -199,7 +201,24 @@ Node.js.
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.
 
-Database and media backups are handled by `backup.sh` — not part of `deploy.sh`, meant to run on
+**Private files.** Article PDFs and CVs are stored in `PRIVATE_MEDIA_ROOT` (default
+`private_media/`), not in `media/`, and are only served through `/protected-media/…`, which checks
+on every request that the visitor may have the file (paid/subscribed for the article, or the CV's
+owner or editorial staff). The web server must **not** serve that folder — only `/media/` and
+`/static/`. The migration that introduced this moves existing PDFs and CVs across automatically.
+
+**Checks.** `deploy.sh` runs `manage.py check --deploy` before anything else and stops on an
+error, e.g. `ajna.E003` if the server would run with the stub payment gateway, which approves every
+payment. Access rules for
+every staff page are covered by `ajna_health_lens/test_access.py`, which walks every URL, so a new
+`/manage/` page without a role check fails the test suite.
+
+**Unused uploads.** `python manage.py quarantine_orphan_media` lists files in `media/` that
+nothing references any more (replaced images, old uploads); `--move` moves them to
+`media_orphans/` (not served, listed in its `manifest.tsv`), never deletes. Tests use temporary
+media folders (`ajna_health_lens/test_runner.py`), so they no longer leave files behind.
+
+Database and media backups (both `media/` and `private_media/`) are handled by `backup.sh` — not part of `deploy.sh`, meant to run on
 its own schedule (a cron entry, e.g. nightly). See `ARCHITECTURE.md` §9.7a.
 
 ## Documentation map

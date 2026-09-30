@@ -71,6 +71,16 @@ class AccountManageForm(ModelForm):
         model = User
         fields = ACCOUNT_PROFILE_FIELDS
 
+    def __init__(self, *args, acting_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The login email is Editor-in-Chief/Admin only: changing someone's
+        # email and then requesting a password reset takes over the account
+        # (a paying subscriber's, for instance). Disabled fields keep their
+        # saved value whatever is posted.
+        if not (acting_user and acting_user.is_senior_staff):
+            self.fields['email'].disabled = True
+            self.fields['email'].help_text = 'Only an Editor-in-Chief or Admin can change the login email.'
+
 
 class AccountCreateForm(ModelForm):
     """Editorial creation of a login account (a contributor who hasn't
