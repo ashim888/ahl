@@ -309,15 +309,75 @@ CKEDITOR_5_CONFIGS = {
             'blockQuote', '|', 'undo', 'redo',
         ],
     },
+    # The article/newsletter editor. Every plugin listed here ships in
+    # django-ckeditor-5's prebuilt bundle; this only chooses which are on
+    # the toolbar and how they behave. Anything whose output needs markup
+    # or styles must also be allowed by articles/sanitize.py (it runs on
+    # save) and styled for readers in templates/base.html (.prose-article).
     'articles': {
-        'toolbar': [
-            'heading', '|', 'bold', 'italic', 'underline', 'link', '|',
-            'bulletedList', 'numberedList', 'blockQuote', 'insertTable', '|',
-            'code', 'codeBlock', '|',
-            'undo', 'redo', '|', 'sourceEditing',
-        ],
+        'toolbar': {
+            'items': [
+                'heading', '|',
+                'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', 'removeFormat', '|',
+                'alignment', '|',
+                'bulletedList', 'numberedList', 'outdent', 'indent', '|',
+                'link', 'insertImage', 'mediaEmbed', 'insertTable', 'blockQuote', 'horizontalLine', 'specialCharacters', '|',
+                'code', 'codeBlock', '|',
+                'findAndReplace', 'undo', 'redo', '|', 'sourceEditing',
+            ],
+            # Wrap onto a second row instead of hiding tools behind "⋮".
+            'shouldNotGroupWhenFull': True,
+        },
+        # Plugins in the bundle this editor must NOT run: Markdown would
+        # store Markdown instead of HTML, FullPage would wrap the article
+        # in <html>/<body>, and Autosave/Mention/Style/HtmlEmbed aren't used.
+        'removePlugins': ['Markdown', 'FullPage', 'Autosave', 'Mention', 'Style', 'HtmlEmbed'],
+        # H1 is the headline itself, so the body starts at H2.
+        'heading': {
+            'options': [
+                {'model': 'paragraph', 'title': 'Paragraph', 'class': 'ck-heading_paragraph'},
+                {'model': 'heading2', 'view': 'h2', 'title': 'Heading', 'class': 'ck-heading_heading2'},
+                {'model': 'heading3', 'view': 'h3', 'title': 'Subheading', 'class': 'ck-heading_heading3'},
+                {'model': 'heading4', 'view': 'h4', 'title': 'Minor heading', 'class': 'ck-heading_heading4'},
+            ],
+        },
+        # Stored as style="text-align: ..." (kept by the sanitizer).
+        'alignment': {'options': ['left', 'center', 'right', 'justify']},
+        # Upload goes to ckeditor5/image_upload/ (editorial roles only, see
+        # ajna_health_lens/ckeditor_views.py); "insert via URL" is also offered.
+        'image': {
+            'toolbar': [
+                'imageTextAlternative', 'toggleImageCaption', '|',
+                'imageStyle:inline', 'imageStyle:alignLeft', 'imageStyle:alignCenter', 'imageStyle:alignRight', '|',
+                'resizeImage', '|', 'linkImage',
+            ],
+            # No None/null anywhere in this config: django-ckeditor-5 parses it
+            # with a JSON reviver that crashes on null (the whole editor then
+            # fails to load). CKEditor's "original size" option is normally
+            # value null; False works the same (any falsy value = no width).
+            'resizeUnit': '%',
+            'resizeOptions': [
+                {'name': 'resizeImage:original', 'value': False, 'label': 'Original size'},
+                {'name': 'resizeImage:50', 'value': '50', 'label': 'Half width'},
+                {'name': 'resizeImage:75', 'value': '75', 'label': 'Three quarters'},
+                {'name': 'resizeImage:100', 'value': '100', 'label': 'Full width'},
+            ],
+            'insert': {'integrations': ['upload', 'url']},
+        },
+        'link': {
+            'addTargetToExternalLinks': True,
+            'defaultProtocol': 'https://',
+        },
+        'list': {'properties': {'styles': True, 'startIndex': True, 'reversed': False}},
+        # Store the real embed (an <iframe>) rather than a bare <oembed> tag
+        # browsers can't display. Only these providers; the sanitizer
+        # allows iframes from the same hosts only.
+        'mediaEmbed': {
+            'previewsInData': True,
+            'removeProviders': ['instagram', 'twitter', 'googleMaps', 'flickr', 'facebook'],
+        },
         'table': {
-            'contentToolbar': ['tableColumn', 'tableRow', 'mergeTableCells'],
+            'contentToolbar': ['tableColumn', 'tableRow', 'mergeTableCells', 'toggleTableCaption'],
         },
         # Language options for the "codeBlock" dropdown (a methodology paper
         # describing an analysis script, most plausibly) — each renders as
@@ -352,6 +412,11 @@ CKEDITOR_5_CONFIGS = {
 # the wrapper's, is just a harmless pass-through rather than a second,
 # conflicting gate.
 CKEDITOR_5_FILE_UPLOAD_PERMISSION = 'authenticated'
+# Images inserted into article text: common web formats only (no SVG, which
+# can carry script), each checked by Pillow before it's stored.
+CKEDITOR_5_UPLOAD_FILE_TYPES = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+CKEDITOR_5_MAX_FILE_SIZE = 5  # MB
+CKEDITOR_5_FILE_STORAGE = 'ajna_health_lens.ckeditor_views.InlineImageStorage'
 
 
 # Reader comments (django-comments-xtd) — threaded comments on articles.

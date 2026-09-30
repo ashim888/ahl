@@ -184,9 +184,28 @@ required to publish.
 1. **Title** is the only thing needed to save a draft. Add a **Summary** if you want one: one or
    two sentences under the headline and on article cards. Short news pieces can skip it; cards
    then use the opening words of the text (for free articles only, so paid text never leaks).
-2. Write the **Article text** in the editor. Use the "Source" toggle if you need raw HTML (e.g.
-   an embedded chart). Add **Keywords** (type and press Enter), and **References** under the
-   collapsed "References" link if the story cites sources as [1], [2], ….
+2. Write the **Article text** in the editor. The toolbar has:
+   - **Headings** (Heading / Subheading / Minor heading — the headline itself is the top level),
+     bold, italic, underline, strikethrough, sub/superscript, and **Remove format** (cleans up
+     text pasted from Word or a website).
+   - **Text alignment**: left, centre, right or **justify**.
+   - **Bulleted and numbered lists** (the arrow next to each picks the style, e.g. a, b, c or
+     i, ii, iii), and **Increase/Decrease indent** for nested points.
+   - **Link**, **Upload image**, **Insert media**, **Table**, **Block quote**, **Horizontal
+     line**, **Special characters**, inline **Code** and **Code block**, **Find and replace**.
+   - **Images:** click Upload image (JPG, PNG, GIF or WebP, up to 5 MB) or use its arrow to
+     insert one by URL. Click an image for its toolbar: **alt text** (always add it: what the
+     picture shows), **caption**, **align** left/centre/right (text wraps around left/right
+     images; on phones they go full width), **resize** (original, half, three quarters, full
+     width) and **link**.
+   - **Insert media** takes a YouTube, Vimeo, Dailymotion or Spotify link and embeds the player.
+     Other sites' embeds are removed when the article is saved.
+   - **Source** shows the raw HTML (e.g. for an embedded chart). Anything the site doesn't
+     allow (scripts from unknown sites, iframes from unknown players, styles other than
+     alignment/image size) is removed when the article is saved.
+
+   Add **Keywords** (type and press Enter), and **References** under the collapsed "References"
+   link if the story cites sources as [1], [2], ….
 3. **Save draft** any time — only a title is needed. Drafts also **save automatically** every
    ~20 seconds while you type (the panel shows "Draft saved at …"), and **Ctrl/⌘ + S** saves.
    If you try to leave with unsaved changes, the browser warns you.

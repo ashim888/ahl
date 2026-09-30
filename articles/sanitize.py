@@ -22,20 +22,41 @@ tag XSS relies on — accepted here as the explicit tradeoff for keeping the
 chart-embed feature working, not a blind spot.
 """
 import bleach
+from bleach.css_sanitizer import CSSSanitizer
 
 _TRUSTED_SCRIPT_SRC_PREFIXES = (
     'https://d3js.org/',
 )
 
+# Video/audio embeds from the editor's "Insert media" button (mediaEmbed with
+# previewsInData, see CKEDITOR_5_CONFIGS) — an <iframe> is kept only when it
+# points at one of these players.
+_TRUSTED_IFRAME_SRC_PREFIXES = (
+    'https://www.youtube.com/embed/',
+    'https://www.youtube-nocookie.com/embed/',
+    'https://player.vimeo.com/video/',
+    'https://www.dailymotion.com/embed/',
+    'https://open.spotify.com/embed/',
+)
+
 _ALLOWED_TAGS = [
     'p', 'br', 'hr',
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'strong', 'b', 'em', 'i', 'u', 'sup', 'sub',
+    'strong', 'b', 'em', 'i', 'u', 's', 'del', 'sup', 'sub',
     'a', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
-    'span', 'div', 'img',
-    'table', 'thead', 'tbody', 'tr', 'td', 'th',
+    'span', 'div', 'img', 'figure', 'figcaption', 'iframe',
+    'table', 'caption', 'colgroup', 'col', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
     'script',
 ]
+
+# Inline styles the editor writes: alignment (text-align, incl. justify),
+# image width after resizing, list numbering style, table borders/colours.
+# Nothing that can position or overlay content (no position/top/left/z-index).
+_CSS_SANITIZER = CSSSanitizer(allowed_css_properties=[
+    'text-align', 'width', 'height', 'max-width', 'float', 'margin-left', 'margin-right',
+    'list-style-type', 'vertical-align',
+    'border', 'border-color', 'border-style', 'border-width', 'background-color', 'padding',
+])
 
 
 def _script_attribute_allowed(tag, name, value):
@@ -46,20 +67,39 @@ def _script_attribute_allowed(tag, name, value):
     return False
 
 
+def _iframe_attribute_allowed(tag, name, value):
+    if name == 'src':
+        return value.startswith(_TRUSTED_IFRAME_SRC_PREFIXES)
+    # YouTube refuses to play ("Error 153") without knowing the embedding
+    # site, which the site-wide Referrer-Policy (same-origin) withholds;
+    # CKEditor adds this per-iframe override, and only this value is kept.
+    if name == 'referrerpolicy':
+        return value == 'strict-origin-when-cross-origin'
+    return name in ('allow', 'allowfullscreen', 'frameborder', 'title', 'loading', 'style')
+
+
+_BLOCK_WITH_STYLE = ['style']  # text-align from the Alignment button
+
 _ALLOWED_ATTRIBUTES = {
     'a': ['href', 'id', 'name', 'target', 'rel'],
-    'img': ['src', 'alt', 'width', 'height'],
-    # No `style` — bleach only sanitizes it with an optional css_sanitizer
-    # dependency this project doesn't have installed; D3 sets element style
-    # via JS at runtime on containers it creates, not through a static
-    # inline style= attribute the editor would type, so there's nothing
-    # real lost by leaving it off the allowlist.
-    'div': ['id', 'class'],
+    'img': ['src', 'alt', 'width', 'height', 'class', 'style', 'loading'],
+    'figure': ['class', 'style'],  # image / image-style-* / image_resized / media / table
+    'div': ['id', 'class', 'data-oembed-url'],
     'span': ['id', 'class'],
-    'h1': ['id'], 'h2': ['id'], 'h3': ['id'], 'h4': ['id'], 'h5': ['id'], 'h6': ['id'],
+    'p': _BLOCK_WITH_STYLE,
+    'li': _BLOCK_WITH_STYLE,
+    'blockquote': _BLOCK_WITH_STYLE,
+    'h1': ['id', 'style'], 'h2': ['id', 'style'], 'h3': ['id', 'style'],
+    'h4': ['id', 'style'], 'h5': ['id', 'style'], 'h6': ['id', 'style'],
+    'ul': ['style'],
+    'ol': ['style', 'start', 'reversed'],
     'code': ['class'],  # codeBlock's language-* class (see CKEDITOR_5_CONFIGS)
-    'td': ['colspan', 'rowspan'],
-    'th': ['colspan', 'rowspan'],
+    'pre': ['class'],
+    'table': ['style'],
+    'col': ['style', 'span'],
+    'td': ['colspan', 'rowspan', 'style'],
+    'th': ['colspan', 'rowspan', 'style', 'scope'],
+    'iframe': _iframe_attribute_allowed,
     'script': _script_attribute_allowed,
 }
 
@@ -71,5 +111,5 @@ def sanitize_editorial_html(html):
         return html
     return bleach.clean(
         html, tags=_ALLOWED_TAGS, attributes=_ALLOWED_ATTRIBUTES,
-        protocols=_ALLOWED_PROTOCOLS, strip=True,
+        protocols=_ALLOWED_PROTOCOLS, strip=True, css_sanitizer=_CSS_SANITIZER,
     )

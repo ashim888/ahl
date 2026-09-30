@@ -633,6 +633,38 @@ class ArticleFormSanitizationTests(TestCase):
         article = form.save()
         self.assertIn('https://d3js.org/d3.v7.min.js', article.html_content)
 
+    def _clean(self, html):
+        form = ArticleForm(data=self._valid_data(html_content=html))
+        self.assertTrue(form.is_valid(), form.errors)
+        return form.save().html_content
+
+    def test_alignment_including_justify_is_kept_but_other_styles_are_not(self):
+        self.assertEqual(self._clean('<p style="text-align:justify;">x</p>'), '<p style="text-align:justify;">x</p>')
+        cleaned = self._clean('<p style="position:fixed;top:0;background:url(javascript:alert(1));text-align:center">x</p>')
+        self.assertEqual(cleaned, '<p style="text-align:center;">x</p>')
+
+    def test_uploaded_image_with_caption_alignment_and_size_is_kept(self):
+        html = ('<figure class="image image-style-align-left image_resized" style="width:50%;">'
+                '<img src="/media/django_ckeditor_5/x.png" alt="Clinic"><figcaption>A clinic.</figcaption></figure>')
+        self.assertEqual(self._clean(html), html)
+
+    def test_video_embed_kept_only_from_trusted_players(self):
+        cleaned = self._clean(
+            '<figure class="media"><div data-oembed-url="https://youtu.be/abc"><div style="position:relative;">'
+            '<iframe src="https://www.youtube.com/embed/abc" style="position:absolute;width:100%;" allowfullscreen="">'
+            '</iframe></div></div></figure>'
+        )
+        self.assertIn('src="https://www.youtube.com/embed/abc"', cleaned)
+        self.assertIn('referrerpolicy="strict-origin-when-cross-origin"', self._clean(
+            '<iframe src="https://www.youtube.com/embed/abc" referrerpolicy="strict-origin-when-cross-origin"></iframe>'))
+        self.assertNotIn('unsafe-url', self._clean('<iframe src="https://www.youtube.com/embed/abc" referrerpolicy="unsafe-url"></iframe>'))
+        self.assertNotIn('position', cleaned)
+        self.assertNotIn('evil', self._clean('<iframe src="https://evil.example/embed/x"></iframe>'))
+
+    def test_list_numbering_style_is_kept(self):
+        html = '<ol style="list-style-type:lower-roman;" start="3"><li>x</li></ol>'
+        self.assertEqual(self._clean(html), html)
+
     def test_normal_rich_content_is_preserved(self):
         html = '<h2>Title</h2><p>Some <strong>bold</strong> text.</p>'
         form = ArticleForm(data=self._valid_data(html_content=html))
@@ -1209,8 +1241,21 @@ class CKEditorWidgetRenderingTests(TestCase):
     def test_article_form_widget_config_has_source_editing(self):
         from .forms import ArticleForm
 
-        widget = ArticleForm().fields['html_content'].widget
-        self.assertIn('sourceEditing', widget.config['toolbar'])
+        config = ArticleForm().fields['html_content'].widget.config
+        for tool in ('sourceEditing', 'alignment', 'insertImage', 'mediaEmbed', 'bulletedList'):
+            self.assertIn(tool, config['toolbar']['items'])
+        self.assertIn('justify', config['alignment']['options'])
+        # Would store Markdown instead of HTML if left on.
+        self.assertIn('Markdown', config['removePlugins'])
+
+    def test_editor_config_contains_no_null(self):
+        # django-ckeditor-5 parses the config with a JSON reviver that
+        # crashes on null, and the whole editor then fails to load.
+        import json
+
+        from django.conf import settings
+
+        self.assertNotIn('null', json.dumps(settings.CKEDITOR_5_CONFIGS))
 
     def test_newsletter_compose_form_renders_ckeditor_widget(self):
         response = self.client.get(reverse('newsletter:manage_issue_compose'))
@@ -1263,7 +1308,25 @@ class CKEditorUploadPermissionTests(TestCase):
         self.client.force_login(editor)
         response = self.client.post(reverse('ck_editor_5_upload_file'), {'upload': self._make_image_upload()})
         self.assertEqual(response.status_code, 200)
-        self.assertIn('url', response.json())
+        url = response.json()['url']
+        # Stored in a dated folder under a random name, not the uploader's filename.
+        self.assertRegex(url, r'^/media/articles/inline/\d{4}/\d{2}/[0-9a-f]{16}\.jpg$')
+        from django.core.files.storage import default_storage
+
+        default_storage.delete(url.removeprefix('/media/'))
+
+    def test_svg_and_non_images_are_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from users.models import User
+
+        editor = User.objects.create_user(
+            email='ckeditor-svg@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
+        )
+        self.client.force_login(editor)
+        svg = SimpleUploadedFile('x.svg', b'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>', content_type='image/svg+xml')
+        self.assertEqual(self.client.post(reverse('ck_editor_5_upload_file'), {'upload': svg}).status_code, 400)
+        fake = SimpleUploadedFile('x.png', b'not really an image', content_type='image/png')
+        self.assertEqual(self.client.post(reverse('ck_editor_5_upload_file'), {'upload': fake}).status_code, 400)
 
 
 def _comment_post_data(article, comment_text, **extra):
@@ -1563,6 +1626,19 @@ class ContentBlockSplittingTests(TestCase):
         html = _paragraphs(20)
         for chunk, _zone in build_content_blocks(html)[:-1]:
             self.assertTrue(chunk.endswith('</p>'))
+
+
+    def test_ads_never_split_a_blockquote_list_or_table(self):
+        nested = '<blockquote><p>q1</p><p>q2</p><p>q3</p><p>q4</p><p>q5</p></blockquote>'
+        html = _paragraphs(3) + nested + '<table><tr><td><p>cell</p></td></tr></table>' + _paragraphs(6)
+        blocks = build_content_blocks(html)
+        self.assertEqual(''.join(chunk for chunk, _zone in blocks), html)
+        for chunk, _zone in blocks[:-1]:
+            self.assertEqual(chunk.count('<blockquote>'), chunk.count('</blockquote>'))
+            self.assertEqual(chunk.count('<table>'), chunk.count('</table>'))
+        # 3 top-level paragraphs before the quote, so the first ad comes
+        # after the 1st paragraph following it (the 4th top-level one).
+        self.assertTrue(blocks[0][0].endswith('</table><p>Paragraph 1.</p>'))
 
 
 class InArticleAdInjectionRenderingTests(TestCase):

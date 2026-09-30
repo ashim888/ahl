@@ -1,9 +1,34 @@
+import re
+
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.html import strip_tags
 
 from ajna_health_lens.mail import send_notification_email
+
+
+_MEDIA_EMBED_RE = re.compile(r'<figure class="media"><div data-oembed-url="([^"]+)">.*?</figure>', re.S)
+_IMG_STYLE_RE = re.compile(r'(<img\b[^>]*?)\s+style="[^"]*"', re.I)
+_SITE_RELATIVE_RE = re.compile(r'\b(src|href)="/(?!/)')
+
+
+def email_ready_html(body_html):
+    """The editor's HTML adjusted for email clients, which can't use the
+    site's stylesheet, relative links or embedded players: site-relative
+    image/link URLs become absolute, a video/audio embed becomes a "Watch"
+    link to it, and images are capped to the email's width."""
+    if not body_html:
+        return body_html
+    html = _MEDIA_EMBED_RE.sub(
+        # data-* attributes aren't protocol-checked by the sanitizer, so
+        # only an https:// address becomes a link.
+        lambda m: f'<p><a href="{m.group(1)}">▶ Watch the video</a></p>' if m.group(1).startswith('https://') else '',
+        body_html,
+    )
+    html = _SITE_RELATIVE_RE.sub(lambda m: f'{m.group(1)}="{settings.SITE_BASE_URL}/', html)
+    html = _IMG_STYLE_RE.sub(r'\1', html)
+    return html.replace('<img ', '<img style="max-width:100%;height:auto;" ')
 
 
 def render_issue_email(subject, body_html, unsubscribe_url, is_preview=False):
@@ -17,7 +42,7 @@ def render_issue_email(subject, body_html, unsubscribe_url, is_preview=False):
     """
     return render_to_string('newsletter/email/issue_email.html', {
         'subject': subject,
-        'body_html': body_html,
+        'body_html': email_ready_html(body_html),
         'unsubscribe_url': unsubscribe_url,
         'is_preview': is_preview,
         'journal_name': settings.JOURNAL_NAME,

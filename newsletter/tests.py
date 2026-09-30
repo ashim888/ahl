@@ -584,3 +584,26 @@ class SubscriberEmailTemplateTests(TestCase):
         welcome = [m for m in mail.outbox if m.subject.startswith('Welcome to')]
         self.assertEqual(len(welcome), 1)
         self.assertIn(subscriber.unsubscribe_token, welcome[0].alternatives[0][0])
+
+
+class EmailReadyHtmlTests(TestCase):
+    """newsletter.emails.email_ready_html — editor HTML adjusted for inboxes."""
+
+    def test_relative_urls_become_absolute_and_images_fit(self):
+        from django.conf import settings
+
+        from newsletter.emails import email_ready_html
+
+        html = email_ready_html('<img style="" src="/media/articles/inline/a.png" width="800"><a href="/articles/x/">x</a>')
+        self.assertIn(f'src="{settings.SITE_BASE_URL}/media/articles/inline/a.png"', html)
+        self.assertIn(f'href="{settings.SITE_BASE_URL}/articles/x/"', html)
+        self.assertIn('style="max-width:100%;height:auto;"', html)
+        self.assertEqual(html.count('style='), 1)
+
+    def test_video_embed_becomes_a_link_and_unsafe_urls_are_dropped(self):
+        from newsletter.emails import email_ready_html
+
+        embed = '<figure class="media"><div data-oembed-url="{}"><div><iframe src="https://www.youtube.com/embed/a"></iframe></div></div></figure>'
+        html = email_ready_html(embed.format('https://www.youtube.com/watch?v=a'))
+        self.assertEqual(html, '<p><a href="https://www.youtube.com/watch?v=a">▶ Watch the video</a></p>')
+        self.assertEqual(email_ready_html(embed.format('javascript:alert(1)')), '')

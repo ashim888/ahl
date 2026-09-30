@@ -1,0 +1,87 @@
+/* Rich text written in the article/newsletter editor (CKEditor, see
+   CKEDITOR_5_CONFIGS in settings.py): images, media embeds, tables and
+   lists. Loaded by both templates/base.html (readers, .prose-article) and
+   templates/admin_dashboard/base.html (the editor itself, .ck-content, and
+   previews), so what an editor sees while writing matches the published page.
+
+   Tailwind's reset removes list bullets/numbers and heading sizes
+   everywhere, which is why they vanished inside the editor; the
+   .ck-content rules below put them back. */
+
+/* --- Inside the editor ---------------------------------------------------- */
+.ck-editor__editable.ck-content { font-size: 1rem; line-height: 1.7; color: #111827; }
+.ck-content p { margin: 0 0 1rem; }
+.ck-content h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin: 1.75rem 0 0.75rem; }
+.ck-content h3 { font-size: 1.2rem; font-weight: 600; line-height: 1.35; margin: 1.5rem 0 0.5rem; }
+.ck-content h4 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
+.ck-content ul, .ck-content ol { margin: 0 0 1rem; padding-left: 1.75rem; }
+.ck-content li { margin: 0.25rem 0; }
+.ck-content li > p { margin: 0; }
+.ck-content blockquote { border-left: 4px solid #d1d5db; margin: 1.25rem 0; padding: 0.25rem 0 0.25rem 1rem; color: #4b5563; font-style: italic; }
+.ck-content a { color: #4f46e5; text-decoration: underline; }
+.ck-content hr { margin: 1.5rem 0; border: 0; border-top: 1px solid #e5e7eb; }
+.ck-content code { background: #f3f4f6; border-radius: 0.25rem; padding: 0.1em 0.35em; font-size: 0.9em; }
+.ck-content pre code { background: none; padding: 0; }
+.ck-content s, .prose-article s, .prose-article del { text-decoration: line-through; }
+
+/* --- Lists (editor + article) ---------------------------------------------- */
+.ck-content ul, .prose-article ul { list-style: disc; }
+.ck-content ol, .prose-article ol { list-style: decimal; }
+.ck-content ul ul, .prose-article ul ul { list-style: circle; }
+.ck-content ul ul ul, .prose-article ul ul ul { list-style: square; }
+.ck-content li > ul, .ck-content li > ol,
+.prose-article li > ul, .prose-article li > ol { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+.prose-article h4 { font-size: 1.05rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.prose-article hr { margin: 2.5rem 0; border: 0; border-top: 1px solid #d4d0cb; }
+
+/* --- Images ---------------------------------------------------------------- */
+.prose-article figure.image, .ck-content figure.image {
+    display: table; clear: both; text-align: center; margin: 2rem auto; min-width: 50px;
+}
+.prose-article figure.image img, .ck-content figure.image img {
+    display: block; margin: 0 auto; max-width: 100%; min-width: 100%; height: auto;
+}
+.prose-article figure.image > figcaption, .ck-content figure.image > figcaption {
+    display: table-caption; caption-side: bottom; word-break: break-word;
+    padding-top: 0.6rem; font-size: 0.8rem; color: #6b6860; text-align: center;
+}
+/* Resized (50% / 75%): the width is inline on the figure. */
+.prose-article .image_resized, .ck-content .image_resized { max-width: 100%; display: block; box-sizing: border-box; }
+.prose-article .image_resized img, .ck-content .image_resized img { width: 100%; }
+.prose-article .image_resized > figcaption, .ck-content .image_resized > figcaption { display: block; }
+/* Inline images sit within a line of text. */
+.prose-article img.image_resized { height: auto; }
+.prose-article .image-inline, .ck-content .image-inline { display: inline-flex; max-width: 100%; align-items: flex-start; }
+.prose-article .image-inline img, .ck-content .image-inline img { flex-grow: 1; flex-shrink: 1; max-width: 100%; }
+/* Left / centre / right. Floated images take at most half the column
+   unless resized, and text wraps around them. */
+.prose-article .image-style-align-left, .ck-content .image-style-align-left { float: left; margin: 0.4rem 1.5rem 1rem 0; }
+.prose-article .image-style-align-right, .ck-content .image-style-align-right { float: right; margin: 0.4rem 0 1rem 1.5rem; }
+.prose-article .image-style-align-left:not(.image_resized),
+.prose-article .image-style-align-right:not(.image_resized),
+.ck-content .image-style-align-left:not(.image_resized),
+.ck-content .image-style-align-right:not(.image_resized) { max-width: 50%; }
+.prose-article .image-style-align-center, .ck-content .image-style-align-center { margin-left: auto; margin-right: auto; }
+.prose-article .image-style-side, .ck-content .image-style-side { float: right; margin-left: 1.5rem; max-width: 50%; }
+.prose-article::after { content: ''; display: table; clear: both; }
+/* A new section starts below a floated image, not beside it. */
+.prose-article h2, .prose-article h3, .ck-content h2, .ck-content h3 { clear: both; }
+/* On phones there's no room to wrap text around an image. */
+@media (max-width: 640px) {
+    .prose-article .image-style-align-left, .prose-article .image-style-align-right, .prose-article .image-style-side {
+        float: none; margin: 1.5rem auto; max-width: 100%; width: 100% !important;
+    }
+}
+
+/* --- Video / audio embeds (Insert media) ----------------------------------- */
+.prose-article figure.media, .ck-content figure.media { clear: both; margin: 2rem 0; }
+.prose-article figure.media iframe, .ck-content figure.media iframe {
+    display: block; width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; border: 0;
+}
+.prose-article figure.media iframe[src*="open.spotify.com"] { aspect-ratio: auto; height: 152px !important; }
+
+/* --- Tables ---------------------------------------------------------------- */
+.prose-article figure.table { overflow-x: auto; margin: 2rem 0; }
+.prose-article figure.table > figcaption, .prose-article table > caption {
+    caption-side: top; font-size: 0.8rem; color: #6b6860; padding-bottom: 0.5rem; text-align: left;
+}

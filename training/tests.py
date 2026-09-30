@@ -164,6 +164,8 @@ class EnrollmentBulkUpdateTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
 
+# The stub-gateway flow, whatever PAYMENT_GATEWAY a local .env sets.
+@override_settings(PAYMENT_GATEWAY='stub')
 class CourseCheckoutTests(TestCase):
     """Self-serve enroll-and-pay — StubGateway always succeeds (see
     billing/gateway.py) but the flow itself is real: no editorial action needed.

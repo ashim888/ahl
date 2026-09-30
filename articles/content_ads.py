@@ -5,7 +5,34 @@ import re
 # full-width break between two paragraphs, not text wrapping around a
 # floated box. A short article gets none at all; a long one gets up to
 # MAX_IN_ARTICLE_ADS, spaced out rather than clustered near the top.
-PARAGRAPH_CLOSE_RE = re.compile(r'</p\s*>', re.IGNORECASE)
+TAG_RE = re.compile(r'<(/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?(/?)>')
+SCRIPT_END_RE = re.compile(r'</script\s*>', re.IGNORECASE)
+VOID_TAGS = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'}
+
+
+def top_level_paragraph_ends(html):
+    """Offsets just after each </p> that closes a *top-level* paragraph —
+    never one inside a blockquote, list, table cell or figure, so an ad is
+    never injected into the middle of one of those."""
+    ends, depth, pos = [], 0, 0
+    while True:
+        match = TAG_RE.search(html, pos)
+        if not match:
+            return ends
+        closing, name, self_closing = match.group(1), match.group(2).lower(), match.group(3)
+        pos = match.end()
+        if name == 'script' and not closing:
+            end = SCRIPT_END_RE.search(html, pos)
+            pos = end.end() if end else len(html)
+            continue
+        if name in VOID_TAGS or self_closing:
+            continue
+        if closing:
+            depth = max(depth - 1, 0)
+            if name == 'p' and depth == 0:
+                ends.append(pos)
+        else:
+            depth += 1
 
 MIN_PARAGRAPHS_BEFORE_FIRST_AD = 4
 PARAGRAPHS_BETWEEN_ADS = 5
@@ -26,7 +53,7 @@ def build_content_blocks(html_content):
     if not html_content:
         return [(html_content, None)]
 
-    paragraph_end_positions = [m.end() for m in PARAGRAPH_CLOSE_RE.finditer(html_content)]
+    paragraph_end_positions = top_level_paragraph_ends(html_content)
     total_paragraphs = len(paragraph_end_positions)
     if total_paragraphs < MIN_PARAGRAPHS_BEFORE_FIRST_AD:
         return [(html_content, None)]

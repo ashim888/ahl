@@ -1,5 +1,6 @@
 asgiref==3.12.1
 bleach==6.4.0
+tinycss2==1.5.1  # bleach CSSSanitizer — keeps editor text-align/image-width styles (articles/sanitize.py)
 cryptography==46.0.7
 django-axes==8.3.1
 django-ckeditor-5==0.2.20

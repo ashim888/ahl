@@ -554,6 +554,8 @@ class GrantSubscriptionViewTests(TestCase):
         self.assertFalse(UserSubscription.objects.filter(user=self.reader).exists())
 
 
+# The stub-gateway flow, whatever PAYMENT_GATEWAY a local .env sets.
+@override_settings(PAYMENT_GATEWAY='stub')
 class SelfServeCheckoutTests(TestCase):
     """Public checkout — no gateway is wired in yet (StubGateway always
     succeeds, see billing/gateway.py), but the flow itself is real and
