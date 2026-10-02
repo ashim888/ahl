@@ -13,10 +13,11 @@
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-0">
         <a href="{% url 'articles:article_detail' hero_article.slug %}"
            class="lg:col-span-3 relative overflow-hidden bg-muted block" style="min-height: 480px;">
-            {% if hero_article.featured_image %}
-                <img src="{{ hero_article.featured_image.url }}" alt="{{ hero_article.featured_image_alt|default:hero_article.title }}"
+            {% if hero_article.card_image_url %}
+                <img src="{{ hero_article.card_image_url }}" alt="{{ hero_article.featured_image_alt|default:hero_article.title }}"
                      class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                {% include 'articles/includes/play_badge.html' with article=hero_article %}
             {% else %}
                 <div class="w-full h-full absolute inset-0 flex items-center justify-center bg-secondary">
                     <span class="font-display text-2xl text-muted-foreground italic">{{ JOURNAL_NAME }}</span>
@@ -158,6 +159,25 @@ zone) fill the row, centered as a group.
                         {% endwith %}
                     </div>
                 </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if home_videos %}
+<section class="bg-foreground text-primary-foreground">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        <div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-primary-foreground/30">
+            <div>
+                <p class="section-label text-accent">{% trans "VIDEOS" %}</p>
+                <h2 class="font-display text-2xl md:text-3xl font-bold mt-1.5" style="letter-spacing: -0.02em;">{% trans "Watch" %}</h2>
+            </div>
+            <a href="{% url 'articles:video_list' %}" class="shrink-0 font-mono-editorial text-xs tracking-widest border-b border-primary-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL VIDEOS →" %}</a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% for article in home_videos %}
+                {% include 'articles/includes/video_card.html' with article=article dark=True %}
             {% endfor %}
         </div>
     </div>

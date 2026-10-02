@@ -31,7 +31,42 @@
     </div>
 {% endif %}
 
-{% if article.featured_image %}
+{% comment %}
+A video story (Article.video_url, articles/video.py): the YouTube player
+takes the featured image's place. youtube-nocookie.com, so YouTube sets no
+cookies until the reader presses play. Gated like the text: a reader who
+can't read the story sees the thumbnail and a lock pointing to the paywall.
+{% endcomment %}
+{% if article.has_video %}
+    <figure class="max-w-5xl mx-auto sm:px-6 sm:pt-6">
+        {% if show_full_text %}
+            <div class="relative w-full bg-black overflow-hidden" style="aspect-ratio: 16 / 9;">
+                <iframe src="{{ article.video_embed_url }}" title="{{ article.title }}"
+                        class="absolute inset-0 w-full h-full" frameborder="0" loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            </div>
+        {% else %}
+            <a href="#paywall" class="relative block w-full bg-black overflow-hidden group" style="aspect-ratio: 16 / 9;">
+                {% if article.card_image_url %}
+                    <img src="{{ article.card_image_url }}" alt="{{ article.featured_image_alt|default:article.title }}"
+                         class="w-full h-full object-cover opacity-60">
+                {% endif %}
+                <span class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
+                    <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
+                    <span class="font-mono-editorial text-xs tracking-widest bg-black/60 px-3 py-1.5 group-hover:bg-accent transition-colors">
+                        {% if article.access_type == 'pay_per_article' %}{% trans "BUY OR SUBSCRIBE TO WATCH" %}{% else %}{% trans "SUBSCRIBE TO WATCH" %}{% endif %}
+                    </span>
+                </span>
+            </a>
+        {% endif %}
+        {% if article.featured_image_caption or article.featured_image_credit %}
+            <figcaption class="px-6 sm:px-0 pt-2 text-xs text-muted-foreground">
+                {{ article.featured_image_caption }}{% if article.featured_image_caption and article.featured_image_credit %} {% endif %}{% if article.featured_image_credit %}<span class="font-mono-editorial tracking-wide opacity-80">{% blocktrans with credit=article.featured_image_credit %}Video: {{ credit }}{% endblocktrans %}</span>{% endif %}
+            </figcaption>
+        {% endif %}
+    </figure>
+{% elif article.featured_image %}
     <figure>
         <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 520px);">
             <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}"
@@ -268,12 +303,12 @@
                             {% endif %}
                         {% endfor %}
                     </div>
-                {% else %}
+                {% elif not article.has_video %}
                     <p class="text-sm text-muted-foreground">{% trans "Full text has not been added for this article yet." %}</p>
                 {% endif %}
             {% else %}
                 {# Paywall — same card language as the course enrollment / plan price cards #}
-                <div class="border border-border bg-card shadow-xl overflow-hidden">
+                <div id="paywall" class="border border-border bg-card shadow-xl overflow-hidden scroll-mt-24">
                     <div class="bg-foreground text-primary-foreground px-6 py-4 flex items-center gap-3">
                         <svg class="w-5 h-5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
                         <p class="section-label text-primary-foreground">

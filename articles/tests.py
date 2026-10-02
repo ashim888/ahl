@@ -3430,3 +3430,116 @@ class PublishPermissionTests(TestCase):
         self.assertTrue(User.objects.get(pk=self.editor.pk).can_publish)
         self.client.post(url, base)
         self.assertFalse(User.objects.get(pk=self.editor.pk).can_publish)
+
+
+class VideoStoryTests(TestCase):
+    """Video stories: a YouTube link on an article (articles/video.py)."""
+
+    WATCH = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+
+    def setUp(self):
+        from users.models import User
+
+        self.editor = User.objects.create_user(
+            email='video-editor@example.com', password='pw', first_name='V', last_name='E', role=User.Role.EDITOR,
+        )
+        grant_publish(self.editor)
+
+    def _story(self, slug='clinic-video', **extra):
+        data = {'title': 'Inside a rural clinic', 'slug': slug, 'status': Article.Status.PUBLISHED,
+                'access_type': Article.AccessType.OPEN_ACCESS, 'article_type': Article.ArticleType.VIDEO,
+                'video_url': self.WATCH, 'published_at': timezone.now()}
+        data.update(extra)
+        return Article.objects.create(**data)
+
+    def test_any_common_youtube_link_is_understood_and_lookalikes_are_not(self):
+        from .video import embed_url, youtube_id
+
+        for url in (self.WATCH, 'https://youtu.be/dQw4w9WgXcQ?t=42', 'youtube.com/shorts/dQw4w9WgXcQ',
+                    'https://www.youtube.com/live/dQw4w9WgXcQ?si=abc', 'https://www.youtube.com/embed/dQw4w9WgXcQ'):
+            self.assertEqual(youtube_id(url), 'dQw4w9WgXcQ', url)
+        self.assertEqual(embed_url('https://youtu.be/dQw4w9WgXcQ?t=1m30s'),
+                         'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&start=90')
+        for url in ('https://vimeo.com/123', 'https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ',
+                    'https://www.youtube.com/watch?v=short', 'javascript:alert(1)'):
+            self.assertEqual(youtube_id(url), '', url)
+
+    def test_editor_publishes_a_video_story_without_body_text(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('articles:manage_article_create'), {
+            'title': 'Handwashing explained', 'article_type': 'video', 'access_type': 'open_access',
+            'video_url': 'https://youtu.be/dQw4w9WgXcQ', 'action': 'publish',
+        })
+        self.assertEqual(response.status_code, 302)
+        article = Article.objects.get(title='Handwashing explained')
+        self.assertEqual(article.status, Article.Status.PUBLISHED)
+        self.assertTrue(article.has_video)
+
+    def test_bad_link_and_video_type_without_link_are_rejected(self):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse('articles:manage_article_create'), {
+            'title': 'Not YouTube', 'article_type': 'news_commentary', 'access_type': 'open_access',
+            'video_url': 'https://vimeo.com/123', 'html_content': '<p>x</p>', 'action': 'publish',
+        })
+        self.assertIn('video_url', response.context['form'].errors)
+        response = self.client.post(reverse('articles:manage_article_create'), {
+            'title': 'No link', 'article_type': 'video', 'access_type': 'open_access',
+            'html_content': '<p>x</p>', 'action': 'publish',
+        })
+        self.assertIn('video_url', response.context['form'].errors)
+        self.assertFalse(Article.objects.exists())
+
+    def test_article_page_shows_the_player_and_video_metadata(self):
+        article = self._story()
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0"')
+        self.assertContains(response, 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg')  # share image
+        self.assertContains(response, '"@type": "VideoObject"')
+        self.assertNotContains(response, 'Full text has not been added')
+
+    def test_paywalled_video_shows_a_locked_thumbnail_not_the_player(self):
+        article = self._story(access_type=Article.AccessType.PAY_PER_ARTICLE, price=100)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'href="#paywall"')
+        self.assertContains(response, 'id="paywall"')
+        # Nothing on the page may give away the video id (it plays free on YouTube).
+        self.assertNotContains(response, 'dQw4w9WgXcQ')
+        for url in (reverse('articles:video_list'), reverse('articles:article_list'), '/feed/'):
+            self.assertNotContains(self.client.get(url), 'dQw4w9WgXcQ', msg_prefix=url)
+        # A subscriber gets the player.
+        from users.models import User
+        from billing.models import ArticlePurchase
+
+        buyer = User.objects.create_user(email='video-buyer@example.com', password='pw', first_name='B', last_name='U')
+        ArticlePurchase.objects.create(user=buyer, article=article, amount=100)
+        self.client.force_login(buyer)
+        self.assertContains(self.client.get(reverse('articles:article_detail', args=[article.slug])),
+                            'youtube-nocookie.com/embed/dQw4w9WgXcQ')
+
+    def test_videos_page_lists_only_published_video_stories(self):
+        self._story()
+        self._story(slug='draft-video', status=Article.Status.DRAFT, title='Unreleased clip')
+        Article.objects.create(title='Plain text story', slug='plain-story', status=Article.Status.PUBLISHED,
+                               html_content='<p>x</p>', published_at=timezone.now())
+        response = self.client.get(reverse('articles:video_list'))
+        self.assertContains(response, 'Inside a rural clinic')
+        self.assertNotContains(response, 'Unreleased clip')
+        self.assertNotContains(response, 'Plain text story')
+
+    def test_video_shows_on_homepage_and_cards_use_the_youtube_thumbnail(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self._story()
+        home = self.client.get(reverse('articles:home'))
+        self.assertContains(home, reverse('articles:video_list'))
+        self.assertContains(home, 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg')
+        listing = self.client.get(reverse('articles:article_list'))
+        self.assertContains(listing, 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg')
+
+    def test_videos_is_in_the_main_menu(self):
+        from sections.models import Section
+
+        entry = Section.objects.get(slug='videos')
+        self.assertEqual(entry.nav_url, reverse('articles:video_list'))
+        self.assertContains(self.client.get(reverse('articles:home')), f'href="{reverse("articles:video_list")}"')

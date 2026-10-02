@@ -11,8 +11,8 @@
 
     <div class="mt-8 border border-border bg-card overflow-hidden">
         <div class="flex gap-4 p-5">
-            {% if article.featured_image %}
-                <img src="{{ article.featured_image.url }}" alt="" class="w-28 aspect-video object-cover shrink-0">
+            {% if article.card_image_url %}
+                <img src="{{ article.card_image_url }}" alt="" class="w-28 aspect-video object-cover shrink-0">
             {% endif %}
             <div class="min-w-0">
                 <span class="section-label text-accent">{% trans "SPECIAL ARTICLE" %}</span>

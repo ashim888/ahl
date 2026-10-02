@@ -72,10 +72,11 @@
     <div class="mt-10 divide-y divide-border">
         {% for article in articles %}
             <article class="article-link py-6 flex gap-4 sm:gap-6">
-                <a href="{% url 'articles:article_detail' article.slug %}" class="overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
-                    {% if article.featured_image %}
-                        <img src="{{ article.featured_image.url }}" alt="{{ article.title }}"
+                <a href="{% url 'articles:article_detail' article.slug %}" class="relative overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
+                    {% if article.card_image_url %}
+                        <img src="{{ article.card_image_url }}" alt="{{ article.title }}"
                              class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                        {% include 'articles/includes/play_badge.html' with article=article small=True %}
                     {% else %}
                         <div class="w-full h-full bg-secondary"></div>
                     {% endif %}

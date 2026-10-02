@@ -178,11 +178,12 @@ class SeedPrimaryNavMigrationTests(TestCase):
     for that; other data migrations here are verified the same way).
     """
 
-    def test_seeds_five_subject_sections_plus_training_and_issues(self):
+    def test_seeds_five_subject_sections_plus_training_videos_and_issues(self):
+        # Videos is added by sections 0007, just before Issues.
         top_level = list(Section.objects.filter(parent__isnull=True).order_by('order').values_list('slug', flat=True))
         self.assertEqual(
             top_level,
-            ['journal', 'policy-economy', 'health-tech', 'service-delivery', 'opinions', 'training', 'issues'],
+            ['journal', 'policy-economy', 'health-tech', 'service-delivery', 'opinions', 'training', 'videos', 'issues'],
         )
 
     def test_subject_sections_have_their_seeded_children(self):

@@ -7,6 +7,8 @@ import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.safestring import mark_safe
 
+from .video import thumbnail_url
+
 # Mirrors Django's own json_script escaping (django.utils.html) — safe to
 # inline inside a <script> tag even if a title/abstract happens to contain
 # "</script>", "-->", or similar.
@@ -144,4 +146,16 @@ def news_article_structured_data(
             {'@type': 'CorrectionComment', 'text': c.note, 'datePublished': c.created_at.isoformat()}
             for c in corrections
         ] or None,
+        # schema.org VideoObject for a free video story — what makes it
+        # eligible for video results. Left out for a paid one: it would
+        # publish the YouTube address to anyone viewing the page source.
+        'video': {
+            '@type': 'VideoObject',
+            'name': article.title[:110],
+            'description': article.summary or article.title,
+            'thumbnailUrl': [thumbnail_url(article.video_url)],
+            'uploadDate': (article.published_at or article.created_at).isoformat(),
+            'embedUrl': article.video_embed_url,
+            'contentUrl': article.video_watch_url,
+        } if article.has_video and article.access_type == article.AccessType.OPEN_ACCESS else None,
     })

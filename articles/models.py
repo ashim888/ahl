@@ -14,6 +14,8 @@ from django.utils.translation import gettext_lazy as _
 
 from ajna_health_lens.storage import private_storage
 
+from .video import embed_url, thumbnail_url, validate_youtube_url, watch_url, youtube_id
+
 from .validators import (
     article_image_extension_validator, article_pdf_extension_validator,
     validate_article_pdf_size, validate_document_content, validate_featured_image_size,
@@ -22,7 +24,7 @@ from .validators import (
 # Shared with articles/views.py HomeView, which caches under this key —
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
-HOME_SECTIONS_CACHE_KEY = 'home:sections:v2'
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v3'
 # The current breaking-news article (or None) for the site-wide banner —
 # see ajna_health_lens/context_processors.py; cleared on every Article.save().
 BREAKING_CACHE_KEY = 'articles:breaking:v1'
@@ -84,6 +86,8 @@ class Article(models.Model):
         EDITORIAL = 'editorial', _('Editorial')
         NEWS_COMMENTARY = 'news_commentary', _('News & Commentary')
         LETTER_TO_EDITOR = 'letter_to_editor', _('Letter to Editor')
+        # A story whose main content is a YouTube video (Article.video_url).
+        VIDEO = 'video', _('Video')
 
     class AccessType(models.TextChoices):
         OPEN_ACCESS = 'open_access', _('Free')
@@ -103,6 +107,7 @@ class Article(models.Model):
         LATEST_NEWS = 'latest_news', 'Latest News'
         OPINION = 'opinion', 'Opinion & Editorial'
         RESEARCH = 'research', 'Research Highlights'
+        VIDEOS = 'videos', 'Videos'
 
     title = models.CharField(max_length=500)
     slug = models.SlugField(
@@ -221,6 +226,14 @@ class Article(models.Model):
     featured_image_credit = models.CharField(
         'Credit', max_length=150, blank=True, help_text='Photographer or source, e.g. "Ram Shrestha / Ajna Health Lens".',
     )
+    # The story's video: a YouTube link (watch, youtu.be, Shorts, live or
+    # embed). Shown as the player at the top of the article instead of the
+    # featured image, with YouTube's thumbnail used on cards when there's no
+    # featured image. See articles/video.py.
+    video_url = models.URLField(
+        'Video (YouTube link)', max_length=300, blank=True, validators=[validate_youtube_url],
+        help_text='Paste the YouTube link. The player appears at the top of the story.',
+    )
     html_content = models.TextField(
         null=True, blank=True,
         help_text='Full-text body HTML, rendered as-is (trusted — admin/editor-authored only, '
@@ -264,6 +277,31 @@ class Article(models.Model):
         if self.access_type == self.AccessType.OPEN_ACCESS and self.html_content:
             return Truncator(' '.join(strip_tags(self.html_content).split())).words(40)
         return ''
+
+    @property
+    def has_video(self) -> bool:
+        return bool(self.video_url and youtube_id(self.video_url))
+
+    @property
+    def video_embed_url(self) -> str:
+        return embed_url(self.video_url)
+
+    @property
+    def video_watch_url(self) -> str:
+        return watch_url(self.video_url)
+
+    @property
+    def card_image_url(self) -> str:
+        """The picture for cards, lists and social previews: the featured
+        image, else (free stories only) the video's YouTube thumbnail, else ''.
+
+        Never YouTube's thumbnail for a paid story: its URL contains the video
+        id, and anyone with the id can watch it free on YouTube."""
+        if self.featured_image:
+            return self.featured_image.url
+        if self.access_type == self.AccessType.OPEN_ACCESS:
+            return thumbnail_url(self.video_url)
+        return 
 
     @property
     def estimated_read_minutes(self):

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Videos" %} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-12">
+    {% trans "VIDEOS" as eyebrow %}{% trans "Watch" as heading %}
+    {% include 'includes/section_heading.html' with eyebrow=eyebrow title=heading %}
+
+    {% if videos %}
+        {% if not page_obj.has_previous %}
+            {% with lead=videos.0 %}
+                <div class="mb-12 max-w-4xl">
+                    {% include 'articles/includes/video_card.html' with article=lead large=True %}
+                </div>
+            {% endwith %}
+        {% endif %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+            {% for article in videos %}
+                {% if page_obj.has_previous or not forloop.first %}
+                    {% include 'articles/includes/video_card.html' with article=article %}
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% include 'includes/pagination.html' %}
+    {% else %}
+        <p class="py-16 text-center text-muted-foreground">{% trans "No videos yet — check back soon." %}</p>
+    {% endif %}
+</div>
+{% endblock %}

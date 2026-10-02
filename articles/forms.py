@@ -151,7 +151,7 @@ class ArticleForm(forms.ModelForm):
         fields = [
             'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned', 'homepage_section',
             'abstract', 'issue', 'section', 'volume', 'page_numbers', 'doi',
-            'html_content', 'references', 'featured_image', 'featured_image_alt', 'featured_image_caption',
+            'video_url', 'html_content', 'references', 'featured_image', 'featured_image_alt', 'featured_image_caption',
             'featured_image_credit', 'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
         ]
         widgets = {
@@ -179,6 +179,10 @@ class ArticleForm(forms.ModelForm):
         help_texts = {
             'title': '',
             'abstract': 'Optional. One or two sentences shown under the headline and on article cards.',
+            'video_url': 'Optional. A YouTube link (watch, youtu.be, Shorts or live). The player appears at the top of '
+                         'the story; on a free story its thumbnail is used when there is no featured image. For a '
+                         'subscriber-only video, upload it to YouTube as Unlisted and add a featured image — '
+                         'anyone with a public link can watch it on YouTube for free.',
             'section': 'Where the story appears in the site menu.',
             'homepage_section': 'Put this story in a specific homepage spot, or leave on Auto.',
             'is_pinned': 'Keep this story at the top of lists and the homepage.',
@@ -248,6 +252,8 @@ class ArticleForm(forms.ModelForm):
         cleaned_data = super().clean()
         if cleaned_data.get('access_type') == Article.AccessType.PAY_PER_ARTICLE and not cleaned_data.get('price'):
             self.add_error('price', 'Set a price for pay-per-article articles.')
+        if cleaned_data.get('article_type') == Article.ArticleType.VIDEO and not cleaned_data.get('video_url'):
+            self.add_error('video_url', 'A video story needs its YouTube link.')
         return cleaned_data
 
     def clean_bylines(self):
@@ -338,8 +344,10 @@ class PublishArticleForm(ArticleForm):
             return cleaned_data
         body = cleaned_data.get('html_content') or ''
         has_pdf = bool(cleaned_data.get('pdf_file') or self.instance.pdf_file)
-        if not strip_tags(body).strip() and '<img' not in body and not has_pdf:
-            self.add_error('html_content', 'Add the article text (or attach a PDF) before publishing.')
+        # A video story's video is its content; the text is optional.
+        has_video = bool(cleaned_data.get('video_url'))
+        if not strip_tags(body).strip() and '<img' not in body and not has_pdf and not has_video:
+            self.add_error('html_content', 'Add the article text (or a video link, or attach a PDF) before publishing.')
         return cleaned_data
 
 

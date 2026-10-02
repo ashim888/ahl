@@ -1,0 +1,5 @@
+{% comment %}
+▶ over a video story's thumbnail (Article.has_video). Include inside the
+image's positioned (relative) container, after the <img>.
+Usage: {% include 'articles/includes/play_badge.html' with article=article small=True %}
+{% endcomment %}{% if article.has_video %}<span aria-hidden="true" class="absolute inset-0 flex items-center justify-center pointer-events-none"><span class="flex items-center justify-center rounded-full bg-black/65 text-white ring-1 ring-white/40 {% if small %}w-8 h-8{% else %}w-12 h-12{% endif %}"><svg class="{% if small %}w-3.5 h-3.5{% else %}w-5 h-5{% endif %} ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span></span>{% endif %}

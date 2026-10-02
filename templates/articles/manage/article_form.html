@@ -82,6 +82,15 @@
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.abstract %}
 
                 <div>
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.video_url %}
+                    {% comment %}Live check of the pasted link — thumbnail when it's a YouTube video (articles/video.py does the real parsing on save).{% endcomment %}
+                    <div id="video-preview" class="hidden mt-2 flex items-center gap-3">
+                        <img id="video-preview-img" src="" alt="" class="w-32 aspect-video rounded-lg object-cover border border-gray-100 bg-gray-50">
+                        <p id="video-preview-text" class="text-xs"></p>
+                    </div>
+                </div>
+
+                <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="block text-sm font-medium text-gray-700" for="{{ form.html_content.id_for_label }}">
                             Article text<span class="text-red-500 ml-0.5" aria-hidden="true">*</span><span class="sr-only"> (required to publish)</span>
@@ -92,7 +101,7 @@
                         </button>
                     </div>
                     {{ form.html_content }}
-                    <p class="mt-1.5 text-xs text-gray-400">Needed to publish (or attach a PDF under “More details”). A draft can be saved without it.</p>
+                    <p class="mt-1.5 text-xs text-gray-400">Needed to publish, unless the story has a video link or a PDF (under “More details”). A draft can be saved without it.</p>
                     {% for error in form.html_content.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
                 </div>
 
@@ -1034,6 +1043,36 @@ document.addEventListener('DOMContentLoaded', function () {
         },
     };
     render();
+});
+</script>
+<script>
+// Video link preview: shows YouTube's thumbnail for a recognised link.
+document.addEventListener('DOMContentLoaded', function () {
+    var input = document.getElementById('id_video_url');
+    var box = document.getElementById('video-preview');
+    if (!input || !box) return;
+    var img = document.getElementById('video-preview-img');
+    var text = document.getElementById('video-preview-text');
+    function videoId(url) {
+        var m = (url || '').trim().match(/^(?:https?:\/\/)?(?:www\.|m\.|music\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})(?:[?&#\/].*)?$/);
+        return m ? m[1] : '';
+    }
+    function update() {
+        var value = input.value.trim();
+        var id = videoId(value);
+        box.classList.toggle('hidden', !value);
+        img.classList.toggle('hidden', !id);
+        if (id) {
+            img.src = 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg';
+            text.textContent = 'YouTube video found — the player will appear at the top of the story.';
+            text.className = 'text-xs text-green-700';
+        } else if (value) {
+            text.textContent = 'That doesn’t look like a YouTube link.';
+            text.className = 'text-xs text-red-600';
+        }
+    }
+    input.addEventListener('input', update);
+    update();
 });
 </script>
 {% endblock %}

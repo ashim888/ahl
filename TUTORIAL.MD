@@ -303,6 +303,25 @@ recently published breaking one.
 edits never appear on the site). **Unpublish** (bottom of the panel) takes it off the site and
 back to drafts.
 
+**Video stories:** paste a YouTube link into **Video (YouTube link)**, under the summary. Any
+common link works: a watch link, a youtu.be share link, Shorts or live. A thumbnail appears under
+the field to confirm the link was recognised.
+- The player shows at the top of the story, where the featured image would be. A start time in the
+  link (`?t=90`) is kept. The player is YouTube's privacy-enhanced one: no YouTube cookies until
+  the reader presses play.
+- Pick the article type **Video** for a story that is mainly the video: it can then be published
+  without any article text. Any story can carry a video, e.g. a news report with a clip.
+- Every story with a video appears on the **Videos** page (`/videos/`, in the main menu) and in
+  the **Watch** row on the homepage. To place one there by hand, set *Homepage spot* to
+  **Videos**.
+- On cards and when shared, a free video story uses YouTube's thumbnail if there's no featured
+  image.
+- **Subscriber-only videos:** set the access to Subscription or pay-per-article as usual. Readers
+  without access see a locked thumbnail pointing to the subscribe box, and the video's address
+  isn't shown anywhere on the site. But anyone who gets the link can watch it on YouTube, so
+  upload such videos as **Unlisted** on YouTube and add a featured image (YouTube's thumbnail
+  isn't used for paid stories).
+
 **Authors:** the **Authors** box on the right of the article form, usable before the first save.
 - Start typing in **Search authors** and pick someone from the list (it shows their affiliation and
   whether they have a login). **+ Add me** credits you if you have an author profile.

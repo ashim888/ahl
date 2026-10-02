@@ -281,6 +281,9 @@ class HomeView(TemplateView):
         latest_news = pick(HomepageSection.LATEST_NEWS, 3, Q(article_type=Article.ArticleType.NEWS_COMMENTARY))
         opinion_pieces = pick(HomepageSection.OPINION, 3, Q(article_type__in=OPINION_TYPES))
         research_highlights = pick(HomepageSection.RESEARCH, 2, Q(article_type__in=RESEARCH_TYPES))
+        # Any story with a YouTube link, not just type "Video" — a news story
+        # with a clip belongs in the video row too.
+        videos = pick(HomepageSection.VIDEOS, 4, ~Q(video_url=''))
 
         # Sections are built as plain lists (picks + autofill concatenated),
         # not querysets, so prefetching happens post-hoc via
@@ -292,6 +295,8 @@ class HomeView(TemplateView):
         sections['latest_news'] = latest_news
         sections['opinion_pieces'] = opinion_pieces
         sections['research_highlights'] = research_highlights
+        prefetch_related_objects(videos, 'section')
+        sections['home_videos'] = videos
 
         sections['special_issues'] = list(Issue.objects.all()[:3])
         sections['board_preview'] = list(EditorialBoardMember.objects.filter(is_active=True)[:6])
@@ -331,6 +336,27 @@ class HomeView(TemplateView):
         )
 
         context['meta_description'] = f'{settings.JOURNAL_TAGLINE} — health news, research highlights, and commentary from {settings.JOURNAL_NAME}.'
+        return context
+
+
+class VideoListView(ListView):
+    """/videos/ — every published story with a YouTube video (the "Videos"
+    menu entry), newest first; the newest is shown large at the top."""
+
+    template_name = 'articles/video_list.html'
+    context_object_name = 'videos'
+    paginate_by = 13
+
+    def get_queryset(self):
+        return (
+            Article.objects.filter(status=Article.Status.PUBLISHED).exclude(video_url='')
+            .select_related('section').prefetch_related('articleauthor_set__author__user')
+            .order_by('-is_pinned', '-published_at', '-created_at')
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['meta_description'] = f'Health videos from {settings.JOURNAL_NAME}: explainers, interviews and reports.'
         return context
 
 
@@ -585,11 +611,11 @@ class ArticleDetailView(DetailView):
         context['short_url'] = self.request.build_absolute_uri(
             reverse('articles:article_short_link', kwargs={'code': self.object.short_code}),
         )
-        image_url = None
-        if self.object.featured_image:
-            image_url = self.request.build_absolute_uri(self.object.featured_image.url)
-        share_image = self.object.social_image or self.object.featured_image
-        context['meta_image_url'] = self.request.build_absolute_uri(share_image.url) if share_image else None
+        # card_image_url: the featured image, else a video story's YouTube
+        # thumbnail (already absolute), so a video shares with a picture too.
+        image_url = self.request.build_absolute_uri(self.object.card_image_url) if self.object.card_image_url else None
+        share_image = self.object.social_image.url if self.object.social_image else self.object.card_image_url
+        context['meta_image_url'] = self.request.build_absolute_uri(share_image) if share_image else None
         context['structured_data_json'] = news_article_structured_data(
             self.object, journal_name=settings.JOURNAL_NAME, canonical_url=context['canonical_url'],
             image_url=image_url, publisher_logo_url=self.request.build_absolute_uri(static('images/logo.png')),

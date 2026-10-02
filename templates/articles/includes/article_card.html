@@ -6,10 +6,11 @@ top, lift-on-hover). Used on issue, section and related-reading grids.
 Expects `article` with articleauthor_set prefetched (…__user).
 {% endcomment %}
 <article class="group relative flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all">
-    <div class="aspect-video bg-secondary overflow-hidden">
-        {% if article.featured_image %}
-            <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
+    <div class="relative aspect-video bg-secondary overflow-hidden">
+        {% if article.card_image_url %}
+            <img src="{{ article.card_image_url }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
                  class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
+            {% include 'articles/includes/play_badge.html' with article=article %}
         {% else %}
             <div class="w-full h-full relative overflow-hidden" style="background: linear-gradient(135deg, #e8e4de 0%, #cfc9c0 100%);">
                 <span aria-hidden="true" class="absolute -right-3 -top-6 font-display font-bold text-foreground/10 leading-none select-none" style="font-size: 8rem;">{{ article.title|first|upper }}</span>
