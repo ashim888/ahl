@@ -207,26 +207,26 @@ class PaymentSettlementTests(TestCase):
     def test_start_payment_rejects_a_response_without_a_qr(self):
         with patch('billing.fonepay.generate_intent_qr', return_value={'status': 'Success'}):
             with self.assertRaisesMessage(fonepay.FonepayError, 'did not return a QR'):
-                payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, amount=Decimal('499'), description='x', plan=self.plan)
+                payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, price=Decimal('499'), description='x', plan=self.plan)
         self.assertFalse(Payment.objects.exists())
 
     def test_start_payment_accepts_the_alternative_field_names(self):
         with patch('billing.fonepay.generate_intent_qr', return_value={'qrString': 'QR2', 'thirdpartyQrWebSocketUrl': 'wss://y'}):
-            payment = payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, amount=Decimal('499'), description='x', plan=self.plan)
+            payment = payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, price=Decimal('499'), description='x', plan=self.plan)
         self.assertEqual((payment.qr_message, payment.websocket_url), ('QR2', 'wss://y'))
 
     def test_a_changed_price_starts_a_fresh_payment(self):
         self._payment()
         with patch('billing.fonepay.generate_intent_qr', return_value={'qrMessage': 'QR'}) as generate:
-            payment = payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, amount=Decimal('599'), description='x', plan=self.plan)
+            payment = payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, price=Decimal('599'), description='x', plan=self.plan)
         generate.assert_called_once()
-        self.assertEqual(payment.amount, Decimal('599'))
+        self.assertEqual((payment.subtotal, payment.vat_amount, payment.amount), (Decimal('599'), Decimal('77.87'), Decimal('676.87')))
         self.assertEqual(Payment.objects.count(), 2)
 
     def test_a_nearly_expired_open_payment_is_not_reused(self):
         self._payment(expires_at=timezone.now() + datetime.timedelta(minutes=1))
         with patch('billing.fonepay.generate_intent_qr', return_value={'qrMessage': 'QR'}) as generate:
-            payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, amount=Decimal('499'), description='x', plan=self.plan)
+            payments.start_payment(self.reader, kind=Payment.Kind.SUBSCRIPTION, price=Decimal('499'), description='x', plan=self.plan)
         generate.assert_called_once()
 
     def test_fonepay_unreachable_leaves_the_payment_pending(self):
@@ -317,7 +317,7 @@ class PaymentSettlementTests(TestCase):
         subscription = self._payment()
         article = self._payment(kind=Payment.Kind.ARTICLE, plan=None, article=self.article)
         course = self._payment(kind=Payment.Kind.COURSE, plan=None, course=self.course)
-        self.assertEqual(payments.success_url(subscription), reverse('users:profile'))
+        self.assertEqual(payments.success_url(subscription), reverse('billing:account'))
         self.assertEqual(payments.success_url(article), reverse('articles:article_detail', args=[self.article.slug]))
         self.assertEqual(payments.success_url(course), reverse('training:course_detail', args=[self.course.pk]))
         self.assertEqual(payments.retry_url(subscription), reverse('billing:subscribe_checkout', args=[self.plan.pk]))
@@ -351,7 +351,7 @@ class PaymentPageTests(TestCase):
     def test_paid_payment_redirects_to_what_was_bought(self):
         payment = self._payment(status=Payment.Status.SUCCESS)
         response = self.client.get(reverse('billing:payment_page', args=[payment.reference]))
-        self.assertRedirects(response, reverse('users:profile'), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse('billing:account'), fetch_redirect_response=False)
 
     def test_bank_list_outage_still_shows_the_qr(self):
         payment = self._payment()
@@ -363,7 +363,7 @@ class PaymentPageTests(TestCase):
         payment = self._payment(expires_at=timezone.now() - datetime.timedelta(minutes=1))
         with patch('billing.fonepay.payment_status', return_value={'paymentStatus': 'success', 'totalTransactionAmount': '499'}):
             response = self.client.get(reverse('billing:payment_page', args=[payment.reference]))
-        self.assertRedirects(response, reverse('users:profile'), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse('billing:account'), fetch_redirect_response=False)
         self.assertTrue(UserSubscription.objects.filter(user=self.reader).exists())
 
     def test_closed_payment_offers_a_retry_and_does_not_ask_for_banks(self):
@@ -389,7 +389,7 @@ class PaymentPageTests(TestCase):
             response = self.client.post(reverse('billing:purchase_checkout', args=[article.slug]))
         payment = Payment.objects.get(kind=Payment.Kind.ARTICLE)
         self.assertRedirects(response, reverse('billing:payment_page', args=[payment.reference]), fetch_redirect_response=False)
-        self.assertEqual(generate.call_args.args[0], Decimal('150.00'))
+        self.assertEqual(generate.call_args.args[0], Decimal('169.50'))  # 150 + 13% VAT
         self.assertFalse(ArticlePurchase.objects.exists())
 
     def test_buyer_who_already_owns_the_article_is_not_charged_again(self):

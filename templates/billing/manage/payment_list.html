@@ -1,0 +1,91 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load money_tags %}
+
+{% block title %}Payments — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Payments{% endblock %}
+
+{% block content %}
+<p class="text-sm text-gray-500">
+    Every payment — Fonepay checkouts, transfers recorded by staff, and organization payments. This is what the
+    Revenue pages add up. <strong>Failed</strong> ones worth a look: an underpaid Fonepay payment shows here as failed
+    with Fonepay's response.
+</p>
+
+<form method="get" class="mt-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+        <input type="search" name="q" value="{{ selected_q }}" placeholder="Reference, receipt, email…"
+               class="rounded-md border border-gray-300 px-3 py-1.5 text-sm w-64">
+    </div>
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+        <select name="status" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">All</option>
+            {% for value, label in statuses %}<option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">For</label>
+        <select name="kind" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">Everything</option>
+            {% for value, label in kinds %}<option value="{{ value }}" {% if value == selected_kind %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Paid via</label>
+        <select name="gateway" onchange="this.form.submit()" class="rounded-md border border-gray-300 px-3 py-1.5 text-sm">
+            <option value="">Any</option>
+            {% for value, label in gateways %}<option value="{{ value }}" {% if value == selected_gateway %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+    </div>
+    <label class="inline-flex items-center gap-2 text-sm pb-1.5">
+        <input type="checkbox" name="attention" value="1" onchange="this.form.submit()" {% if selected_attention == '1' %}checked{% endif %}>
+        Needs a look{% if attention_count %} <span class="rounded-full bg-red-50 text-red-700 px-2 py-0.5 text-xs font-medium">{{ attention_count }}</span>{% endif %}
+    </label>
+    <button type="submit" class="px-3 py-1.5 rounded-md border border-gray-300 text-sm">Filter</button>
+</form>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3">Payer</th>
+                <th class="px-4 py-3 min-w-[14rem]">For</th>
+                <th class="px-4 py-3 text-right">Total</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Receipt</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for payment in payments %}
+                <tr>
+                    <td class="px-4 py-3">
+                        <span class="font-medium text-gray-900">{{ payment.payer_name }}</span>
+                        {% if payment.payer_email %}<span class="block text-xs text-gray-400">{{ payment.payer_email }}</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">
+                        {{ payment.description }}
+                        <span class="block text-xs text-gray-400">{{ payment.created_at|date:"M j, Y H:i" }} · {{ payment.get_gateway_display }} · {{ payment.reference }}{% if payment.gateway_trace_id %} · trace {{ payment.gateway_trace_id }}{% endif %}{% if payment.recorded_by %} · by {{ payment.recorded_by.get_full_name }}{% endif %}</span>
+                        {% if payment.attention %}<span class="mt-1 block text-xs font-medium text-red-700">⚠ {{ payment.attention }}</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <span class="font-medium text-gray-900">{{ payment.amount|money }}</span>
+                        {% if payment.vat_amount %}<span class="block text-xs text-gray-400">{{ payment.subtotal|money }} + {{ payment.vat_amount|money }} VAT</span>{% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium
+                            {% if payment.status == 'success' %}bg-green-50 text-green-700{% elif payment.status == 'failed' %}bg-red-50 text-red-700{% elif payment.status == 'refunded' %}bg-purple-50 text-purple-700{% elif payment.status == 'pending' %}bg-amber-50 text-amber-700{% else %}bg-gray-100 text-gray-500{% endif %}">{{ payment.get_status_display }}</span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        {% if payment.receipt_number %}<a href="{% url 'billing:receipt' payment.reference %}" class="underline text-gray-700">{{ payment.receipt_number }}</a>{% if payment.credit_note_number %}<span class="block text-xs text-gray-400">{{ payment.credit_note_number }}</span>{% endif %}{% else %}<span class="text-gray-300">—</span>{% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No payments match.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'includes/pagination.html' %}
+{% endblock %}

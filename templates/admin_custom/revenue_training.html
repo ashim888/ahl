@@ -23,17 +23,17 @@
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Collected</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ collected_total|money }}</p>
-        <p class="mt-2 text-xs text-gray-400">Paid enrollments</p>
+        <p class="mt-2 text-xs text-gray-400">Excl. VAT ({{ vat_total|money }} VAT on top)</p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Pending</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ pending_total|money }}</p>
-        <p class="mt-2 text-xs text-gray-400">Awaiting payment</p>
+        <p class="mt-2 text-xs text-gray-400">Checkouts not paid yet</p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Refunded</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ refunded_total|money }}</p>
-        <p class="mt-2 text-xs text-gray-400">Returned to enrollees</p>
+        <p class="mt-2 text-xs text-gray-400">Refunds recorded, excl. VAT</p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Total Enrollments</p>

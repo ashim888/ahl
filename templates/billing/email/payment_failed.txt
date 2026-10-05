@@ -1,0 +1,9 @@
+Hi {{ payment.user.first_name }},
+{% if underpaid %}
+Fonepay reported a payment for {{ payment.description }} that was less than the {{ total }} due, so we couldn't give you access. Please email {{ contact_email }} with your reference {{ payment.reference }} and we'll sort it out.
+{% else %}
+Your payment of {{ total }} for {{ payment.description }} was declined, so nothing was charged and your access hasn't changed.
+
+Try again: {{ retry_url }}
+{% endif %}
+— {{ journal_name }}

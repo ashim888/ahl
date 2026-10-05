@@ -1,0 +1,69 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load money_tags %}
+
+{% block title %}{% if object %}{{ object.name }}{% else %}Add organization{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if object %}{{ object.name }}{% else %}Add organization{% endif %}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+    <p class="text-sm text-gray-500 mb-6">
+        Readers get access by confirming an email address at one of these domains — never by just typing one in.
+        Prices are VAT-exclusive; record money received <strong>including</strong> VAT and the receipt splits it out.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="space-y-5">
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.name %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.email_domains %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.plan %}
+            <div class="grid sm:grid-cols-3 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.start_date %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.end_date %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.seats %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.is_active %}
+            <div class="grid sm:grid-cols-2 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.contact_name %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.contact_email %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.amount_received %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.notes %}
+        </div>
+        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800">Save</button>
+            <a href="{% url 'billing:manage_organization_list' %}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if object %}
+<div class="mt-6 grid lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h3 class="text-base font-semibold text-gray-900">Members ({{ members|length }}{% if object.seats %} of {{ object.seats }}{% endif %})</h3>
+        <ul class="mt-3 divide-y divide-gray-100 text-sm">
+            {% for member in members %}
+                <li class="py-2 flex justify-between gap-3"><span>{{ member.user.get_full_name }} <span class="text-gray-400">{{ member.user.email }}</span></span><span class="text-gray-400 whitespace-nowrap">{{ member.joined_at|date:"M j, Y" }}</span></li>
+            {% empty %}
+                <li class="py-2 text-gray-500">Nobody has joined yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h3 class="text-base font-semibold text-gray-900">Payments</h3>
+        <ul class="mt-3 divide-y divide-gray-100 text-sm">
+            {% for payment in org_payments %}
+                <li class="py-2 flex justify-between gap-3">
+                    <span>{{ payment.completed_at|date:"M j, Y" }} · {% if payment.receipt_number %}<a href="{% url 'billing:receipt' payment.reference %}" class="underline">{{ payment.receipt_number }}</a>{% endif %}</span>
+                    <span class="font-medium">{{ payment.amount|money }}</span>
+                </li>
+            {% empty %}
+                <li class="py-2 text-gray-500">No payments recorded.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

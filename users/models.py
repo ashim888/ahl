@@ -87,6 +87,28 @@ class User(AbstractUser):
         help_text='Stamped automatically whenever verification_status changes (see signals.py). '
                    'Used to enforce the 30-day reapply cooldown after rejection.',
     )
+    # Privacy & email preferences (users/privacy.py, /account/privacy/).
+    email_topic_digest = models.BooleanField(
+        'Weekly digest of topics I follow', default=True,
+        help_text='The weekly email listing new articles in followed sections and topics.',
+    )
+    email_renewal_reminders = models.BooleanField(
+        'Subscription renewal reminders', default=True,
+        help_text='Emails before a subscription ends (billing/reminders.py).',
+    )
+    terms_accepted_at = models.DateTimeField(
+        null=True, blank=True, help_text='When the person agreed to the Terms of use and Privacy policy at sign-up.',
+    )
+    erased_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Set when the account was deleted at the person\'s request: personal data removed, row kept '
+                  'only so receipts and published records stay intact (users/privacy.py erase_user).',
+    )
+    email_confirmed_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When the person proved they receive mail at this address (users/email_confirmation.py). '
+                  'Cleared whenever the email changes. Organization access by email domain needs it.',
+    )
 
     orcid = models.CharField(
         max_length=19, unique=True, null=True, blank=True,

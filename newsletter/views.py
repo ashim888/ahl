@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView
 from django.utils.translation import gettext as _
@@ -77,6 +78,7 @@ def confirm(request, token):
     return render(request, 'newsletter/confirmed.html', {'subscriber': subscriber})
 
 
+@csrf_exempt  # mail clients' one-click unsubscribe POSTs here without a session (RFC 8058)
 def unsubscribe(request, token):
     subscriber = get_object_or_404(Subscriber, unsubscribe_token=token)
     if subscriber.status != Subscriber.Status.UNSUBSCRIBED:

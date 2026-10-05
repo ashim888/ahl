@@ -1,0 +1,13 @@
+{% extends 'email/base.html' %}
+{% block title %}New report{% endblock %}
+{% block preheader %}{{ report.get_reason_display }} — {{ report.target_summary }}{% endblock %}
+{% block eyebrow %}Reader report{% endblock %}
+{% block heading %}{{ report.get_reason_display }}{% endblock %}
+{% block content %}
+    <p><strong>{{ report.target_summary }}</strong></p>
+    {% if report.details %}<p style="white-space: pre-line;">{{ report.details }}</p>{% endif %}
+    <p style="font-size: 13px; color: #6b6860;">From {{ report.reporter_name|default:"an anonymous reader" }}{% if report.reporter_email %} ({{ report.reporter_email }}){% endif %}.</p>
+    {% include 'email/includes/button.html' with url=queue_url label='Open the reports queue' %}
+    {% if target_url %}{% include 'email/includes/link_fallback.html' with url=target_url %}{% endif %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you're an editor at {{ journal_name }}.{% endblock %}

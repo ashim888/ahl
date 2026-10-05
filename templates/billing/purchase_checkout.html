@@ -4,6 +4,7 @@
 
 {% block title %}{% trans "Checkout" %} — {{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
 {% block content %}
 <div class="max-w-lg mx-auto px-6 py-14">
     <a href="{% url 'articles:article_detail' article.slug %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "← BACK TO ARTICLE" %}</a>
@@ -19,10 +20,8 @@
                 <h2 class="font-display text-lg font-bold leading-snug mt-1">{{ article.title }}</h2>
             </div>
         </div>
-        <div class="border-t border-border px-5 py-4 flex items-baseline justify-between">
-            <span class="font-mono-editorial text-xs text-muted-foreground">{% trans "One-time purchase" %}</span>
-            <span class="font-display text-2xl font-bold">{{ article.price|money }}</span>
-        </div>
+        {% trans "One-time purchase" as purchase_label %}
+        {% include 'billing/includes/bill_summary.html' with price=article.price label=purchase_label %}
     </div>
 
     {% if PAYMENTS_LIVE %}
@@ -41,5 +40,6 @@
             {% if PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & UNLOCK ARTICLE" %}{% endif %}
         </button>
     </form>
+    {% include 'billing/includes/agree_terms.html' %}
 </div>
 {% endblock %}

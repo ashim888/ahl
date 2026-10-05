@@ -1,0 +1,9 @@
+Hi {{ user.first_name }},
+
+Please confirm that {{ user.email }} is your address{% if organization %} — then you can read {{ journal_name }} under {{ organization.name }}'s subscription{% endif %}.
+
+Confirm my email: {{ confirm_url }}
+
+The link works for {{ valid_days }} days. If you didn't ask for this, ignore this email.
+
+— {{ journal_name }}

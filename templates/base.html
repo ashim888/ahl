@@ -2,15 +2,16 @@
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KDLXMLM9WD"></script>
+    {% if GOOGLE_ANALYTICS_ID and analytics_consent %}
+    {# Google Analytics — only after the reader accepted analytics cookies (includes/cookie_consent.html). #}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_ID }}"></script>
     <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
-    gtag('config', 'G-KDLXMLM9WD');
+    gtag('config', '{{ GOOGLE_ANALYTICS_ID }}');
     </script>
+    {% endif %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
@@ -36,9 +37,10 @@
     {# Sitewide NewsMediaOrganization + WebSite/SearchAction — see ajna_health_lens/context_processors.py. #}
     <script type="application/ld+json">{{ sitewide_structured_data_json }}</script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+    {# Fonts are served from this site (static/css/fonts.css), not Google — no visitor IP goes to Google. #}
+    <link rel="preload" href="{% static 'fonts/playfair-display-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'fonts/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <link rel="stylesheet" href="{% static 'css/rich-content.css' %}">
     <style>
@@ -479,7 +481,8 @@
     {% endif %}
     {% endwith %}
 
-    {% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}
+    {% comment %}Pages about money or terms (checkout, receipts, billing, policies) empty these blocks: no ads there.{% endcomment %}
+    {% block header_ad %}{% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}{% endblock %}
 
     <main class="flex-1">
         {% if messages %}
@@ -497,7 +500,8 @@
         {% block content %}{% endblock %}
     </main>
 
-    {% ad_slot 'mobile_anchor' wrapper_class='md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border flex justify-center py-1' %}
+    {% include 'includes/cookie_consent.html' %}
+    {% block anchor_ad %}{% ad_slot 'mobile_anchor' wrapper_class='md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border flex justify-center py-1' %}{% endblock %}
 
     <footer class="bg-foreground text-primary-foreground">
         <div class="max-w-7xl mx-auto px-6 py-10">
@@ -539,6 +543,11 @@
                     <a href="{% url 'editorial_board:public_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Board" %}</a>
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Policies" %}</a>
                     <a href="{% url 'users:register' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Register" %}</a>
+                    {% for legal_page in legal_pages %}
+                        <a href="{{ legal_page.get_absolute_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ legal_page.title }}</a>
+                    {% endfor %}
+                    <a href="#" data-cookie-settings class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Cookie settings" %}</a>
+                    {% if user.is_authenticated %}<a href="{% url 'users:privacy' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Privacy & your data" %}</a>{% endif %}
                 </div>
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{{ JOURNAL_NAME|upper }}</p>
@@ -548,7 +557,8 @@
             </div>
             <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
                 <p class="font-mono-editorial text-xs opacity-30">
-                    &copy; {% now "Y" %} {{ JOURNAL_NAME }}. {% trans "All rights reserved." %}
+                    &copy; {% now "Y" %} {{ BUSINESS_LEGAL_NAME|default:JOURNAL_NAME }}. {% trans "All rights reserved." %}
+                    {% if BUSINESS_PAN %}· PAN {{ BUSINESS_PAN }}{% endif %}{% if BUSINESS_ADDRESS %} · {{ BUSINESS_ADDRESS }}{% endif %}
                 </p>
                 <p class="font-mono-editorial text-xs opacity-30">
                     ISSN {{ JOURNAL_ISSN }}

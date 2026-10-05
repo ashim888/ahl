@@ -136,6 +136,8 @@ class UserSubscription(models.Model):
     # once checkout exists; blank for manually-granted subscriptions.
     payment_reference = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Which expiry emails went out ("7", "1", "ended") — see billing/reminders.py.
+    reminders_sent = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -248,33 +250,159 @@ def generate_payment_reference() -> str:
     return 'AHL' + secrets.token_hex(10).upper()
 
 
+class Organization(models.Model):
+    """An institution (hospital, university, NGO) whose staff read under one
+    subscription: anyone with a confirmed email address at one of its
+    domains gets the plan's access while the deal is current. Set up by
+    senior staff after a deal is agreed (/manage/billing/organizations/);
+    there's no self-serve checkout for these.
+    """
+
+    name = models.CharField(max_length=255)
+    email_domains = models.TextField(
+        help_text='One per line, e.g. nhrc.gov.np. Addresses at subdomains (staff@dept.nhrc.gov.np) count too. '
+                  'Public email providers (gmail.com and the like) are refused.',
+    )
+    plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.PROTECT, related_name='organizations',
+        help_text='Decides what members get (ad-free, archive, gifting…).',
+    )
+    start_date = models.DateField(default=timezone.localdate)
+    end_date = models.DateField()
+    seats = models.PositiveIntegerField(
+        null=True, blank=True, help_text='Most people who can join. Leave empty for no limit.',
+    )
+    is_active = models.BooleanField(default=True, help_text='Untick to stop access straight away.')
+    contact_name = models.CharField(max_length=255, blank=True)
+    contact_email = models.EmailField(blank=True, help_text='Gets the receipt for payments recorded against this organization.')
+    notes = models.TextField(blank=True, help_text='Staff only — contract details, invoice numbers.')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def domains(self) -> list[str]:
+        return [line.strip().lower().lstrip('@') for line in self.email_domains.splitlines() if line.strip()]
+
+    def matches_email(self, email: str) -> bool:
+        domain = (email or '').rpartition('@')[2].lower()
+        return bool(domain) and any(domain == d or domain.endswith(f'.{d}') for d in self.domains)
+
+    @property
+    def is_current(self) -> bool:
+        return self.is_active and self.start_date <= timezone.localdate() <= self.end_date
+
+    @property
+    def seats_left(self):
+        return None if self.seats is None else max(self.seats - self.members.count(), 0)
+
+
+class OrganizationMember(models.Model):
+    """Someone reading under an Organization — recorded the first time
+    their confirmed email gets them access, for seat counting and the
+    usage figures an institution asks for."""
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='organization_memberships')
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-joined_at']
+        unique_together = ('organization', 'user')
+
+    def __str__(self):
+        return f'{self.user} at {self.organization}'
+
+
+class ReceiptSequence(models.Model):
+    """Hands out gap-free receipt numbers (billing/payments.py
+    next_receipt_number) — one row, locked while a number is taken, so two
+    payments confirmed at the same moment never share or skip a number."""
+
+    name = models.CharField(max_length=30, unique=True)
+    last_number = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f'{self.name}: {self.last_number}'
+
+
 class Payment(models.Model):
-    """One checkout through a real gateway (Fonepay): created when the
-    reader starts paying, confirmed only by a server-side status check
-    (billing/payments.py verify_payment). Access — the subscription,
-    article purchase or course enrollment — is granted exactly once, on the
-    transition to Success.
+    """Every payment that bought access — the one money ledger. Fonepay
+    checkouts start Pending and are confirmed only by a server-side status
+    check (billing/payments.py verify_payment); payments staff record by
+    hand (bank transfer, cheque) and the development stub gateway are
+    created already Paid. Access — the subscription, article purchase or
+    course enrollment — is granted exactly once, on the transition to Paid,
+    which also assigns the receipt number and emails the receipt.
+
+    Prices are VAT-exclusive: `subtotal` is the price, `vat_amount` the VAT
+    on top, `amount` what was actually paid (subtotal + VAT).
     """
 
     class Kind(models.TextChoices):
         SUBSCRIPTION = 'subscription', 'Subscription'
         ARTICLE = 'article', 'Article purchase'
         COURSE = 'course', 'Training course'
+        INSTITUTIONAL = 'institutional', 'Institutional subscription'
+
+    class Gateway(models.TextChoices):
+        FONEPAY = 'fonepay', 'Fonepay'
+        MANUAL = 'manual', 'Recorded by staff'
+        STUB = 'stub', 'Test gateway'
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'Waiting for payment'
         SUCCESS = 'success', 'Paid'
         FAILED = 'failed', 'Failed'
         EXPIRED = 'expired', 'Expired'
+        REFUNDED = 'refunded', 'Refunded'
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payments')
+    # Empty only for an institutional payment (the organization paid).
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='payments',
+    )
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, null=True, blank=True, related_name='payments',
+    )
     kind = models.CharField(max_length=20, choices=Kind.choices)
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     article = models.ForeignKey('articles.Article', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     course = models.ForeignKey('training.TrainingCourse', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Price before VAT.')
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Total paid, VAT included.')
     description = models.CharField(max_length=255)
-    gateway = models.CharField(max_length=20, default='fonepay')
+    gateway = models.CharField(max_length=20, choices=Gateway.choices, default=Gateway.FONEPAY)
+    receipt_number = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    # Who the receipt was made out to, frozen when the payment completed —
+    # receipts are tax records and must stay readable even after the payer
+    # deletes their account (users/privacy.py erase_user).
+    billed_name = models.CharField(max_length=255, blank=True)
+    billed_email = models.EmailField(blank=True)
+    # Where to send the reader after paying (e.g. the article whose paywall
+    # they subscribed from) — a site-relative path, checked when set.
+    return_path = models.CharField(max_length=255, blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+        help_text='The staff member who recorded a manual payment.',
+    )
+    # Something a person should look at — set when a paid payment couldn't
+    # be granted cleanly (already owned, course over capacity…). Shown on
+    # the Payments screen; cleared by staff once handled.
+    attention = models.CharField(max_length=255, blank=True)
+    # Refunds (billing/payments.py refund_payment): always the full amount,
+    # money returned outside the site (bank transfer / Fonepay merchant
+    # portal); recording it here removes the access and issues a credit note.
+    refunded_at = models.DateTimeField(null=True, blank=True)
+    refunded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    refund_reason = models.TextField(blank=True)
+    credit_note_number = models.CharField(max_length=30, unique=True, null=True, blank=True)
     reference = models.CharField(max_length=30, unique=True, default=generate_payment_reference)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
     qr_message = models.TextField(blank=True, help_text='Fonepay QR payload, shown as a QR or passed to a bank app.')
@@ -295,3 +423,19 @@ class Payment(models.Model):
     @property
     def is_expired(self) -> bool:
         return self.status == self.Status.PENDING and timezone.now() >= self.expires_at
+
+    @property
+    def payer_name(self) -> str:
+        if self.billed_name:
+            return self.billed_name
+        if self.organization_id:
+            return self.organization.name
+        return self.user.get_full_name() or self.user.email if self.user_id else ''
+
+    @property
+    def payer_email(self) -> str:
+        if self.billed_email:
+            return self.billed_email
+        if self.organization_id:
+            return self.organization.contact_email
+        return self.user.email if self.user_id else ''

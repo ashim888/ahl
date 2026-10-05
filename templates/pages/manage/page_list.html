@@ -1,0 +1,29 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Site pages — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Site pages{% endblock %}
+
+{% block content %}
+<p class="text-sm text-gray-500">
+    Terms, privacy and refund policy. Payment providers expect all three on a site that takes payments, and the checkout
+    links to them once they're published. <strong>The text started as a draft written for you — read it, adjust it to
+    your actual practice (have a lawyer look if you can), then publish.</strong>
+</p>
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr><th class="px-4 py-3">Page</th><th class="px-4 py-3">Address</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Last edited</th></tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for page in pages %}
+                <tr>
+                    <td class="px-4 py-3"><a href="{% url 'pages:manage_page_update' page.slug %}" class="font-medium text-gray-900 underline">{{ page.title_en }}</a></td>
+                    <td class="px-4 py-3"><a href="{{ page.get_absolute_url }}" class="text-gray-600 underline">{{ page.get_absolute_url }}</a></td>
+                    <td class="px-4 py-3">{% if page.is_published %}<span class="rounded-full bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">Published</span>{% else %}<span class="rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-medium">Draft — not public</span>{% endif %}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ page.updated_at|date:"M j, Y" }}{% if page.updated_by %} · {{ page.updated_by.get_full_name }}{% endif %}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

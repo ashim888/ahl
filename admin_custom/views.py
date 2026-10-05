@@ -14,7 +14,7 @@ from django_comments_xtd.models import XtdComment
 
 from ads.models import AdEvent, AdSlot
 from articles.models import Article, ArticleView, Keyword, KeywordEvent
-from billing.models import ArticlePurchase, SubscriptionPlan, UserSubscription
+from billing.models import ArticlePurchase, Payment, SubscriptionPlan, UserSubscription
 from newsletter.models import NewsletterIssue, Subscriber
 from pitches.models import StoryPitch
 from training.models import Enrollment, TrainingCourse
@@ -250,32 +250,40 @@ class DashboardHomeView(TemplateView):
         return context
 
 
+# Revenue = money actually received: Paid payments in the billing ledger
+# (billing.models.Payment — Fonepay, staff-recorded transfers, the dev stub),
+# counted net of VAT (Payment.subtotal); VAT collected is shown separately.
+# Complimentary grants have no payment and so count as nothing.
+SUBSCRIPTION_KINDS = (Payment.Kind.SUBSCRIPTION, Payment.Kind.INSTITUTIONAL)
+
+
+def _paid(*kinds):
+    return Payment.objects.filter(status=Payment.Status.SUCCESS, kind__in=kinds)
+
+
+def _net(queryset):
+    return queryset.aggregate(total=Sum('subtotal'))['total'] or 0
+
+
+def _vat(queryset):
+    return queryset.aggregate(total=Sum('vat_amount'))['total'] or 0
+
+
 def _training_revenue_trend(days, day_labels):
-    """Daily 'collected' revenue (PAID enrollments, priced at course.price,
-    bucketed by enrolled_at) — used by both RevenueTrainingView and
-    RevenueOverviewView, which is why it's a standalone function rather than
-    inlined in one view's get_context_data.
-    """
-    paid_enrollments = Enrollment.objects.filter(payment_status=Enrollment.PaymentStatus.PAID)
-    sums = _daily_sums(paid_enrollments, 'enrolled_at', 'course__price', days)
+    """Daily training revenue (net of VAT, by payment date) — used by both
+    RevenueTrainingView and RevenueOverviewView."""
+    sums = _daily_sums(_paid(Payment.Kind.COURSE), 'completed_at', 'subtotal', days)
     return _trend_bars(day_labels, sums), sums
 
 
 def _subscription_purchase_revenue_trend(days, day_labels):
-    """Daily subscription + purchase revenue, used by both
-    RevenueSubscriptionsView and RevenueOverviewView. Subscription revenue
-    here is the plan price at the moment a subscription is *created*
-    (bucketed by created_at) — a proxy for the initial payment, not a full
-    ledger of recurring renewals, since UserSubscription only tracks the
-    current period rather than a payment history (see its docstring —
-    renewals will need a real gateway's webhook events to track properly).
-    Purchase revenue is exact: ArticlePurchase.amount is a real one-time
-    transaction, bucketed by purchased_at.
-    """
-    sub_sums = _daily_sums(UserSubscription.objects.all(), 'created_at', 'plan__price', days)
-    purchase_sums = _daily_sums(ArticlePurchase.objects.all(), 'purchased_at', 'amount', days)
-    combined = [s + p for s, p in zip(sub_sums, purchase_sums)]
-    return _trend_bars(day_labels, combined), combined
+    """Daily subscription (personal + institutional) and article-purchase
+    revenue, net of VAT, by payment date — used by RevenueSubscriptionsView
+    and RevenueOverviewView. Renewals count each time they're paid."""
+    sums = _daily_sums(
+        _paid(*SUBSCRIPTION_KINDS, Payment.Kind.ARTICLE), 'completed_at', 'subtotal', days,
+    )
+    return _trend_bars(day_labels, sums), sums
 
 
 def _mrr_estimate(active_subs):
@@ -306,14 +314,14 @@ class RevenueTrainingView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        def total_for(payment_status):
-            return Enrollment.objects.filter(
-                payment_status=payment_status,
-            ).aggregate(total=Sum('course__price'))['total'] or 0
-
-        context['collected_total'] = total_for(Enrollment.PaymentStatus.PAID)
-        context['pending_total'] = total_for(Enrollment.PaymentStatus.PENDING)
-        context['refunded_total'] = total_for(Enrollment.PaymentStatus.REFUNDED)
+        course_payments = _paid(Payment.Kind.COURSE)
+        context['collected_total'] = _net(course_payments)
+        context['vat_total'] = _vat(course_payments)
+        # Started at checkout but not paid yet (Fonepay QR still open).
+        context['pending_total'] = Payment.objects.filter(
+            kind=Payment.Kind.COURSE, status=Payment.Status.PENDING, expires_at__gt=timezone.now(),
+        ).aggregate(total=Sum('subtotal'))['total'] or 0
+        context['refunded_total'] = _net(Payment.objects.filter(kind=Payment.Kind.COURSE, status=Payment.Status.REFUNDED))
         context['enrollment_total'] = Enrollment.objects.count()
 
         today = timezone.localdate()
@@ -327,8 +335,11 @@ class RevenueTrainingView(TemplateView):
             refunded_count=Count('enrollments', filter=Q(enrollments__payment_status=Enrollment.PaymentStatus.REFUNDED)),
             total_enrollments=Count('enrollments'),
         ).order_by('-total_enrollments')
+        collected = dict(
+            course_payments.values('course').annotate(total=Sum('subtotal')).values_list('course', 'total'),
+        )
         for course in courses:
-            course.collected = course.paid_count * course.price
+            course.collected = collected.get(course.pk, 0)
         context['courses'] = courses
 
         return context
@@ -370,12 +381,17 @@ class RevenueSubscriptionsView(TemplateView):
             )),
             lifetime_count=Count('subscriptions'),
         ).order_by('-lifetime_count')
+        plan_revenue = dict(
+            _paid(*SUBSCRIPTION_KINDS).values('plan').annotate(total=Sum('subtotal')).values_list('plan', 'total'),
+        )
         for plan in plans:
-            plan.lifetime_revenue = plan.lifetime_count * plan.price
+            plan.lifetime_revenue = plan_revenue.get(plan.pk, 0)
         context['plans'] = plans
 
-        context['purchase_count'] = ArticlePurchase.objects.count()
-        context['purchase_revenue'] = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+        article_payments = _paid(Payment.Kind.ARTICLE)
+        context['purchase_count'] = article_payments.count()
+        context['purchase_revenue'] = _net(article_payments)
+        context['vat_total'] = _vat(_paid(*SUBSCRIPTION_KINDS, Payment.Kind.ARTICLE))
 
         days = [today - datetime.timedelta(days=i) for i in range(REVENUE_TREND_DAYS - 1, -1, -1)]
         day_labels = [d.strftime('%b %-d') for d in days]
@@ -402,14 +418,11 @@ class RevenueOverviewView(TemplateView):
         context = super().get_context_data(**kwargs)
         today = timezone.localdate()
 
-        training_total = Enrollment.objects.filter(
-            payment_status=Enrollment.PaymentStatus.PAID,
-        ).aggregate(total=Sum('course__price'))['total'] or 0
-        subscription_total = UserSubscription.objects.aggregate(
-            total=Sum('plan__price'),
-        )['total'] or 0
-        purchase_total = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
-
+        training_total = _net(_paid(Payment.Kind.COURSE))
+        subscription_total = _net(_paid(*SUBSCRIPTION_KINDS))
+        purchase_total = _net(_paid(Payment.Kind.ARTICLE))
+        context['vat_total'] = _vat(Payment.objects.filter(status=Payment.Status.SUCCESS))
+        context['refunded_total'] = _net(Payment.objects.filter(status=Payment.Status.REFUNDED))
         context['training_total'] = training_total
         context['subscription_total'] = subscription_total
         context['purchase_total'] = purchase_total
@@ -494,9 +507,7 @@ class AnalyticsView(TemplateView):
             status=UserSubscription.Status.CANCELLED,
         ).count()
         context['purchase_count'] = ArticlePurchase.objects.count()
-        context['purchase_revenue'] = (
-            ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
-        ) if show_money else None
+        context['purchase_revenue'] = _net(_paid(Payment.Kind.ARTICLE)) if show_money else None
 
         # -- Ads ---------------------------------------------------------------
         ads_all_time_impressions = AdSlot.objects.aggregate(total=Sum('impression_count'))['total'] or 0
@@ -598,10 +609,7 @@ def analytics_csv_export(request):
         UserSubscription.objects.filter(status=UserSubscription.Status.CANCELLED).count(),
     ])
     writer.writerow(['Article purchases (lifetime count)', ArticlePurchase.objects.count()])
-    writer.writerow([
-        'Article purchase revenue (lifetime)',
-        ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0,
-    ])
+    writer.writerow(['Article purchase revenue (lifetime, excl. VAT)', _net(_paid(Payment.Kind.ARTICLE))])
     writer.writerow([])
 
     # -- Ads -----------------------------------------------------------------

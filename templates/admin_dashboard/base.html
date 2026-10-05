@@ -211,6 +211,16 @@
                     <span class="ml-auto shrink-0 min-w-[1.25rem] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[0.65rem] font-semibold text-center" title="New in the last 24 hours">{{ work_counts.new_comments }}</span>
                 {% endif %}
             </a>
+            <a href="{% url 'admin_custom:manage_report_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_report' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 21V4m0 0h11l-1.5 4L15 12H4"/>
+                </svg>
+                Reports
+                {% if work_counts.open_reports %}
+                    <span class="ml-auto shrink-0 min-w-[1.25rem] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[0.65rem] font-semibold text-center" title="Waiting for an editor">{{ work_counts.open_reports }}</span>
+                {% endif %}
+            </a>
             <a href="{% url 'editorial_board:manage_member_list' %}"
                class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_member' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -225,6 +235,15 @@
                 </svg>
                 Sections
             </a>
+            {% if user.is_senior_staff %}
+            <a href="{% url 'pages:manage_page_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_page' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6M9 16h6M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/>
+                </svg>
+                Terms &amp; policies
+            </a>
+            {% endif %}
 
             <p class="px-3 pt-4 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400 border-t border-gray-100 mt-2">People &amp; Access</p>
             <a href="{% url 'users:verification_queue' %}"
@@ -280,11 +299,25 @@
             <p class="px-3 pt-4 pb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400 border-t border-gray-100 mt-2">Growth &amp; Revenue</p>
             {% if user.is_senior_staff %}
             <a href="{% url 'billing:manage_plan_list' %}"
-               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'billing:manage' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'billing:manage' in view_name and 'manage_payment' not in view_name and 'manage_organization' not in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h2m10-9H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z"/>
                 </svg>
                 Plans
+            </a>
+            <a href="{% url 'billing:manage_payment_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_payment' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l2 2 4-4M7 3h10a2 2 0 0 1 2 2v16l-3-2-3 2-3-2-3 2-2-1.33V5a2 2 0 0 1 2-2Z"/>
+                </svg>
+                Payments
+            </a>
+            <a href="{% url 'billing:manage_organization_list' %}"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg {% if 'manage_organization' in view_name %}bg-gray-100 text-gray-900 font-medium{% else %}text-gray-500 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 10h.01M15 10h.01"/>
+                </svg>
+                Organizations
             </a>
             {% endif %}
             <a href="{% url 'training:manage_course_list' %}"

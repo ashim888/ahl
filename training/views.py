@@ -13,6 +13,7 @@ from articles.seo import breadcrumb_list_structured_data
 from billing import payments
 from billing.gateway import charge_safely
 from billing.models import Payment
+from billing.money import price_with_vat
 from users.decorators import role_required
 from users.models import User
 
@@ -106,7 +107,7 @@ class CourseDetailView(DetailView):
         context['enrolled_count'] = enrolled_count
         context['spots_left'] = (
             None if course.max_enrollments is None
-            else max(course.max_enrollments - enrolled_count, 0)
+            else max(course.max_enrollments - payments.seats_taken(course), 0)
         )
         if self.request.user.is_authenticated:
             context['enrollment'] = Enrollment.objects.filter(
@@ -149,32 +150,37 @@ def course_checkout(request, pk):
         messages.info(request, "You're already enrolled in this course.")
         return redirect('training:course_detail', pk=pk)
 
-    if course.max_enrollments is not None:
-        active_count = course.enrollments.exclude(status=Enrollment.Status.CANCELLED).count()
-        if active_count >= course.max_enrollments:
-            messages.error(request, 'This course is full.')
-            return redirect('training:course_detail', pk=pk)
+    # Seats held by people still paying count as taken (payments.seats_taken),
+    # so the last seat can't be sold twice.
+    if course.max_enrollments is not None and payments.seats_taken(course, exclude_user=request.user) >= course.max_enrollments:
+        messages.error(request, 'This course is full.')
+        return redirect('training:course_detail', pk=pk)
 
     # Fonepay's minimum is Rs. 1 — a free course enrolls directly.
     if request.method == 'POST' and payments.uses_fonepay() and course.price > 0:
         from billing.views import _start_fonepay
 
         return _start_fonepay(
-            request, kind=Payment.Kind.COURSE, amount=course.price, description=f'Training — {course.title}', course=course,
+            request, kind=Payment.Kind.COURSE, price=course.price, description=f'Training — {course.title}', course=course,
         )
+    if request.method == 'POST' and course.price <= 0:
+        # Free course: no payment, no receipt.
+        if existing:
+            existing.status = Enrollment.Status.ACTIVE
+            existing.save(update_fields=['status'])
+        else:
+            Enrollment.objects.create(user=request.user, course=course, payment_status=Enrollment.PaymentStatus.PAID)
+        messages.success(request, f'Enrolled in "{course.title}".')
+        return redirect('training:course_detail', pk=pk)
     if request.method == 'POST':
-        result = charge_safely(request.user, course.price, f'Training — {course.title}')
+        description = f'Training — {course.title}'
+        result = charge_safely(request.user, price_with_vat(course.price), description)
         if result.success:
-            if existing:
-                existing.status = Enrollment.Status.ACTIVE
-                existing.payment_status = Enrollment.PaymentStatus.PAID
-                existing.payment_reference = result.reference
-                existing.save(update_fields=['status', 'payment_status', 'payment_reference'])
-            else:
-                Enrollment.objects.create(
-                    user=request.user, course=course,
-                    payment_status=Enrollment.PaymentStatus.PAID, payment_reference=result.reference,
-                )
+            payment = payments.record_paid_payment(
+                user=request.user, kind=Payment.Kind.COURSE, course=course, price=course.price,
+                description=description, gateway=Payment.Gateway.STUB,
+            )
+            Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
             messages.success(request, f'Enrolled in "{course.title}".')
             return redirect('training:course_detail', pk=pk)
         messages.error(request, result.error or 'Payment failed — please try again.')

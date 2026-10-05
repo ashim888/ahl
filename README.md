@@ -184,6 +184,19 @@ coverage run --source=. --omit='*/migrations/*,*/tests.py,*/test_*.py,.venv/*' m
 coverage report -m --skip-covered --sort=miss
 ```
 
+## Fonts
+
+Fonts are served from this site (`static/css/fonts.css` + `static/fonts/`), not Google Fonts, so
+visitors' IP addresses don't go to Google. They're the Fontsource builds of Playfair Display,
+Inter, Space Mono and Noto Sans/Serif Devanagari (latin, latin-ext and devanagari subsets; SIL Open
+Font License). To change a font, `npm install @fontsource-variable/<name>` in a scratch folder,
+copy the `.woff2` files for those subsets into `static/fonts/`, and add matching `@font-face` rules
+to `fonts.css`.
+
+## Incidents
+
+If personal data may have been exposed, follow [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md).
+
 ## Project layout
 
 Each Django app owns one concern:
@@ -200,6 +213,7 @@ Each Django app owns one concern:
 | `newsletter` | Free email newsletter, double opt-in, async bulk send |
 | `ads` | House-sold ad zones, impressions/clicks |
 | `pitches` | Public story-pitch intake → editorial review queue |
+| `pages` | Terms, privacy and refund policy pages, edited at `/manage/pages/` |
 | `admin_custom` | The editorial dashboard (KPIs, BI analytics, keyword analytics, comment alerts, analytics retention) |
 
 ## Deployment
@@ -208,6 +222,18 @@ After pulling new code on the server: run `deploy.sh` (migrations, translations,
 checks), make sure the `qcluster` worker is running, and restart the app so `.env` changes take
 effect. The compiled CSS (`static/css/tailwind.css`) is committed, so the server doesn't need
 Node.js.
+
+Billing needs these in the server `.env` (see `.env.example`):
+
+- `VAT_RATE` — default 13. Every price is VAT-exclusive and checkout adds it.
+- `BUSINESS_LEGAL_NAME`, `BUSINESS_PAN`, `BUSINESS_ADDRESS` — printed on every receipt.
+  `check --deploy` warns (`ajna.W001`) when payments are live without them.
+- `RECEIPT_PREFIX` — receipt numbers are this plus a gap-free sequence.
+- `GOOGLE_ANALYTICS_ID` — loaded only for readers who accept analytics cookies; empty switches
+  analytics off.
+
+The `qcluster` worker also sends the subscription expiry reminders (daily, 08:00) and runs the
+privacy clean-up (daily, 03:30 — `users/privacy.py`).
 
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.

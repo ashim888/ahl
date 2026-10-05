@@ -9,7 +9,7 @@ browser but every emailed link is dead, and nothing errors anywhere.
 from urllib.parse import urlparse
 
 from django.conf import settings
-from django.core.checks import Error, Tags, register
+from django.core.checks import Error, Tags, Warning, register
 
 LOCAL_HOSTS = {'localhost', '127.0.0.1', '0.0.0.0', ''}
 
@@ -64,4 +64,20 @@ def check_debug_off(app_configs, **kwargs):
         'DEBUG is on — this server would show full debug error pages to the public.',
         hint='Set DEBUG=False in the server .env (or remove the line).',
         id='ajna.E004',
+    )]
+
+
+@register(Tags.security, deploy=True)
+def check_receipt_details(app_configs, **kwargs):
+    """Every paid checkout emails a receipt with the seller's details; with
+    real payments switched on they should be filled in."""
+    if settings.DEBUG or settings.PAYMENT_GATEWAY != 'fonepay':
+        return []
+    missing = [name for name in ('BUSINESS_PAN', 'BUSINESS_ADDRESS') if not getattr(settings, name, '')]
+    if not missing:
+        return []
+    return [Warning(
+        f'{", ".join(missing)} not set — receipts go out without the business\'s PAN/address.',
+        hint='Set BUSINESS_LEGAL_NAME, BUSINESS_PAN and BUSINESS_ADDRESS in the server .env.',
+        id='ajna.W001',
     )]

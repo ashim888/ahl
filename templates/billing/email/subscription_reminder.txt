@@ -1,0 +1,11 @@
+Hi {{ user.first_name }},
+{% if stage == 'ended' %}
+Your {{ plan.name }} subscription ended on {{ subscription.end_date|date:"j M Y" }}, so subscriber articles are locked again. Renew any time to pick up where you left off.
+{% else %}
+Your {{ plan.name }} subscription runs until {{ subscription.end_date|date:"j M Y" }}. Subscriptions don't renew automatically — renew now and the new period starts the day after this one ends, so you won't lose a day.
+{% endif %}
+{% if plan.is_active %}Renew now: {{ renew_url }}{% else %}See plans: {{ plans_url }}{% endif %}
+
+— {{ journal_name }}
+
+Stop renewal reminders: {{ unsubscribe_url }}

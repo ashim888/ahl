@@ -85,3 +85,15 @@
 .prose-article figure.table > figcaption, .prose-article table > caption {
     caption-side: top; font-size: 0.8rem; color: #6b6860; padding-bottom: 0.5rem; text-align: left;
 }
+
+/* Terms / Privacy / Refund pages (templates/pages/page.html): plain reading
+   text — the article styles minus the drop cap and ad-friendly spacing. */
+.policy-text p { margin: 0 0 1em; }
+.policy-text h2 { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; font-size: 1.4rem; font-weight: 700; margin: 2em 0 0.6em; }
+.policy-text h3 { font-weight: 700; margin: 1.5em 0 0.5em; }
+.policy-text ul, .policy-text ol { padding-left: 1.5em; margin: 0 0 1em; }
+.policy-text ul { list-style: disc; }
+.policy-text ol { list-style: decimal; }
+.policy-text li { margin: 0.3em 0; }
+.policy-text a { text-decoration: underline; }
+.policy-text a:hover { color: #c0392b; }

@@ -553,6 +553,12 @@ class ArticleDetailView(DetailView):
                     'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
                 }
         context['show_full_text'] = show_full_text
+        if not show_full_text and self.request.user.is_authenticated:
+            # Their organization subscribes, they just haven't confirmed their
+            # email yet — the paywall offers that instead of a checkout.
+            from billing.institutions import pending_organization_for
+
+            context['pending_organization'] = pending_organization_for(self.request.user)
         context['is_bookmarked'] = (
             self.request.user.is_authenticated
             and Bookmark.objects.filter(user=self.request.user, article=self.object).exists()

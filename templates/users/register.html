@@ -30,7 +30,7 @@
             {% endif %}{% endfor %}
         </div>
 
-        {% for field in form %}{% if field.name != 'first_name' and field.name != 'last_name' %}
+        {% for field in form %}{% if field.name != 'first_name' and field.name != 'last_name' and field.name != 'accept_terms' %}
             <div>
                 <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ field.id_for_label }}">
                     {% if field.name == 'email' %}{% trans "EMAIL" %}{% elif field.name == 'password1' %}{% trans "PASSWORD" %}{% else %}{% trans "CONFIRM PASSWORD" %}{% endif %} <span class="text-accent">*</span>
@@ -42,6 +42,16 @@
                 {% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
             </div>
         {% endif %}{% endfor %}
+
+        {% if form.accept_terms %}
+            <div>
+                <label class="flex items-start gap-3 text-sm">
+                    <input type="checkbox" name="{{ form.accept_terms.html_name }}" id="{{ form.accept_terms.id_for_label }}" class="mt-1" {% if form.accept_terms.value %}checked{% endif %} required>
+                    <span>{% trans "I agree to the" %}{% for legal_page in form.consent_pages %}{% if not forloop.first %} {% trans "and" %}{% endif %} <a href="{{ legal_page.get_absolute_url }}" target="_blank" class="underline hover:text-accent">{{ legal_page.title }}</a>{% endfor %}{% trans "." context "end of: I agree to the Terms and Privacy policy" %}</span>
+                </label>
+                {% for error in form.accept_terms.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
+            </div>
+        {% endif %}
 
         <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent transition-colors">
             {% trans "CREATE ACCOUNT" %}

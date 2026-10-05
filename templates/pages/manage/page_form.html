@@ -1,0 +1,32 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{{ object.title_en }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{{ object.title_en }}{% endblock %}
+{% block extra_head %}{{ form.media }}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+    <p class="text-sm text-gray-500 mb-6">
+        Shown at <a href="{{ object.get_absolute_url }}" class="underline">{{ object.get_absolute_url }}</a>{% if not object.is_published %} once published — you can preview it there now{% endif %}.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="space-y-5">
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.title_en %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.body_en %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.is_published %}
+            <details class="border-t border-gray-100 pt-5">
+                <summary class="cursor-pointer text-sm font-medium text-gray-700">Nepali version (optional)</summary>
+                <div class="mt-5 space-y-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.title_ne %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.body_ne %}
+                </div>
+            </details>
+        </div>
+        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800">Save</button>
+            <a href="{% url 'pages:manage_page_list' %}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

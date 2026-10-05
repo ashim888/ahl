@@ -34,6 +34,9 @@ render_xtdcomment_tree for nested replies, same as the package default.
                         {% trans "REPLY" %}
                     </a>
                 {% endif %}
+                <a href="{% url 'report_content' %}?comment={{ item.comment.pk }}" rel="nofollow" class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent">
+                    {% trans "REPORT" %}
+                </a>
                 {% if perms.django_comments.can_moderate %}
                     <a href="{% url 'comments-delete' item.comment.pk %}" class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent">
                         {% trans "REMOVE" %}

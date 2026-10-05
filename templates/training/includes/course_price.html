@@ -1,1 +1,1 @@
-{% load money_tags %}{% load i18n %}{% if course.price %}{{ course.price|money }}{% else %}{% trans "Free" %}{% endif %}
+{% load money_tags %}{% load i18n %}{% if course.price %}{{ course.price|money }}<span class="text-[0.6em] font-normal text-muted-foreground"> + {% trans "VAT" %}</span>{% else %}{% trans "Free" %}{% endif %}

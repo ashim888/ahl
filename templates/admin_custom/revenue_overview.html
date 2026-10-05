@@ -23,7 +23,7 @@
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Total Revenue</p>
         <p class="mt-2 text-3xl font-bold text-gray-900">{{ total_revenue|money }}</p>
-        <p class="mt-2 text-xs text-gray-400">Training + subscriptions + purchases</p>
+        <p class="mt-2 text-xs text-gray-400">Money received, excl. VAT · <a href="{% url 'billing:manage_payment_list' %}" class="hover:underline">payments →</a></p>
     </div>
     <div class="bg-white rounded-2xl border border-gray-100 p-5">
         <p class="text-sm text-gray-500">Training</p>
@@ -42,10 +42,22 @@
     </div>
 </div>
 
-<div class="bg-white rounded-2xl border border-gray-100 p-5 mb-6 sm:w-64">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:max-w-4xl">
+<div class="bg-white rounded-2xl border border-gray-100 p-5">
+    <p class="text-sm text-gray-500">Refunded</p>
+    <p class="mt-2 text-3xl font-bold text-gray-900">{{ refunded_total|money }}</p>
+    <p class="mt-2 text-xs text-gray-400">Excl. VAT — already left out of the totals above</p>
+</div>
+<div class="bg-white rounded-2xl border border-gray-100 p-5">
+    <p class="text-sm text-gray-500">VAT collected</p>
+    <p class="mt-2 text-3xl font-bold text-gray-900">{{ vat_total|money }}</p>
+    <p class="mt-2 text-xs text-gray-400">Owed to IRD — not counted in Total Revenue</p>
+</div>
+<div class="bg-white rounded-2xl border border-gray-100 p-5">
     <p class="text-sm text-gray-500">Approx. MRR</p>
     <p class="mt-2 text-3xl font-bold text-gray-900">{{ mrr_estimate|money }}</p>
     <p class="mt-2 text-xs text-gray-400">Forward-looking — not counted in Total Revenue above</p>
+</div>
 </div>
 
 <div class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">

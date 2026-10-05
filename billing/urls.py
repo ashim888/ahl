@@ -13,6 +13,8 @@ urlpatterns = [
     # Fonepay checkout (settings.PAYMENT_GATEWAY = "fonepay") — see billing/payments.py
     path('pay/<str:reference>/', views.payment_page, name='payment_page'),
     path('pay/<str:reference>/status/', views.payment_check, name='payment_check'),
+    path('account/billing/', views.account, name='account'),
+    path('account/receipts/<str:reference>/', views.receipt, name='receipt'),
 
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
     path('manage/billing/plans/', views.PlanListView.as_view(), name='manage_plan_list'),
@@ -26,4 +28,10 @@ urlpatterns = [
     path('manage/billing/subscriptions/<int:pk>/revoke/', views.subscription_revoke, name='manage_subscription_revoke'),
     path('manage/billing/purchases/', views.PurchaseListView.as_view(), name='manage_purchase_list'),
     path('manage/billing/purchases/grant/', views.PurchaseGrantView.as_view(), name='manage_purchase_grant'),
+    path('manage/billing/payments/', views.PaymentListView.as_view(), name='manage_payment_list'),
+    path('manage/billing/payments/<str:reference>/refund/', views.payment_refund, name='manage_payment_refund'),
+    path('manage/billing/payments/<str:reference>/handled/', views.payment_clear_attention, name='manage_payment_handled'),
+    path('manage/billing/organizations/', views.OrganizationListView.as_view(), name='manage_organization_list'),
+    path('manage/billing/organizations/new/', views.OrganizationCreateView.as_view(), name='manage_organization_create'),
+    path('manage/billing/organizations/<int:pk>/edit/', views.OrganizationUpdateView.as_view(), name='manage_organization_update'),
 ]

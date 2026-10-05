@@ -1,0 +1,14 @@
+{% extends 'email/base.html' %}
+{% block title %}Confirm your email{% endblock %}
+{% block preheader %}One click to confirm {{ user.email }}.{% endblock %}
+{% block eyebrow %}Your account{% endblock %}
+{% block heading %}Confirm your email address{% endblock %}
+{% block content %}
+    <p>Hi {{ user.first_name }},</p>
+    <p>Please confirm that <strong>{{ user.email }}</strong> is your address{% if organization %} — then you can read {{ journal_name }} under <strong>{{ organization.name }}</strong>'s subscription{% endif %}.</p>
+    {% include 'email/includes/button.html' with url=confirm_url label='Confirm my email' %}
+    {% include 'email/includes/link_fallback.html' with url=confirm_url %}
+    <p style="font-size: 13px; color: #6b6860;">The link works for {{ valid_days }} days. If you didn't ask for this, ignore this email.</p>
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because someone asked to confirm this address on {{ journal_name }}.{% endblock %}

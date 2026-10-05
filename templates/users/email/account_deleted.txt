@@ -1,0 +1,9 @@
+Hi {{ first_name }},
+
+As you asked, we've deleted your {{ journal_name }} account and removed your personal data: your profile, saved articles, follows, newsletter subscription and sign-in history.
+
+We keep only what we must: receipts for any payments (tax law requires it), and the anonymised record of anything that was published — comments now show as "Deleted user".
+
+This is the last email you'll get from us at this address. If you didn't ask for this, write to {{ contact_email }} straight away.
+
+— {{ journal_name }}

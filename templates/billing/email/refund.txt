@@ -1,0 +1,18 @@
+Hi {{ payment.payer_name }},
+
+We've refunded your payment for {{ payment.description }}. The money goes back the way you paid; depending on your bank it can take a few working days to show.
+
+Credit note no.: {{ payment.credit_note_number }}
+For receipt: {{ payment.receipt_number }}
+Date: {{ payment.refunded_at|date:"j M Y" }}
+Price: {{ subtotal }}
+VAT ({{ vat_rate }}%): {{ vat }}
+Total refunded: {{ total }}
+
+Access that came with this payment has ended. Questions? Write to {{ contact_email }}.
+{% if receipt_url %}
+Your receipt and credit note: {{ receipt_url }}
+{% endif %}
+{{ seller.legal_name }}{% if seller.pan %} · PAN {{ seller.pan }}{% endif %}{% if seller.address %} · {{ seller.address }}{% endif %}
+
+— {{ journal_name }}

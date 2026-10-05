@@ -1,0 +1,13 @@
+{% extends 'email/base.html' %}
+{% block title %}Your account has been deleted{% endblock %}
+{% block preheader %}Your personal data has been removed from {{ journal_name }}.{% endblock %}
+{% block eyebrow %}Your account{% endblock %}
+{% block heading %}Your account has been deleted{% endblock %}
+{% block content %}
+    <p>Hi {{ first_name }},</p>
+    <p>As you asked, we've deleted your {{ journal_name }} account and removed your personal data: your profile, saved articles, follows, newsletter subscription and sign-in history.</p>
+    <p>We keep only what we must: receipts for any payments (tax law requires it), and the anonymised record of anything that was published — comments now show as "Deleted user".</p>
+    <p>This is the last email you'll get from us at this address. If you didn't ask for this, write to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> straight away.</p>
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because your {{ journal_name }} account was deleted.{% endblock %}

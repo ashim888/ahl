@@ -1,0 +1,21 @@
+{% load i18n money_tags %}
+{% comment %}
+Price / VAT / total rows for a checkout card. Every price is VAT-exclusive;
+VAT is added here, exactly as billing.money.vat_breakdown charges it.
+Usage: {% include 'billing/includes/bill_summary.html' with price=plan.price label="30 days access" %}
+{% endcomment %}
+{% vat_breakdown price as bill %}
+<dl class="border-t border-border px-5 py-4 space-y-2 text-sm">
+    <div class="flex items-baseline justify-between gap-4">
+        <dt class="text-muted-foreground">{{ label|default:_("Price") }}</dt>
+        <dd>{{ bill.price|money }}</dd>
+    </div>
+    <div class="flex items-baseline justify-between gap-4">
+        <dt class="text-muted-foreground">{% blocktrans with rate=bill.rate %}VAT ({{ rate }}%){% endblocktrans %}</dt>
+        <dd>{{ bill.vat|money }}</dd>
+    </div>
+    <div class="flex items-baseline justify-between gap-4 pt-2 border-t border-border">
+        <dt class="font-mono-editorial text-xs tracking-widest">{% trans "TOTAL" %}</dt>
+        <dd class="font-display text-2xl font-bold">{{ bill.total|money }}</dd>
+    </div>
+</dl>

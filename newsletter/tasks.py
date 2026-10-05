@@ -54,6 +54,9 @@ def send_newsletter_issue(issue_id):
             text_body = issue_email_text_body(issue.subject, issue.body_html, unsubscribe_url)
             message = EmailMultiAlternatives(
                 subject=issue.subject, body=text_body, to=[subscriber.email], connection=connection,
+                # One-click unsubscribe (RFC 8058): Gmail/Yahoo show an
+                # Unsubscribe button that POSTs to the same link.
+                headers={'List-Unsubscribe': f'<{unsubscribe_url}>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'},
             )
             message.attach_alternative(html_body, 'text/html')
             try:

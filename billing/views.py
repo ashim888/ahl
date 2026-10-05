@@ -1,10 +1,13 @@
 import datetime
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.http import JsonResponse
+from django.db import transaction
+from django.db.models import Count, Q
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -17,12 +20,13 @@ from articles.models import Article
 from users.decorators import role_required
 from users.models import User
 
-from .access import user_has_active_subscription, user_has_purchased_article
-from .forms import GrantPurchaseForm, GrantSubscriptionForm, SubscriptionPlanForm
 from . import fonepay, payments
+from .access import user_has_active_subscription, user_has_purchased_article
+from .forms import GrantPurchaseForm, GrantSubscriptionForm, OrganizationForm, SubscriptionPlanForm
 from .gateway import charge_safely
-from .models import ArticlePurchase, Payment, SubscriptionPlan, UserSubscription
-from .services import record_purchase, start_subscription
+from .models import ArticlePurchase, Organization, Payment, SubscriptionPlan, UserSubscription
+from .money import vat_breakdown
+from .services import next_start_date, paid_through
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +70,32 @@ def build_comparison_matrix(plans):
     return matrix
 
 
+def _next_path(request) -> str:
+    """The page to come back to after paying (e.g. the article whose paywall
+    sent the reader here), carried as ?next= / a hidden field."""
+    return payments.safe_return_path(request.POST.get('next') or request.GET.get('next') or '')
+
+
+def _subscription_context(request) -> dict:
+    """What the plan pages need to know about the reader's current access."""
+    user = request.user
+    if not user.is_authenticated:
+        return {
+            'already_subscribed': False, 'paid_through': None, 'renewal_starts': None, 'organization': None,
+            'next_path': _next_path(request),
+        }
+    from .institutions import organization_for
+
+    current_end = paid_through(user)
+    return {
+        'already_subscribed': user_has_active_subscription(user),
+        'paid_through': current_end,
+        'renewal_starts': current_end + datetime.timedelta(days=1) if current_end else None,
+        'organization': organization_for(user) if not current_end else None,
+        'next_path': _next_path(request),
+    }
+
+
 class PlanBrowseView(ListView):
     model = SubscriptionPlan
     template_name = 'billing/plan_browse.html'
@@ -76,10 +106,9 @@ class PlanBrowseView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['already_subscribed'] = (
-            self.request.user.is_authenticated and user_has_active_subscription(self.request.user)
-        )
+        context.update(_subscription_context(self.request))
         context['comparison_matrix'] = build_comparison_matrix(context['plans'])
+        context['contact_email'] = settings.JOURNAL_CONTACT_EMAIL
         return context
 
 
@@ -99,40 +128,52 @@ class PlanDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['plan_features'] = self.object.features.order_by('order', 'id')
-        context['already_subscribed'] = (
-            self.request.user.is_authenticated and user_has_active_subscription(self.request.user)
-        )
+        context.update(_subscription_context(self.request))
         all_plans = list(
             SubscriptionPlan.objects.filter(is_active=True).order_by('price').prefetch_related('features'),
         )
         context['plans'] = all_plans
         context['comparison_matrix'] = build_comparison_matrix(all_plans)
+        context['contact_email'] = settings.JOURNAL_CONTACT_EMAIL
         return context
 
 
 @login_required
 def subscribe_checkout(request, pk):
+    """Buy a plan — or renew/switch early: a reader who already has one
+    gets the new period from the day after their current one ends."""
     plan = get_object_or_404(SubscriptionPlan, pk=pk, is_active=True)
+    if plan.plan_type == SubscriptionPlan.PlanType.INSTITUTIONAL:
+        messages.info(request, f'Institutional plans are set up with your organization — email {settings.JOURNAL_CONTACT_EMAIL}.')
+        return redirect('billing:plan_detail', pk=plan.pk)
 
-    if user_has_active_subscription(request.user):
-        messages.info(request, "You already have an active subscription.")
-        return redirect('billing:plan_browse')
+    next_path = _next_path(request)
+    starts = next_start_date(request.user)
+    ends = starts + datetime.timedelta(days=plan.duration_days)
+    description = f'Subscription — {plan.name}'
 
     if request.method == 'POST' and payments.uses_fonepay():
         return _start_fonepay(
-            request, kind=Payment.Kind.SUBSCRIPTION, amount=plan.price, description=f'Subscription — {plan.name}', plan=plan,
+            request, kind=Payment.Kind.SUBSCRIPTION, price=plan.price, description=description, plan=plan,
+            return_path=next_path,
         )
     if request.method == 'POST':
-        result = charge_safely(
-            request.user, plan.price, f'Subscription — {plan.name}',
-        )
+        subtotal, vat, total = vat_breakdown(plan.price)
+        result = charge_safely(request.user, total, description)
         if result.success:
-            start_subscription(request.user, plan, payment_reference=result.reference)
-            messages.success(request, f'Subscribed to "{plan.name}". Enjoy full access.')
-            return redirect('users:profile')
+            payment = payments.record_paid_payment(
+                user=request.user, kind=Payment.Kind.SUBSCRIPTION, plan=plan, price=plan.price,
+                description=description, gateway=Payment.Gateway.STUB, return_path=next_path,
+            )
+            Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
+            messages.success(request, f'Subscribed to "{plan.name}" — active until {ends:%-d %b %Y}.')
+            return redirect(payments.success_url(payment))
         messages.error(request, result.error or 'Payment failed — please try again.')
 
-    return render(request, 'billing/subscribe_checkout.html', {'plan': plan})
+    return render(request, 'billing/subscribe_checkout.html', {
+        'plan': plan, 'starts': starts, 'ends': ends, 'is_renewal': starts > timezone.localdate(),
+        'next_path': next_path,
+    })
 
 
 @login_required
@@ -144,14 +185,20 @@ def purchase_checkout(request, slug):
     if user_has_active_subscription(request.user) or user_has_purchased_article(request.user, article):
         return redirect('articles:article_detail', slug=article.slug)
 
+    description = f'Article — {article.title}'
     if request.method == 'POST' and payments.uses_fonepay():
         return _start_fonepay(
-            request, kind=Payment.Kind.ARTICLE, amount=article.price, description=f'Article — {article.title}', article=article,
+            request, kind=Payment.Kind.ARTICLE, price=article.price, description=description, article=article,
         )
     if request.method == 'POST':
-        result = charge_safely(request.user, article.price, f'Article — {article.title}')
+        subtotal, vat, total = vat_breakdown(article.price)
+        result = charge_safely(request.user, total, description)
         if result.success:
-            record_purchase(request.user, article, article.price, payment_reference=result.reference)
+            payment = payments.record_paid_payment(
+                user=request.user, kind=Payment.Kind.ARTICLE, article=article, price=article.price,
+                description=description, gateway=Payment.Gateway.STUB,
+            )
+            Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
             messages.success(request, f'Purchased "{article.title}".')
             return redirect('articles:article_detail', slug=article.slug)
         messages.error(request, result.error or 'Payment failed — please try again.')
@@ -167,8 +214,66 @@ def _start_fonepay(request, **payment_kwargs):
     except fonepay.FonepayError:
         logger.exception('Could not start Fonepay payment for %s', request.user)
         messages.error(request, 'We couldn\'t start the payment with Fonepay right now. Please try again in a moment.')
-        return redirect(request.path)
+        return redirect(request.get_full_path())
     return redirect('billing:payment_page', reference=payment.reference)
+
+
+@login_required
+def account(request):
+    """The reader's billing page: what they have, until when, and every
+    payment with its receipt."""
+    from .institutions import organization_for, pending_organization_for
+
+    user = request.user
+    today = timezone.localdate()
+    subscriptions = list(
+        UserSubscription.objects.filter(user=user).select_related('plan').order_by('-end_date')[:20],
+    )
+    current = next((s for s in subscriptions if s.is_currently_active), None)
+    upcoming = [
+        s for s in subscriptions
+        if s.status == UserSubscription.Status.ACTIVE and s.start_date > today
+    ]
+    current_end = paid_through(user)
+    renew_plan = current.plan if current and current.plan.is_active else None
+    return render(request, 'billing/account.html', {
+        'current': current,
+        'upcoming': sorted(upcoming, key=lambda s: s.start_date),
+        'past': [s for s in subscriptions if s is not current and s not in upcoming][:10],
+        'paid_through': current_end,
+        'days_left': (current_end - today).days if current_end else None,
+        'renew_plan': renew_plan,
+        'organization': organization_for(user),
+        'pending_organization': pending_organization_for(user),
+        'purchases': ArticlePurchase.objects.filter(user=user).select_related('article')[:50],
+        'payments': Payment.objects.filter(
+            user=user, status__in=(Payment.Status.SUCCESS, Payment.Status.REFUNDED),
+        ).order_by('-completed_at')[:50],
+        'open_payments': Payment.objects.filter(
+            user=user, status=Payment.Status.PENDING, expires_at__gt=timezone.now(),
+        ).order_by('-created_at'),
+        'expiring_soon_days': EXPIRING_SOON_WINDOW_DAYS,
+        'contact_email': settings.JOURNAL_CONTACT_EMAIL,
+    })
+
+
+@login_required
+def receipt(request, reference):
+    """A printable receipt — the payer's own, or any for senior staff."""
+    payment = get_object_or_404(
+        Payment.objects.select_related('user', 'organization', 'plan', 'article', 'course'),
+        reference=reference, status__in=(Payment.Status.SUCCESS, Payment.Status.REFUNDED),
+    )
+    is_staff_view = request.user.is_senior_staff
+    if payment.user_id != request.user.pk and not is_staff_view:
+        raise Http404
+    return render(request, 'billing/receipt.html', {
+        'payment': payment, 'vat_rate': settings.VAT_RATE.normalize(), 'is_staff_view': is_staff_view,
+        'seller': {
+            'legal_name': settings.BUSINESS_LEGAL_NAME, 'pan': settings.BUSINESS_PAN,
+            'address': settings.BUSINESS_ADDRESS, 'email': settings.JOURNAL_CONTACT_EMAIL,
+        },
+    })
 
 
 @login_required
@@ -344,6 +449,9 @@ class SubscriptionGrantView(CreateView):
     template_name = 'billing/manage/subscription_grant_form.html'
     success_url = reverse_lazy('billing:manage_subscription_list')
 
+    def get_form_kwargs(self):
+        return {**super().get_form_kwargs(), 'recorded_by': self.request.user}
+
     def form_valid(self, form):
         # form.save() (GrantSubscriptionForm.save) returns the real created
         # row via billing.services.start_subscription — end_date isn't a form
@@ -398,9 +506,129 @@ class PurchaseGrantView(CreateView):
     template_name = 'billing/manage/purchase_grant_form.html'
     success_url = reverse_lazy('billing:manage_purchase_list')
 
+    def get_form_kwargs(self):
+        return {**super().get_form_kwargs(), 'recorded_by': self.request.user}
+
     def form_valid(self, form):
         response = super().form_valid(form)
         messages.success(
             self.request, f'Recorded {form.instance.user.email}\'s purchase of "{form.instance.article.title}".',
         )
         return response
+
+
+@method_decorator(role_required(*SENIOR_STAFF_ROLES), name='dispatch')
+class PaymentListView(ListView):
+    """Every payment — the money ledger behind the revenue screens, with
+    filters for what needs a look (failed, still pending)."""
+
+    model = Payment
+    template_name = 'billing/manage/payment_list.html'
+    context_object_name = 'payments'
+    paginate_by = 40
+
+    def get_queryset(self):
+        queryset = Payment.objects.select_related('user', 'organization').order_by('-created_at')
+        for field in ('status', 'kind', 'gateway'):
+            value = self.request.GET.get(field)
+            if value:
+                queryset = queryset.filter(**{field: value})
+        if self.request.GET.get('attention') == '1':
+            queryset = queryset.exclude(attention='')
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            queryset = queryset.filter(
+                Q(reference__icontains=q) | Q(receipt_number__icontains=q) | Q(credit_note_number__icontains=q) | Q(user__email__icontains=q)
+                | Q(organization__name__icontains=q) | Q(description__icontains=q) | Q(gateway_trace_id__icontains=q),
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['statuses'] = Payment.Status.choices
+        context['kinds'] = Payment.Kind.choices
+        context['gateways'] = Payment.Gateway.choices
+        for field in ('status', 'kind', 'gateway', 'q', 'attention'):
+            context[f'selected_{field}'] = self.request.GET.get(field, '')
+        context['attention_count'] = Payment.objects.exclude(attention='').count()
+        return context
+
+
+@role_required(*SENIOR_STAFF_ROLES)
+@require_POST
+def payment_refund(request, reference):
+    """Record a full refund already made outside the site, and take back
+    the access it bought (billing/payments.py refund_payment)."""
+    payment = get_object_or_404(Payment, reference=reference)
+    reason = request.POST.get('reason', '').strip()
+    if not reason:
+        messages.error(request, 'Say why it was refunded — it goes on the credit note record.')
+    else:
+        try:
+            with transaction.atomic():
+                payment = payments.refund_payment(payment, by=request.user, reason=reason)
+        except payments.RefundError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, f'Refund recorded as {payment.credit_note_number}; access removed and the payer emailed.')
+    return redirect('billing:receipt', reference=payment.reference)
+
+
+@role_required(*SENIOR_STAFF_ROLES)
+@require_POST
+def payment_clear_attention(request, reference):
+    payment = get_object_or_404(Payment, reference=reference)
+    Payment.objects.filter(pk=payment.pk).update(attention='')
+    messages.success(request, f'{payment.reference} marked as handled.')
+    return redirect(f"{reverse('billing:manage_payment_list')}?attention=1")
+
+
+@method_decorator(role_required(*SENIOR_STAFF_ROLES), name='dispatch')
+class OrganizationListView(ListView):
+    model = Organization
+    template_name = 'billing/manage/organization_list.html'
+    context_object_name = 'organizations'
+
+    def get_queryset(self):
+        return Organization.objects.select_related('plan').annotate(member_count=Count('members')).order_by(
+            '-is_active', 'name',
+        )
+
+
+class OrganizationFormMixin:
+    model = Organization
+    form_class = OrganizationForm
+    template_name = 'billing/manage/organization_form.html'
+    success_url = reverse_lazy('billing:manage_organization_list')
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            response = super().form_valid(form)
+            received = form.cleaned_data.get('amount_received')
+            if received:
+                payments.record_paid_payment(
+                    organization=self.object, kind=Payment.Kind.INSTITUTIONAL, plan=self.object.plan,
+                    total_paid=received, description=f'Institutional subscription — {self.object.name}',
+                    gateway=Payment.Gateway.MANUAL, recorded_by=self.request.user, grant=False,
+                )
+        messages.success(self.request, f'"{self.object.name}" saved.')
+        return response
+
+
+@method_decorator(role_required(*SENIOR_STAFF_ROLES), name='dispatch')
+class OrganizationCreateView(OrganizationFormMixin, CreateView):
+    def get_initial(self):
+        institutional = SubscriptionPlan.objects.filter(plan_type=SubscriptionPlan.PlanType.INSTITUTIONAL).first()
+        return {
+            'plan': institutional, 'start_date': timezone.localdate(),
+            'end_date': timezone.localdate() + datetime.timedelta(days=365),
+        }
+
+
+@method_decorator(role_required(*SENIOR_STAFF_ROLES), name='dispatch')
+class OrganizationUpdateView(OrganizationFormMixin, UpdateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['members'] = self.object.members.select_related('user')[:200]
+        context['org_payments'] = self.object.payments.order_by('-created_at')
+        return context

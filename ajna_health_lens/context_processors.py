@@ -5,6 +5,18 @@ from django.templatetags.static import static
 from django.urls import reverse
 
 
+def _legal_pages() -> dict:
+    from pages.models import SitePage, published_pages
+
+    pages = published_pages()
+    by_slug = {page.slug: page for page in pages}
+    return {
+        'legal_pages': pages,
+        'terms_page': by_slug.get(SitePage.Slug.TERMS),
+        'refund_page': by_slug.get(SitePage.Slug.REFUNDS),
+    }
+
+
 def journal_settings(request):
     from issues.models import Issue  # local import: avoids a project->app import at module load time
 
@@ -20,6 +32,17 @@ def journal_settings(request):
         'JOURNAL_ISSN': settings.JOURNAL_ISSN,
         'JOURNAL_PUBLISHER': settings.JOURNAL_PUBLISHER,
         'JOURNAL_CONTACT_EMAIL': settings.JOURNAL_CONTACT_EMAIL,
+        # Published Terms/Privacy/Refund pages, for the footer and checkout.
+        **_legal_pages(),
+        # Cookie consent (templates/includes/cookie_consent.html): analytics
+        # only render once the reader has accepted them.
+        'GOOGLE_ANALYTICS_ID': settings.GOOGLE_ANALYTICS_ID,
+        # Who runs the site, in the footer (consumer-protection basics).
+        'BUSINESS_LEGAL_NAME': settings.BUSINESS_LEGAL_NAME,
+        'BUSINESS_PAN': settings.BUSINESS_PAN,
+        'BUSINESS_ADDRESS': settings.BUSINESS_ADDRESS,
+        'analytics_consent': request.COOKIES.get(settings.COOKIE_CONSENT_COOKIE, '').endswith(':analytics'),
+        'cookie_choice_made': bool(request.COOKIES.get(settings.COOKIE_CONSENT_COOKIE)),
         # -created_at, not -publication_date — an issue's publication_date
         # is optional (unlike Article.publication_date, nothing stamps it
         # automatically), so it's not a reliable "latest" ordering on its own.

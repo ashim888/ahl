@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-02 13:03+0545\n"
+"POT-Creation-Date: 2026-10-06 03:22+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,72 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: admin_custom/models.py:17
+msgid "A factual error that needs correcting"
+msgstr "सच्याउनुपर्ने तथ्यगत त्रुटि"
+
+#: admin_custom/models.py:18
+msgid "Misleading or dangerous health information"
+msgstr "भ्रामक वा खतरनाक स्वास्थ्य जानकारी"
+
+#: admin_custom/models.py:19
+msgid "Abusive, hateful or harassing"
+msgstr "अपमानजनक, घृणा फैलाउने वा दुर्व्यवहार गर्ने"
+
+#: admin_custom/models.py:20
+msgid "Shares someone’s private or health information"
+msgstr "कसैको निजी वा स्वास्थ्य जानकारी सार्वजनिक गर्छ"
+
+#: admin_custom/models.py:21
+msgid "Uses my copyrighted work without permission"
+msgstr "मेरो प्रतिलिपि अधिकार भएको काम अनुमति बिना प्रयोग गर्छ"
+
+#: admin_custom/models.py:22
+msgid "Spam or advertising"
+msgstr "स्प्याम वा विज्ञापन"
+
+#: admin_custom/models.py:23
+msgid "Something else"
+msgstr "अरू केही"
+
+#: admin_custom/reports.py:32
+msgid "What’s the problem?"
+msgstr "के समस्या छ?"
+
+#: admin_custom/reports.py:34
+msgid "Tell us more"
+msgstr "थप बताउनुहोस्"
+
+#: admin_custom/reports.py:35
+msgid ""
+"What’s wrong and where. For a copyright claim: which work is yours, where it "
+"was first published, and confirm that you own it or act for the owner."
+msgstr ""
+"के गलत छ र कहाँ। प्रतिलिपि अधिकारको दाबीका लागि: कुन काम तपाईंको हो, पहिले कहाँ "
+"प्रकाशित भयो, र त्यो तपाईंको हो वा तपाईं मालिकका तर्फबाट हुनुहुन्छ भनी पुष्टि गर्नुहोस्।"
+
+#: admin_custom/reports.py:38
+msgid "Your name"
+msgstr "तपाईंको नाम"
+
+#: admin_custom/reports.py:39
+msgid "Your email"
+msgstr "तपाईंको इमेल"
+
+#: admin_custom/reports.py:40
+msgid ""
+"So we can tell you what we did. Required for copyright and privacy reports."
+msgstr ""
+"हामीले के गर्‍यौं भनी जानकारी दिन। प्रतिलिपि अधिकार र गोपनीयता उजुरीका लागि अनिवार्य।"
+
+#: admin_custom/reports.py:56
+msgid "Please describe the problem so we can act on it."
+msgstr "कारबाही गर्न सकियोस् भनेर समस्या वर्णन गर्नुहोस्।"
+
+#: admin_custom/reports.py:59
+msgid "We need a way to reach you about this kind of report."
+msgstr "यस्तो उजुरीका लागि तपाईंलाई सम्पर्क गर्ने उपाय चाहिन्छ।"
 
 # django_comments_xtd's email subjects are hard-coded gettext strings
 # (views.py: send_email_confirmation_request / notify_comment_followers);
@@ -101,7 +167,8 @@ msgstr "सम्पादकलाई पत्र"
 msgid "Video"
 msgstr "भिडियो"
 
-#: articles/models.py:93 templates/training/includes/course_price.html:1
+#: articles/models.py:93 templates/training/course_checkout.html:32
+#: templates/training/includes/course_price.html:1
 msgid "Free"
 msgstr "निःशुल्क"
 
@@ -143,28 +210,28 @@ msgid_plural "%(count)d hours ago"
 msgstr[0] "%(count)d घण्टाअघि"
 msgstr[1] "%(count)d घण्टाअघि"
 
-#: articles/views.py:790
+#: articles/views.py:796
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:792
+#: articles/views.py:798
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:809
+#: articles/views.py:815
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:811
+#: articles/views.py:817
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:1027 sections/views.py:87
+#: articles/views.py:1033 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:1032 sections/views.py:89
+#: articles/views.py:1038 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -178,17 +245,71 @@ msgid_plural "%(count)d ARTICLES"
 msgstr[0] "%(count)d लेख"
 msgstr[1] "%(count)d लेख"
 
-#: newsletter/views.py:47
+#: newsletter/views.py:48
 msgid "You're already subscribed."
 msgstr "तपाईंले पहिले नै सदस्यता लिनुभएको छ।"
 
-#: newsletter/views.py:53 newsletter/views.py:56
+#: newsletter/views.py:54 newsletter/views.py:57
 msgid "Check your email to confirm your subscription."
 msgstr "सदस्यता पुष्टि गर्न आफ्नो इमेल हेर्नुहोस्।"
 
-#: newsletter/views.py:58
+#: newsletter/views.py:59
 msgid "Enter a valid email address."
 msgstr "मान्य इमेल ठेगाना लेख्नुहोस्।"
+
+#: templates/admin_custom/report_form.html:3
+#: templates/admin_custom/report_form.html:9
+msgid "Report a problem"
+msgstr "समस्या रिपोर्ट गर्नुहोस्"
+
+#: templates/admin_custom/report_form.html:8
+#: templates/billing/payment_page.html:9 templates/billing/receipt.html:20
+msgid "← BACK"
+msgstr "← फर्कनुहोस्"
+
+#: templates/admin_custom/report_form.html:10
+msgid "You’re reporting this comment:"
+msgstr "तपाईं यो टिप्पणी रिपोर्ट गर्दै हुनुहुन्छ:"
+
+#: templates/admin_custom/report_form.html:10
+msgid "You’re reporting this article:"
+msgstr "तपाईं यो लेख रिपोर्ट गर्दै हुनुहुन्छ:"
+
+#: templates/admin_custom/report_form.html:36
+msgid ""
+"An editor reads every report. We don’t share your name or email with the "
+"person you’re reporting."
+msgstr ""
+"हरेक रिपोर्ट सम्पादकले पढ्छन्। तपाईंले रिपोर्ट गरेको व्यक्तिलाई हामी तपाईंको नाम वा इमेल "
+"दिँदैनौं।"
+
+#: templates/admin_custom/report_form.html:37
+msgid "SEND REPORT"
+msgstr "रिपोर्ट पठाउनुहोस्"
+
+#: templates/admin_custom/report_thanks.html:3
+msgid "Thank you"
+msgstr "धन्यवाद"
+
+#: templates/admin_custom/report_thanks.html:7
+msgid "REPORT SENT"
+msgstr "रिपोर्ट पठाइयो"
+
+#: templates/admin_custom/report_thanks.html:8
+msgid "Thank you for telling us"
+msgstr "हामीलाई जानकारी दिनुभएकोमा धन्यवाद"
+
+#: templates/admin_custom/report_thanks.html:9
+msgid ""
+"An editor will look at it, usually within two working days. If you left an "
+"email address, we’ll let you know what we did."
+msgstr ""
+"सम्पादकले सामान्यतया दुई कार्यदिनभित्र हेर्नेछन्। इमेल छोड्नुभएको भए हामीले के गर्‍यौं भनी "
+"जानकारी दिनेछौं।"
+
+#: templates/admin_custom/report_thanks.html:10
+msgid "BACK TO THE ARTICLE"
+msgstr "लेखमा फर्कनुहोस्"
 
 #: templates/articles/article_detail.html:29
 msgid "PREVIEW MODE — nothing has been saved. Close this tab to keep editing."
@@ -227,7 +348,7 @@ msgid "Share on LinkedIn"
 msgstr "LinkedIn मा साझा गर्नुहोस्"
 
 #: templates/articles/article_detail.html:97
-#: templates/articles/article_detail.html:415
+#: templates/articles/article_detail.html:425
 msgid "Copy link"
 msgstr "लिंक प्रतिलिपि गर्नुहोस्"
 
@@ -235,12 +356,13 @@ msgstr "लिंक प्रतिलिपि गर्नुहोस्"
 msgid "Copy short link"
 msgstr "छोटो लिंक प्रतिलिपि गर्नुहोस्"
 
-#: templates/articles/article_detail.html:119 templates/base.html:464
+#: templates/articles/article_detail.html:119 templates/base.html:466
 msgid "BREAKING"
 msgstr "ताजा खबर"
 
-#: templates/articles/article_detail.html:164 templates/home.html:48
-#: templates/home.html:196
+#: templates/articles/article_detail.html:164
+#: templates/billing/includes/agree_terms.html:7 templates/home.html:48
+#: templates/home.html:196 templates/users/register.html:50
 msgid "and"
 msgstr "र"
 
@@ -386,6 +508,11 @@ msgstr ""
 "यो अभिलेखमा रहेको लेख हो — लेखको मूल पहुँच तह जे भए पनि, पूर्ण पाठ पढ्न अभिलेख पहुँचसहितको "
 "सदस्यता योजना आवश्यक छ।"
 
+#: templates/articles/article_detail.html:325
+#: templates/training/includes/course_price.html:1
+msgid "VAT"
+msgstr "भ्याट"
+
 #: templates/articles/article_detail.html:327
 #, python-format
 msgid ""
@@ -399,64 +526,86 @@ msgstr ""
 msgid "This article requires an active subscription for full-text access."
 msgstr "यो लेखको पूर्ण पाठ पढ्न सक्रिय सदस्यता आवश्यक छ।"
 
-#: templates/articles/article_detail.html:339
+#: templates/articles/article_detail.html:336
+#, python-format
+msgid ""
+"<strong>%(org)s</strong> has a subscription. Confirm <strong>%(email)s</"
+"strong> is your address and you can read this straight away."
+msgstr ""
+"<strong>%(org)s</strong> को सदस्यता छ। <strong>%(email)s</strong> तपाईंकै ठेगाना "
+"हो भनी पुष्टि गर्नुहोस् र यो तुरुन्तै पढ्नुहोस्।"
+
+#: templates/articles/article_detail.html:340 templates/billing/account.html:62
+msgid "EMAIL ME A CONFIRMATION LINK"
+msgstr "पुष्टि लिङ्क इमेल गर्नुहोस्"
+
+#: templates/articles/article_detail.html:349
 #, python-format
 msgid "BUY FOR %(price)s"
 msgstr "%(price)s मा किन्नुहोस्"
 
-#: templates/articles/article_detail.html:343
-#: templates/articles/article_detail.html:348 templates/base.html:520
-#: templates/billing/plan_browse.html:8 templates/billing/plan_browse.html:51
-#: templates/home.html:232
+#: templates/articles/article_detail.html:353
+#: templates/articles/article_detail.html:358 templates/base.html:525
+#: templates/billing/includes/plan_cta.html:18
+#: templates/billing/plan_browse.html:8 templates/home.html:232
+#: templates/users/privacy.html:37
 msgid "SUBSCRIBE"
 msgstr "सदस्यता लिनुहोस्"
 
-#: templates/articles/article_detail.html:354
-#: templates/billing/purchase_checkout.html:33 templates/users/register.html:52
+#: templates/articles/article_detail.html:364
+#: templates/billing/purchase_checkout.html:32 templates/users/register.html:62
 msgid "Log in"
 msgstr "लग इन"
 
-#: templates/articles/article_detail.html:355
+#: templates/articles/article_detail.html:365
 msgid "to subscribe or purchase this article."
 msgstr "गरेर सदस्यता लिनुहोस् वा यो लेख किन्नुहोस्।"
 
-#: templates/articles/article_detail.html:364
+#: templates/articles/article_detail.html:374
 msgid "CORRECTIONS & UPDATES"
 msgstr "सच्याइ र अद्यावधिक"
 
-#: templates/articles/article_detail.html:379
+#: templates/articles/article_detail.html:389
 msgid "References"
 msgstr "सन्दर्भ सामग्री"
 
-#: templates/articles/article_detail.html:402
+#: templates/articles/article_detail.html:412
 msgid "Cite this article"
 msgstr "यो लेख उद्धृत गर्नुहोस्"
 
-#: templates/articles/article_detail.html:406
+#: templates/articles/article_detail.html:416
 msgid "Plain text"
 msgstr "सादा पाठ"
 
-#: templates/articles/article_detail.html:412
+#: templates/articles/article_detail.html:422
 msgid "Share:"
 msgstr "साझा गर्नुहोस्:"
 
-#: templates/articles/article_detail.html:414
+#: templates/articles/article_detail.html:424
 msgid "LinkedIn"
 msgstr ""
 
-#: templates/articles/article_detail.html:416
+#: templates/articles/article_detail.html:426
 msgid "Short link"
 msgstr "छोटो लिंक"
 
-#: templates/articles/article_detail.html:423
+#: templates/articles/article_detail.html:431
+msgid "Spotted an error, or something that shouldn’t be here?"
+msgstr "त्रुटि वा यहाँ हुनु नहुने केही देख्नुभयो?"
+
+#: templates/articles/article_detail.html:432
+msgid "Report it"
+msgstr "रिपोर्ट गर्नुहोस्"
+
+#: templates/articles/article_detail.html:437
 msgid "Comments"
 msgstr "टिप्पणीहरू"
 
-#: templates/articles/article_detail.html:435
+#: templates/articles/article_detail.html:449
 msgid "Almost there — please confirm your email."
 msgstr "लगभग भयो — कृपया आफ्नो इमेल पुष्टि गर्नुहोस्।"
 
-#: templates/articles/article_detail.html:437
+#: templates/articles/article_detail.html:451
 #, python-format
 msgid ""
 "We've sent a confirmation link to <span class=\"font-medium text-"
@@ -465,57 +614,57 @@ msgstr ""
 "हामीले <span class=\"font-medium text-foreground\">%(email)s</span> मा पुष्टि "
 "लिंक पठाएका छौं।"
 
-#: templates/articles/article_detail.html:437
+#: templates/articles/article_detail.html:451
 msgid "We've sent a confirmation link to your email address."
 msgstr "हामीले तपाईंको इमेल ठेगानामा पुष्टि लिंक पठाएका छौं।"
 
-#: templates/articles/article_detail.html:438
+#: templates/articles/article_detail.html:452
 msgid ""
 "Your comment will appear here once you click it. Can't find it? Check your "
 "spam folder."
 msgstr "त्यसमा क्लिक गरेपछि तपाईंको टिप्पणी यहाँ देखिनेछ। भेटिएन? स्प्याम फोल्डर हेर्नुहोस्।"
 
-#: templates/articles/article_detail.html:442
+#: templates/articles/article_detail.html:456
 msgid "Thanks for confirming — your comment is now live."
 msgstr "पुष्टि गर्नुभएकोमा धन्यवाद — तपाईंको टिप्पणी अब प्रकाशित भयो।"
 
-#: templates/articles/article_detail.html:442
+#: templates/articles/article_detail.html:456
 msgid "Your comment has been posted."
 msgstr "तपाईंको टिप्पणी प्रकाशित भयो।"
 
-#: templates/articles/article_detail.html:445
+#: templates/articles/article_detail.html:459
 msgid "View your comment ↓"
 msgstr "आफ्नो टिप्पणी हेर्नुहोस् ↓"
 
-#: templates/articles/article_detail.html:462
+#: templates/articles/article_detail.html:476
 msgid "In this article"
 msgstr "यस लेखमा"
 
-#: templates/articles/article_detail.html:463
+#: templates/articles/article_detail.html:477
 msgid "IN THIS ARTICLE"
 msgstr "यस लेखमा"
 
-#: templates/articles/article_detail.html:479
+#: templates/articles/article_detail.html:493
 msgid "ABOUT THE AUTHOR"
 msgstr "लेखकबारे"
 
-#: templates/articles/article_detail.html:504
+#: templates/articles/article_detail.html:518
 msgid "MORE BY THIS AUTHOR →"
 msgstr "यी लेखकका थप लेख →"
 
-#: templates/articles/article_detail.html:512 templates/home.html:83
+#: templates/articles/article_detail.html:526 templates/home.html:83
 msgid "TRENDING THIS WEEK"
 msgstr "यो हप्ता चर्चामा"
 
-#: templates/articles/article_detail.html:538
+#: templates/articles/article_detail.html:552
 msgid "Download full-text PDF →"
 msgstr "पूर्ण पाठ PDF डाउनलोड गर्नुहोस् →"
 
-#: templates/articles/article_detail.html:551
+#: templates/articles/article_detail.html:565
 msgid "KEEP READING"
 msgstr "थप पढ्नुहोस्"
 
-#: templates/articles/article_detail.html:551
+#: templates/articles/article_detail.html:565
 msgid "Related reading"
 msgstr "सम्बन्धित सामग्री"
 
@@ -593,8 +742,8 @@ msgstr "सम्पादक मण्डल"
 msgid "WEBSITE"
 msgstr "वेबसाइट"
 
-#: templates/articles/author_detail.html:48 templates/base.html:425
-#: templates/base.html:541 templates/training/course_detail.html:94
+#: templates/articles/author_detail.html:48 templates/base.html:427
+#: templates/base.html:546 templates/training/course_detail.html:94
 msgid "ABOUT"
 msgstr "बारेमा"
 
@@ -668,7 +817,7 @@ msgstr "अघिल्ला भिडियोहरू"
 msgid "More videos"
 msgstr "थप भिडियोहरू"
 
-#: templates/articles/search_results.html:10 templates/base.html:324
+#: templates/articles/search_results.html:10 templates/base.html:326
 msgid "Search"
 msgstr "खोज्नुहोस्"
 
@@ -695,168 +844,359 @@ msgstr "भिडियोहरू"
 msgid "No videos yet — check back soon."
 msgstr "अहिलेसम्म कुनै भिडियो छैन — केही समयपछि फेरि हेर्नुहोस्।"
 
-#: templates/base.html:274 templates/issues/issue_list.html:20
+#: templates/base.html:276 templates/issues/issue_list.html:20
 msgid "LATEST ISSUE"
 msgstr "पछिल्लो अंक"
 
-#: templates/base.html:289
+#: templates/base.html:291
 msgid "Menu"
 msgstr "मेनु"
 
-#: templates/base.html:298 templates/base.html:418
+#: templates/base.html:300 templates/base.html:420
 msgid "Search…"
 msgstr "खोज्नुहोस्…"
 
-#: templates/base.html:318 templates/base.html:449
+#: templates/base.html:320 templates/base.html:451
 msgid "Language"
 msgstr "भाषा"
 
-#: templates/base.html:352 templates/base.html:433
+#: templates/base.html:354 templates/base.html:435
 msgid "Dashboard"
 msgstr "ड्यासबोर्ड"
 
-#: templates/base.html:356 templates/base.html:435
+#: templates/base.html:358 templates/base.html:437
 msgid "For You"
 msgstr "तपाईंका लागि"
 
-#: templates/base.html:359 templates/base.html:436
+#: templates/base.html:361 templates/base.html:438
 msgid "Reading List"
 msgstr "पठन सूची"
 
-#: templates/base.html:362 templates/base.html:372 templates/base.html:437
+#: templates/base.html:364 templates/base.html:374 templates/base.html:439
 msgid "Profile"
 msgstr "प्रोफाइल"
 
-#: templates/base.html:367 templates/base.html:440
+#: templates/base.html:369 templates/base.html:442
 msgid "Log out"
 msgstr "लग आउट"
 
-#: templates/base.html:383
+#: templates/base.html:385
 msgid "LOGIN"
 msgstr "लग इन"
 
-#: templates/base.html:387
+#: templates/base.html:389
 msgid "REGISTER"
 msgstr "दर्ता"
 
-#: templates/base.html:397 templates/base.html:422
+#: templates/base.html:399 templates/base.html:424
 #: templates/sections/section_detail.html:18
 msgid "HOME"
 msgstr "गृहपृष्ठ"
 
-#: templates/base.html:424
+#: templates/base.html:426
 msgid "ARTICLES"
 msgstr "लेखहरू"
 
-#: templates/base.html:426
+#: templates/base.html:428
 msgid "PITCH A STORY"
 msgstr "कथा प्रस्ताव गर्नुहोस्"
 
-#: templates/base.html:443
+#: templates/base.html:445
 msgid "Login"
 msgstr "लग इन"
 
-#: templates/base.html:444 templates/base.html:544
+#: templates/base.html:446 templates/base.html:549
 msgid "Register"
 msgstr "दर्ता गर्नुहोस्"
 
-#: templates/base.html:467
+#: templates/base.html:469
 msgid "Dismiss"
 msgstr "बन्द गर्नुहोस्"
 
-#: templates/base.html:509
+#: templates/base.html:514
 msgid "NEWSLETTER"
 msgstr "न्यूजलेटर"
 
-#: templates/base.html:510
+#: templates/base.html:515
 msgid "Free — the latest articles and news, straight to your inbox."
 msgstr "निःशुल्क — ताजा लेख र समाचार, सिधै तपाईंको इमेलमा।"
 
-#: templates/base.html:526
+#: templates/base.html:531
 msgid "SECTIONS"
 msgstr "विभागहरू"
 
-#: templates/base.html:527
+#: templates/base.html:532
 msgid "Home"
 msgstr "गृहपृष्ठ"
 
-#: templates/base.html:531 templates/billing/plan_browse.html:5
+#: templates/base.html:536 templates/billing/plan_browse.html:5
 #: templates/billing/plan_detail.html:5
 msgid "Subscribe"
 msgstr "सदस्यता लिनुहोस्"
 
-#: templates/base.html:534
+#: templates/base.html:539
 msgid "JOURNAL"
 msgstr "जर्नल"
 
-#: templates/base.html:535
+#: templates/base.html:540
 msgid "Issue Archive"
 msgstr "अंक अभिलेख"
 
-#: templates/base.html:536
+#: templates/base.html:541
 msgid "Article Archive"
 msgstr "लेख अभिलेख"
 
-#: templates/base.html:537
+#: templates/base.html:542
 msgid "Research"
 msgstr "अनुसन्धान"
 
-#: templates/base.html:538
+#: templates/base.html:543
 msgid "Editorial Policy"
 msgstr "सम्पादकीय नीति"
 
-#: templates/base.html:542
+#: templates/base.html:547
 msgid "Editorial Board"
 msgstr "सम्पादकीय बोर्ड"
 
-#: templates/base.html:543
+#: templates/base.html:548
 msgid "Policies"
 msgstr "नीतिहरू"
 
-#: templates/base.html:554
+#: templates/base.html:553
+msgid "Cookie settings"
+msgstr "कुकी सेटिङ"
+
+#: templates/base.html:554 templates/users/privacy.html:4
+#: templates/users/privacy.html:11
+msgid "Privacy & your data"
+msgstr "गोपनीयता र तपाईंको डाटा"
+
+#: templates/base.html:564
 msgid "All rights reserved."
 msgstr "सर्वाधिकार सुरक्षित।"
 
-#: templates/billing/payment_page.html:4 templates/billing/payment_page.html:9
+#: templates/billing/account.html:4
+msgid "Billing"
+msgstr "बिलिङ"
+
+#: templates/billing/account.html:9 templates/users/privacy.html:9
+msgid "← YOUR PROFILE"
+msgstr "← तपाईंको प्रोफाइल"
+
+#: templates/billing/account.html:11
+msgid "Subscription & billing"
+msgstr "सदस्यता र बिलिङ"
+
+#: templates/billing/account.html:12
+msgid "What you have, until when, and a receipt for every payment."
+msgstr "तपाईंसँग के छ, कहिलेसम्म, र हरेक भुक्तानीको रसिद।"
+
+#: templates/billing/account.html:17
+msgid "YOUR ACCESS"
+msgstr "तपाईंको पहुँच"
+
+#: templates/billing/account.html:25
+#, python-format
+msgid "%(start)s – %(end)s"
+msgstr "%(start)s – %(end)s"
+
+#: templates/billing/account.html:30
+msgid "DAY LEFT"
+msgid_plural "DAYS LEFT"
+msgstr[0] "दिन बाँकी"
+msgstr[1] "दिन बाँकी"
+
+#: templates/billing/account.html:34
+#, python-format
+msgid "Renewed — you’re covered until <strong>%(date)s</strong>."
+msgstr "नवीकरण भयो — <strong>%(date)s</strong> सम्म तपाईंको पहुँच छ।"
+
+#: templates/billing/account.html:38
+msgid "RENEW"
+msgstr "नवीकरण गर्नुहोस्"
+
+#: templates/billing/account.html:40
+msgid "SWITCH PLAN"
+msgstr "योजना बदल्नुहोस्"
+
+#: templates/billing/account.html:42
+msgid ""
+"Subscriptions don’t renew automatically. Renewing early adds the new period "
+"after this one, so no days are lost — we’ll also email you a week before it "
+"ends."
+msgstr ""
+"सदस्यता आफैं नवीकरण हुँदैन। चाँडै नवीकरण गर्दा नयाँ अवधि यो सकिएपछि जोडिन्छ, त्यसैले कुनै "
+"दिन गुम्दैन — सकिनुभन्दा एक हप्ता अघि हामी इमेल पनि गर्नेछौं।"
+
+#: templates/billing/account.html:46
+msgid "ORGANIZATION ACCESS"
+msgstr "संस्थागत पहुँच"
+
+#: templates/billing/account.html:48
+#, python-format
+msgid "You read with %(plan)s through your address %(email)s, until %(end)s."
+msgstr "तपाईं आफ्नो ठेगाना %(email)s मार्फत %(end)s सम्म %(plan)s सँग पढ्नुहुन्छ।"
+
+#: templates/billing/account.html:52
+msgid "No active subscription."
+msgstr "सक्रिय सदस्यता छैन।"
+
+#: templates/billing/account.html:53
+msgid "SEE PLANS"
+msgstr "योजनाहरू हेर्नुहोस्"
+
+#: templates/billing/account.html:59
+#, python-format
+msgid ""
+"<strong>%(org)s</strong> has a subscription you can read with. Confirm that "
+"<strong>%(email)s</strong> is your address to start."
+msgstr ""
+"<strong>%(org)s</strong> को सदस्यतामार्फत तपाईं पढ्न सक्नुहुन्छ। सुरु गर्न "
+"<strong>%(email)s</strong> तपाईंकै ठेगाना हो भनी पुष्टि गर्नुहोस्।"
+
+#: templates/billing/account.html:69
+msgid "NEXT"
+msgstr "अर्को"
+
+#: templates/billing/account.html:77
+msgid "WAITING FOR PAYMENT"
+msgstr "भुक्तानी पर्खँदै"
+
+#: templates/billing/account.html:82
+msgid "FINISH PAYING →"
+msgstr "भुक्तानी पूरा गर्नुहोस् →"
+
+#: templates/billing/account.html:91
+msgid "PAYMENTS & RECEIPTS"
+msgstr "भुक्तानी र रसिद"
+
+#: templates/billing/account.html:96
+msgid "DATE"
+msgstr "मिति"
+
+#: templates/billing/account.html:96
+msgid "FOR"
+msgstr "केका लागि"
+
+#: templates/billing/account.html:96
+#: templates/billing/includes/bill_summary.html:18
+msgid "TOTAL"
+msgstr "जम्मा"
+
+#: templates/billing/account.html:96 templates/billing/receipt.html:34
+msgid "RECEIPT"
+msgstr "रसिद"
+
+#: templates/billing/account.html:104 templates/billing/receipt.html:33
+msgid "REFUNDED"
+msgstr "फिर्ता गरियो"
+
+#: templates/billing/account.html:111
+msgid "No payments yet."
+msgstr "अहिलेसम्म कुनै भुक्तानी छैन।"
+
+#: templates/billing/account.html:117
+msgid "ARTICLES YOU OWN"
+msgstr "तपाईंले किनेका लेख"
+
+#: templates/billing/account.html:131
+msgid "EARLIER SUBSCRIPTIONS"
+msgstr "पहिलेका सदस्यता"
+
+#: templates/billing/account.html:135
+msgid "cancelled"
+msgstr "रद्द"
+
+#: templates/billing/account.html:143
+#, python-format
+msgid "Questions about a payment? Email %(email)s with the receipt number."
+msgstr "भुक्तानीबारे प्रश्न छ? रसिद नम्बरसहित %(email)s मा इमेल गर्नुहोस्।"
+
+#: templates/billing/includes/agree_terms.html:6
+msgid "By paying you agree to our"
+msgstr "भुक्तानी गरेर तपाईं हाम्रो"
+
+#: templates/billing/includes/agree_terms.html:7
+msgctxt "end of: By paying you agree to our Terms and Refund policy"
+msgid "."
+msgstr " मा सहमत हुनुहुन्छ।"
+
+#: templates/billing/includes/bill_summary.html:10
+msgid "Price"
+msgstr "मूल्य"
+
+#: templates/billing/includes/bill_summary.html:14
+#: templates/billing/receipt.html:56
+#, python-format
+msgid "VAT (%(rate)s%%)"
+msgstr "भ्याट (%(rate)s%%)"
+
+#: templates/billing/includes/plan_cta.html:12
+msgid "ASK ABOUT YOUR ORGANIZATION →"
+msgstr "आफ्नो संस्थाका लागि सोध्नुहोस् →"
+
+#: templates/billing/includes/plan_cta.html:14
+msgid ""
+"Your whole organization reads under one subscription — staff just confirm "
+"their work email."
+msgstr ""
+"तपाईंको पूरै संस्था एउटै सदस्यतामा पढ्छ — कर्मचारीले आफ्नो कार्यालयको इमेल पुष्टि गरे पुग्छ।"
+
+#: templates/billing/includes/plan_cta.html:18
+msgid "RENEW OR SWITCH"
+msgstr "नवीकरण वा परिवर्तन"
+
+#: templates/billing/includes/plan_cta.html:21
+#, python-format
+msgid "Starts %(date)s, when your current subscription ends — no days lost."
+msgstr "हालको सदस्यता सकिएपछि %(date)s देखि सुरु हुन्छ — कुनै दिन गुम्दैन।"
+
+#: templates/billing/includes/plan_cta.html:23
+#, python-format
+msgid "You already read with %(org)s’s subscription."
+msgstr "तपाईं पहिले नै %(org)s को सदस्यतामा पढ्दै हुनुहुन्छ।"
+
+#: templates/billing/payment_page.html:4 templates/billing/payment_page.html:10
 msgid "Pay with Fonepay"
 msgstr "फोनपेबाट भुक्तानी गर्नुहोस्"
 
-#: templates/billing/payment_page.html:8
-msgid "← BACK"
-msgstr "← फर्कनुहोस्"
+#: templates/billing/payment_page.html:12
+#, python-format
+msgid "%(price)s + %(vat)s VAT"
+msgstr "%(price)s + %(vat)s भ्याट"
 
-#: templates/billing/payment_page.html:19
+#: templates/billing/payment_page.html:21
 msgid "SCAN TO PAY"
 msgstr "स्क्यान गरी भुक्तानी गर्नुहोस्"
 
-#: templates/billing/payment_page.html:21
+#: templates/billing/payment_page.html:23
 msgid "Open your bank or wallet app and scan this Fonepay QR."
 msgstr "आफ्नो बैंक वा वालेट एप खोलेर यो फोनपे QR स्क्यान गर्नुहोस्।"
 
-#: templates/billing/payment_page.html:26
+#: templates/billing/payment_page.html:28
 msgid "PAY WITH YOUR BANK APP"
 msgstr "आफ्नो बैंक एपबाट भुक्तानी गर्नुहोस्"
 
-#: templates/billing/payment_page.html:41
+#: templates/billing/payment_page.html:43
 msgid ""
 "On your phone: tap your bank, approve the payment in its app, then come back "
 "here."
 msgstr ""
 "फोनमा: आफ्नो बैंक छान्नुहोस्, त्यसको एपमा भुक्तानी स्वीकृत गर्नुहोस्, अनि यहाँ फर्कनुहोस्।"
 
-#: templates/billing/payment_page.html:43
+#: templates/billing/payment_page.html:45
 msgid "Scan the QR with your bank or wallet app."
 msgstr "आफ्नो बैंक वा वालेट एपले QR स्क्यान गर्नुहोस्।"
 
-#: templates/billing/payment_page.html:50
+#: templates/billing/payment_page.html:52
 msgid "Waiting for your payment…"
 msgstr "तपाईंको भुक्तानी पर्खँदै…"
 
-#: templates/billing/payment_page.html:51
+#: templates/billing/payment_page.html:53
 msgid "Expires in"
 msgstr "समय बाँकी"
 
-#: templates/billing/payment_page.html:53
+#: templates/billing/payment_page.html:55
 msgid ""
 "Don't close this page until the payment is confirmed. If you already paid "
 "and closed it, your access is added automatically within a few minutes."
@@ -864,27 +1204,27 @@ msgstr ""
 "भुक्तानी पुष्टि नहुन्जेल यो पेज बन्द नगर्नुहोस्। भुक्तानी गरिसकेर पेज बन्द भएमा पनि केही "
 "मिनेटभित्र तपाईंको पहुँच आफैं थपिन्छ।"
 
-#: templates/billing/payment_page.html:57
+#: templates/billing/payment_page.html:59
 msgid "The payment didn't go through."
 msgstr "भुक्तानी सफल भएन।"
 
-#: templates/billing/payment_page.html:57
+#: templates/billing/payment_page.html:59
 msgid "This payment request has expired."
 msgstr "यो भुक्तानी अनुरोधको समय सकियो।"
 
-#: templates/billing/payment_page.html:59
+#: templates/billing/payment_page.html:61
 msgid "No money was taken for this request. You can start a new payment."
 msgstr "यस अनुरोधमा कुनै रकम काटिएको छैन। तपाईं नयाँ भुक्तानी सुरु गर्न सक्नुहुन्छ।"
 
-#: templates/billing/payment_page.html:60
+#: templates/billing/payment_page.html:62
 msgid "TRY AGAIN"
 msgstr "फेरि प्रयास गर्नुहोस्"
 
-#: templates/billing/payment_page.html:86
+#: templates/billing/payment_page.html:88
 msgid "Payment confirmed — taking you there…"
 msgstr "भुक्तानी पुष्टि भयो — अगाडि लैजाँदै…"
 
-#: templates/billing/payment_page.html:102
+#: templates/billing/payment_page.html:104
 msgid "QR scanned — approve the payment in your app…"
 msgstr "QR स्क्यान भयो — आफ्नो एपमा भुक्तानी स्वीकृत गर्नुहोस्…"
 
@@ -896,37 +1236,51 @@ msgstr "बिना सीमा पढ्नुहोस्"
 msgid "Full access to subscriber-only and special articles."
 msgstr "सदस्यहरूका लागि मात्र र विशेष लेखहरूमा पूर्ण पहुँच।"
 
-#: templates/billing/plan_browse.html:15 templates/billing/plan_detail.html:50
-msgid "You already have an active subscription."
-msgstr "तपाईंको सदस्यता पहिले नै सक्रिय छ।"
+#: templates/billing/plan_browse.html:16
+#, python-format
+msgid ""
+"You’re subscribed until %(date)s. Renew now and the new period starts when "
+"this one ends."
+msgstr ""
+"तपाईंको सदस्यता %(date)s सम्म छ। अहिले नवीकरण गर्नुभयो भने नयाँ अवधि यो सकिएपछि सुरु "
+"हुन्छ।"
 
-#: templates/billing/plan_browse.html:23 templates/billing/plan_detail.html:41
+#: templates/billing/plan_browse.html:17
+#, python-format
+msgid "You read with %(org)s’s subscription."
+msgstr "तपाईं %(org)s को सदस्यतामा पढ्नुहुन्छ।"
+
+#: templates/billing/plan_browse.html:19
+msgid "MY BILLING →"
+msgstr "मेरो बिलिङ →"
+
+#: templates/billing/plan_browse.html:27 templates/billing/plan_detail.html:41
 msgid "MOST POPULAR"
 msgstr "सबैभन्दा लोकप्रिय"
 
-#: templates/billing/plan_browse.html:31
+#: templates/billing/plan_browse.html:35
 #, python-format
-msgid "every %(days)s days"
-msgstr "हरेक %(days)s दिनमा"
+msgid "+ %(rate)s%% VAT · every %(days)s days"
+msgstr "+ %(rate)s%% भ्याट · हरेक %(days)s दिन"
 
-#: templates/billing/plan_browse.html:44
+#: templates/billing/plan_browse.html:48
 #, python-format
 msgid "+ %(count)s more"
 msgstr "+ थप %(count)s"
 
-#: templates/billing/plan_browse.html:56
+#: templates/billing/plan_browse.html:55
 msgid "SEE PLAN DETAILS →"
 msgstr "योजनाको विवरण हेर्नुहोस् →"
 
-#: templates/billing/plan_browse.html:61
+#: templates/billing/plan_browse.html:60
 msgid "No plans available right now — check back soon."
 msgstr "अहिले कुनै योजना उपलब्ध छैन — केही समयपछि फेरि हेर्नुहोस्।"
 
-#: templates/billing/plan_browse.html:67 templates/billing/plan_detail.html:30
+#: templates/billing/plan_browse.html:66 templates/billing/plan_detail.html:30
 msgid "COMPARE PLANS"
 msgstr "योजनाहरू तुलना गर्नुहोस्"
 
-#: templates/billing/plan_browse.html:68
+#: templates/billing/plan_browse.html:67
 msgid "Full feature comparison"
 msgstr "सुविधाहरूको पूर्ण तुलना"
 
@@ -949,48 +1303,46 @@ msgstr "%(name)s अरूसँग कस्तो छ हेर्नुहो
 
 #: templates/billing/plan_detail.html:45
 #, python-format
-msgid "billed every %(days)s days"
-msgstr "हरेक %(days)s दिनमा शुल्क"
+msgid "+ %(rate)s%% VAT (%(total)s in all) · for %(days)s days"
+msgstr "+ %(rate)s%% भ्याट (जम्मा %(total)s) · %(days)s दिनका लागि"
 
-#: templates/billing/plan_detail.html:54
-msgid "VIEW MY SUBSCRIPTION"
-msgstr "मेरो सदस्यता हेर्नुहोस्"
-
-#: templates/billing/plan_detail.html:59
-msgid "SUBSCRIBE NOW"
-msgstr "अहिले सदस्यता लिनुहोस्"
-
-#: templates/billing/plan_detail.html:62
-#: templates/billing/purchase_checkout.html:29
-#: templates/billing/subscribe_checkout.html:25
-#: templates/training/course_checkout.html:32
+#: templates/billing/plan_detail.html:50
+#: templates/billing/purchase_checkout.html:28
+#: templates/billing/subscribe_checkout.html:29
+#: templates/training/course_checkout.html:38
 msgid ""
 "You'll pay securely with Fonepay — scan a QR or approve in your bank app."
 msgstr ""
 "तपाईं फोनपेमार्फत सुरक्षित रूपमा भुक्तानी गर्नुहुनेछ — QR स्क्यान गर्नुहोस् वा बैंक एपमा स्वीकृत "
 "गर्नुहोस्।"
 
-#: templates/billing/plan_detail.html:65
+#: templates/billing/plan_detail.html:52
 msgid ""
 "Payment processing isn't live yet — checkout runs in test mode and activates "
 "access immediately."
 msgstr ""
 "भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — भुक्तानी पुष्टि गर्दा पहुँच तुरुन्तै सक्रिय हुन्छ।"
 
+#: templates/billing/plan_detail.html:54
+#: templates/billing/subscribe_checkout.html:26
+msgid ""
+"Subscriptions don’t renew automatically — we’ll email you before yours ends."
+msgstr "सदस्यता आफैं नवीकरण हुँदैन — सकिनुअघि हामी तपाईंलाई इमेल गर्नेछौं।"
+
 #: templates/billing/purchase_checkout.html:5
-#: templates/billing/purchase_checkout.html:10
+#: templates/billing/purchase_checkout.html:11
 #: templates/billing/subscribe_checkout.html:5
-#: templates/billing/subscribe_checkout.html:10
+#: templates/billing/subscribe_checkout.html:11
 #: templates/training/course_checkout.html:4
-#: templates/training/course_checkout.html:9
+#: templates/training/course_checkout.html:10
 msgid "Checkout"
 msgstr "भुक्तानी"
 
-#: templates/billing/purchase_checkout.html:9
+#: templates/billing/purchase_checkout.html:10
 msgid "← BACK TO ARTICLE"
 msgstr "← लेखमा फर्कनुहोस्"
 
-#: templates/billing/purchase_checkout.html:18
+#: templates/billing/purchase_checkout.html:19
 msgid "SPECIAL ARTICLE"
 msgstr "विशेष लेख"
 
@@ -998,7 +1350,7 @@ msgstr "विशेष लेख"
 msgid "One-time purchase"
 msgstr "एक पटकको खरिद"
 
-#: templates/billing/purchase_checkout.html:32
+#: templates/billing/purchase_checkout.html:31
 msgid ""
 "Payment processing isn't live yet — confirming below unlocks this article "
 "immediately at no charge while checkout is in test mode."
@@ -1006,34 +1358,100 @@ msgstr ""
 "भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — तल पुष्टि गर्दा कुनै शुल्क नलागी यो लेख तुरुन्तै "
 "खुल्नेछ।"
 
-#: templates/billing/purchase_checkout.html:33
+#: templates/billing/purchase_checkout.html:32
 msgid "Already subscribed?"
 msgstr "पहिले नै सदस्य हुनुहुन्छ?"
 
-#: templates/billing/purchase_checkout.html:33
+#: templates/billing/purchase_checkout.html:32
 msgid "for free access instead."
 msgstr "र निःशुल्क पढ्नुहोस्।"
 
-#: templates/billing/purchase_checkout.html:41
-#: templates/billing/subscribe_checkout.html:36
-#: templates/training/course_checkout.html:43
+#: templates/billing/purchase_checkout.html:40
+#: templates/billing/subscribe_checkout.html:41
+#: templates/training/course_checkout.html:49
 msgid "CONTINUE TO FONEPAY"
 msgstr "फोनपेमा अगाडि बढ्नुहोस्"
 
-#: templates/billing/purchase_checkout.html:41
+#: templates/billing/purchase_checkout.html:40
 msgid "CONFIRM & UNLOCK ARTICLE"
 msgstr "पुष्टि गरी लेख खोल्नुहोस्"
 
-#: templates/billing/subscribe_checkout.html:9
+#: templates/billing/receipt.html:4
+msgid "Receipt"
+msgstr "रसिद"
+
+#: templates/billing/receipt.html:21
+msgid "PRINT / SAVE AS PDF"
+msgstr "प्रिन्ट / PDF सेभ गर्नुहोस्"
+
+#: templates/billing/receipt.html:29
+#, python-format
+msgid "PAN / VAT no. %(pan)s"
+msgstr "प्यान / भ्याट नं. %(pan)s"
+
+#: templates/billing/receipt.html:41
+msgid "BILLED TO"
+msgstr "बिल पाउने"
+
+#: templates/billing/receipt.html:48
+msgid "DESCRIPTION"
+msgstr "विवरण"
+
+#: templates/billing/receipt.html:48
+msgid "AMOUNT"
+msgstr "रकम"
+
+#: templates/billing/receipt.html:60
+msgid "TOTAL PAID"
+msgstr "जम्मा भुक्तानी"
+
+#: templates/billing/receipt.html:67
+msgid "Paid via"
+msgstr "भुक्तानी माध्यम"
+
+#: templates/billing/receipt.html:68
+msgid "Payment reference"
+msgstr "भुक्तानी सन्दर्भ"
+
+#: templates/billing/receipt.html:69
+msgid "Fonepay trace ID"
+msgstr "फोनपे ट्रेस आईडी"
+
+#: templates/billing/receipt.html:76
+msgid "CREDIT NOTE"
+msgstr "क्रेडिट नोट"
+
+#: templates/billing/receipt.html:82
+#, python-format
+msgid "%(price)s + %(vat)s VAT refunded"
+msgstr "%(price)s + %(vat)s भ्याट फिर्ता"
+
+#: templates/billing/receipt.html:88
+#, python-format
+msgid "Thank you for supporting %(name)s."
+msgstr "%(name)s लाई सहयोग गर्नुभएकोमा धन्यवाद।"
+
+#: templates/billing/subscribe_checkout.html:10
 msgid "← BACK TO PLAN"
 msgstr "← योजनामा फर्कनुहोस्"
 
-#: templates/billing/subscribe_checkout.html:19
+#: templates/billing/subscribe_checkout.html:20
+#, python-format
+msgid ""
+"Renewal · %(start)s – %(end)s (starts when your current subscription ends)"
+msgstr "नवीकरण · %(start)s – %(end)s (हालको सदस्यता सकिएपछि सुरु हुन्छ)"
+
+#: templates/billing/subscribe_checkout.html:21
+#, python-format
+msgid "Access %(start)s – %(end)s"
+msgstr "पहुँच %(start)s – %(end)s"
+
+#: templates/billing/subscribe_checkout.html:23
 #, python-format
 msgid "%(days)s days access"
 msgstr "%(days)s दिनको पहुँच"
 
-#: templates/billing/subscribe_checkout.html:28
+#: templates/billing/subscribe_checkout.html:32
 msgid ""
 "Payment processing isn't live yet — confirming below activates your "
 "subscription immediately at no charge while checkout is in test mode."
@@ -1041,7 +1459,7 @@ msgstr ""
 "भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — तल पुष्टि गर्दा कुनै शुल्क नलागी तपाईंको सदस्यता "
 "तुरुन्तै सक्रिय हुनेछ।"
 
-#: templates/billing/subscribe_checkout.html:36
+#: templates/billing/subscribe_checkout.html:41
 msgid "CONFIRM & SUBSCRIBE"
 msgstr "पुष्टि गरी सदस्यता लिनुहोस्"
 
@@ -1089,7 +1507,11 @@ msgstr "यो टिप्पणी हटाइएको छ।"
 msgid "REPLY"
 msgstr "जवाफ दिनुहोस्"
 
-#: templates/django_comments_xtd/comment_tree.html:39
+#: templates/django_comments_xtd/comment_tree.html:38
+msgid "REPORT"
+msgstr "रिपोर्ट"
+
+#: templates/django_comments_xtd/comment_tree.html:42
 msgid "REMOVE"
 msgstr "हटाउनुहोस्"
 
@@ -1247,6 +1669,34 @@ msgstr ""
 msgid "EDITORIAL POLICY →"
 msgstr "सम्पादकीय नीति →"
 
+#: templates/includes/cookie_consent.html:14
+msgid "Cookies on this site"
+msgstr "यस साइटमा कुकीहरू"
+
+#: templates/includes/cookie_consent.html:16
+msgid ""
+"We use essential cookies to keep you signed in and the site working. With "
+"your permission we’d also like to use analytics cookies (Google Analytics) "
+"to understand how the site is used. You can change your mind at any time "
+"from “Cookie settings” at the bottom of every page."
+msgstr ""
+"तपाईंलाई साइन इन राख्न र साइट चलाउन हामी आवश्यक कुकीहरू प्रयोग गर्छौं। तपाईंको "
+"अनुमतिमा, साइट कसरी प्रयोग हुन्छ बुझ्न एनालिटिक्स कुकीहरू (Google Analytics) पनि "
+"प्रयोग गर्न चाहन्छौं। हरेक पृष्ठको तल रहेको “कुकी सेटिङ” बाट जुनसुकै बेला आफ्नो निर्णय बदल्न "
+"सक्नुहुन्छ।"
+
+#: templates/includes/cookie_consent.html:17
+msgid "Privacy policy"
+msgstr "गोपनीयता नीति"
+
+#: templates/includes/cookie_consent.html:20
+msgid "ACCEPT ANALYTICS"
+msgstr "एनालिटिक्स स्वीकार्नुहोस्"
+
+#: templates/includes/cookie_consent.html:21
+msgid "ONLY ESSENTIAL"
+msgstr "आवश्यक मात्र"
+
 #: templates/issues/issue_detail.html:13
 msgid "← ALL ISSUES"
 msgstr "← सबै अंकहरू"
@@ -1284,7 +1734,7 @@ msgid "Subscription Confirmed"
 msgstr "सदस्यता पुष्टि भयो"
 
 #: templates/newsletter/confirmed.html:8
-#: templates/newsletter/unsubscribed.html:8
+#: templates/newsletter/unsubscribed.html:8 templates/users/privacy.html:24
 msgid "Newsletter"
 msgstr "न्युजलेटर"
 
@@ -1323,6 +1773,17 @@ msgstr ""
 "%(email)s ले अब हाम्रो न्युजलेटर प्राप्त गर्ने छैन। मन बदलियो? जुनसुकै बेला फेरि सदस्यता लिन "
 "सक्नुहुन्छ।"
 
+#: templates/pages/page.html:10
+msgid ""
+"Draft — only Editors-in-Chief and Admins can see this page until it’s "
+"published."
+msgstr "मस्यौदा — प्रकाशित नभएसम्म यो पृष्ठ प्रधान सम्पादक र एडमिनले मात्र देख्न सक्छन्।"
+
+#: templates/pages/page.html:13
+#, python-format
+msgid "Last updated %(date)s"
+msgstr "पछिल्लो अद्यावधिक %(date)s"
+
 #: templates/sections/section_detail.html:17
 #: templates/training/course_detail.html:21
 msgid "Breadcrumb"
@@ -1343,11 +1804,11 @@ msgstr "पिन गरिएको"
 msgid "No articles in this section yet."
 msgstr "यस खण्डमा अहिलेसम्म कुनै लेख छैन।"
 
-#: templates/training/course_checkout.html:8
+#: templates/training/course_checkout.html:9
 msgid "← BACK TO COURSE"
 msgstr "← कोर्समा फर्कनुहोस्"
 
-#: templates/training/course_checkout.html:21
+#: templates/training/course_checkout.html:22
 #: templates/training/course_detail.html:48
 #: templates/training/course_detail.html:240
 #: templates/training/course_list.html:68
@@ -1355,11 +1816,12 @@ msgstr "← कोर्समा फर्कनुहोस्"
 msgid "Starts %(date)s"
 msgstr "%(date)s देखि सुरु"
 
-#: templates/training/course_checkout.html:26
+#: templates/training/course_checkout.html:27
+#: templates/training/course_checkout.html:31
 msgid "One-time enrollment"
 msgstr "एक पटकको भर्ना शुल्क"
 
-#: templates/training/course_checkout.html:35
+#: templates/training/course_checkout.html:41
 msgid ""
 "Payment processing isn't live yet — confirming below enrolls you immediately "
 "at no charge while checkout is in test mode."
@@ -1367,7 +1829,7 @@ msgstr ""
 "भुक्तानी प्रणाली अहिले परीक्षण मोडमा छ — तल पुष्टि गर्दा कुनै शुल्क नलागी तुरुन्तै भर्ना "
 "हुनुहुनेछ।"
 
-#: templates/training/course_checkout.html:43
+#: templates/training/course_checkout.html:49
 msgid "CONFIRM & ENROLL"
 msgstr "पुष्टि गरी भर्ना हुनुहोस्"
 
@@ -1660,6 +2122,241 @@ msgstr "अहिले भर्ना हुनुहोस्"
 msgid "LOG IN TO ENROLL"
 msgstr "भर्ना हुन लग इन गर्नुहोस्"
 
+#: templates/users/account_deleted.html:3
+msgid "Account deleted"
+msgstr "खाता मेटाइयो"
+
+#: templates/users/account_deleted.html:7
+msgid "ACCOUNT DELETED"
+msgstr "खाता मेटाइयो"
+
+#: templates/users/account_deleted.html:8
+msgid "Your account has been deleted"
+msgstr "तपाईंको खाता मेटाइएको छ"
+
+#: templates/users/account_deleted.html:9
+msgid ""
+"Your personal data has been removed and you’ve been signed out. We’ve sent a "
+"last confirmation to your email address."
+msgstr ""
+"तपाईंको व्यक्तिगत डाटा हटाइएको छ र तपाईं साइन आउट हुनुभएको छ। हामीले तपाईंको इमेलमा "
+"अन्तिम पुष्टि पठाएका छौं।"
+
+#: templates/users/account_deleted.html:10
+msgid "BACK TO THE HOMEPAGE"
+msgstr "गृहपृष्ठमा फर्कनुहोस्"
+
+#: templates/users/confirm_email_invalid.html:3
+msgid "Link expired"
+msgstr "लिङ्कको म्याद सकियो"
+
+#: templates/users/confirm_email_invalid.html:7
+msgid "EMAIL CONFIRMATION"
+msgstr "इमेल पुष्टि"
+
+#: templates/users/confirm_email_invalid.html:8
+msgid "This link doesn’t work any more"
+msgstr "यो लिङ्कले अब काम गर्दैन"
+
+#: templates/users/confirm_email_invalid.html:9
+msgid ""
+"Confirmation links last 3 days and only work for the address they were sent "
+"to. Sign in and ask for a new one from your billing page."
+msgstr ""
+"पुष्टि लिङ्क ३ दिनसम्म मात्र चल्छ र जुन ठेगानामा पठाइएको हो त्यसैका लागि काम गर्छ। लग "
+"इन गरेर आफ्नो बिलिङ पृष्ठबाट नयाँ माग्नुहोस्।"
+
+#: templates/users/confirm_email_invalid.html:10
+msgid "GO TO BILLING"
+msgstr "बिलिङमा जानुहोस्"
+
+#: templates/users/email_unsubscribe.html:3
+msgid "Email preferences"
+msgstr "इमेल प्राथमिकता"
+
+#: templates/users/email_unsubscribe.html:7
+msgid "EMAIL PREFERENCES"
+msgstr "इमेल प्राथमिकता"
+
+#: templates/users/email_unsubscribe.html:9
+msgid "This link doesn’t work"
+msgstr "यो लिङ्कले काम गर्दैन"
+
+#: templates/users/email_unsubscribe.html:10
+msgid "Sign in and change which emails you get on your Privacy & data page."
+msgstr "साइन इन गरी आफ्नो गोपनीयता र डाटा पृष्ठमा कुन इमेल पाउने भनेर बदल्नुहोस्।"
+
+#: templates/users/email_unsubscribe.html:12
+msgid "You’re unsubscribed"
+msgstr "तपाईंको सदस्यता हटाइयो"
+
+#: templates/users/email_unsubscribe.html:13
+#, python-format
+msgid ""
+"You won’t get %(label)s any more. You can switch it back on from your "
+"Privacy & data page."
+msgstr ""
+"अबदेखि तपाईंले %(label)s पाउनुहुने छैन। गोपनीयता र डाटा पृष्ठबाट फेरि खोल्न सक्नुहुन्छ।"
+
+#: templates/users/email_unsubscribe.html:15
+msgid "Unsubscribe?"
+msgstr "सदस्यता हटाउने?"
+
+#: templates/users/email_unsubscribe.html:16
+#, python-format
+msgid "Stop getting %(label)s."
+msgstr "%(label)s पाउन बन्द गर्नुहोस्।"
+
+#: templates/users/email_unsubscribe.html:18 templates/users/privacy.html:30
+msgid "UNSUBSCRIBE"
+msgstr "सदस्यता हटाउनुहोस्"
+
+#: templates/users/privacy.html:13
+msgid ""
+"Choose which emails you get, download a copy of your data, manage cookies, "
+"or delete your account."
+msgstr ""
+"कुन इमेल पाउने छान्नुहोस्, आफ्नो डाटाको प्रति डाउनलोड गर्नुहोस्, कुकी व्यवस्थापन गर्नुहोस्, "
+"वा खाता मेटाउनुहोस्।"
+
+#: templates/users/privacy.html:14
+msgid "Read our privacy policy"
+msgstr "हाम्रो गोपनीयता नीति पढ्नुहोस्"
+
+#: templates/users/privacy.html:20
+msgid "EMAILS"
+msgstr "इमेलहरू"
+
+#: templates/users/privacy.html:25
+#, python-format
+msgid "You get the newsletter at %(email)s."
+msgstr "तपाईंले %(email)s मा न्युजलेटर पाउनुहुन्छ।"
+
+#: templates/users/privacy.html:25
+msgid "You don’t get the newsletter."
+msgstr "तपाईंले न्युजलेटर पाउनुहुन्न।"
+
+#: templates/users/privacy.html:46
+msgid "Weekly digest of topics I follow"
+msgstr "मैले पछ्याएका विषयहरूको साप्ताहिक सारांश"
+
+#: templates/users/privacy.html:46
+msgid "New articles in the sections and topics you follow, once a week."
+msgstr "तपाईंले पछ्याएका खण्ड र विषयका नयाँ लेखहरू, हप्तामा एक पटक।"
+
+#: templates/users/privacy.html:50
+msgid "Subscription renewal reminders"
+msgstr "सदस्यता नवीकरण सम्झना"
+
+#: templates/users/privacy.html:50
+msgid "A week and a day before your subscription ends."
+msgstr "सदस्यता सकिनुभन्दा एक हप्ता र एक दिन अघि।"
+
+#: templates/users/privacy.html:52
+msgid ""
+"Receipts, password resets and other emails about your account are always "
+"sent."
+msgstr "रसिद, पासवर्ड रिसेट र खातासम्बन्धी अन्य इमेल सधैं पठाइन्छन्।"
+
+#: templates/users/privacy.html:53
+msgid "SAVE EMAIL PREFERENCES"
+msgstr "इमेल प्राथमिकता सेभ गर्नुहोस्"
+
+#: templates/users/privacy.html:60
+msgid "YOUR DATA"
+msgstr "तपाईंको डाटा"
+
+#: templates/users/privacy.html:62
+msgid ""
+"Download everything linked to your account — profile, subscriptions, "
+"payments, saved articles, follows, comments and pitches — as a file."
+msgstr ""
+"तपाईंको खातासँग जोडिएका सबै कुरा — प्रोफाइल, सदस्यता, भुक्तानी, सेभ गरिएका लेख, "
+"पछ्याइएका विषय, टिप्पणी र पिच — एउटा फाइलमा डाउनलोड गर्नुहोस्।"
+
+#: templates/users/privacy.html:63
+msgid "DOWNLOAD MY DATA"
+msgstr "मेरो डाटा डाउनलोड गर्नुहोस्"
+
+#: templates/users/privacy.html:69
+msgid "COOKIES"
+msgstr "कुकीहरू"
+
+#: templates/users/privacy.html:71
+msgid ""
+"We only use analytics cookies if you allow them. You can change your choice "
+"at any time."
+msgstr ""
+"तपाईंले अनुमति दिनुभयो भने मात्र हामी एनालिटिक्स कुकी प्रयोग गर्छौं। जुनसुकै बेला निर्णय "
+"बदल्न सक्नुहुन्छ।"
+
+#: templates/users/privacy.html:72
+msgid "COOKIE SETTINGS"
+msgstr "कुकी सेटिङ"
+
+#: templates/users/privacy.html:78
+msgid "DELETE YOUR ACCOUNT"
+msgstr "खाता मेटाउनुहोस्"
+
+#: templates/users/privacy.html:81
+msgid ""
+"This permanently deletes your account and personal data: profile, saved "
+"articles, follows, newsletter subscription and sign-in history. Any active "
+"subscription ends without a refund. It can’t be undone."
+msgstr ""
+"यसले तपाईंको खाता र व्यक्तिगत डाटा — प्रोफाइल, सेभ गरिएका लेख, पछ्याइएका विषय, "
+"न्युजलेटर सदस्यता र साइन-इन इतिहास — स्थायी रूपमा मेटाउँछ। सक्रिय सदस्यता फिर्ता बिना "
+"सकिन्छ। यो फर्काउन सकिँदैन।"
+
+#: templates/users/privacy.html:82
+msgid ""
+"We keep receipts for payments you made, because tax law requires it, and "
+"anything already published stays up with your name removed."
+msgstr ""
+"कर कानुनले माग्ने भएकाले भुक्तानीका रसिद राखिन्छन्, र पहिले नै प्रकाशित भएका कुरा तपाईंको "
+"नाम हटाएर रहन्छन्।"
+
+#: templates/users/privacy.html:84
+msgid "Delete your account permanently? This can’t be undone."
+msgstr "खाता स्थायी रूपमा मेटाउने? यो फर्काउन सकिँदैन।"
+
+#: templates/users/privacy.html:87
+msgid "Your password"
+msgstr "तपाईंको पासवर्ड"
+
+#: templates/users/privacy.html:90
+msgid "Type your email address to confirm"
+msgstr "पुष्टि गर्न आफ्नो इमेल ठेगाना लेख्नुहोस्"
+
+#: templates/users/privacy.html:93
+msgid "Also remove my comments (otherwise they stay, shown as “Deleted user”)."
+msgstr "मेरा टिप्पणीहरू पनि हटाउनुहोस् (नत्र “मेटाइएको प्रयोगकर्ता” भनेर रहन्छन्)।"
+
+#: templates/users/privacy.html:94
+msgid "I understand this is permanent."
+msgstr "यो स्थायी हो भन्ने मैले बुझें।"
+
+#: templates/users/privacy.html:95
+msgid "DELETE MY ACCOUNT"
+msgstr "मेरो खाता मेटाउनुहोस्"
+
+#: templates/users/privacy.html:98
+#, python-format
+msgid ""
+"Staff accounts can’t be deleted from here. Ask an Admin, or write to "
+"%(email)s."
+msgstr ""
+"कर्मचारी खाता यहाँबाट मेटाउन मिल्दैन। एडमिनलाई सोध्नुहोस्, वा %(email)s मा लेख्नुहोस्।"
+
+#: templates/users/privacy.html:103
+#, python-format
+msgid ""
+"Anything else — correcting your data, or a question about how we use it? "
+"Write to %(email)s."
+msgstr ""
+"अरू केही — डाटा सच्याउन, वा हामीले यसलाई कसरी प्रयोग गर्छौं भन्ने प्रश्न? %(email)s मा "
+"लेख्नुहोस्।"
+
 #: templates/users/register.html:4 templates/users/register.html:9
 msgid "Create an account"
 msgstr "खाता बनाउनुहोस्"
@@ -1696,11 +2393,20 @@ msgstr "पासवर्ड पुष्टि गर्नुहोस्"
 msgid "At least 8 characters. Avoid common words and all-number passwords."
 msgstr "कम्तीमा ८ अक्षर। सामान्य शब्द र अंक मात्रको पासवर्ड नराख्नुहोस्।"
 
-#: templates/users/register.html:47
+#: templates/users/register.html:50
+msgid "I agree to the"
+msgstr "म यी कुरामा सहमत छु:"
+
+#: templates/users/register.html:50
+msgctxt "end of: I agree to the Terms and Privacy policy"
+msgid "."
+msgstr "।"
+
+#: templates/users/register.html:57
 msgid "CREATE ACCOUNT"
 msgstr "खाता बनाउनुहोस्"
 
-#: templates/users/register.html:52
+#: templates/users/register.html:62
 msgid "Already have an account?"
 msgstr "पहिले नै खाता छ?"
 
@@ -1732,7 +2438,72 @@ msgstr "प्रत्यक्ष (कक्षामा)"
 msgid "Hybrid"
 msgstr "मिश्रित (अनलाइन र प्रत्यक्ष)"
 
-#: users/views.py:69
+#: users/forms.py:38
+msgid "Please agree to the terms to create an account."
+msgstr "खाता बनाउन सर्तहरूमा सहमति जनाउनुहोस्।"
+
+#: users/privacy.py:241
+msgid "the weekly digest of topics you follow"
+msgstr "तपाईंले पछ्याएका विषयहरूको साप्ताहिक सारांश"
+
+#: users/privacy.py:242
+msgid "subscription renewal reminders"
+msgstr "सदस्यता नवीकरण सम्झना"
+
+#: users/views.py:76
 #, python-format
 msgid "Welcome, %(name)s — your account is ready."
 msgstr "स्वागत छ, %(name)s — तपाईंको खाता तयार छ।"
+
+#: users/views.py:92
+#, python-format
+msgid ""
+"%(org)s has a subscription. We’ve emailed you a link — confirm your address "
+"to read with it."
+msgstr ""
+"%(org)s को सदस्यता छ। हामीले तपाईंलाई लिङ्क इमेल गरेका छौं — त्यससँग पढ्न आफ्नो ठेगाना "
+"पुष्टि गर्नुहोस्।"
+
+#: users/views.py:725
+msgid ""
+"We’ve sent a few links already — check your inbox (and spam), or try again "
+"in an hour."
+msgstr ""
+"हामीले केही लिङ्क पठाइसकेका छौं — इनबक्स (र स्प्याम) हेर्नुहोस्, वा एक घण्टापछि फेरि प्रयास "
+"गर्नुहोस्।"
+
+#: users/views.py:727
+msgid "Your email address is already confirmed."
+msgstr "तपाईंको इमेल ठेगाना पहिले नै पुष्टि भइसकेको छ।"
+
+#: users/views.py:729
+#, python-format
+msgid "We’ve emailed a confirmation link to %(email)s."
+msgstr "हामीले %(email)s मा पुष्टि लिङ्क इमेल गरेका छौं।"
+
+#: users/views.py:731
+msgid "We couldn’t send the email just now. Please try again in a few minutes."
+msgstr "अहिले इमेल पठाउन सकिएन। केही मिनेटपछि फेरि प्रयास गर्नुहोस्।"
+
+#: users/views.py:748
+#, python-format
+msgid "Email confirmed — you now read with %(org)s’s subscription."
+msgstr "इमेल पुष्टि भयो — अब तपाईं %(org)s को सदस्यतामा पढ्नुहुन्छ।"
+
+#: users/views.py:750
+msgid "Email confirmed. Thank you!"
+msgstr "इमेल पुष्टि भयो। धन्यवाद!"
+
+#: users/views.py:767
+msgid "Email preferences saved."
+msgstr "इमेल प्राथमिकता सेभ भयो।"
+
+#: users/views.py:788
+msgid ""
+"You’ve downloaded your data several times this hour — please try again later."
+msgstr "तपाईंले यो घण्टा धेरै पटक डाटा डाउनलोड गर्नुभयो — पछि फेरि प्रयास गर्नुहोस्।"
+
+#: users/views.py:814
+msgid ""
+"Your account was not deleted: confirm with your password and tick the box."
+msgstr "खाता मेटाइएन: पासवर्डले पुष्टि गरी बाकसमा चिन्ह लगाउनुहोस्।"

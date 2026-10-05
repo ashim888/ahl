@@ -1,0 +1,17 @@
+{% extends 'email/base.html' %}
+{% block title %}Your payment didn't go through{% endblock %}
+{% block preheader %}{{ payment.description }} — {{ total }}.{% endblock %}
+{% block eyebrow %}Payment{% endblock %}
+{% block heading %}Your payment didn't go through{% endblock %}
+{% block content %}
+    <p>Hi {{ payment.user.first_name }},</p>
+    {% if underpaid %}
+        <p>Fonepay reported a payment for <strong>{{ payment.description }}</strong> that was less than the {{ total }} due, so we couldn't give you access. Please reply to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> with your reference <strong>{{ payment.reference }}</strong> and we'll sort it out.</p>
+    {% else %}
+        <p>Your payment of {{ total }} for <strong>{{ payment.description }}</strong> was declined, so nothing was charged and your access hasn't changed. You can try again:</p>
+        {% include 'email/includes/button.html' with url=retry_url label='Try again' %}
+        {% include 'email/includes/link_fallback.html' with url=retry_url %}
+    {% endif %}
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you started a payment on {{ journal_name }}.{% endblock %}

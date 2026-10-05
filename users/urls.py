@@ -12,6 +12,13 @@ urlpatterns = [
 
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.profile_update_view, name='profile_edit'),
+    path('account/confirm-email/', views.send_email_confirmation, name='send_email_confirmation'),
+    path('account/privacy/', views.privacy_settings, name='privacy'),
+    path('account/privacy/download/', views.privacy_export, name='privacy_export'),
+    path('account/privacy/delete/', views.privacy_delete_account, name='privacy_delete'),
+    path('email/unsubscribe/<str:token>/', views.email_unsubscribe, name='email_unsubscribe'),
+    path('manage/accounts/<int:pk>/erase/', views.account_erase, name='manage_account_erase'),
+    path('account/confirm-email/<str:token>/', views.confirm_email, name='confirm_email'),
 
     path('pending-verification/', views.pending_verification_view, name='pending_verification'),
     path('pending-verification/reapply/', views.reapply_verification, name='reapply_verification'),

@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 import io
 
 from django.core.files.base import ContentFile
@@ -213,25 +214,57 @@ class RevenueAccessTests(TestCase):
             self.assertEqual(response.status_code, 302, name)
 
 
+def record_paid(user, kind, price, **items):
+    """A Paid payment in the billing ledger — what the revenue pages count."""
+    from billing.models import Payment
+    from billing.payments import record_paid_payment
+
+    return record_paid_payment(
+        user=user, kind=kind, price=price, description='Test payment', gateway=Payment.Gateway.STUB, grant=False,
+        **items,
+    )
+
+
 class RevenueTrainingViewTests(TestCase):
+    """Training revenue = paid course payments, net of VAT."""
+
     def setUp(self):
         self.client.force_login(make_senior())
 
     def test_collected_pending_refunded_totals(self):
+        from billing.models import Payment
+
         course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')
-        Enrollment.objects.create(user=make_reader('a@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PAID)
-        Enrollment.objects.create(user=make_reader('b@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PENDING)
-        Enrollment.objects.create(user=make_reader('c@example.com'), course=course, payment_status=Enrollment.PaymentStatus.REFUNDED)
+        paid_reader = make_reader('a@example.com')
+        Enrollment.objects.create(user=paid_reader, course=course, payment_status=Enrollment.PaymentStatus.PAID)
+        record_paid(paid_reader, Payment.Kind.COURSE, 50, course=course)
+        # A checkout started but not paid yet.
+        Payment.objects.create(
+            user=make_reader('b@example.com'), kind=Payment.Kind.COURSE, course=course, subtotal=50, vat_amount=6.5,
+            amount=56.5, description='x', expires_at=timezone.now() + datetime.timedelta(minutes=10),
+        )
+        # Paid, then refunded: counted as refunded, not collected.
+        from billing.payments import refund_payment
+
+        refund_payment(record_paid(make_reader('c@example.com'), Payment.Kind.COURSE, 50, course=course), by=None, reason='x')
+        # Labelled refunded by hand with no money recorded: neither.
+        Enrollment.objects.create(user=make_reader('e@example.com'), course=course, payment_status=Enrollment.PaymentStatus.REFUNDED)
+        # Marked paid by staff with no money recorded: not revenue.
+        Enrollment.objects.create(user=make_reader('d@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PAID)
 
         response = self.client.get(reverse('admin_custom:revenue_training'))
         self.assertEqual(response.context['collected_total'], 50)
+        self.assertEqual(response.context['vat_total'], Decimal('6.50'))
         self.assertEqual(response.context['pending_total'], 50)
         self.assertEqual(response.context['refunded_total'], 50)
         self.assertEqual(response.context['enrollment_total'], 3)
+        self.assertEqual(list(response.context['courses'])[0].collected, 50)
 
-    def test_revenue_trend_reflects_paid_enrollment_today(self):
+    def test_revenue_trend_reflects_todays_payment(self):
+        from billing.models import Payment
+
         course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')
-        Enrollment.objects.create(user=make_reader('a@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PAID)
+        record_paid(make_reader('a@example.com'), Payment.Kind.COURSE, 50, course=course)
 
         response = self.client.get(reverse('admin_custom:revenue_training'))
         self.assertEqual(sum(d['count'] for d in response.context['revenue_trend']), 50)
@@ -241,19 +274,27 @@ class RevenueSubscriptionsViewTests(TestCase):
     def setUp(self):
         self.client.force_login(make_senior())
 
-    def test_per_plan_breakdown_and_active_count(self):
+    def test_per_plan_breakdown_counts_payments_not_list_prices(self):
+        from billing.models import Payment
+
         plan = SubscriptionPlan.objects.create(
             name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=30, duration_days=30,
         )
+        payer = make_reader('sub1@example.com')
         UserSubscription.objects.create(
-            user=make_reader('sub1@example.com'), plan=plan, status=UserSubscription.Status.ACTIVE,
+            user=payer, plan=plan, status=UserSubscription.Status.ACTIVE,
             start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
         )
+        record_paid(payer, Payment.Kind.SUBSCRIPTION, 30, plan=plan)
+        # Complimentary (no payment) — counted as a subscription, not as money.
         UserSubscription.objects.create(
             user=make_reader('sub2@example.com'), plan=plan, status=UserSubscription.Status.CANCELLED,
             start_date=timezone.localdate() - datetime.timedelta(days=40),
             end_date=timezone.localdate() - datetime.timedelta(days=10),
         )
+        # The plan's price later went up: past revenue doesn't change.
+        plan.price = 45
+        plan.save()
 
         response = self.client.get(reverse('admin_custom:revenue_subscriptions'))
         self.assertEqual(response.context['active_subscription_count'], 1)
@@ -262,32 +303,34 @@ class RevenueSubscriptionsViewTests(TestCase):
         self.assertEqual(len(plans), 1)
         self.assertEqual(plans[0].active_count, 1)
         self.assertEqual(plans[0].lifetime_count, 2)
-        self.assertEqual(plans[0].lifetime_revenue, 60)
+        self.assertEqual(plans[0].lifetime_revenue, 30)
 
     def test_purchase_revenue_totals(self):
+        from billing.models import Payment
+
         article = Article.objects.create(
             title='Special', slug='special-article', abstract='A', article_type=Article.ArticleType.ORIGINAL_RESEARCH,
             status=Article.Status.PUBLISHED,
         )
-        ArticlePurchase.objects.create(user=make_reader('buyer@example.com'), article=article, amount=5)
+        record_paid(make_reader('buyer@example.com'), Payment.Kind.ARTICLE, 5, article=article)
+        ArticlePurchase.objects.create(user=make_reader('comp@example.com'), article=article, amount=0)
 
         response = self.client.get(reverse('admin_custom:revenue_subscriptions'))
         self.assertEqual(response.context['purchase_count'], 1)
         self.assertEqual(response.context['purchase_revenue'], 5)
 
     def test_revenue_trend_combines_subscriptions_and_purchases(self):
+        from billing.models import Payment
+
         plan = SubscriptionPlan.objects.create(
             name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=30, duration_days=30,
         )
-        UserSubscription.objects.create(
-            user=make_reader('sub@example.com'), plan=plan, status=UserSubscription.Status.ACTIVE,
-            start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
-        )
+        record_paid(make_reader('sub@example.com'), Payment.Kind.SUBSCRIPTION, 30, plan=plan)
         article = Article.objects.create(
             title='Special', slug='special-article-2', abstract='A', article_type=Article.ArticleType.ORIGINAL_RESEARCH,
             status=Article.Status.PUBLISHED,
         )
-        ArticlePurchase.objects.create(user=make_reader('buyer2@example.com'), article=article, amount=5)
+        record_paid(make_reader('buyer2@example.com'), Payment.Kind.ARTICLE, 5, article=article)
 
         response = self.client.get(reverse('admin_custom:revenue_subscriptions'))
         self.assertEqual(sum(d['count'] for d in response.context['revenue_trend']), 35)
@@ -298,27 +341,32 @@ class RevenueOverviewViewTests(TestCase):
         self.client.force_login(make_senior())
 
     def test_totals_combine_training_subscriptions_and_purchases(self):
+        from billing.models import Payment
+
         course = TrainingCourse.objects.create(title='Course', description='D', price=50, duration='4 weeks', instructor='I')
-        Enrollment.objects.create(user=make_reader('a@example.com'), course=course, payment_status=Enrollment.PaymentStatus.PAID)
+        record_paid(make_reader('a@example.com'), Payment.Kind.COURSE, 50, course=course)
 
         plan = SubscriptionPlan.objects.create(
             name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=30, duration_days=30,
         )
+        subscriber = make_reader('sub@example.com')
         UserSubscription.objects.create(
-            user=make_reader('sub@example.com'), plan=plan, status=UserSubscription.Status.ACTIVE,
+            user=subscriber, plan=plan, status=UserSubscription.Status.ACTIVE,
             start_date=timezone.localdate(), end_date=timezone.localdate() + datetime.timedelta(days=10),
         )
+        record_paid(subscriber, Payment.Kind.SUBSCRIPTION, 30, plan=plan)
         article = Article.objects.create(
             title='Special', slug='special-article-3', abstract='A', article_type=Article.ArticleType.ORIGINAL_RESEARCH,
             status=Article.Status.PUBLISHED,
         )
-        ArticlePurchase.objects.create(user=make_reader('buyer3@example.com'), article=article, amount=5)
+        record_paid(make_reader('buyer3@example.com'), Payment.Kind.ARTICLE, 5, article=article)
 
         response = self.client.get(reverse('admin_custom:revenue'))
         self.assertEqual(response.context['training_total'], 50)
         self.assertEqual(response.context['subscription_total'], 30)
         self.assertEqual(response.context['purchase_total'], 5)
         self.assertEqual(response.context['total_revenue'], 85)
+        self.assertEqual(response.context['vat_total'], Decimal('11.05'))  # 13% of 85, kept separate
         # 30-day plan at price 30 normalizes to exactly 30/month.
         self.assertEqual(response.context['mrr_estimate'], 30)
 

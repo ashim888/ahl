@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -11,12 +13,14 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 from django.views.generic.detail import DetailView
 from django_ratelimit.decorators import ratelimit
 
 from articles.models import Article, Author, Bookmark, KeywordFollow
+from billing.institutions import pending_organization_for
 from billing.models import ArticleGift
 from pitches.models import StoryPitch
 from sections.models import Section
@@ -27,12 +31,15 @@ from .forms import (
     AccountCreateForm, AccountManageForm, ChangeRoleForm, GroupForm, ProfileUpdateForm,
     RegistrationForm, STAFF_ROLES, StaffCreateForm, StaffManageForm, UserGroupsForm,
 )
+from . import email_confirmation
 from .invites import send_account_invite
 from .models import User
 
 # Single source of truth for both is User.EDITORIAL_ROLES / User.SENIOR_STAFF_ROLES
 # (see users/models.py). Granting Editor/EiC/Admin is more sensitive than the
 # Authors screen above — scoped to EiC/Admin only, not plain Editors.
+logger = logging.getLogger(__name__)
+
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 STAFF_MANAGE_ROLES = User.SENIOR_STAFF_ROLES
 # Raw Django Group/Permission config is more sensitive still — Admin only.
@@ -76,6 +83,14 @@ class RegisterView(CreateView):
         # AxesStandaloneBackend itself never authenticates a user — it only
         # blocks locked-out attempts — so ModelBackend is the real one.
         login(self.request, self.object, backend='django.contrib.auth.backends.ModelBackend')
+        # Signed up with an address at a subscribing organization: send the
+        # confirmation link straight away, it's what unlocks their access.
+        organization = pending_organization_for(self.object)
+        if organization:
+            email_confirmation.send_confirmation(self.object, organization)
+            messages.info(self.request, _(
+                '%(org)s has a subscription. We’ve emailed you a link — confirm your address to read with it.',
+            ) % {'org': organization.name})
         return response
 
 
@@ -127,6 +142,12 @@ class RateLimitedPasswordResetConfirmView(PasswordResetConfirmView):
     # the stock default reverses an unnamespaced 'password_reset_complete'.
     success_url = reverse_lazy('users:password_reset_complete')
 
+    def form_valid(self, form):
+        # The link came by email (a reset or an account invite), so the
+        # person has just proved they receive mail at this address.
+        email_confirmation.confirm(form.user)
+        return super().form_valid(form)
+
 
 class ProfileView(DetailView):
     model = User
@@ -156,6 +177,15 @@ class ProfileView(DetailView):
         context['followed_keywords'] = KeywordFollow.objects.filter(
             user=self.request.user,
         ).select_related('keyword')
+        from billing.access import current_subscription
+        from billing.institutions import organization_for
+        from billing.services import paid_through
+
+        context['billing_subscription'] = current_subscription(self.request.user)
+        context['billing_paid_through'] = paid_through(self.request.user)
+        context['billing_organization'] = (
+            None if context['billing_subscription'] else organization_for(self.request.user)
+        )
         context['active_gifts'] = ArticleGift.objects.filter(
             gifter=self.request.user, expires_at__gte=timezone.now(),
         ).select_related('article')
@@ -684,3 +714,151 @@ def manage_user_groups(request, pk):
     else:
         form = UserGroupsForm(initial={'groups': target.groups.all()})
     return render(request, 'users/manage/user_groups.html', {'form': form, 'target': target})
+
+
+@login_required
+@require_POST
+@ratelimit(key='user', rate='3/h', method='POST', block=False)
+def send_email_confirmation(request):
+    """Emails the signed-in reader a link proving they own their address."""
+    if getattr(request, 'limited', False):
+        messages.error(request, _('We’ve sent a few links already — check your inbox (and spam), or try again in an hour.'))
+    elif request.user.email_confirmed_at:
+        messages.info(request, _('Your email address is already confirmed.'))
+    elif email_confirmation.send_confirmation(request.user, pending_organization_for(request.user)):
+        messages.success(request, _('We’ve emailed a confirmation link to %(email)s.') % {'email': request.user.email})
+    else:
+        messages.error(request, _('We couldn’t send the email just now. Please try again in a few minutes.'))
+    next_url = request.POST.get('next', '')
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        next_url = reverse('billing:account')
+    return redirect(next_url)
+
+
+def confirm_email(request, token):
+    """The emailed link. Works signed in or not — the token names the account."""
+    user = email_confirmation.user_for_token(token)
+    if user is None:
+        return render(request, 'users/confirm_email_invalid.html', status=400)
+    email_confirmation.confirm(user)
+    from billing.institutions import organization_for
+
+    organization = organization_for(user)
+    if organization:
+        messages.success(request, _('Email confirmed — you now read with %(org)s’s subscription.') % {'org': organization.name})
+    else:
+        messages.success(request, _('Email confirmed. Thank you!'))
+    return redirect('billing:account' if request.user.is_authenticated else 'users:login')
+
+
+# -- Privacy & data (users/privacy.py) ---------------------------------------
+
+@login_required
+def privacy_settings(request):
+    """/account/privacy/ — email preferences, data download, cookie choice
+    and account deletion, in one place."""
+    from newsletter.models import Subscriber
+
+    user = request.user
+    if request.method == 'POST' and request.POST.get('action') == 'emails':
+        user.email_topic_digest = bool(request.POST.get('email_topic_digest'))
+        user.email_renewal_reminders = bool(request.POST.get('email_renewal_reminders'))
+        user.save(update_fields=['email_topic_digest', 'email_renewal_reminders'])
+        messages.success(request, _('Email preferences saved.'))
+        return redirect('users:privacy')
+    newsletter = Subscriber.objects.filter(email__iexact=user.email).first()
+    return render(request, 'users/privacy.html', {
+        'newsletter': newsletter,
+        'newsletter_confirmed': bool(newsletter and newsletter.status == Subscriber.Status.CONFIRMED),
+        'can_self_delete': not (user.is_editorial_staff or user.is_superuser),
+    })
+
+
+@login_required
+@ratelimit(key='user', rate='5/h', block=False)
+def privacy_export(request):
+    """Downloads everything linked to the account as JSON."""
+    import json
+
+    from django.http import HttpResponse
+
+    from . import privacy
+
+    if getattr(request, 'limited', False):
+        messages.error(request, _('You’ve downloaded your data several times this hour — please try again later.'))
+        return redirect('users:privacy')
+    data = json.dumps(privacy.export_user_data(request.user), ensure_ascii=False, indent=2, default=str)
+    response = HttpResponse(data, content_type='application/json; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="my-data-{timezone.localdate():%Y-%m-%d}.json"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
+@require_POST
+@ratelimit(key='user', rate='5/h', method='POST', block=True)
+def privacy_delete_account(request):
+    """Self-service account deletion — needs the password (or, for an
+    account that never set one, typing the email address)."""
+    from django.contrib.auth import logout
+
+    from . import privacy
+
+    user = request.user
+    password = request.POST.get('password', '')
+    confirmed = (
+        user.check_password(password) if user.has_usable_password()
+        else request.POST.get('email_confirm', '').strip().lower() == user.email.lower()
+    )
+    if not request.POST.get('understood') or not confirmed:
+        messages.error(request, _('Your account was not deleted: confirm with your password and tick the box.'))
+        return redirect(f"{reverse('users:privacy')}#delete")
+    try:
+        privacy.erase_user(user, remove_comments=bool(request.POST.get('remove_comments')))
+    except privacy.ErasureRefused as exc:
+        messages.error(request, str(exc))
+        return redirect('users:privacy')
+    logout(request)
+    return render(request, 'users/account_deleted.html')
+
+
+@csrf_exempt  # one-click unsubscribe (RFC 8058) POSTs from mail clients, no session
+def email_unsubscribe(request, token):
+    """Unsubscribe link in the topic digest and renewal reminder emails.
+    GET shows a confirm button (mail scanners open links); POST — the
+    button, or a mail client's one-click — switches the email off."""
+    from . import privacy
+
+    user, kind = privacy.read_unsubscribe_token(token)
+    if user is None:
+        return render(request, 'users/email_unsubscribe.html', {'invalid': True}, status=400)
+    field, label = privacy.EMAIL_KINDS[kind]
+    done = False
+    if request.method == 'POST':
+        setattr(user, field, False)
+        user.save(update_fields=[field])
+        done = True
+    return render(request, 'users/email_unsubscribe.html', {'label': label, 'done': done, 'token': token})
+
+
+@role_required(*User.SENIOR_STAFF_ROLES)
+@require_POST
+def account_erase(request, pk):
+    """Staff acting on a deletion request received by email or letter."""
+    from . import privacy
+
+    target = get_object_or_404(User, pk=pk)
+    if target.pk == request.user.pk:
+        raise PermissionDenied
+    if request.POST.get('confirm_email', '').strip().lower() != target.email.lower():
+        messages.error(request, 'Not deleted — type the account’s email address exactly to confirm.')
+        return redirect('users:manage_account_update', pk=target.pk)
+    email = target.email
+    try:
+        privacy.erase_user(target, remove_comments=bool(request.POST.get('remove_comments')))
+    except privacy.ErasureRefused as exc:
+        messages.error(request, str(exc))
+        return redirect('users:manage_account_update', pk=target.pk)
+    logger.info('Account %s (%s) erased by %s on request', target.pk, email, request.user.email)
+    messages.success(request, f'Personal data of {email} deleted. Receipts and published records were kept, anonymised.')
+    return redirect('users:manage_account_list')

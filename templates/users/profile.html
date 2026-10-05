@@ -48,6 +48,21 @@
         </div>
     </div>
 
+    <div class="mt-8 border border-border bg-card px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">SUBSCRIPTION</p>
+            <p class="mt-1 text-sm font-medium">
+                {% if billing_subscription %}{{ billing_subscription.plan.name }} · until {{ billing_paid_through|date:"j M Y" }}
+                {% elif billing_organization %}Through {{ billing_organization.name }}
+                {% else %}No active subscription{% endif %}
+            </p>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+            <a href="{% url 'billing:account' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">BILLING &amp; RECEIPTS →</a>
+            <a href="{% url 'users:privacy' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">PRIVACY &amp; YOUR DATA →</a>
+        </div>
+    </div>
+
     {% if profile_user.bio %}
         <div class="mt-8">
             <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">BIO</p>

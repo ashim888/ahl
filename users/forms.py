@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group, Permission
 from django.forms import ModelForm
+from django.utils.translation import gettext_lazy
 
 from ajna_health_lens.forms import apply_tailwind_widgets
 from .models import User
@@ -27,6 +28,25 @@ class RegistrationForm(UserCreationForm):
         self.fields['last_name'].widget.attrs['autocomplete'] = 'family-name'
         self.fields['email'].widget.attrs['autocomplete'] = 'email'
         apply_tailwind_widgets(self)
+        # Consent to the Terms/Privacy policy — asked once they're published
+        # (pages app), and recorded as User.terms_accepted_at.
+        from pages.models import SitePage, published_pages
+
+        self.consent_pages = [page for page in published_pages() if page.slug in (SitePage.Slug.TERMS, SitePage.Slug.PRIVACY)]
+        if self.consent_pages:
+            self.fields['accept_terms'] = forms.BooleanField(
+                required=True, error_messages={'required': gettext_lazy('Please agree to the terms to create an account.')},
+            )
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if self.cleaned_data.get('accept_terms'):
+            from django.utils import timezone
+
+            user.terms_accepted_at = timezone.now()
+        if commit:
+            user.save()
+        return user
 
 
 class ProfileUpdateForm(ModelForm):

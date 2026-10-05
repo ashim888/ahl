@@ -1,0 +1,10 @@
+Reader report: {{ report.get_reason_display }}
+
+{{ report.target_summary }}
+{% if target_url %}{{ target_url }}{% endif %}
+{% if report.details %}
+{{ report.details }}
+{% endif %}
+From {{ report.reporter_name|default:"an anonymous reader" }}{% if report.reporter_email %} ({{ report.reporter_email }}){% endif %}.
+
+Reports queue: {{ queue_url }}

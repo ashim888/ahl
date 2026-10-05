@@ -1,0 +1,16 @@
+Hi {{ payment.payer_name }},
+
+We've received your payment for {{ payment.description }}.
+
+Receipt no.: {{ payment.receipt_number }}
+Date: {{ payment.completed_at|date:"j M Y" }}
+Price: {{ subtotal }}
+VAT ({{ vat_rate }}%): {{ vat }}
+Total paid: {{ total }}
+Paid via: {{ payment.get_gateway_display }}{% if payment.gateway_trace_id %} (ref. {{ payment.gateway_trace_id }}){% endif %}
+
+{{ seller.legal_name }}{% if seller.pan %} · PAN {{ seller.pan }}{% endif %}{% if seller.address %} · {{ seller.address }}{% endif %}
+{% if receipt_url %}
+View or print your receipt: {{ receipt_url }}
+{% endif %}
+— {{ journal_name }}

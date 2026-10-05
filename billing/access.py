@@ -24,21 +24,14 @@ METERED_ACCESS_TYPES = ('subscription',)
 
 
 def user_has_active_subscription(user):
-    if not user.is_authenticated:
-        return False
-    today = timezone.localdate()
-    return UserSubscription.objects.filter(
-        user=user, status=UserSubscription.Status.ACTIVE,
-        start_date__lte=today, end_date__gte=today,
-    ).exists()
+    """A current personal subscription, or access through the reader's
+    organization (billing/institutions.py)."""
+    return _active_plan(user) is not None
 
 
-def _active_subscription(user):
-    """The user's current active UserSubscription (plan selected), or None.
-    Internal — perk checks need to know *which* plan, not just whether one
-    exists; external callers that only need the yes/no answer should use
-    user_has_active_subscription above.
-    """
+def current_subscription(user):
+    """The user's own current UserSubscription (plan selected), or None —
+    not organization access; see _active_plan for "which plan applies"."""
     if not user.is_authenticated:
         return None
     today = timezone.localdate()
@@ -48,17 +41,28 @@ def _active_subscription(user):
     ).select_related('plan').order_by('-end_date').first()
 
 
+def _active_plan(user):
+    """The plan whose perks apply to `user` right now: their own
+    subscription's, else their organization's, else None."""
+    if not user.is_authenticated:
+        return None
+    subscription = current_subscription(user)
+    if subscription:
+        return subscription.plan
+    from .institutions import organization_for
+
+    org = organization_for(user)
+    return org.plan if org else None
+
+
 def user_has_perk(user, perk_field_name):
-    """Whether the user's active plan grants a specific SubscriptionPlan
-    boolean field (e.g. 'grants_ad_free_reading') — False for no active
-    subscription, or an active subscription whose plan has that perk turned
-    off. Every plan defaults both perk fields to True (see
-    billing/models.py), so this is a behavior-preserving replacement for
-    "has any active subscription" everywhere it's used below, until an
-    editor actually configures a plan differently.
+    """Whether the plan that applies to the user (own or organization's —
+    see _active_plan) grants a SubscriptionPlan boolean field (e.g.
+    'grants_ad_free_reading'). False with no plan, or when that plan has
+    the perk turned off.
     """
-    subscription = _active_subscription(user)
-    return bool(subscription and getattr(subscription.plan, perk_field_name, False))
+    plan = _active_plan(user)
+    return bool(plan and getattr(plan, perk_field_name, False))
 
 
 def user_has_purchased_article(user, article):
@@ -182,11 +186,11 @@ def gift_articles_remaining(user):
     non-subscriber or a plan with gifting turned off (the default — see
     SubscriptionPlan.gift_articles_per_month).
     """
-    subscription = _active_subscription(user)
-    if not subscription or subscription.plan.gift_articles_per_month <= 0:
+    plan = _active_plan(user)
+    if not plan or plan.gift_articles_per_month <= 0:
         return 0
     used = ArticleGift.objects.filter(gifter=user, period=_current_period()).values('article').distinct().count()
-    return max(0, subscription.plan.gift_articles_per_month - used)
+    return max(0, plan.gift_articles_per_month - used)
 
 
 def get_existing_article_gift(user, article):

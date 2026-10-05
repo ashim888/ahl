@@ -1,0 +1,86 @@
+{% load i18n %}
+{% comment %}
+Cookie consent. Essential cookies (sign-in, language, form protection, the
+free-article count) need no consent; analytics (Google Analytics) load only
+after "Accept analytics". The choice is kept in the cookie_consent cookie
+("v1:analytics" or "v1:essential") for 180 days; base.html renders the
+gtag script server-side only when it says analytics. Anything with
+data-cookie-settings (footer link, Privacy & data page) reopens this.
+{% endcomment %}
+<div id="cookie-consent" role="dialog" aria-live="polite" aria-labelledby="cookie-consent-title"
+     class="{% if cookie_choice_made %}hidden {% endif %}fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6"
+     data-analytics-id="{{ GOOGLE_ANALYTICS_ID }}" data-cookie-name="cookie_consent">
+    <div class="max-w-3xl mx-auto bg-card border border-foreground shadow-2xl p-5 sm:p-6">
+        <p id="cookie-consent-title" class="font-display text-lg font-bold">{% trans "Cookies on this site" %}</p>
+        <p class="mt-2 text-sm text-muted-foreground leading-relaxed">
+            {% trans "We use essential cookies to keep you signed in and the site working. With your permission we’d also like to use analytics cookies (Google Analytics) to understand how the site is used. You can change your mind at any time from “Cookie settings” at the bottom of every page." %}
+            {% for legal_page in legal_pages %}{% if legal_page.slug == 'privacy' %}<a href="{{ legal_page.get_absolute_url }}" class="underline hover:text-accent">{% trans "Privacy policy" %}</a>{% endif %}{% endfor %}
+        </p>
+        <div class="mt-4 flex flex-wrap gap-3">
+            <button type="button" data-cookie-choice="analytics" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-3 hover:bg-accent">{% trans "ACCEPT ANALYTICS" %}</button>
+            <button type="button" data-cookie-choice="essential" class="font-mono-editorial text-xs tracking-widest border border-foreground px-5 py-3 hover:border-accent hover:text-accent">{% trans "ONLY ESSENTIAL" %}</button>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var banner = document.getElementById('cookie-consent');
+    if (!banner) { return; }
+    var name = banner.dataset.cookieName, gaId = banner.dataset.analyticsId;
+
+    function setChoice(value) {
+        var secure = location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = name + '=v1:' + value + '; Max-Age=' + (180 * 86400) + '; Path=/; SameSite=Lax' + secure;
+    }
+
+    // Google Analytics' own cookies (_ga, _ga_<id>, _gid…), on this host and its parent domains.
+    function deleteAnalyticsCookies() {
+        var parts = location.hostname.split('.'), domains = [''];
+        for (var i = 0; i < parts.length - 1; i++) { domains.push('; Domain=.' + parts.slice(i).join('.')); }
+        document.cookie.split(';').forEach(function (pair) {
+            var cookie = pair.split('=')[0].trim();
+            if (/^(_ga|_gid|_gat)/.test(cookie)) {
+                domains.forEach(function (domain) {
+                    document.cookie = cookie + '=; Max-Age=0; Path=/' + domain;
+                });
+            }
+        });
+    }
+
+    function loadAnalytics() {
+        if (!gaId || window.gtag) { return; }
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaId);
+        document.head.appendChild(script);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { window.dataLayer.push(arguments); };
+        window.gtag('js', new Date());
+        window.gtag('config', gaId);
+    }
+
+    banner.querySelectorAll('[data-cookie-choice]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var choice = button.dataset.cookieChoice;
+            setChoice(choice);
+            banner.classList.add('hidden');
+            if (choice === 'analytics') {
+                if (gaId) { window['ga-disable-' + gaId] = false; }
+                loadAnalytics();
+            } else {
+                if (gaId) { window['ga-disable-' + gaId] = true; }  // stops an already-loaded tag sending anything more
+                deleteAnalyticsCookies();
+            }
+        });
+    });
+
+    // Delegated: "Cookie settings" links can come after this script (the footer).
+    document.addEventListener('click', function (event) {
+        var link = event.target.closest('[data-cookie-settings]');
+        if (!link) { return; }
+        event.preventDefault();
+        banner.classList.remove('hidden');
+        banner.querySelector('[data-cookie-choice]').focus();
+    });
+})();
+</script>

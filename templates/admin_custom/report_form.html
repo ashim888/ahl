@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Report a problem" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-14">
+    {% if article %}<a href="{{ article.get_absolute_url }}{% if comment %}#c{{ comment.pk }}{% endif %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "← BACK" %}</a>{% endif %}
+    <h1 class="font-display text-3xl font-bold mt-4" style="letter-spacing: -0.02em;">{% trans "Report a problem" %}</h1>
+    <p class="mt-2 text-sm text-muted-foreground">{% if comment %}{% trans "You’re reporting this comment:" %}{% else %}{% trans "You’re reporting this article:" %}{% endif %}</p>
+    <blockquote class="mt-2 border-l-2 border-border pl-4 text-sm">
+        {% if comment %}<span class="font-medium">{{ comment.name }}:</span> {{ comment.comment|truncatechars:240 }}{% else %}{{ article.title }}{% endif %}
+    </blockquote>
+
+    <form method="post" class="mt-8 space-y-6">
+        {% csrf_token %}
+        {% if comment %}<input type="hidden" name="comment" value="{{ comment.pk }}">{% else %}<input type="hidden" name="article" value="{{ article.pk }}">{% endif %}
+        {{ form.website }}
+        <fieldset>
+            <legend class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{{ form.reason.label|upper }} <span class="text-accent">*</span></legend>
+            <div class="space-y-2">
+                {% for radio in form.reason %}
+                    <label class="flex items-start gap-3 text-sm">{{ radio.tag }} <span>{{ radio.choice_label }}</span></label>
+                {% endfor %}
+            </div>
+            {% for error in form.reason.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
+        </fieldset>
+        {% for field in form %}{% if field.name != 'reason' and field.name != 'website' %}
+            <div>
+                <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ field.id_for_label }}">{{ field.label|upper }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>{% endif %}
+                {% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
+            </div>
+        {% endif %}{% endfor %}
+        <p class="text-xs text-muted-foreground">{% trans "An editor reads every report. We don’t share your name or email with the person you’re reporting." %}</p>
+        <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent">{% trans "SEND REPORT" %}</button>
+    </form>
+</div>
+{% endblock %}

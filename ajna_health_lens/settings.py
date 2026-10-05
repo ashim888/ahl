@@ -6,6 +6,7 @@ See CLAUDE.md and ARCHITECTURE.md for the full spec this file implements.
 
 import datetime
 import os
+from decimal import Decimal
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -113,6 +114,7 @@ INSTALLED_APPS = [
     'newsletter',
     'ads',
     'pitches',
+    'pages',
 ]
 
 MIDDLEWARE = [
@@ -627,6 +629,25 @@ FONEPAY_PRIVATE_KEY = os.environ.get('FONEPAY_PRIVATE_KEY', '')
 FONEPAY_TERMINAL_ID = os.environ.get('FONEPAY_TERMINAL_ID', '')
 # How long a generated QR stays payable before the reader must start again.
 FONEPAY_PAYMENT_TIMEOUT_MINUTES = int(os.environ.get('FONEPAY_PAYMENT_TIMEOUT_MINUTES', '15'))
+
+# Google Analytics — loaded only for readers who accept analytics cookies
+# (templates/includes/cookie_consent.html). Empty turns it off entirely.
+GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID', 'G-KDLXMLM9WD')
+# Name of the cookie that remembers a reader's cookie choice.
+COOKIE_CONSENT_COOKIE = 'cookie_consent'
+
+# Billing — every price (plans, special articles, courses) is VAT-exclusive;
+# checkout adds VAT_RATE percent on top (billing/money.py vat_breakdown).
+VAT_RATE = Decimal(os.environ.get('VAT_RATE', '13'))
+# Printed on every receipt (billing/receipt.html). Receipt numbers are
+# RECEIPT_PREFIX + a gap-free sequence (billing.models.ReceiptSequence).
+BUSINESS_LEGAL_NAME = os.environ.get('BUSINESS_LEGAL_NAME', JOURNAL_NAME)
+BUSINESS_PAN = os.environ.get('BUSINESS_PAN', '')
+BUSINESS_ADDRESS = os.environ.get('BUSINESS_ADDRESS', '')
+RECEIPT_PREFIX = os.environ.get('RECEIPT_PREFIX', 'AHL-')
+# Expiry reminder emails go out this many days before a subscription ends
+# (and once the day after it has ended) — billing/reminders.py.
+SUBSCRIPTION_REMINDER_DAYS = (7, 1)
 
 
 # Cloudflare Turnstile (CAPTCHA) — pitches app, story-pitch submission

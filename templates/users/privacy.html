@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Privacy & your data" %} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-6 py-14">
+    <a href="{% url 'users:profile' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "← YOUR PROFILE" %}</a>
+    <div class="mt-4 pb-6 border-b-2 border-foreground">
+        <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Privacy & your data" %}</h1>
+        <p class="mt-1 text-sm text-muted-foreground">
+            {% trans "Choose which emails you get, download a copy of your data, manage cookies, or delete your account." %}
+            {% if legal_pages %}{% for legal_page in legal_pages %}{% if legal_page.slug == 'privacy' %}<a href="{{ legal_page.get_absolute_url }}" class="underline hover:text-accent">{% trans "Read our privacy policy" %}</a>.{% endif %}{% endfor %}{% endif %}
+        </p>
+    </div>
+
+    {# -- Emails ---------------------------------------------------------- #}
+    <section class="mt-8">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">{% trans "EMAILS" %}</p>
+        <div class="border border-border bg-card divide-y divide-border">
+            <div class="p-5 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <p class="font-medium">{% trans "Newsletter" %}</p>
+                    <p class="text-sm text-muted-foreground">{% if newsletter_confirmed %}{% blocktrans with email=user.email %}You get the newsletter at {{ email }}.{% endblocktrans %}{% else %}{% trans "You don’t get the newsletter." %}{% endif %}</p>
+                </div>
+                {% if newsletter_confirmed %}
+                    <form method="post" action="{% url 'newsletter:unsubscribe' newsletter.unsubscribe_token %}">
+                        {% csrf_token %}
+                        <button type="submit" class="font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-2 hover:border-accent hover:text-accent">{% trans "UNSUBSCRIBE" %}</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'newsletter:subscribe' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="email" value="{{ user.email }}">
+                        <input type="hidden" name="next" value="{% url 'users:privacy' %}">
+                        <button type="submit" class="font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-2 hover:border-accent hover:text-accent">{% trans "SUBSCRIBE" %}</button>
+                    </form>
+                {% endif %}
+            </div>
+            <form method="post" class="p-5 space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="emails">
+                <label class="flex items-start gap-3">
+                    <input type="checkbox" name="email_topic_digest" class="mt-1" {% if user.email_topic_digest %}checked{% endif %}>
+                    <span><span class="font-medium">{% trans "Weekly digest of topics I follow" %}</span><span class="block text-sm text-muted-foreground">{% trans "New articles in the sections and topics you follow, once a week." %}</span></span>
+                </label>
+                <label class="flex items-start gap-3">
+                    <input type="checkbox" name="email_renewal_reminders" class="mt-1" {% if user.email_renewal_reminders %}checked{% endif %}>
+                    <span><span class="font-medium">{% trans "Subscription renewal reminders" %}</span><span class="block text-sm text-muted-foreground">{% trans "A week and a day before your subscription ends." %}</span></span>
+                </label>
+                <p class="text-xs text-muted-foreground">{% trans "Receipts, password resets and other emails about your account are always sent." %}</p>
+                <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 py-2.5 hover:bg-accent">{% trans "SAVE EMAIL PREFERENCES" %}</button>
+            </form>
+        </div>
+    </section>
+
+    {# -- Data ------------------------------------------------------------ #}
+    <section class="mt-10">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">{% trans "YOUR DATA" %}</p>
+        <div class="border border-border bg-card p-5 flex flex-wrap items-center justify-between gap-4">
+            <p class="text-sm max-w-md">{% trans "Download everything linked to your account — profile, subscriptions, payments, saved articles, follows, comments and pitches — as a file." %}</p>
+            <a href="{% url 'users:privacy_export' %}" class="font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-2 hover:border-accent hover:text-accent">{% trans "DOWNLOAD MY DATA" %}</a>
+        </div>
+    </section>
+
+    {# -- Cookies --------------------------------------------------------- #}
+    <section class="mt-10">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">{% trans "COOKIES" %}</p>
+        <div class="border border-border bg-card p-5 flex flex-wrap items-center justify-between gap-4">
+            <p class="text-sm max-w-md">{% trans "We only use analytics cookies if you allow them. You can change your choice at any time." %}</p>
+            <button type="button" data-cookie-settings class="font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-2 hover:border-accent hover:text-accent">{% trans "COOKIE SETTINGS" %}</button>
+        </div>
+    </section>
+
+    {# -- Delete ---------------------------------------------------------- #}
+    <section id="delete" class="mt-10 scroll-mt-24">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">{% trans "DELETE YOUR ACCOUNT" %}</p>
+        <div class="border border-accent bg-card p-5">
+            {% if can_self_delete %}
+                <p class="text-sm">{% trans "This permanently deletes your account and personal data: profile, saved articles, follows, newsletter subscription and sign-in history. Any active subscription ends without a refund. It can’t be undone." %}</p>
+                <p class="mt-2 text-sm text-muted-foreground">{% trans "We keep receipts for payments you made, because tax law requires it, and anything already published stays up with your name removed." %}</p>
+                <form method="post" action="{% url 'users:privacy_delete' %}" class="mt-5 space-y-3"
+                      onsubmit="return confirm('{% trans "Delete your account permanently? This can’t be undone." as confirm_text %}{{ confirm_text|escapejs }}');">
+                    {% csrf_token %}
+                    {% if user.has_usable_password %}
+                        <label class="block text-sm font-medium" for="delete-password">{% trans "Your password" %}</label>
+                        <input id="delete-password" type="password" name="password" required autocomplete="current-password" class="w-full max-w-sm border border-border bg-background px-3 py-2">
+                    {% else %}
+                        <label class="block text-sm font-medium" for="delete-email">{% trans "Type your email address to confirm" %}</label>
+                        <input id="delete-email" type="email" name="email_confirm" required class="w-full max-w-sm border border-border bg-background px-3 py-2">
+                    {% endif %}
+                    <label class="flex items-start gap-3 text-sm"><input type="checkbox" name="remove_comments" class="mt-1"> <span>{% trans "Also remove my comments (otherwise they stay, shown as “Deleted user”)." %}</span></label>
+                    <label class="flex items-start gap-3 text-sm"><input type="checkbox" name="understood" required class="mt-1"> <span>{% trans "I understand this is permanent." %}</span></label>
+                    <button type="submit" class="font-mono-editorial text-xs tracking-widest border border-accent text-accent px-4 py-2.5 hover:bg-accent hover:text-white">{% trans "DELETE MY ACCOUNT" %}</button>
+                </form>
+            {% else %}
+                <p class="text-sm">{% blocktrans with email=JOURNAL_CONTACT_EMAIL %}Staff accounts can’t be deleted from here. Ask an Admin, or write to {{ email }}.{% endblocktrans %}</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <p class="mt-12 text-xs text-muted-foreground">{% blocktrans with email=JOURNAL_CONTACT_EMAIL %}Anything else — correcting your data, or a question about how we use it? Write to {{ email }}.{% endblocktrans %}</p>
+</div>
+{% endblock %}

@@ -1,6 +1,8 @@
 from django.contrib import admin
 
-from .models import ArticlePurchase, Payment, PlanFeature, SubscriptionPlan, UserSubscription
+from .models import (
+    ArticlePurchase, Organization, OrganizationMember, Payment, PlanFeature, SubscriptionPlan, UserSubscription,
+)
 
 
 @admin.register(PlanFeature)
@@ -34,9 +36,25 @@ class ArticlePurchaseAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    """Fonepay checkouts — read-mostly: status comes from Fonepay, not staff edits."""
+    """The payment ledger — read-only: status comes from Fonepay, manual
+    payments are recorded from the dashboard's grant/organization screens."""
 
-    list_display = ['reference', 'user', 'description', 'amount', 'status', 'created_at', 'completed_at']
+    list_display = ['reference', 'receipt_number', 'user', 'organization', 'description', 'amount', 'status', 'created_at']
     list_filter = ['status', 'kind', 'gateway']
-    search_fields = ['reference', 'user__email', 'description', 'gateway_trace_id']
+    search_fields = ['reference', 'receipt_number', 'user__email', 'organization__name', 'description', 'gateway_trace_id']
     readonly_fields = [f.name for f in Payment._meta.fields]
+
+
+class OrganizationMemberInline(admin.TabularInline):
+    model = OrganizationMember
+    extra = 0
+    readonly_fields = ['user', 'joined_at']
+    can_delete = True
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ['name', 'plan', 'start_date', 'end_date', 'seats', 'is_active']
+    list_filter = ['is_active', 'plan']
+    search_fields = ['name', 'email_domains', 'contact_email']
+    inlines = [OrganizationMemberInline]

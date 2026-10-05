@@ -532,23 +532,139 @@ verification request (from filling out their profile and submitting for review, 
 
 ---
 
-## 16. Subscriptions & purchases
+## 16. Subscriptions, payments & organizations
 
 Editor-in-Chief and Admin only — this is the money-sensitive tier, one level above general
 editorial access.
 
-- **Plans** (`/manage/billing/plans/`) — an Editor-in-Chief or Admin can create/edit subscription plans
-  (individual monthly, individual annual, institutional) and toggle them active/inactive.
-- **Subscriptions** (`/manage/billing/subscriptions/`) — every grant, active or not, whether from
-  a reader's self-serve checkout or manually granted here. Filter by status or plan, or by
-  **"expiring within 7 days"** to catch renewals before they lapse. **Grant** a subscription
-  manually (e.g. a comp/press account) or **Cancel** an active one.
-- **Purchases** (`/manage/billing/purchases/`) — one-time pay-per-article unlocks. Filter by
-  article, or **Grant** one manually.
+**Prices and VAT.** Every price you set (plans, special articles, courses) is **VAT-exclusive**.
+Checkout adds 13% VAT on top and shows the reader *price + VAT = total*. Every receipt shows the
+split. The rate and the business name, PAN and address printed on receipts come from the server's
+`.env` (`VAT_RATE`, `BUSINESS_LEGAL_NAME`, `BUSINESS_PAN`, `BUSINESS_ADDRESS`).
 
-Readers can also self-serve at `/subscribe/` (plans) and from any pay-per-article article page —
-both use a stub payment gateway right now (always succeeds; no real charge is made until a real
-payment provider is integrated).
+- **Plans** (`/manage/billing/plans/`) — create/edit plans (individual monthly, individual
+  annual, institutional) and switch them on/off. Institutional plans have no checkout: readers
+  see "Ask about your organization" instead, and access comes from **Organizations** below.
+- **Payments** (`/manage/billing/payments/`) — every payment: Fonepay checkouts, money recorded
+  by staff, organization payments. Each paid one has a numbered **receipt** (click it to view or
+  print). Filter by **Failed** to find problems — an underpaid Fonepay payment lands there (the
+  reader is emailed to contact you) and never grants access. The Revenue pages add up only
+  these payments, **excluding VAT**. VAT collected is shown separately.
+- **Subscriptions** (`/manage/billing/subscriptions/`) — every subscription, active or not.
+  Filter by **"expiring within 7 days"**. **Grant** one by hand:
+  - leave *Amount received* at 0 for a complimentary/press account — no payment, no receipt;
+  - for a bank transfer, enter the amount received **including VAT**. It's recorded as a payment
+    and the reader is emailed a receipt.
+  - A grant to someone who's still subscribed starts the day after their current one ends.
+- **Purchases** (`/manage/billing/purchases/`) — special-article unlocks; **Record purchase**
+  works the same way (0 = complimentary).
+- **Refunds:**
+  1. Send the money back first: the Fonepay merchant portal, or a bank transfer.
+  2. Open the payment's receipt from **Payments** and use **Record full refund** with a reason.
+  - The site removes what the payment bought: the subscription is cancelled, the special article
+    locks again, the course enrollment is cancelled.
+  - It issues a numbered **credit note** (`AHL-CN-…`) and emails the reader.
+  - Refunds are always for the full amount. Revenue leaves refunded payments out and shows the
+    refunded total separately.
+- **Needs a look** (tick it on **Payments**) — paid, but the payment couldn't be granted
+  cleanly. For example, the reader paid twice for an article they already had, or a course
+  filled up while they were paying. They're enrolled anyway, since they paid. Refund the extra
+  payment or **Mark as handled**.
+- **Course seats** — someone in the middle of paying holds a seat for up to 15 minutes, so the
+  last seat can't be sold twice. An abandoned checkout frees it again.
+- **Organizations** (`/manage/billing/organizations/`) — institutional deals. Add the
+  organization's **email domains** (e.g. `nhrc.gov.np`; staff at subdomains like
+  `dept.nhrc.gov.np` count too), the plan, start/end dates and, optionally, a seat limit.
+  - Anyone who **confirms** an email address at one of those domains reads with the
+    organization's plan until the end date. Typing the address at sign-up isn't enough. They
+    click a link we email them, prompted at sign-up, on the paywall and on their billing page.
+  - Public email providers (gmail.com and the like) are refused, since everyone could join.
+  - Untick *Active* to stop access straight away. The edit page lists members and payments.
+  - Money received for a deal: enter it (incl. VAT) in *Record a payment received*. The receipt
+    goes to the contact email.
+
+**What readers get:**
+
+- **Billing page** (`/account/billing/`, linked from their profile): current plan and days left,
+  **Renew** / **Switch plan**, any renewal already bought, unfinished payments, every payment
+  with its receipt, and the articles they own.
+- **Renewing early never loses days.** The new period starts the day after the current one ends.
+  Subscriptions don't renew automatically (Fonepay payments are one-off). Instead readers get an
+  email **7 days** and **1 day** before the end, and one the day after it has ended — unless
+  they've already renewed. These go out every morning at 8:00 from the background worker.
+- **Receipt email** for every payment, and an email when a Fonepay payment is declined.
+- **Back to the story:** subscribing from an article's paywall returns the reader to that article
+  after paying.
+
+---
+
+**Terms, privacy and refunds** (`/manage/pages/`, Editor-in-Chief/Admin): three pages at
+`/terms/`, `/privacy/` and `/refund-policy/`, covering the whole site, not just payments.
+
+- **Terms of use:** reading and the free-article allowance, accounts, author verification,
+  payments, training, organization access, gift links, how our content may be used, the
+  health-information disclaimer, editorial standards and corrections, what people send us
+  (comments, pitches), community rules, and account suspension.
+- **Privacy policy:** what each feature collects (reading, accounts, verification, comments,
+  pitches, newsletter, payments, sign-in security), cookies, who it's shared with, how long it's
+  kept, and readers' rights.
+- **Refunds & cancellations:** stopping free things (newsletter, comment emails, account),
+  subscriptions, special articles, training courses, organizations, and how refunds are paid.
+
+They started as **unpublished drafts** written to match how the site actually works.
+
+1. Read them and change anything that isn't your practice, ideally with a lawyer.
+2. Tick *Published*. Until then they're hidden: 404 to readers, though you can preview them.
+
+Once published they appear in the footer, and checkout says "By paying you agree to our Terms of
+use and Refunds & cancellations". A Nepali version is optional; until it's written, Nepali
+readers see the English page.
+
+**Privacy tools** (what readers can do themselves, and what you do on request):
+
+- **Cookie banner** — first-time visitors choose *Accept analytics* or *Only essential*. Google
+  Analytics loads only after *Accept*. *Cookie settings* in the footer reopens the choice;
+  choosing *Only essential* deletes the analytics cookies.
+- **Privacy & your data** (`/account/privacy/`, linked from the profile and footer) — readers
+  switch the newsletter, weekly digest and renewal reminders on/off, **download their data** (a
+  JSON file), and **delete their account** with their password.
+- **Every non-essential email has a one-click unsubscribe** (also the Unsubscribe button Gmail and
+  Yahoo show). Receipts and account emails are always sent.
+- **Deletion requests by email or letter:** open the account under **Accounts → Edit**, then
+  **Delete personal data** at the bottom. Type the account's email to confirm.
+  - Staff accounts must be changed to a reader role first.
+  - Either way, the profile, files, follows, saved articles, newsletter subscription and sign-in
+    history are deleted, and any active subscription ends.
+  - Receipts are kept (tax law) and still show who paid. Published comments and bylines stay, as
+    "Deleted user"; the reader can choose to remove their comments too.
+  - Requests to see or correct data: readers can do both themselves. Otherwise reply within 30
+    days, as the privacy policy promises.
+- **Consent at sign-up** — once Terms/Privacy are published, new accounts must tick "I agree", and
+  the date is recorded.
+- **Automatic clean-up** every night (03:30), as the privacy policy says:
+  - comment IP addresses after 90 days;
+  - sign-in attempt records after 90 days;
+  - newsletter sign-ups never confirmed after 30 days;
+  - expired sessions.
+
+**Reader reports** (**Reports** in the sidebar, any editor; a red count shows open ones):
+
+- Every article has a "Report it" line above the comments, and every comment has **REPORT**.
+  Readers choose a reason: error, misleading health information, abuse, private information,
+  copyright, spam, or other.
+- Senior staff and the contact address are emailed for each report.
+- For each report, write what you did (it's kept as the record), then:
+  - **Remove the comment & close**;
+  - **Action taken** (for example after correcting the article or taking it down);
+  - **No action needed**.
+- Copyright and privacy reports are highlighted. Act on them promptly, and reply to the reader
+  if they left an email.
+- Closed reports stay under *Action taken* / *No action needed*, so you can always show what
+  was reported and what you did.
+
+**If personal data may have leaked**, follow `INCIDENT_RESPONSE.md` in the code repository: who
+to call, what to switch off, who must be told within 72 hours, and how to email the people
+affected (`python manage.py notify_users`).
 
 ---
 

@@ -1,0 +1,59 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Reports — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Reader reports{% endblock %}
+
+{% block content %}
+<p class="text-sm text-gray-500">
+    Problems readers flagged with the "Report" links on articles and comments. Every report and what you did about it is
+    kept here as the record — for a copyright or privacy notice, act promptly (hide the comment, or correct or take down
+    the article) and note what you did.
+</p>
+
+<div class="mt-6 flex gap-2">
+    {% for value, label in statuses %}
+        <a href="?status={{ value }}" class="px-3 py-1.5 rounded-md text-sm {% if selected_status == value %}bg-gray-900 text-white{% else %}border border-gray-300 text-gray-600 hover:bg-gray-50{% endif %}">{{ label }}</a>
+    {% endfor %}
+</div>
+
+<div class="mt-6 space-y-4">
+    {% for report in reports %}
+        <div class="bg-white rounded-2xl border {% if report.reason == 'copyright' or report.reason == 'privacy' %}border-red-200{% else %}border-gray-100{% endif %} shadow-sm p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide {% if report.reason == 'copyright' or report.reason == 'privacy' %}text-red-700{% else %}text-gray-500{% endif %}">{{ report.get_reason_display }}</p>
+                    <p class="mt-1 font-medium text-gray-900">
+                        {% if report.target_url %}<a href="{{ report.target_url }}" target="_blank" class="underline">{{ report.target_summary }}</a>{% else %}{{ report.target_summary }} <span class="text-gray-400">(no longer on the site)</span>{% endif %}
+                    </p>
+                    {% if report.comment %}<p class="mt-2 text-sm text-gray-600 border-l-2 border-gray-200 pl-3">{{ report.comment.comment|truncatechars:400 }}{% if report.comment.is_removed %} <span class="text-red-600">(removed)</span>{% endif %}</p>{% endif %}
+                </div>
+                <p class="text-xs text-gray-400 whitespace-nowrap">{{ report.created_at|date:"M j, Y H:i" }}</p>
+            </div>
+            {% if report.details %}<p class="mt-3 text-sm text-gray-700 whitespace-pre-line">{{ report.details }}</p>{% endif %}
+            <p class="mt-3 text-xs text-gray-500">From: {{ report.reporter_name|default:"anonymous" }}{% if report.reporter_email %} · <a href="mailto:{{ report.reporter_email }}" class="underline">{{ report.reporter_email }}</a>{% endif %}</p>
+
+            {% if report.status == 'open' %}
+                <form method="post" action="{% url 'admin_custom:manage_report_handle' report.pk %}" class="mt-4 space-y-2">
+                    {% csrf_token %}
+                    <textarea name="note" rows="2" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" placeholder="What you did (kept as the record) — e.g. corrected the dosage figure, replied to the reporter"></textarea>
+                    <div class="flex flex-wrap gap-2">
+                        {% if report.comment and not report.comment.is_removed %}
+                            <button name="action" value="hide_comment" class="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50">Remove the comment &amp; close</button>
+                        {% endif %}
+                        <button name="action" value="resolve" class="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-700">Action taken</button>
+                        <button name="action" value="dismiss" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">No action needed</button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                    <p class="text-gray-600"><span class="font-medium">{{ report.get_status_display }}</span>{% if report.handled_by %} by {{ report.handled_by.get_full_name }}{% endif %} · {{ report.handled_at|date:"M j, Y" }}{% if report.resolution_note %} — {{ report.resolution_note }}{% endif %}</p>
+                    <form method="post" action="{% url 'admin_custom:manage_report_handle' report.pk %}">{% csrf_token %}<button name="action" value="reopen" class="text-gray-500 underline">Reopen</button></form>
+                </div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <p class="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-500">Nothing here.</p>
+    {% endfor %}
+</div>
+{% include 'includes/pagination.html' %}
+{% endblock %}

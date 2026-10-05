@@ -4,6 +4,7 @@
 
 {% block title %}{% trans "Checkout" %} — {{ plan.name }} — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
 {% block content %}
 <div class="max-w-lg mx-auto px-6 py-14">
     <a href="{% url 'billing:plan_detail' plan.pk %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "← BACK TO PLAN" %}</a>
@@ -15,11 +16,14 @@
             <h2 class="font-display text-lg font-bold leading-snug mt-1">{{ plan.name }}</h2>
             {% if plan.description %}<p class="mt-1 text-sm text-muted-foreground leading-relaxed">{{ plan.description }}</p>{% endif %}
         </div>
-        <div class="border-t border-border px-5 py-4 flex items-baseline justify-between">
-            <span class="font-mono-editorial text-xs text-muted-foreground">{% blocktrans with days=plan.duration_days %}{{ days }} days access{% endblocktrans %}</span>
-            <span class="font-display text-2xl font-bold">{{ plan.price|money }}</span>
+        <div class="border-t border-border px-5 py-3 font-mono-editorial text-xs text-muted-foreground">
+            {% if is_renewal %}{% blocktrans with start=starts|date:"j M Y" end=ends|date:"j M Y" %}Renewal · {{ start }} – {{ end }} (starts when your current subscription ends){% endblocktrans %}
+            {% else %}{% blocktrans with start=starts|date:"j M Y" end=ends|date:"j M Y" %}Access {{ start }} – {{ end }}{% endblocktrans %}{% endif %}
         </div>
+        {% blocktrans asvar days_label with days=plan.duration_days %}{{ days }} days access{% endblocktrans %}
+        {% include 'billing/includes/bill_summary.html' with price=plan.price label=days_label %}
     </div>
+    <p class="mt-3 text-xs text-muted-foreground">{% trans "Subscriptions don’t renew automatically — we’ll email you before yours ends." %}</p>
 
     {% if PAYMENTS_LIVE %}
         <p class="mt-4 text-xs text-muted-foreground leading-relaxed">{% trans "You'll pay securely with Fonepay — scan a QR or approve in your bank app." %}</p>
@@ -31,10 +35,12 @@
 
     <form method="post" class="mt-6">
         {% csrf_token %}
+        {% if next_path %}<input type="hidden" name="next" value="{{ next_path }}">{% endif %}
         <button type="submit"
                 class="w-full font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
             {% if PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & SUBSCRIBE" %}{% endif %}
         </button>
     </form>
+    {% include 'billing/includes/agree_terms.html' %}
 </div>
 {% endblock %}

@@ -9,6 +9,7 @@ from django.urls import include, path
 from articles.sitemaps import NewsArticleSitemap, sitemaps
 from ajna_health_lens.ckeditor_views import ckeditor5_upload_file
 from ajna_health_lens.media_views import protected_media
+from admin_custom.reports import report_content
 from ajna_health_lens.comments_views import confirm_comment, rate_limited_post_comment
 from ajna_health_lens.views import robots_txt
 
@@ -31,6 +32,8 @@ urlpatterns = [
     path('', include('newsletter.urls')),
     path('', include('ads.urls')),
     path('', include('pitches.urls')),
+    path('', include('pages.urls')),
+    path('report/', report_content, name='report_content'),
     # Overrides django_comments' own 'comments-post-comment' URL with a
     # rate-limited wrapper, and django_comments_xtd's confirm link with one
     # that adds reader feedback (see comments_views.py) — must come before the
