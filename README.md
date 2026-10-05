@@ -170,8 +170,19 @@ python manage.py migrate
 python manage.py test
 ```
 
-Every app has its own `tests.py`; there's no single "critical path" suite to run selectively —
-`python manage.py test` runs everything.
+Every app has its own `tests.py`, plus focused `test_*.py` files beside it (e.g.
+`billing/test_fonepay.py` for the Fonepay client, `users/test_manage.py` for staff/role screens,
+`ajna_health_lens/test_access.py` for the role-by-route access matrix). There's no single
+"critical path" suite to run selectively — `python manage.py test` runs everything, and no test
+talks to Fonepay or YouTube.
+
+To see what isn't tested yet (`pip install coverage` first; it's a dev tool, not in
+requirements.txt):
+
+```bash
+coverage run --source=. --omit='*/migrations/*,*/tests.py,*/test_*.py,.venv/*' manage.py test
+coverage report -m --skip-covered --sort=miss
+```
 
 ## Project layout
 
