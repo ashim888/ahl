@@ -3537,6 +3537,26 @@ class VideoStoryTests(TestCase):
         listing = self.client.get(reverse('articles:article_list'))
         self.assertContains(listing, 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg')
 
+    def test_homepage_showcase_plays_free_videos_inline_but_never_exposes_a_paid_one(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        # The newest story takes the homepage's lead spot, so give it one that isn't a video.
+        Article.objects.create(title='Lead story', slug='lead-story', status=Article.Status.PUBLISHED,
+                               html_content='<p>x</p>', published_at=timezone.now())
+        self._story(slug='free-clip', title='Free clinic clip', published_at=timezone.now() - datetime.timedelta(minutes=30))
+        self._story(slug='paid-clip', title='Paid budget briefing', video_url='https://youtu.be/aqz-KE-bpKQ',
+                    access_type=Article.AccessType.SUBSCRIPTION, published_at=timezone.now() - datetime.timedelta(hours=1))
+        home = self.client.get(reverse('articles:home'))
+        self.assertContains(home, 'data-video-showcase')
+        self.assertContains(home, 'data-reel-item ', count=2)
+        # The free one carries its player address for inline play...
+        self.assertContains(home, 'data-embed="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0"')
+        # ...the paid one sends ▶ to its paywall and its id appears nowhere.
+        self.assertContains(home, 'Paid budget briefing')
+        self.assertNotContains(home, 'aqz-KE-bpKQ')
+        self.assertContains(home, f'data-url="{reverse("articles:article_detail", args=["paid-clip"])}"')
+
     def test_videos_is_in_the_main_menu(self):
         from sections.models import Section
 

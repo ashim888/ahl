@@ -312,8 +312,11 @@ the field to confirm the link was recognised.
 - Pick the article type **Video** for a story that is mainly the video: it can then be published
   without any article text. Any story can carry a video, e.g. a news report with a clip.
 - Every story with a video appears on the **Videos** page (`/videos/`, in the main menu) and in
-  the **Watch** row on the homepage. To place one there by hand, set *Homepage spot* to
-  **Videos**.
+  the **Watch** showcase on the homepage: the 8 latest videos, the first on a large screen and
+  the rest in a swipeable reel beneath it. Readers pick a video from the reel and press ▶ to
+  watch a free one right there; ▶ on a paid one goes to its subscribe box. To place a video there
+  by hand, set *Homepage spot* to **Videos** (the homepage's top story is never repeated in the
+  showcase).
 - On cards and when shared, a free video story uses YouTube's thumbnail if there's no featured
   image.
 - **Subscriber-only videos:** set the access to Subscription or pay-per-article as usual. Readers

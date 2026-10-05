@@ -1,0 +1,229 @@
+{% load news_time %}
+{% load i18n %}
+{% comment %}
+Homepage video showcase: a large "screen" for the selected video with its
+details beside it, and a swipeable reel of every video below. Picking a reel
+item swaps the screen without leaving the page; ▶ plays free videos inline
+(youtube-nocookie, only once pressed).
+
+Paid stories never get data-embed: their YouTube id must not reach the page
+(see Article.card_image_url), so their ▶ goes to the story's paywall.
+
+Without JavaScript the screen and every reel item are plain links to the
+story. Expects `videos` (list of Articles with `section` loaded).
+{% endcomment %}
+{% with lead=videos.0 %}
+<section class="relative bg-foreground text-primary-foreground overflow-hidden" data-video-showcase aria-labelledby="home-videos-heading">
+    <div aria-hidden="true" class="pointer-events-none absolute -top-40 -right-40 w-[36rem] h-[36rem] rounded-full bg-accent/20 blur-3xl"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
+        <div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-primary-foreground/20">
+            <div>
+                <p class="section-label text-accent flex items-center gap-2"><span aria-hidden="true" class="inline-block w-2 h-2 rounded-full bg-accent animate-pulse"></span>{% trans "VIDEOS" %}</p>
+                <h2 id="home-videos-heading" class="font-display text-3xl md:text-4xl font-bold mt-1.5" style="letter-spacing: -0.02em;">{% trans "Watch" %}</h2>
+            </div>
+            <a href="{% url 'articles:video_list' %}" class="shrink-0 font-mono-editorial text-xs tracking-widest border-b border-primary-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL VIDEOS →" %}</a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+            {# The screen #}
+            <div class="lg:col-span-8">
+                <div class="relative aspect-video bg-black overflow-hidden shadow-2xl ring-1 ring-white/10 group" data-stage-screen>
+                    <div data-stage-poster class="absolute inset-0">
+                        <img data-stage-img src="{{ lead.card_image_url }}" alt="{{ lead.featured_image_alt|default:lead.title }}"
+                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]{% if not lead.card_image_url %} hidden{% endif %}">
+                        <div data-stage-fallback aria-hidden="true" class="absolute inset-0{% if lead.card_image_url %} hidden{% endif %}" style="background: linear-gradient(135deg, #2a2826 0%, #111110 100%);"></div>
+                        <div aria-hidden="true" class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30"></div>
+                        <span data-stage-access class="absolute top-3 left-3 font-mono-editorial text-[0.65rem] tracking-wider uppercase bg-black/70 text-white px-2 py-1{% if lead.access_type == 'open_access' %} hidden{% endif %}">{% if lead.access_type == 'pay_per_article' %}{% trans "Special" %}{% elif lead.access_type != 'open_access' %}{% trans "Subscribers" %}{% endif %}</span>
+                        <a data-stage-play href="{% url 'articles:article_detail' lead.slug %}{% if lead.access_type != 'open_access' %}#paywall{% endif %}"
+                           class="absolute inset-0 flex items-center justify-center focus:outline-none group/play" data-label="{% trans 'Play video' %}" aria-label="{% trans 'Play video' %}: {{ lead.title }}">
+                            <span class="relative flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-accent text-white shadow-xl transition-transform duration-200 group-hover/play:scale-110 group-focus-visible/play:ring-4 group-focus-visible/play:ring-white">
+                                <span aria-hidden="true" class="absolute inset-0 rounded-full bg-accent/60 animate-ping opacity-40"></span>
+                                <svg class="relative w-7 h-7 md:w-8 md:h-8 ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                            </span>
+                        </a>
+                        <span data-stage-counter aria-hidden="true" class="absolute bottom-3 right-3 font-mono-editorial text-xs tracking-widest text-white/80">01 / {{ videos|length|stringformat:"02d" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {# What's on the screen #}
+            <div class="lg:col-span-4 flex flex-col" aria-live="polite">
+                <p class="font-mono-editorial text-[0.65rem] tracking-widest uppercase text-primary-foreground/50">{% trans "Now showing" %}</p>
+                <p data-stage-section class="section-label text-accent mt-3">{% if lead.section %}{{ lead.section.name }}{% else %}{% trans "Video" %}{% endif %}</p>
+                <h3 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-2" style="letter-spacing: -0.02em;">
+                    <a data-stage-title href="{% url 'articles:article_detail' lead.slug %}" class="hover:text-accent transition-colors">{{ lead.title }}</a>
+                </h3>
+                {% with summary=lead.summary %}<p data-stage-summary class="mt-3 text-sm md:text-base text-primary-foreground/70 leading-relaxed line-clamp-4{% if not summary %} hidden{% endif %}">{{ summary }}</p>{% endwith %}
+                <p data-stage-time class="mt-3 text-xs text-primary-foreground/50">{% if lead.published_at %}{{ lead.published_at|news_time }}{% endif %}</p>
+                <div class="mt-6 flex flex-wrap items-center gap-3">
+                    <a data-stage-play-button href="{% url 'articles:article_detail' lead.slug %}{% if lead.access_type != 'open_access' %}#paywall{% endif %}"
+                       class="inline-flex items-center gap-2 bg-accent text-accent-foreground px-5 py-3 font-mono-editorial text-xs tracking-widest hover:bg-white hover:text-foreground transition-colors">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                        <span data-stage-play-label>{% if lead.access_type == 'open_access' %}{% trans "PLAY" %}{% elif lead.access_type == 'pay_per_article' %}{% trans "BUY OR SUBSCRIBE TO WATCH" %}{% else %}{% trans "SUBSCRIBE TO WATCH" %}{% endif %}</span>
+                    </a>
+                    <a data-stage-read href="{% url 'articles:article_detail' lead.slug %}"
+                       class="inline-flex items-center gap-2 border border-primary-foreground/40 px-5 py-3 font-mono-editorial text-xs tracking-widest hover:border-accent hover:text-accent transition-colors">{% trans "READ THE STORY →" %}</a>
+                </div>
+            </div>
+        </div>
+
+        {% if videos|length > 1 %}
+        <div class="mt-10 md:mt-12">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <p class="font-mono-editorial text-[0.65rem] tracking-widest uppercase text-primary-foreground/50">{% trans "Up next" %}</p>
+                <div class="hidden md:flex items-center gap-2">
+                    <button type="button" data-reel-prev aria-label="{% trans 'Previous videos' %}"
+                            class="w-10 h-10 flex items-center justify-center border border-primary-foreground/30 hover:border-accent hover:text-accent disabled:opacity-30 disabled:pointer-events-none transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <button type="button" data-reel-next aria-label="{% trans 'More videos' %}"
+                            class="w-10 h-10 flex items-center justify-center border border-primary-foreground/30 hover:border-accent hover:text-accent disabled:opacity-30 disabled:pointer-events-none transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+            <ol data-reel class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {% for article in videos %}
+                <li class="shrink-0 snap-start w-[72%] sm:w-[42%] md:w-[30%] lg:w-[calc((100%-3rem)/4)]">
+                    <a href="{% url 'articles:article_detail' article.slug %}" data-reel-item {% if forloop.first %}aria-current="true"{% endif %}
+                       data-url="{% url 'articles:article_detail' article.slug %}"
+                       data-title="{{ article.title }}"
+                       data-summary="{{ article.summary }}"
+                       data-section="{% if article.section %}{{ article.section.name }}{% else %}{% trans 'Video' %}{% endif %}"
+                       data-time="{% if article.published_at %}{{ article.published_at|news_time }}{% endif %}"
+                       data-thumb="{{ article.card_image_url }}"
+                       data-alt="{{ article.featured_image_alt|default:article.title }}"
+                       data-access="{% if article.access_type == 'pay_per_article' %}{% trans 'Special' %}{% elif article.access_type != 'open_access' %}{% trans 'Subscribers' %}{% endif %}"
+                       data-play-label="{% if article.access_type == 'open_access' %}{% trans 'PLAY' %}{% elif article.access_type == 'pay_per_article' %}{% trans 'BUY OR SUBSCRIBE TO WATCH' %}{% else %}{% trans 'SUBSCRIBE TO WATCH' %}{% endif %}"
+                       {% if article.access_type == 'open_access' %}data-embed="{{ article.video_embed_url }}"{% endif %}
+                       class="group block opacity-70 hover:opacity-100 aria-[current=true]:opacity-100 transition-opacity focus:outline-none focus-visible:opacity-100">
+                        <div class="relative aspect-video bg-black overflow-hidden ring-1 ring-white/10 group-aria-[current=true]:ring-2 group-aria-[current=true]:ring-accent group-focus-visible:ring-2 group-focus-visible:ring-white">
+                            {% if article.card_image_url %}
+                                <img src="{{ article.card_image_url }}" alt="" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300">
+                            {% else %}
+                                <div class="w-full h-full" style="background: linear-gradient(135deg, #2a2826 0%, #111110 100%);"></div>
+                            {% endif %}
+                            {% include 'articles/includes/play_badge.html' with article=article small=True %}
+                            <span aria-hidden="true" class="absolute top-2 left-2 font-mono-editorial text-[0.6rem] tracking-widest text-white/90 bg-black/60 px-1.5 py-0.5">{{ forloop.counter|stringformat:"02d" }}</span>
+                            <span aria-hidden="true" class="absolute bottom-0 inset-x-0 h-1 bg-accent scale-x-0 origin-left transition-transform duration-300 group-aria-[current=true]:scale-x-100"></span>
+                        </div>
+                        <p class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 group-hover:text-accent transition-colors">{{ article.title }}</p>
+                        {% if article.published_at %}<p class="mt-1 text-xs text-primary-foreground/50">{{ article.published_at|news_time }}</p>{% endif %}
+                    </a>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endwith %}
+<script>
+(function () {
+    document.querySelectorAll('[data-video-showcase]').forEach(function (root) {
+        var items = Array.prototype.slice.call(root.querySelectorAll('[data-reel-item]'));
+        var $ = function (name) { return root.querySelector('[data-' + name + ']'); };
+        var screen = $('stage-screen'), poster = $('stage-poster'), img = $('stage-img'), fallback = $('stage-fallback');
+        var playLinks = [ $('stage-play'), $('stage-play-button') ];
+        var reel = $('reel'), prev = $('reel-prev'), next = $('reel-next');
+        var total = Math.max(items.length, 1), current = 0, frame = null;
+
+        function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+        function stop() {
+            if (frame) { frame.remove(); frame = null; }
+            poster.classList.remove('hidden');
+        }
+
+        function play() {
+            var data = items.length ? items[current].dataset : null;
+            if (!data || !data.embed) { return false; }
+            stop();
+            frame = document.createElement('iframe');
+            frame.src = data.embed + '&autoplay=1';
+            frame.title = data.title;
+            frame.className = 'absolute inset-0 w-full h-full';
+            frame.setAttribute('frameborder', '0');
+            frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+            frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+            frame.setAttribute('allowfullscreen', '');
+            screen.appendChild(frame);
+            poster.classList.add('hidden');
+            return true;
+        }
+
+        function scrollReelTo(item) {
+            if (!reel) { return; }
+            var li = item.parentElement;
+            var left = li.offsetLeft - reel.offsetLeft;
+            if (left < reel.scrollLeft || left + li.offsetWidth > reel.scrollLeft + reel.clientWidth) {
+                reel.scrollTo({ left: left, behavior: 'smooth' });
+            }
+        }
+
+        function show(index, keepPlaying) {
+            var wasPlaying = !!frame;
+            current = index;
+            var d = items[index].dataset;
+            items.forEach(function (el, i) {
+                if (i === index) { el.setAttribute('aria-current', 'true'); } else { el.removeAttribute('aria-current'); }
+            });
+            img.src = d.thumb || '';
+            img.alt = d.alt;
+            img.classList.toggle('hidden', !d.thumb);
+            fallback.classList.toggle('hidden', !!d.thumb);
+            var access = $('stage-access');
+            access.textContent = d.access;
+            access.classList.toggle('hidden', !d.access);
+            $('stage-counter').textContent = pad(index + 1) + ' / ' + pad(total);
+            $('stage-section').textContent = d.section;
+            var title = $('stage-title');
+            title.textContent = d.title;
+            title.href = d.url;
+            var summary = $('stage-summary');
+            summary.textContent = d.summary;
+            summary.classList.toggle('hidden', !d.summary);
+            $('stage-time').textContent = d.time;
+            $('stage-read').href = d.url;
+            $('stage-play-label').textContent = d.playLabel;
+            playLinks.forEach(function (a) { a.href = d.url + (d.embed ? '' : '#paywall'); });
+            $('stage-play').setAttribute('aria-label', $('stage-play').dataset.label + ': ' + d.title);
+            stop();
+            if (keepPlaying && wasPlaying) { play(); }
+            scrollReelTo(items[index]);
+        }
+
+        // Plain clicks only — a ctrl/cmd/middle click still opens the story.
+        function plain(event) { return !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button); }
+
+        items.forEach(function (el, i) {
+            el.addEventListener('click', function (event) {
+                if (!plain(event)) { return; }
+                event.preventDefault();
+                show(i, true);
+                if (window.matchMedia('(max-width: 1023px)').matches) {
+                    screen.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        });
+
+        playLinks.forEach(function (a) {
+            a.addEventListener('click', function (event) {
+                if (plain(event) && play()) { event.preventDefault(); }
+            });
+        });
+
+        if (reel && prev && next) {
+            var updateArrows = function () {
+                prev.disabled = reel.scrollLeft <= 4;
+                next.disabled = reel.scrollLeft + reel.clientWidth >= reel.scrollWidth - 4;
+            };
+            prev.addEventListener('click', function () { reel.scrollBy({ left: -reel.clientWidth * 0.9, behavior: 'smooth' }); });
+            next.addEventListener('click', function () { reel.scrollBy({ left: reel.clientWidth * 0.9, behavior: 'smooth' }); });
+            reel.addEventListener('scroll', updateArrows, { passive: true });
+            window.addEventListener('resize', updateArrows);
+            updateArrows();
+        }
+    });
+})();
+</script>

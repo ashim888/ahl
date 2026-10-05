@@ -166,22 +166,7 @@ zone) fill the row, centered as a group.
 {% endif %}
 
 {% if home_videos %}
-<section class="bg-foreground text-primary-foreground">
-    <div class="max-w-7xl mx-auto px-6 py-12">
-        <div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-primary-foreground/30">
-            <div>
-                <p class="section-label text-accent">{% trans "VIDEOS" %}</p>
-                <h2 class="font-display text-2xl md:text-3xl font-bold mt-1.5" style="letter-spacing: -0.02em;">{% trans "Watch" %}</h2>
-            </div>
-            <a href="{% url 'articles:video_list' %}" class="shrink-0 font-mono-editorial text-xs tracking-widest border-b border-primary-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL VIDEOS →" %}</a>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {% for article in home_videos %}
-                {% include 'articles/includes/video_card.html' with article=article dark=True %}
-            {% endfor %}
-        </div>
-    </div>
-</section>
+    {% include 'articles/includes/video_showcase.html' with videos=home_videos %}
 {% endif %}
 
 {% ad_slot 'homepage_leaderboard' wrapper_class='hidden lg:flex lg:justify-center max-w-7xl mx-auto px-6 py-10' %}

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-01 14:00+0545\n"
+"POT-Creation-Date: 2026-10-02 13:03+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -83,7 +83,7 @@ msgstr "संक्षिप्त सञ्चार"
 msgid "Methodology Paper"
 msgstr "विधि पत्र"
 
-#: articles/models.py:86 templates/home.html:311
+#: articles/models.py:86 templates/home.html:296
 msgid "Editorial"
 msgstr "सम्पादकीय"
 
@@ -96,6 +96,8 @@ msgid "Letter to Editor"
 msgstr "सम्पादकलाई पत्र"
 
 #: articles/models.py:90 templates/articles/includes/video_card.html:19
+#: templates/articles/includes/video_showcase.html:52
+#: templates/articles/includes/video_showcase.html:92
 msgid "Video"
 msgstr "भिडियो"
 
@@ -195,10 +197,14 @@ msgstr ""
 "गर्नुहोस्।"
 
 #: templates/articles/article_detail.html:58
+#: templates/articles/includes/video_showcase.html:62
+#: templates/articles/includes/video_showcase.html:97
 msgid "BUY OR SUBSCRIBE TO WATCH"
 msgstr "हेर्न किन्नुहोस् वा सदस्यता लिनुहोस्"
 
 #: templates/articles/article_detail.html:58
+#: templates/articles/includes/video_showcase.html:62
+#: templates/articles/includes/video_showcase.html:97
 msgid "SUBSCRIBE TO WATCH"
 msgstr "हेर्न सदस्यता लिनुहोस्"
 
@@ -234,7 +240,7 @@ msgid "BREAKING"
 msgstr "ताजा खबर"
 
 #: templates/articles/article_detail.html:164 templates/home.html:48
-#: templates/home.html:211
+#: templates/home.html:196
 msgid "and"
 msgstr "र"
 
@@ -242,7 +248,7 @@ msgstr "र"
 #: templates/articles/article_list.html:99
 #: templates/articles/includes/article_card.html:33
 #: templates/articles/search_results.html:39 templates/home.html:48
-#: templates/home.html:156 templates/home.html:211
+#: templates/home.html:156 templates/home.html:196
 #: templates/sections/section_detail.html:81
 msgid "Editorial staff"
 msgstr "सम्पादकीय टोली"
@@ -401,7 +407,7 @@ msgstr "%(price)s मा किन्नुहोस्"
 #: templates/articles/article_detail.html:343
 #: templates/articles/article_detail.html:348 templates/base.html:520
 #: templates/billing/plan_browse.html:8 templates/billing/plan_browse.html:51
-#: templates/home.html:247
+#: templates/home.html:232
 msgid "SUBSCRIBE"
 msgstr "सदस्यता लिनुहोस्"
 
@@ -607,13 +613,60 @@ msgstr "अहिलेसम्म कुनै लेख प्रकाशि
 
 #: templates/articles/includes/article_card.html:24
 #: templates/articles/includes/video_card.html:16
+#: templates/articles/includes/video_showcase.html:36
+#: templates/articles/includes/video_showcase.html:96
 msgid "Special"
 msgstr "विशेष"
 
 #: templates/articles/includes/article_card.html:24
 #: templates/articles/includes/video_card.html:16
+#: templates/articles/includes/video_showcase.html:36
+#: templates/articles/includes/video_showcase.html:96
 msgid "Subscribers"
 msgstr "सदस्यहरूका लागि"
+
+#: templates/articles/includes/video_showcase.html:21
+#: templates/articles/video_list.html:8
+msgid "VIDEOS"
+msgstr "भिडियो"
+
+#: templates/articles/includes/video_showcase.html:22
+#: templates/articles/video_list.html:8
+msgid "Watch"
+msgstr "हेर्नुहोस्"
+
+#: templates/articles/includes/video_showcase.html:24
+msgid "ALL VIDEOS →"
+msgstr "सबै भिडियो →"
+
+#: templates/articles/includes/video_showcase.html:38
+msgid "Play video"
+msgstr "भिडियो चलाउनुहोस्"
+
+#: templates/articles/includes/video_showcase.html:51
+msgid "Now showing"
+msgstr "अहिले देखाइँदै"
+
+#: templates/articles/includes/video_showcase.html:62
+#: templates/articles/includes/video_showcase.html:97
+msgid "PLAY"
+msgstr "चलाउनुहोस्"
+
+#: templates/articles/includes/video_showcase.html:65
+msgid "READ THE STORY →"
+msgstr "समाचार पढ्नुहोस् →"
+
+#: templates/articles/includes/video_showcase.html:73
+msgid "Up next"
+msgstr "अर्को"
+
+#: templates/articles/includes/video_showcase.html:75
+msgid "Previous videos"
+msgstr "अघिल्ला भिडियोहरू"
+
+#: templates/articles/includes/video_showcase.html:79
+msgid "More videos"
+msgstr "थप भिडियोहरू"
 
 #: templates/articles/search_results.html:10 templates/base.html:324
 msgid "Search"
@@ -637,14 +690,6 @@ msgstr "तपाईंको खोजसँग मिल्ने कुनै
 #: templates/articles/video_list.html:4
 msgid "Videos"
 msgstr "भिडियोहरू"
-
-#: templates/articles/video_list.html:8 templates/home.html:173
-msgid "VIDEOS"
-msgstr "भिडियो"
-
-#: templates/articles/video_list.html:8 templates/home.html:174
-msgid "Watch"
-msgstr "हेर्नुहोस्"
 
 #: templates/articles/video_list.html:28
 msgid "No videos yet — check back soon."
@@ -1105,95 +1150,91 @@ msgstr "विचार तथा टिप्पणी"
 msgid "ALL OPINION →"
 msgstr "सबै विचार →"
 
-#: templates/home.html:176
-msgid "ALL VIDEOS →"
-msgstr "सबै भिडियो →"
-
-#: templates/home.html:193
+#: templates/home.html:178
 msgid "PEER-REVIEWED RESEARCH"
 msgstr "समकक्षी-समीक्षित अनुसन्धान"
 
-#: templates/home.html:193
+#: templates/home.html:178
 msgid "From the Journal"
 msgstr "जर्नलबाट"
 
-#: templates/home.html:193
+#: templates/home.html:178
 msgid "BROWSE ARCHIVE →"
 msgstr "अभिलेख हेर्नुहोस् →"
 
-#: templates/home.html:202
+#: templates/home.html:187
 msgid "Online first"
 msgstr "अनलाइन पहिले"
 
-#: templates/home.html:217
+#: templates/home.html:202
 msgid "DOI"
 msgstr ""
 
-#: templates/home.html:217
+#: templates/home.html:202
 msgid "Read more →"
 msgstr "थप पढ्नुहोस् →"
 
-#: templates/home.html:233
+#: templates/home.html:218
 msgid "FREE NEWSLETTER"
 msgstr "निःशुल्क न्युजलेटर"
 
-#: templates/home.html:235
+#: templates/home.html:220
 msgid "Get our best health journalism in your inbox."
 msgstr "हाम्रो उत्कृष्ट स्वास्थ्य पत्रकारिता तपाईंको इमेलमा।"
 
-#: templates/home.html:237
+#: templates/home.html:222
 msgid "No spam. Unsubscribe anytime."
 msgstr "स्प्याम हुँदैन। जुनसुकै बेला सदस्यता हटाउन सकिन्छ।"
 
-#: templates/home.html:243
+#: templates/home.html:228
 msgid "you@example.com"
 msgstr ""
 
-#: templates/home.html:258 templates/issues/issue_list.html:7
+#: templates/home.html:243 templates/issues/issue_list.html:7
 msgid "STORY TRAILS"
 msgstr "कथा शृङ्खला"
 
-#: templates/home.html:258
+#: templates/home.html:243
 msgid "Special Issues"
 msgstr "विशेष अंकहरू"
 
-#: templates/home.html:258
+#: templates/home.html:243
 msgid "ALL ISSUES →"
 msgstr "सबै अंक →"
 
-#: templates/home.html:270
+#: templates/home.html:255
 msgid "Available Now"
 msgstr "अहिले उपलब्ध"
 
-#: templates/home.html:270
+#: templates/home.html:255
 msgid "READ →"
 msgstr "पढ्नुहोस् →"
 
-#: templates/home.html:277
+#: templates/home.html:262
 msgid "FORTHCOMING"
 msgstr "आगामी"
 
-#: templates/home.html:281
+#: templates/home.html:266
 msgid "In production"
 msgstr "तयारीमा"
 
-#: templates/home.html:295 templates/training/course_detail.html:22
+#: templates/home.html:280 templates/training/course_detail.html:22
 msgid "TRAINING"
 msgstr "तालिम"
 
-#: templates/home.html:295
+#: templates/home.html:280
 msgid "Learn with us"
 msgstr "हामीसँग सिक्नुहोस्"
 
-#: templates/home.html:295 templates/training/course_detail.html:252
+#: templates/home.html:280 templates/training/course_detail.html:252
 msgid "ALL COURSES →"
 msgstr "सबै कोर्सहरू →"
 
-#: templates/home.html:312
+#: templates/home.html:297
 msgid "Board &amp; Policies"
 msgstr "बोर्ड तथा नीतिहरू"
 
-#: templates/home.html:314
+#: templates/home.html:299
 #, python-format
 msgid ""
 "%(journal)s is governed by an independent editorial board. Peer review for "
@@ -1202,7 +1243,7 @@ msgstr ""
 "%(journal)s स्वतन्त्र सम्पादकीय बोर्डद्वारा सञ्चालित छ। मौलिक अनुसन्धानको समकक्षी "
 "समीक्षा OJS मार्फत बाहिरी रूपमा गरिन्छ।"
 
-#: templates/home.html:318
+#: templates/home.html:303
 msgid "EDITORIAL POLICY →"
 msgstr "सम्पादकीय नीति →"
 

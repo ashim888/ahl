@@ -283,7 +283,7 @@ class HomeView(TemplateView):
         research_highlights = pick(HomepageSection.RESEARCH, 2, Q(article_type__in=RESEARCH_TYPES))
         # Any story with a YouTube link, not just type "Video" — a news story
         # with a clip belongs in the video row too.
-        videos = pick(HomepageSection.VIDEOS, 4, ~Q(video_url=''))
+        videos = pick(HomepageSection.VIDEOS, 8, ~Q(video_url=''))
 
         # Sections are built as plain lists (picks + autofill concatenated),
         # not querysets, so prefetching happens post-hoc via
