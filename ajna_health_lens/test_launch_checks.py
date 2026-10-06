@@ -62,6 +62,11 @@ class OptimizeBytesTests(TestCase):
         self.assertIsNone(optimize_bytes(out.getvalue()))
         self.assertIsNone(optimize_bytes(b'not an image'))
 
+    def test_broken_image_never_breaks_the_upload(self):
+        out = io.BytesIO()
+        Image.new('RGB', (20, 20)).save(out, 'PNG')
+        self.assertIsNone(optimize_bytes(out.getvalue()[:-20]))  # truncated: Pillow raises SyntaxError
+
 
 class UploadOptimizationTests(TestCase):
     def test_model_image_upload_is_optimized(self):

@@ -24,7 +24,7 @@ from django.core.files.base import ContentFile
 from django.db.models import ImageField
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +33,21 @@ KEEP_SIZE_MODELS = {'ads.adslot'}
 
 
 def optimize_bytes(data: bytes, *, keep_size: bool = False) -> bytes | None:
-    """Web-sized bytes for an image, or None to keep the original as it is."""
+    """Web-sized bytes for an image, or None to keep the original as it is.
+    Never raises: a file Pillow can't handle is simply stored untouched."""
     try:
-        image = Image.open(io.BytesIO(data))
-        image_format = image.format
-        if image_format not in ('JPEG', 'PNG', 'WEBP') or getattr(image, 'is_animated', False):
-            return None
-        image.load()
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError, ValueError):
+        return _optimize(data, keep_size)
+    except Exception:  # noqa: BLE001 — Pillow raises many types (SyntaxError for broken PNGs…)
+        logger.warning('Image left as uploaded (could not optimize it)', exc_info=True)
         return None
 
+
+def _optimize(data: bytes, keep_size: bool) -> bytes | None:
+    image = Image.open(io.BytesIO(data))
+    image_format = image.format
+    if image_format not in ('JPEG', 'PNG', 'WEBP') or getattr(image, 'is_animated', False):
+        return None
+    image.load()
     has_metadata = bool(image.info.get('exif')) or bool(image.getexif())
     image = ImageOps.exif_transpose(image)
     resized = False

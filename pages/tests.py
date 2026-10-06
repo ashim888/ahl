@@ -22,9 +22,9 @@ class SitePageTests(TestCase):
     def test_drafts_are_seeded_unpublished_and_hidden(self):
         self.assertEqual(
             sorted(SitePage.objects.values_list('slug', 'is_published')),
-            [('privacy', False), ('refund-policy', False), ('terms', False)],
+            [('faq', False), ('privacy', False), ('refund-policy', False), ('terms', False)],
         )
-        for name in ('terms', 'privacy', 'refunds'):
+        for name in ('terms', 'privacy', 'refunds', 'faq'):
             self.assertEqual(self.client.get(reverse(f'pages:{name}')).status_code, 404, name)
         self.assertNotContains(self.client.get(reverse('articles:home')), '/terms/')
 
