@@ -81,3 +81,40 @@ def check_receipt_details(app_configs, **kwargs):
         hint='Set BUSINESS_LEGAL_NAME, BUSINESS_PAN and BUSINESS_ADDRESS in the server .env.',
         id='ajna.W001',
     )]
+
+
+@register(Tags.security, deploy=True)
+def check_backups(app_configs, **kwargs):
+    """Nightly off-site backups (ajna_health_lens/backups.py) need both settings."""
+    if settings.DEBUG or (settings.BACKUP_EMAIL and settings.BACKUP_ENCRYPTION_PASSWORD):
+        return []
+    return [Warning(
+        'Emailed database backups are off — the only backups are on this server.',
+        hint='Set BACKUP_EMAIL and BACKUP_ENCRYPTION_PASSWORD in the server .env (keep the password in a password manager too).',
+        id='ajna.W002',
+    )]
+
+
+@register(Tags.security, deploy=True)
+def check_admin_emails(app_configs, **kwargs):
+    """Every alert (server errors, broken links, failed backups, a stopped
+    worker) goes to ADMINS — with none set, they go nowhere."""
+    if settings.DEBUG or settings.ADMINS:
+        return []
+    return [Warning(
+        'ADMIN_EMAILS is empty — server errors, failed backups and a stopped worker alert nobody.',
+        hint='Set ADMIN_EMAILS=you@example.com (comma-separated for several) in the server .env.',
+        id='ajna.W003',
+    )]
+
+
+@register(Tags.security, deploy=True)
+def check_two_factor(app_configs, **kwargs):
+    """Staff two-step sign-in (users/two_factor.py) must stay on in production."""
+    if settings.DEBUG or settings.STAFF_TWO_FACTOR_REQUIRED:
+        return []
+    return [Warning(
+        'STAFF_TWO_FACTOR_REQUIRED is off — staff sign in with a password alone.',
+        hint='Remove STAFF_TWO_FACTOR_REQUIRED=False from the server .env.',
+        id='ajna.W004',
+    )]

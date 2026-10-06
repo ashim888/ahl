@@ -26,5 +26,6 @@ class ArticlesConfig(AppConfig):
 
     def ready(self):
         from . import checks  # noqa: F401 — registers the SITE_BASE_URL deploy check
+        from . import search_signals  # noqa: F401 — keeps Article.search_text current
 
         post_migrate.connect(sync_site_domain, sender=self, dispatch_uid='articles.sync_site_domain')

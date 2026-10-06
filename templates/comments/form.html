@@ -23,7 +23,7 @@ styling from templates/base.html, so no per-field classes are needed here.
     {% endcomment %}
     <input type="hidden" name="next" value="{% if article %}{{ request.path }}{% elif comment %}{{ comment.content_object.get_absolute_url }}{% endif %}">
     {# Honeypot — real visitors never see this field; a bot that fills every field trips it. #}
-    <div style="position: absolute; left: -9999px;" aria-hidden="true">{{ form.honeypot }}</div>
+    <div style="position: absolute; left: -9999px;" aria-hidden="true"><input type="text" name="{{ form.honeypot.html_name }}" id="{{ form.honeypot.id_for_label }}" tabindex="-1" autocomplete="off"></div>
 
     {% if form.non_field_errors %}
         <p class="text-xs text-accent">{{ form.non_field_errors }}</p>

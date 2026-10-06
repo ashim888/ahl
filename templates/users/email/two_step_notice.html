@@ -1,0 +1,18 @@
+{% extends 'email/base.html' %}
+{% block title %}Two-step sign-in{% endblock %}
+{% block preheader %}A security change on your {{ journal_name }} account.{% endblock %}
+{% block eyebrow %}Account security{% endblock %}
+{% block heading %}{% if event == 'enabled' %}Two-step sign-in is on{% elif event == 'reset' %}Two-step sign-in was reset{% else %}A backup code was used{% endif %}{% endblock %}
+{% block content %}
+    <p>Hi {{ user.first_name }},</p>
+    {% if event == 'enabled' %}
+        <p>Two-step sign-in is now on for your account: you'll enter a code from your authenticator app each time you sign in.</p>
+    {% elif event == 'reset' %}
+        <p>{{ by }} reset two-step sign-in on your account. Next time you sign in you'll set up your authenticator app again.</p>
+    {% else %}
+        <p>One of your backup codes was just used to sign in. You have {{ remaining }} left. If that wasn't you, change your password straight away and tell us.</p>
+    {% endif %}
+    <p>Didn't expect this? Write to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> straight away.</p>
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because of a security change on your {{ journal_name }} account.{% endblock %}

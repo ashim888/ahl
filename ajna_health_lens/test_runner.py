@@ -15,6 +15,10 @@ from django.test.runner import DiscoverRunner
 
 class IsolatedMediaTestRunner(DiscoverRunner):
     def setup_test_environment(self, **kwargs):
+        # Most tests force_login a staff user and expect the page; two-step
+        # sign-in would redirect every one of them. users/test_two_factor.py
+        # switches it back on with override_settings.
+        settings.STAFF_TWO_FACTOR_REQUIRED = False
         super().setup_test_environment(**kwargs)
         self._media_tmp = Path(tempfile.mkdtemp(prefix='ahl-test-media-'))
         self._saved_media = {}

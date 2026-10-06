@@ -51,7 +51,13 @@ No account needed for any of this.
 - **Browse articles** at `/articles/` — filter by type using the dropdown, or click a keyword
   pill on any article to see everything tagged with it.
 - **Search** from the box in the header, or go to `/search/` directly. Search matches title,
-  abstract, keywords, and author names — short medical acronyms (e.g. "TB", "HIV") work too.
+  summary, article text, keywords, section and author names — short medical acronyms (e.g. "TB",
+  "HIV") and Nepali words work too. Typing in the header box suggests matching headlines and topics.
+  Results put title matches first, show the matching sentence with the words highlighted, and can
+  be narrowed by **section**, **story type** and **when** (past week/month/year), or sorted newest
+  first. A misspelt search offers "Did you mean …".
+- **Corrections** (`/corrections/`, linked in the footer) lists every correction, clarification and
+  update made to a published story, newest first.
 - **Browse issues** (curated story trails/coverage series) at `/issues/`.
 - **Browse by topic** using the primary nav (e.g. "Policy & Economy" → "Health Insurance (NHIP)")
   or directly at `/sections/<slug>/` — this is the editorial subject taxonomy, separate from an
@@ -197,8 +203,9 @@ required to publish.
    - **Link**, **Upload image**, **Insert media**, **Table**, **Block quote**, **Horizontal
      line**, **Special characters**, inline **Code** and **Code block**, **Find and replace**.
    - **Images:** click Upload image (JPG, PNG, GIF or WebP, up to 5 MB) or use its arrow to
-     insert one by URL. Click an image for its toolbar: **alt text** (always add it: what the
-     picture shows), **caption**, **align** left/centre/right (text wraps around left/right
+     insert one by URL. Click an image for its toolbar: **alt text** (required: what the
+     picture shows — an article can't be published for the first time while an image in the text
+     has none), **caption**, **align** left/centre/right (text wraps around left/right
      images; on phones they go full width), **resize** (original, half, three quarters, full
      width) and **link**.
    - **Insert media** takes a YouTube, Vimeo, Dailymotion or Spotify link and embeds the player.
@@ -274,8 +281,8 @@ it shows "Updated <time>" under the date — pinning or changing the homepage sp
 update.
 
 **Featured image details:** under the image upload, fill in the **Image description (alt
-text)** — what the picture shows, for screen readers and search engines (it falls back to the
-headline) — plus an optional **Caption** and **Credit** ("Ram Shrestha / Ajna Health Lens"). The
+text)** — what the picture shows, for screen readers and search engines. It's required before an
+article with a featured image is first published — plus an optional **Caption** and **Credit** ("Ram Shrestha / Ajna Health Lens"). The
 caption and "Photo: <credit>" appear under the image on the article page.
 
 **Corrections & updates:** on a saved article, the **Corrections & updates** panel (right-hand
@@ -284,7 +291,8 @@ side) adds a dated note for readers — pick **Correction** (a factual error was
 note**. It appears at the end of the article under "Corrections & updates", with a "Correction
 appended ↓" link under the date, and the article is marked "Updated". Fix the article text itself
 with **Update live article** as usual — the note is what tells readers it changed. **Remove**
-deletes a note added by mistake.
+deletes a note added by mistake. Every note also appears on the public **Corrections** page
+(`/corrections/`).
 
 **Search & social (optional):** the collapsed **Search & social** card lets you write a different
 **search headline** (~60 characters) and **search description** (~155) for Google results and
@@ -542,6 +550,15 @@ Checkout adds 13% VAT on top and shows the reader *price + VAT = total*. Every r
 split. The rate and the business name, PAN and address printed on receipts come from the server's
 `.env` (`VAT_RATE`, `BUSINESS_LEGAL_NAME`, `BUSINESS_PAN`, `BUSINESS_ADDRESS`).
 
+**Invoices.** Once `BUSINESS_PAN` is set, receipts are headed **TAX INVOICE**.
+
+- Numbers restart every Nepali fiscal year (from 1 Shrawan): `AHL-2083-84-000001`, and credit notes
+  `AHL-CN-2083-84-000001`.
+- Readers can add their own **PAN** at checkout (optional, 9 digits) and it's printed on the
+  invoice. Organizations' PAN is set on the organization and used for their payments.
+- Dates show in both **BS and AD** ("20 Aswin 2083 (6 Oct 2026)"). `INVOICE_DATE_DISPLAY` in `.env`
+  switches to `bs` or `ad` only.
+
 - **Plans** (`/manage/billing/plans/`) — create/edit plans (individual monthly, individual
   annual, institutional) and switch them on/off. Institutional plans have no checkout: readers
   see "Ask about your organization" instead, and access comes from **Organizations** below.
@@ -570,6 +587,10 @@ split. The rate and the business name, PAN and address printed on receipts come 
   cleanly. For example, the reader paid twice for an article they already had, or a course
   filled up while they were paying. They're enrolled anyway, since they paid. Refund the extra
   payment or **Mark as handled**.
+- **Cancelled within 3 days** — a reader can cancel a subscription themselves from their Billing
+  page within 3 days of paying (`SUBSCRIPTION_CANCEL_DAYS`). Their access ends at once and you're
+  emailed **Refund to send**. The payment is flagged on **Payments → Needs a look**. Send the
+  money back, then **Record full refund** on its receipt as above.
 - **Course seats** — someone in the middle of paying holds a seat for up to 15 minutes, so the
   last seat can't be sold twice. An abandoned checkout frees it again.
 - **Organizations** (`/manage/billing/organizations/`) — institutional deals. Add the
@@ -579,9 +600,30 @@ split. The rate and the business name, PAN and address printed on receipts come 
     organization's plan until the end date. Typing the address at sign-up isn't enough. They
     click a link we email them, prompted at sign-up, on the paywall and on their billing page.
   - Public email providers (gmail.com and the like) are refused, since everyone could join.
-  - Untick *Active* to stop access straight away. The edit page lists members and payments.
+  - Untick *Active* to stop access straight away.
   - Money received for a deal: enter it (incl. VAT) in *Record a payment received*. The receipt
     goes to the contact email.
+  - **Account manager:** pick the staff member who looks after the organization. They're named on
+    its dashboard and copied on its usage reports and renewal reminders.
+  - The edit page shows this month's usage, the members (with **Make manager**, and anyone the
+    organization removed), payments, and **Send last month's report now**.
+
+**What organizations get** — they're the biggest buyers, so they get the most:
+
+- **Their own dashboard** (`/organization/`) for their **managers**. The contact email becomes a
+  manager automatically when that person joins; you or another manager can add more.
+  - Seats used and left, members who read this month, articles read per month for the last 12
+    months, the most-read articles and topics.
+  - Each member with how many articles they read and when they last read. **Never which
+    articles** — reading about health can reveal something personal.
+  - **Remove** someone who left (their seat is freed and they can't rejoin by themselves;
+    **Restore** undoes it), **invite colleagues** by work email, download a **CSV**, see
+    invoices, the renewal date and their account manager.
+- **A monthly usage report**, emailed on the 1st at 07:00 to the contact email and managers,
+  with the CSV attached.
+- **Renewal reminders** 30 and 7 days before the end date, and once after it ends, to the
+  organization and its account manager (or to the Editors-in-Chief and Admins when there's none).
+- A read counts once per member, article and day, and only for readers (not staff).
 
 **What readers get:**
 
@@ -647,6 +689,10 @@ readers see the English page.
   - newsletter sign-ups never confirmed after 30 days;
   - expired sessions.
 
+**Cancelling within 3 days.** On their Billing page, a subscription paid in the last 3 days
+shows **Cancel & refund** with the deadline. Cancelling ends access straight away and emails them
+a confirmation. You're emailed to send the refund (see Refunds above).
+
 **Reader reports** (**Reports** in the sidebar, any editor; a red count shows open ones):
 
 - Every article has a "Report it" line above the comments, and every comment has **REPORT**.
@@ -696,6 +742,17 @@ Editor-in-Chief and Admin only, with one carve-out noted below.
   Admin; those rows say "Managed by Admins".
 - **Change role** (from a user's row) — move any account to any role. Same Admin-granting
   restriction applies: an EiC can promote up to EiC, never to Admin.
+- **Two-step sign-in** — every Editor, Editor-in-Chief and Admin signs in with their password
+  **and** a 6-digit code from an authenticator app (Google Authenticator, Microsoft
+  Authenticator, Authy).
+  - The first sign-in after this is switched on asks them to scan a QR code, then shows **10
+    backup codes** once. Print them or keep them in a password manager. Each works once.
+  - Lost phone: sign in with a backup code, or ask an Editor-in-Chief/Admin to **Reset two-step
+    sign-in** on the staff member's edit page (only Admins can reset an Admin). They set it up again
+    at their next sign-in. If nobody can sign in: `python manage.py reset_two_step <email>` on
+    the server.
+  - New backup codes: **Privacy & your data** → *New backup codes*.
+  - Every set-up, reset and backup-code sign-in is emailed to the account's owner.
 - **Permissions / Groups** (`/manage/permissions/`, `/manage/groups/`) — Django's underlying
   group/permission system, for future-proofing; nothing in the app currently checks group
   membership day-to-day (every screen gates on role, not group).
@@ -737,3 +794,49 @@ For whoever installs and deploys the site. The settings live in the server's `.e
 - **Analytics clean-up.** Page views, ad impressions/clicks and keyword impressions/clicks older
   than `ANALYTICS_RETENTION_DAYS` (default 400 days) are deleted once a day by the worker. To run
   it by hand: `python manage.py prune_analytics_events` (add `--days 180` to keep less).
+
+**Error pages.** A missing page shows a friendly "We can't find that page" with a search box
+already filled in from the address. A server error shows a simple bilingual page. A form left open
+too long shows "Please try that again" instead of a bare security error.
+
+**Alerts — know before readers tell you.** Set `ADMIN_EMAILS` (comma-separated) in `.env`.
+
+- Every server error is emailed to them, with the details.
+- **Broken links on our own site** (one of our pages linking to a page that doesn't exist) are
+  emailed too. Mistyped addresses and bots probing for WordPress files are ignored.
+- **Sentry** (optional): set `SENTRY_DSN` to group errors and see trends. Readers' personal data
+  isn't sent.
+- **`/healthz/`** answers 200 when the database, cache and background worker are fine, and 503
+  otherwise — point an uptime monitor (UptimeRobot, Better Stack) at it.
+- **Worker and failed-task alerts:** add this to the server's crontab so someone hears when the
+  worker stops (a stopped worker can't report itself):
+
+  ```
+  */15 * * * * cd /path/to/ahl && .venv/bin/python manage.py check_health
+  ```
+
+  It emails `ADMIN_EMAILS` if the worker hasn't checked in for 15 minutes (at most once an hour),
+  and once for each background task that failed.
+
+**Emailed backups.** Set `BACKUP_EMAIL` (an address *outside* this server, e.g. a Gmail kept for
+backups) and `BACKUP_ENCRYPTION_PASSWORD` (long; keep it somewhere safe — without it a backup
+can't be opened).
+
+- Every night at 02:00 the worker emails an encrypted, compressed database dump there.
+- Over `BACKUP_EMAIL_MAX_MB` (default 20) it isn't sent and `ADMIN_EMAILS` are told — move to
+  server-side backups (`backup.sh`) and off-site storage then.
+- Send one now: `python manage.py email_backup`.
+- **Restore:** `python manage.py decrypt_backup ajna_health_lens-….sql.gz.enc` (uses
+  `BACKUP_ENCRYPTION_PASSWORD` from `.env`, or asks for it, and writes the `.sql.gz` next to it), then
+  `gunzip -c ajna_health_lens-….sql.gz | mysql -u <user> -p ajna_health_lens`. Test a restore once, on a
+  spare database, before you need it.
+
+**Security headers.** Pages send a Content-Security-Policy listing the outside sites allowed to
+run code or show frames (Google Analytics, YouTube/Vimeo/Dailymotion/Spotify embeds, Fonepay,
+Cloudflare Turnstile, chart libraries). Adding a new kind of embed or script from another site
+means adding it to `CSP_DIRECTIVES` in `settings.py`. Anything blocked is logged as
+"CSP violation". Set `CSP_REPORT_ONLY=True` to only report, not block, while testing a change.
+
+**Search index.** Articles are indexed for search as they're saved. After importing articles
+straight into the database, run `python manage.py rebuild_search_index`.
+

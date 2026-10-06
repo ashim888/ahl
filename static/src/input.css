@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Accessibility: red text inside dark sections (page heroes, the video
+   showcase, footer) uses the lighter red so it meets WCAG AA contrast. */
+@layer utilities {
+  .bg-foreground .text-accent,
+  .bg-foreground.text-accent { color: theme('colors.accent-on-dark'); }
+}

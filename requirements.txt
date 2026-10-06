@@ -21,3 +21,7 @@ pytz==2026.3.post1
 requests==2.34.2
 six==1.17.0
 sqlparse==0.6.0
+sentry-sdk[django]==2.71.0  # error tracking — on only when SENTRY_DSN is set (settings.py)
+nepali-datetime==1.0.8.5  # Bikram Sambat dates and fiscal year on invoices (billing/nepali.py)
+django-otp==1.7.3  # two-step sign-in for staff (users/two_factor.py)
+qrcode==8.2  # QR code for setting up the authenticator app

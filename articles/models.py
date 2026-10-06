@@ -234,6 +234,9 @@ class Article(models.Model):
         'Video (YouTube link)', max_length=300, blank=True, validators=[validate_youtube_url],
         help_text='Paste the YouTube link. The player appears at the top of the story.',
     )
+    # Plain text of everything searchable, kept up to date by save() and
+    # articles/search_signals.py; FULLTEXT ngram index (migration 0046).
+    search_text = models.TextField(blank=True, editable=False)
     html_content = models.TextField(
         null=True, blank=True,
         help_text='Full-text body HTML, rendered as-is (trusted — admin/editor-authored only, '
@@ -363,6 +366,9 @@ class Article(models.Model):
                 self.published_at = now
             self.publication_date = timezone.localdate(self.published_at)
         super().save(*args, **kwargs)
+        from .search import refresh as refresh_search_text
+
+        refresh_search_text([self.pk])
         # Cheap and unconditional rather than trying to detect exactly which
         # field changes matter (status, homepage_section, is_pinned, or just
         # an edit to an already-featured article's title/image) — a save is

@@ -55,6 +55,18 @@
         </div>
     </section>
 
+    {% if user.is_editorial_staff or user.is_superuser %}
+    <section class="mt-10">
+        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">{% trans "TWO-STEP SIGN-IN" %}</p>
+        <div class="border border-border bg-card p-5 flex flex-wrap items-center justify-between gap-4">
+            <p class="text-sm max-w-md">{% trans "On for your staff account. Lost your backup codes? Make new ones — the old ones stop working." %}</p>
+            <form method="post" action="{% url 'users:two_step_backup_codes' %}">{% csrf_token %}
+                <button type="submit" class="font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-2 hover:border-accent hover:text-accent">{% trans "NEW BACKUP CODES" %}</button>
+            </form>
+        </div>
+    </section>
+    {% endif %}
+
     {# -- Data ------------------------------------------------------------ #}
     <section class="mt-10">
         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">{% trans "YOUR DATA" %}</p>

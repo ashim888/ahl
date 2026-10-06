@@ -56,4 +56,19 @@
         </form>
     </div>
 </div>
+{% if not is_create %}
+<div class="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+    <h3 class="text-base font-semibold text-gray-900">Two-step sign-in</h3>
+    <p class="mt-2 text-sm text-gray-500">
+        {% if target_has_two_step %}On — they sign in with an authenticator app code.{% else %}Not set up yet — they'll be asked to set it up at their next sign-in.{% endif %}
+    </p>
+    {% if target_has_two_step and object.pk != request.user.pk %}
+        <form method="post" action="{% url 'users:manage_staff_reset_two_step' object.pk %}" class="mt-4"
+              onsubmit="return confirm('Reset two-step sign-in? Use this when they\'ve lost their phone — they\'ll set it up again at their next sign-in.');">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">Reset (lost phone)</button>
+        </form>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

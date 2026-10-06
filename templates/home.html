@@ -145,9 +145,9 @@ zone) fill the row, centered as a group.
             {% for article in opinion_pieces %}
                 <article class="article-link px-0 md:px-8 first:pl-0 last:pr-0 pb-8 md:pb-0">
                     <div class="font-mono-editorial text-xs text-muted-foreground mb-3 pt-6 md:pt-0">{{ article.published_at|news_time }}</div>
-                    <h4 class="font-display text-xl font-bold leading-snug article-title mb-3" style="letter-spacing: -0.01em;">
+                    <h3 class="font-display text-xl font-bold leading-snug article-title mb-3" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
-                    </h4>
+                    </h3>
                     {% with summary=article.summary %}{% if summary %}<p class="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
                     <div class="rule-thin mb-3"></div>
                     <div>
@@ -188,9 +188,9 @@ zone) fill the row, centered as a group.
                             </span>
                             <span class="font-mono-editorial text-xs text-muted-foreground">{{ JOURNAL_NAME }}</span>
                         </div>
-                        <h4 class="font-display text-lg font-bold leading-snug mb-3 article-title" style="letter-spacing: -0.01em;">
+                        <h3 class="font-display text-lg font-bold leading-snug mb-3 article-title" style="letter-spacing: -0.01em;">
                             {{ article.title }}
-                        </h4>
+                        </h3>
                     </a>
                     <p class="text-sm text-muted-foreground italic mb-3">
                         {% for aa in article.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}<span>{{ aa.display_name }}</span>{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}

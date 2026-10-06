@@ -1,0 +1,11 @@
+Hi {{ user.first_name }},
+{% if event == 'enabled' %}
+Two-step sign-in is now on for your account: you'll enter a code from your authenticator app each time you sign in.
+{% elif event == 'reset' %}
+{{ by }} reset two-step sign-in on your account. Next time you sign in you'll set up your authenticator app again.
+{% else %}
+One of your backup codes was just used to sign in. You have {{ remaining }} left. If that wasn't you, change your password straight away and tell us.
+{% endif %}
+Didn't expect this? Write to {{ contact_email }} straight away.
+
+— {{ journal_name }}

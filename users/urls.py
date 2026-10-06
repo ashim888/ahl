@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import two_factor, views
 
 app_name = 'users'
 
@@ -14,6 +14,10 @@ urlpatterns = [
     path('profile/edit/', views.profile_update_view, name='profile_edit'),
     path('account/confirm-email/', views.send_email_confirmation, name='send_email_confirmation'),
     path('account/privacy/', views.privacy_settings, name='privacy'),
+    path('account/two-step/setup/', two_factor.setup, name='two_step_setup'),
+    path('account/two-step/verify/', two_factor.verify, name='two_step_verify'),
+    path('account/two-step/backup-codes/', two_factor.new_backup_codes, name='two_step_backup_codes'),
+    path('manage/staff/<int:pk>/reset-two-step/', two_factor.staff_reset, name='manage_staff_reset_two_step'),
     path('account/privacy/download/', views.privacy_export, name='privacy_export'),
     path('account/privacy/delete/', views.privacy_delete_account, name='privacy_delete'),
     path('email/unsubscribe/<str:token>/', views.email_unsubscribe, name='email_unsubscribe'),

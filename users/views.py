@@ -181,7 +181,10 @@ class ProfileView(DetailView):
         from billing.institutions import organization_for
         from billing.services import paid_through
 
+        from billing.org_views import managed_organizations
+
         context['billing_subscription'] = current_subscription(self.request.user)
+        context['managed_organizations'] = managed_organizations(self.request.user)
         context['billing_paid_through'] = paid_through(self.request.user)
         context['billing_organization'] = (
             None if context['billing_subscription'] else organization_for(self.request.user)
@@ -544,6 +547,9 @@ class StaffUpdateView(StaffFormViewMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_create'] = False
+        from .two_factor import has_device
+
+        context['target_has_two_step'] = has_device(self.object)
         return context
 
     def form_valid(self, form):

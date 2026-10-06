@@ -21,3 +21,19 @@ def vat_breakdown(price):
 
     subtotal, vat, total = breakdown(price or 0)
     return {'price': subtotal, 'vat': vat, 'total': total, 'rate': settings.VAT_RATE.normalize()}
+
+
+@register.filter
+def invoice_date(value):
+    """{{ payment.completed_at|invoice_date }} — AD and/or BS per INVOICE_DATE_DISPLAY."""
+    from billing.nepali import format_invoice_date
+
+    return format_invoice_date(value)
+
+
+@register.filter
+def bs_date(value):
+    """{{ some_date|bs_date }} -> '20 Aswin 2083'."""
+    from billing.nepali import format_bs
+
+    return format_bs(value)

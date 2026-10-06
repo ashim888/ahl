@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Corrections" %} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block content %}
+{% trans "STANDARDS" as eyebrow %}{% trans "Corrections" as title %}{% trans "When we get something wrong, we fix it and say so. Every correction, clarification and update to a published story is listed here." as lead %}
+{% include 'includes/page_hero.html' %}
+
+<div class="max-w-3xl mx-auto px-6 py-12">
+    <nav class="flex flex-wrap gap-2" aria-label="{% trans 'Filter corrections' %}">
+        <a href="{% url 'articles:correction_list' %}" class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if not selected_kind %}border-foreground bg-foreground text-primary-foreground{% else %}border-border hover:border-foreground{% endif %}"{% if not selected_kind %} aria-current="page"{% endif %}>{% trans "ALL" %}</a>
+        {% for value, label in kinds %}
+            <a href="?kind={{ value }}" class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if selected_kind == value %}border-foreground bg-foreground text-primary-foreground{% else %}border-border hover:border-foreground{% endif %}"{% if selected_kind == value %} aria-current="page"{% endif %}>{{ label|upper }}</a>
+        {% endfor %}
+    </nav>
+
+    <ol class="mt-8 divide-y divide-border border-y border-border">
+        {% for correction in corrections %}
+            <li class="py-6">
+                <p class="font-mono-editorial text-xs text-muted-foreground">
+                    <span class="text-accent font-semibold">{{ correction.get_kind_display|upper }}</span> ·
+                    <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|date:"j M Y" }}</time>
+                    {% if correction.article.section %} · {{ correction.article.section.name }}{% endif %}
+                </p>
+                <h2 class="font-display text-lg font-bold mt-1 leading-snug"><a href="{{ correction.article.get_absolute_url }}#corrections" class="hover:text-accent">{{ correction.article.title }}</a></h2>
+                <p class="mt-1.5 text-sm leading-relaxed">{{ correction.note }}</p>
+            </li>
+        {% empty %}
+            <li class="py-10 text-center text-muted-foreground">{% trans "No corrections yet." %}</li>
+        {% endfor %}
+    </ol>
+    {% include 'includes/pagination.html' %}
+
+    <p class="mt-10 text-sm text-muted-foreground">
+        {% trans "Spotted something we got wrong? Use the “Report it” link on the article, or write to" %} <a href="mailto:{{ JOURNAL_CONTACT_EMAIL }}" class="underline hover:text-accent">{{ JOURNAL_CONTACT_EMAIL }}</a>.
+    </p>
+</div>
+{% endblock %}

@@ -17,7 +17,10 @@ from users.models import User
 from . import payments
 from .access import article_is_accessible, user_has_active_subscription
 from .models import ArticlePurchase, Payment, SubscriptionPlan, UserSubscription
+from .nepali import fiscal_year
 from .tests import FONEPAY_TEST_SETTINGS
+
+FY = fiscal_year()  # receipt numbers restart each Nepali fiscal year
 
 
 def make_user(email, **extra):
@@ -52,12 +55,12 @@ class RefundTests(TestCase):
         payment.refresh_from_db()
         self.assertEqual(payment.status, Payment.Status.REFUNDED)
         self.assertEqual((payment.refunded_by, payment.refund_reason), (self.eic, 'Paid by mistake'))
-        self.assertEqual(payment.credit_note_number, 'AHL-CN-000001')
+        self.assertEqual(payment.credit_note_number, f'AHL-CN-{FY}-000001')
         self.assertFalse(user_has_active_subscription(self.reader))
         self.assertEqual(UserSubscription.objects.get(user=self.reader).status, UserSubscription.Status.CANCELLED)
         refund_email = mail.outbox[-1]
         self.assertEqual(refund_email.to, ['refund-me@example.com'])
-        self.assertIn('AHL-CN-000001', refund_email.subject)
+        self.assertIn(f'AHL-CN-{FY}-000001', refund_email.subject)
         self.assertIn('Total refunded: Rs. 563.87', refund_email.body)
 
     def test_refunding_an_article_purchase_locks_it_again(self):
@@ -93,7 +96,7 @@ class RefundTests(TestCase):
         self._refund(payment)
         response = self.client.post(reverse('billing:manage_payment_refund', args=[payment.reference]), {'reason': 'again'}, follow=True)
         self.assertContains(response, 'Only a paid payment can be refunded')
-        self.assertEqual(Payment.objects.get(pk=payment.pk).credit_note_number, 'AHL-CN-000001')
+        self.assertEqual(Payment.objects.get(pk=payment.pk).credit_note_number, f'AHL-CN-{FY}-000001')
 
     def test_credit_notes_and_receipts_are_separate_sequences(self):
         first = paid(self.reader, Payment.Kind.SUBSCRIPTION, 499, plan=self.plan)
@@ -101,8 +104,8 @@ class RefundTests(TestCase):
         self._refund(first)
         self._refund(second)
         numbers = sorted(Payment.objects.values_list('credit_note_number', flat=True))
-        self.assertEqual(numbers, ['AHL-CN-000001', 'AHL-CN-000002'])
-        self.assertEqual(sorted(Payment.objects.values_list('receipt_number', flat=True)), ['AHL-000001', 'AHL-000002'])
+        self.assertEqual(numbers, [f'AHL-CN-{FY}-000001', f'AHL-CN-{FY}-000002'])
+        self.assertEqual(sorted(Payment.objects.values_list('receipt_number', flat=True)), [f'AHL-{FY}-000001', f'AHL-{FY}-000002'])
 
     def test_receipt_and_billing_page_show_the_refund(self):
         payment = paid(self.reader, Payment.Kind.SUBSCRIPTION, 499, plan=self.plan)
@@ -114,7 +117,7 @@ class RefundTests(TestCase):
         self.client.force_login(self.reader)
         reader_view = self.client.get(receipt_url)
         self.assertContains(reader_view, 'CREDIT NOTE')
-        self.assertContains(reader_view, 'AHL-CN-000001')
+        self.assertContains(reader_view, f'AHL-CN-{FY}-000001')
         self.assertNotContains(reader_view, 'Paid by mistake')  # staff-only panel
         self.assertContains(self.client.get(reverse('billing:account')), 'REFUNDED')
 
@@ -239,3 +242,69 @@ class SeatHoldTests(TestCase):
         self.client.force_login(self.other)
         self.client.post(reverse('training:course_checkout', args=[self.course.pk]))
         self.assertTrue(Enrollment.objects.filter(user=self.other).exists())
+
+
+class CancelWithinThreeDaysTests(TestCase):
+    """A reader can cancel a paid subscription for a full refund within
+    SUBSCRIPTION_CANCEL_DAYS (3) of paying; after that it runs to its end."""
+
+    def setUp(self):
+        self.reader = make_user('cancel-me@example.com')
+        self.plan = SubscriptionPlan.objects.create(
+            name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=499, duration_days=30,
+        )
+        self.payment = paid(self.reader, Payment.Kind.SUBSCRIPTION, 499, plan=self.plan)
+        self.client.force_login(self.reader)
+
+    def _cancel(self, payment=None):
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(reverse('billing:subscription_cancel', args=[(payment or self.payment).reference]), follow=True)
+
+    def test_billing_page_offers_cancel_with_the_deadline(self):
+        page = self.client.get(reverse('billing:account'))
+        self.assertContains(page, 'CANCEL & REFUND')
+        self.assertContains(page, 'for a full refund of Rs. 563.87')
+
+    def test_cancelling_ends_access_and_asks_staff_to_refund(self):
+        eic = make_user('eic-cancel@example.com', role=User.Role.EDITOR_IN_CHIEF)
+        response = self._cancel()
+        self.assertContains(response, 'Your refund of Rs. 563.87 is on its way')
+        self.assertContains(response, 'Refund of Rs. 563.87 requested on')
+        self.assertFalse(user_has_active_subscription(self.reader))
+        self.payment.refresh_from_db()
+        self.assertIsNotNone(self.payment.refund_requested_at)
+        self.assertIn('send the refund', self.payment.attention)
+        recipients = {address for message in mail.outbox for address in message.to}
+        self.assertIn('cancel-me@example.com', recipients)
+        self.assertIn('eic-cancel@example.com', recipients)
+        # Staff record the refund: credit note issued, flag cleared.
+        payments.refund_payment(self.payment, by=eic, reason='Cancelled within 3 days')
+        self.payment.refresh_from_db()
+        self.assertEqual((self.payment.status, self.payment.attention), (Payment.Status.REFUNDED, ''))
+
+    def test_after_three_days_it_cannot_be_cancelled(self):
+        Payment.objects.filter(pk=self.payment.pk).update(completed_at=timezone.now() - datetime.timedelta(days=3, minutes=1))
+        self.assertNotContains(self.client.get(reverse('billing:account')), 'CANCEL & REFUND')
+        response = self._cancel()
+        self.assertContains(response, 'only be cancelled within 3 days')
+        self.assertTrue(user_has_active_subscription(self.reader))
+
+    def test_only_once_and_only_your_own(self):
+        self._cancel()
+        response = self._cancel()
+        self.assertContains(response, 'only be cancelled within 3 days')
+        self.client.force_login(make_user('someone-else-cancel@example.com'))
+        self.assertEqual(self.client.post(reverse('billing:subscription_cancel', args=[self.payment.reference])).status_code, 404)
+
+    def test_complimentary_subscriptions_have_nothing_to_cancel(self):
+        other = make_user('comp@example.com')
+        UserSubscription.objects.create(user=other, plan=self.plan, end_date=timezone.localdate() + datetime.timedelta(days=30))
+        self.client.force_login(other)
+        self.assertNotContains(self.client.get(reverse('billing:account')), 'CANCEL & REFUND')
+
+    def test_an_early_renewal_can_be_cancelled_before_it_starts(self):
+        renewal = paid(self.reader, Payment.Kind.SUBSCRIPTION, 499, plan=self.plan)
+        self._cancel(renewal)
+        statuses = dict(UserSubscription.objects.values_list('payment_reference', 'status'))
+        self.assertEqual(statuses[renewal.reference], UserSubscription.Status.CANCELLED)
+        self.assertEqual(statuses[self.payment.reference], UserSubscription.Status.ACTIVE)

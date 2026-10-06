@@ -535,8 +535,8 @@ class Command(BaseCommand):
             'Priority customer support',
             'Early access to new platform features',
             'Multi-user access (up to 50 reader seats)',
-            'Organization-wide IP-based access',
-            'Usage analytics dashboard for admins',
+            'Organization-wide access by work email',
+            'Usage dashboard and monthly usage reports',
             'Dedicated account manager',
             'Custom invoicing',
         ]
@@ -548,7 +548,7 @@ class Command(BaseCommand):
         specs = [
             dict(name='Reader Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
                  price=499, duration_days=30,
-                 description='Full digital access to Ajna Health Lens, billed monthly. Cancel anytime.',
+                 description='Full digital access to Ajna Health Lens, billed monthly. Cancel within 3 days of paying for a full refund.',
                  feature_count=4),
             dict(name='Reader Annual', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL,
                  price=4999, duration_days=365, is_featured=True,

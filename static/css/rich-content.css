@@ -97,3 +97,6 @@
 .policy-text li { margin: 0.3em 0; }
 .policy-text a { text-decoration: underline; }
 .policy-text a:hover { color: #c0392b; }
+
+/* Search results (articles/search_results.html): matched words. */
+.search-snippet mark { background: #fde68a; color: inherit; padding: 0 0.1em; }

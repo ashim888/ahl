@@ -1,10 +1,15 @@
 import secrets
 
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
 from .money import format_money
+
+
+# Nepal PAN / VAT registration numbers are 9 digits.
+pan_validator = RegexValidator(r'^\d{9}$', 'A PAN is 9 digits.')
 
 
 def generate_gift_token():
@@ -275,7 +280,17 @@ class Organization(models.Model):
     is_active = models.BooleanField(default=True, help_text='Untick to stop access straight away.')
     contact_name = models.CharField(max_length=255, blank=True)
     contact_email = models.EmailField(blank=True, help_text='Gets the receipt for payments recorded against this organization.')
+    pan = models.CharField(
+        'PAN', max_length=9, blank=True, validators=[pan_validator],
+        help_text='Printed on their tax invoices (9 digits).',
+    )
     notes = models.TextField(blank=True, help_text='Staff only — contract details, invoice numbers.')
+    account_manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_organizations',
+        help_text='The staff member this organization deals with — shown on their dashboard and in reports.',
+    )
+    # Renewal reminders already sent for the current end date ("30", "7", "ended").
+    reminders_sent = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -297,8 +312,12 @@ class Organization(models.Model):
         return self.is_active and self.start_date <= timezone.localdate() <= self.end_date
 
     @property
+    def active_members(self):
+        return self.members.filter(removed_at__isnull=True)
+
+    @property
     def seats_left(self):
-        return None if self.seats is None else max(self.seats - self.members.count(), 0)
+        return None if self.seats is None else max(self.seats - self.active_members.count(), 0)
 
 
 class OrganizationMember(models.Model):
@@ -309,6 +328,11 @@ class OrganizationMember(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='organization_memberships')
     joined_at = models.DateTimeField(auto_now_add=True)
+    # Can see the organization's dashboard (/organization/), invite and remove members.
+    is_manager = models.BooleanField(default=False)
+    # Removed by a manager or staff: no access, seat freed, can't rejoin by
+    # confirming their email again (only a manager/staff can restore them).
+    removed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-joined_at']
@@ -316,6 +340,26 @@ class OrganizationMember(models.Model):
 
     def __str__(self):
         return f'{self.user} at {self.organization}'
+
+
+class OrganizationRead(models.Model):
+    """One member reading one article on one day through their
+    organization's subscription — the organization's usage figures
+    (billing/org_reports.py). Organizations only ever see counts, never
+    which articles a member read. `user` becomes empty if the member deletes
+    their account (users/privacy.py), so totals stay right."""
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='reads')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    article = models.ForeignKey('articles.Article', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    read_on = models.DateField()
+
+    class Meta:
+        indexes = [models.Index(fields=['organization', 'read_on'])]
+        constraints = [models.UniqueConstraint(fields=['organization', 'user', 'article', 'read_on'], name='one_read_per_member_article_day')]
+
+    def __str__(self):
+        return f'{self.organization} read on {self.read_on}'
 
 
 class ReceiptSequence(models.Model):
@@ -383,6 +427,8 @@ class Payment(models.Model):
     # deletes their account (users/privacy.py erase_user).
     billed_name = models.CharField(max_length=255, blank=True)
     billed_email = models.EmailField(blank=True)
+    # Optional, for a business buyer's VAT records — printed on the invoice.
+    buyer_pan = models.CharField('Buyer PAN', max_length=9, blank=True, validators=[pan_validator])
     # Where to send the reader after paying (e.g. the article whose paywall
     # they subscribed from) — a site-relative path, checked when set.
     return_path = models.CharField(max_length=255, blank=True)
@@ -402,6 +448,9 @@ class Payment(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
     )
     refund_reason = models.TextField(blank=True)
+    # The reader cancelled within the cancellation window and is owed a
+    # refund — access already ended; staff send the money and record it.
+    refund_requested_at = models.DateTimeField(null=True, blank=True)
     credit_note_number = models.CharField(max_length=30, unique=True, null=True, blank=True)
     reference = models.CharField(max_length=30, unique=True, default=generate_payment_reference)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)

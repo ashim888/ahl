@@ -76,8 +76,11 @@ class ReceiptTests(TestCase):
     def test_receipt_numbers_are_sequential(self):
         first = self._buy()
         second = self._buy(make_user('second@example.com'))
-        number = int(first.receipt_number.removeprefix('AHL-'))
-        self.assertEqual(second.receipt_number, f'AHL-{number + 1:06d}')
+        from .nepali import fiscal_year
+
+        prefix = f'AHL-{fiscal_year()}-'
+        number = int(first.receipt_number.removeprefix(prefix))
+        self.assertEqual(second.receipt_number, f'{prefix}{number + 1:06d}')
 
     @override_settings(BUSINESS_PAN='600123456', BUSINESS_ADDRESS='Lalitpur, Nepal')
     def test_receipt_email_has_the_vat_breakdown(self):

@@ -1,0 +1,9 @@
+{{ inviter.get_full_name }} has invited you: {{ org.name }} subscribes to {{ journal_name }}, so you can read every article at no cost.
+
+How to join (two minutes):
+1. Create an account with {{ email }} — or sign in, if you already have one with this address: {{ register_url }}
+2. Click the confirmation link we email you. That's it.
+
+Already have an account? Sign in ({{ login_url }}) and confirm your email from your Billing page.
+
+— {{ journal_name }}

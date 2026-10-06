@@ -1,0 +1,11 @@
+{% extends 'email/base.html' %}
+{% block title %}Refund to send{% endblock %}
+{% block preheader %}{{ payment.payer_name }} cancelled — refund {{ total }}.{% endblock %}
+{% block eyebrow %}Refund due{% endblock %}
+{% block heading %}Refund to send: {{ total }}{% endblock %}
+{% block content %}
+    <p><strong>{{ payment.payer_name }}</strong> ({{ payment.payer_email }}) cancelled <strong>{{ payment.description }}</strong> within the cancellation window. Their access has already ended.</p>
+    <p>Send {{ total }} back (Fonepay merchant portal{% if payment.gateway_trace_id %}, trace {{ payment.gateway_trace_id }}{% endif %}, or bank transfer), then open the receipt and use <strong>Record full refund</strong> — that issues the credit note and emails them.</p>
+    {% include 'email/includes/button.html' with url=receipt_url label='Open the receipt' %}
+{% endblock %}
+{% block footer_reason %}You're receiving this because you handle payments at {{ journal_name }}.{% endblock %}

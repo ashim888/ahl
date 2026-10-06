@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import org_views, views
 
 app_name = 'billing'
 
@@ -15,6 +15,15 @@ urlpatterns = [
     path('pay/<str:reference>/status/', views.payment_check, name='payment_check'),
     path('account/billing/', views.account, name='account'),
     path('account/receipts/<str:reference>/', views.receipt, name='receipt'),
+    path('account/subscriptions/<str:reference>/cancel/', views.subscription_cancel, name='subscription_cancel'),
+    # Organization dashboard — the institution's own managers (billing/org_views.py)
+    path('organization/', org_views.dashboard, name='org_dashboard'),
+    path('organization/<int:pk>/', org_views.dashboard, name='org_dashboard_for'),
+    path('organization/<int:pk>/report.csv', org_views.report_csv, name='org_report_csv'),
+    path('organization/<int:pk>/invite/', org_views.invite, name='org_invite'),
+    path('organization/<int:pk>/members/<int:member_pk>/remove/', org_views.member_remove, name='org_member_remove'),
+    path('organization/<int:pk>/members/<int:member_pk>/restore/', org_views.member_restore, name='org_member_restore'),
+    path('organization/<int:pk>/members/<int:member_pk>/manager/', org_views.member_manager, name='org_member_manager'),
 
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
     path('manage/billing/plans/', views.PlanListView.as_view(), name='manage_plan_list'),
@@ -34,4 +43,7 @@ urlpatterns = [
     path('manage/billing/organizations/', views.OrganizationListView.as_view(), name='manage_organization_list'),
     path('manage/billing/organizations/new/', views.OrganizationCreateView.as_view(), name='manage_organization_create'),
     path('manage/billing/organizations/<int:pk>/edit/', views.OrganizationUpdateView.as_view(), name='manage_organization_update'),
+    path('manage/billing/organizations/<int:pk>/send-report/', views.organization_send_report, name='manage_organization_send_report'),
+    path('manage/billing/organizations/<int:pk>/members/<int:member_pk>/manager/', views.organization_member_manager,
+         name='manage_organization_member_manager'),
 ]

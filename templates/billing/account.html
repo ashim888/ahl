@@ -40,6 +40,7 @@
                     <a href="{% url 'billing:plan_browse' %}" class="font-mono-editorial text-xs tracking-widest border border-foreground px-5 py-3 hover:border-accent hover:text-accent">{% trans "SWITCH PLAN" %}</a>
                 </div>
                 <p class="mt-4 text-xs text-muted-foreground">{% trans "Subscriptions don’t renew automatically. Renewing early adds the new period after this one, so no days are lost — we’ll also email you a week before it ends." %}</p>
+                {% if current.cancel_payment %}{% include 'billing/includes/cancel_subscription.html' with subscription=current %}{% endif %}
             </div>
         {% elif organization %}
             <div class="border border-border bg-card p-6">
@@ -53,6 +54,12 @@
                 <a href="{% url 'billing:plan_browse' %}" class="inline-block mt-4 font-mono-editorial text-xs tracking-widest bg-accent text-white px-5 py-3 hover:opacity-90">{% trans "SEE PLANS" %}</a>
             </div>
         {% endif %}
+        {% for org in managed_organizations %}
+            <a href="{% url 'billing:org_dashboard_for' org.pk %}" class="mt-4 flex items-center justify-between gap-4 border border-foreground p-4 hover:border-accent hover:text-accent">
+                <span><span class="section-label text-accent block">{% trans "YOU MANAGE" %}</span><span class="font-medium">{{ org.name }}</span></span>
+                <span class="font-mono-editorial text-xs tracking-widest">{% trans "USAGE &amp; MEMBERS →" %}</span>
+            </a>
+        {% endfor %}
 
         {% if pending_organization %}
             <div class="mt-4 border-l-2 border-accent bg-secondary px-5 py-4">
@@ -69,8 +76,13 @@
                 <span><span class="section-label text-muted-foreground">{% trans "NEXT" %}</span> {{ upcoming_subscription.plan.name }}</span>
                 <span class="text-muted-foreground">{{ upcoming_subscription.start_date|date:"j M Y" }} – {{ upcoming_subscription.end_date|date:"j M Y" }}</span>
             </div>
+            {% if upcoming_subscription.cancel_payment %}<div class="px-5">{% include 'billing/includes/cancel_subscription.html' with subscription=upcoming_subscription %}</div>{% endif %}
         {% endfor %}
     </section>
+
+    {% for refund in refunds_pending %}
+        <p class="mt-4 border-l-2 border-accent bg-secondary px-4 py-3 text-sm">{% blocktrans with total=refund.amount|money date=refund.refund_requested_at|date:"j M Y" %}Refund of {{ total }} requested on {{ date }} — on its way; you’ll get a credit note by email.{% endblocktrans %}</p>
+    {% endfor %}
 
     {% if open_payments %}
         <section class="mt-10">

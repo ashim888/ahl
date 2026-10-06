@@ -1,0 +1,35 @@
+{% load static %}<!DOCTYPE html>
+{% comment %}
+Server error page. Deliberately standalone — no base.html, no database, no
+context processors — so it still renders when whatever broke is the
+database or a template. The error itself is emailed to ADMINS (LOGGING
+mail_admins) and, when configured, sent to error tracking.
+{% endcomment %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Something went wrong</title>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #fafaf8; color: #111110; font-family: Inter, system-ui, sans-serif; }
+        main { max-width: 32rem; padding: 2rem 1.5rem; text-align: center; }
+        .label { font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.15em; color: #c0392b; }
+        h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; margin: 0.75rem 0 1rem; }
+        p { color: #6b6860; line-height: 1.6; }
+        a { display: inline-block; margin-top: 1.5rem; padding: 0.8rem 1.5rem; background: #111110; color: #fff; text-decoration: none; font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.15em; }
+        a:hover { background: #c0392b; }
+        .ne { margin-top: 2rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <main>
+        <p class="label">500 — SERVER ERROR</p>
+        <h1>Something went wrong on our side</h1>
+        <p>It isn’t anything you did. Our team has been told automatically and is looking into it. Please try again in a few minutes.</p>
+        <p class="ne">हाम्रो तर्फबाट केही गडबड भयो। हाम्रो टोलीलाई स्वतः जानकारी गइसकेको छ — केही मिनेटपछि फेरि प्रयास गर्नुहोस्।</p>
+        <a href="/">BACK TO THE HOMEPAGE</a>
+    </main>
+</body>
+</html>

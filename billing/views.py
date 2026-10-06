@@ -24,8 +24,9 @@ from . import fonepay, payments
 from .access import user_has_active_subscription, user_has_purchased_article
 from .forms import GrantPurchaseForm, GrantSubscriptionForm, OrganizationForm, SubscriptionPlanForm
 from .gateway import charge_safely
-from .models import ArticlePurchase, Organization, Payment, SubscriptionPlan, UserSubscription
-from .money import vat_breakdown
+from . import org_views
+from .models import ArticlePurchase, Organization, OrganizationMember, Payment, SubscriptionPlan, UserSubscription
+from .money import format_money, vat_breakdown
 from .services import next_start_date, paid_through
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,14 @@ def build_comparison_matrix(plans):
         included = [feature.id in {f.id for f in plan.features.all()} for plan in plans]
         matrix.append({'feature': feature, 'included': included})
     return matrix
+
+
+def _buyer_pan(request):
+    """(pan, error) from the checkout's optional PAN box."""
+    try:
+        return payments.clean_pan(request.POST.get('buyer_pan', '')), None
+    except ValueError as exc:
+        return '', str(exc)
 
 
 def _next_path(request) -> str:
@@ -152,18 +161,21 @@ def subscribe_checkout(request, pk):
     ends = starts + datetime.timedelta(days=plan.duration_days)
     description = f'Subscription — {plan.name}'
 
-    if request.method == 'POST' and payments.uses_fonepay():
+    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' else ('', None)
+    if pan_error:
+        messages.error(request, pan_error)
+    elif request.method == 'POST' and payments.uses_fonepay():
         return _start_fonepay(
             request, kind=Payment.Kind.SUBSCRIPTION, price=plan.price, description=description, plan=plan,
-            return_path=next_path,
+            return_path=next_path, buyer_pan=buyer_pan,
         )
-    if request.method == 'POST':
+    elif request.method == 'POST':
         subtotal, vat, total = vat_breakdown(plan.price)
         result = charge_safely(request.user, total, description)
         if result.success:
             payment = payments.record_paid_payment(
                 user=request.user, kind=Payment.Kind.SUBSCRIPTION, plan=plan, price=plan.price,
-                description=description, gateway=Payment.Gateway.STUB, return_path=next_path,
+                description=description, gateway=Payment.Gateway.STUB, return_path=next_path, buyer_pan=buyer_pan,
             )
             Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
             messages.success(request, f'Subscribed to "{plan.name}" — active until {ends:%-d %b %Y}.')
@@ -172,7 +184,7 @@ def subscribe_checkout(request, pk):
 
     return render(request, 'billing/subscribe_checkout.html', {
         'plan': plan, 'starts': starts, 'ends': ends, 'is_renewal': starts > timezone.localdate(),
-        'next_path': next_path,
+        'next_path': next_path, 'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
     })
 
 
@@ -186,24 +198,30 @@ def purchase_checkout(request, slug):
         return redirect('articles:article_detail', slug=article.slug)
 
     description = f'Article — {article.title}'
-    if request.method == 'POST' and payments.uses_fonepay():
+    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' else ('', None)
+    if pan_error:
+        messages.error(request, pan_error)
+    elif request.method == 'POST' and payments.uses_fonepay():
         return _start_fonepay(
             request, kind=Payment.Kind.ARTICLE, price=article.price, description=description, article=article,
+            buyer_pan=buyer_pan,
         )
-    if request.method == 'POST':
+    elif request.method == 'POST':
         subtotal, vat, total = vat_breakdown(article.price)
         result = charge_safely(request.user, total, description)
         if result.success:
             payment = payments.record_paid_payment(
                 user=request.user, kind=Payment.Kind.ARTICLE, article=article, price=article.price,
-                description=description, gateway=Payment.Gateway.STUB,
+                description=description, gateway=Payment.Gateway.STUB, buyer_pan=buyer_pan,
             )
             Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
             messages.success(request, f'Purchased "{article.title}".')
             return redirect('articles:article_detail', slug=article.slug)
         messages.error(request, result.error or 'Payment failed — please try again.')
 
-    return render(request, 'billing/purchase_checkout.html', {'article': article})
+    return render(request, 'billing/purchase_checkout.html', {
+        'article': article, 'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
+    })
 
 
 def _start_fonepay(request, **payment_kwargs):
@@ -236,6 +254,16 @@ def account(request):
     ]
     current_end = paid_through(user)
     renew_plan = current.plan if current and current.plan.is_active else None
+    # Cancellable within SUBSCRIPTION_CANCEL_DAYS of paying (Refunds policy).
+    paid_by_reference = {
+        p.reference: p for p in Payment.objects.filter(
+            user=user, kind=Payment.Kind.SUBSCRIPTION, reference__in=[s.payment_reference for s in subscriptions if s.payment_reference],
+        )
+    }
+    for subscription in subscriptions:
+        payment = paid_by_reference.get(subscription.payment_reference)
+        subscription.cancel_payment = payment if payment and payments.can_cancel(payment) else None
+        subscription.cancel_deadline = payments.cancellation_deadline(payment) if subscription.cancel_payment else None
     return render(request, 'billing/account.html', {
         'current': current,
         'upcoming': sorted(upcoming, key=lambda s: s.start_date),
@@ -245,6 +273,7 @@ def account(request):
         'renew_plan': renew_plan,
         'organization': organization_for(user),
         'pending_organization': pending_organization_for(user),
+        'managed_organizations': org_views.managed_organizations(user),
         'purchases': ArticlePurchase.objects.filter(user=user).select_related('article')[:50],
         'payments': Payment.objects.filter(
             user=user, status__in=(Payment.Status.SUCCESS, Payment.Status.REFUNDED),
@@ -254,7 +283,23 @@ def account(request):
         ).order_by('-created_at'),
         'expiring_soon_days': EXPIRING_SOON_WINDOW_DAYS,
         'contact_email': settings.JOURNAL_CONTACT_EMAIL,
+        'refunds_pending': Payment.objects.filter(user=user, refund_requested_at__isnull=False, status=Payment.Status.SUCCESS),
+        'cancel_days': settings.SUBSCRIPTION_CANCEL_DAYS,
     })
+
+
+@login_required
+@require_POST
+def subscription_cancel(request, reference):
+    """The reader cancels a subscription within the cancellation window."""
+    payment = get_object_or_404(Payment, reference=reference, user=request.user, kind=Payment.Kind.SUBSCRIPTION)
+    try:
+        payments.cancel_subscription(payment)
+    except payments.CancellationError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f'Cancelled. Your refund of {format_money(payment.amount)} is on its way — we’ve emailed you.')
+    return redirect('billing:account')
 
 
 @login_required
@@ -629,6 +674,39 @@ class OrganizationCreateView(OrganizationFormMixin, CreateView):
 class OrganizationUpdateView(OrganizationFormMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['members'] = self.object.members.select_related('user')[:200]
+        from . import org_reports
+
+        start, end = org_reports.month_bounds(timezone.localdate())
+        usage = org_reports.summary(self.object, start, end)
+        context['members'] = self.object.members.select_related('user').order_by('removed_at', 'user__first_name')[:200]
+        context['usage'] = usage
+        context['last_month'] = org_reports.previous_month()[0]
         context['org_payments'] = self.object.payments.order_by('-created_at')
         return context
+
+
+@role_required(*SENIOR_STAFF_ROLES)
+@require_POST
+def organization_send_report(request, pk):
+    """Email last month's usage report to the organization now (it also
+    goes out by itself on the 1st)."""
+    from . import org_reports
+
+    organization = get_object_or_404(Organization, pk=pk)
+    if org_reports.send_report(organization):
+        messages.success(request, f'Usage report for {organization.name} sent.')
+    else:
+        messages.error(request, 'Not sent — the organization has no contact email or managers, or the email failed.')
+    return redirect('billing:manage_organization_update', pk=organization.pk)
+
+
+@role_required(*SENIOR_STAFF_ROLES)
+@require_POST
+def organization_member_manager(request, pk, member_pk):
+    """Staff: let a member run (or stop running) the organization dashboard."""
+    organization = get_object_or_404(Organization, pk=pk)
+    member = get_object_or_404(OrganizationMember, pk=member_pk, organization=organization, removed_at__isnull=True)
+    member.is_manager = not member.is_manager
+    member.save(update_fields=['is_manager'])
+    messages.success(request, f"{member.user.email} {'can now' if member.is_manager else 'can no longer'} manage the dashboard.")
+    return redirect('billing:manage_organization_update', pk=organization.pk)

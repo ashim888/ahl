@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 
 from django import forms
 from django.utils import timezone
@@ -331,6 +332,20 @@ class DraftArticleForm(LenientArticleForm):
         self.fields['title'].required = True
 
 
+IMG_TAG_RE = re.compile(r'<img\b[^>]*>', re.IGNORECASE)
+ALT_RE = re.compile(r'\balt\s*=\s*("([^"]*)"|\'([^\']*)\')', re.IGNORECASE)
+
+
+def images_missing_alt(html: str) -> int:
+    """How many <img> in `html` have no (or an empty) alt text."""
+    missing = 0
+    for tag in IMG_TAG_RE.findall(html or ''):
+        match = ALT_RE.search(tag)
+        if not match or not (match.group(2) or match.group(3) or '').strip():
+            missing += 1
+    return missing
+
+
 class PublishArticleForm(ArticleForm):
     """Publish / Update: ArticleForm's own rules, plus — the first time an
     article goes live — there must be something to read (body text or a PDF).
@@ -348,6 +363,16 @@ class PublishArticleForm(ArticleForm):
         has_video = bool(cleaned_data.get('video_url'))
         if not strip_tags(body).strip() and '<img' not in body and not has_pdf and not has_video:
             self.add_error('html_content', 'Add the article text (or a video link, or attach a PDF) before publishing.')
+        # Accessibility: every image needs a description for screen-reader users.
+        missing = images_missing_alt(body)
+        if missing:
+            self.add_error('html_content', (
+                f'{missing} image{"s" if missing > 1 else ""} in the text {"have" if missing > 1 else "has"} no description. '
+                'Click the image, then the "Change image text alternative" button, and describe what it shows.'
+            ))
+        has_featured = bool(cleaned_data.get('featured_image') or (self.instance.pk and self.instance.featured_image))
+        if has_featured and not (cleaned_data.get('featured_image_alt') or '').strip() and 'featured_image_alt' in self.fields:
+            self.add_error('featured_image_alt', 'Describe the featured image for readers who can’t see it.')
         return cleaned_data
 
 

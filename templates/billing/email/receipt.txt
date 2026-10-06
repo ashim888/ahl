@@ -1,9 +1,10 @@
-Hi {{ payment.payer_name }},
+{% load money_tags %}Hi {{ payment.payer_name }},
 
 We've received your payment for {{ payment.description }}.
 
-Receipt no.: {{ payment.receipt_number }}
-Date: {{ payment.completed_at|date:"j M Y" }}
+{% if seller.pan %}Tax invoice no.{% else %}Receipt no.{% endif %}: {{ payment.receipt_number }}{% if payment.buyer_pan %}
+Your PAN: {{ payment.buyer_pan }}{% endif %}
+Date: {{ payment.completed_at|invoice_date }}
 Price: {{ subtotal }}
 VAT ({{ vat_rate }}%): {{ vat }}
 Total paid: {{ total }}

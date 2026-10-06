@@ -1,0 +1,7 @@
+Hi {{ user.first_name }},
+
+{{ org.name }} has taken you off its {{ journal_name }} subscription, so subscriber articles are locked for you again. Your account, saved articles and follows are unchanged.
+
+Want to keep reading? You can subscribe on your own any time: {{ plans_url }}
+
+— {{ journal_name }}

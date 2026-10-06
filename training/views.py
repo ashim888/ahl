@@ -157,13 +157,17 @@ def course_checkout(request, pk):
         return redirect('training:course_detail', pk=pk)
 
     # Fonepay's minimum is Rs. 1 — a free course enrolls directly.
-    if request.method == 'POST' and payments.uses_fonepay() and course.price > 0:
-        from billing.views import _start_fonepay
+    from billing.views import _buyer_pan, _start_fonepay
 
+    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' else ('', None)
+    if pan_error:
+        messages.error(request, pan_error)
+    elif request.method == 'POST' and payments.uses_fonepay() and course.price > 0:
         return _start_fonepay(
             request, kind=Payment.Kind.COURSE, price=course.price, description=f'Training — {course.title}', course=course,
+            buyer_pan=buyer_pan,
         )
-    if request.method == 'POST' and course.price <= 0:
+    elif request.method == 'POST' and course.price <= 0:
         # Free course: no payment, no receipt.
         if existing:
             existing.status = Enrollment.Status.ACTIVE
@@ -172,20 +176,22 @@ def course_checkout(request, pk):
             Enrollment.objects.create(user=request.user, course=course, payment_status=Enrollment.PaymentStatus.PAID)
         messages.success(request, f'Enrolled in "{course.title}".')
         return redirect('training:course_detail', pk=pk)
-    if request.method == 'POST':
+    elif request.method == 'POST':
         description = f'Training — {course.title}'
         result = charge_safely(request.user, price_with_vat(course.price), description)
         if result.success:
             payment = payments.record_paid_payment(
                 user=request.user, kind=Payment.Kind.COURSE, course=course, price=course.price,
-                description=description, gateway=Payment.Gateway.STUB,
+                description=description, gateway=Payment.Gateway.STUB, buyer_pan=buyer_pan,
             )
             Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
             messages.success(request, f'Enrolled in "{course.title}".')
             return redirect('training:course_detail', pk=pk)
         messages.error(request, result.error or 'Payment failed — please try again.')
 
-    return render(request, 'training/course_checkout.html', {'course': course})
+    return render(request, 'training/course_checkout.html', {
+        'course': course, 'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
+    })
 
 
 # -- Editorial course management (CRUD, not public browsing) ---------------

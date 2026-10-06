@@ -41,13 +41,16 @@ def organization_for(user):
     candidates = matching_organizations(user.email)
     if not candidates:
         return None
-    member_of = set(OrganizationMember.objects.filter(
-        user=user, organization__in=candidates,
-    ).values_list('organization_id', flat=True))
+    memberships = {
+        m.organization_id: m for m in OrganizationMember.objects.filter(user=user, organization__in=candidates)
+    }
     for org in candidates:
-        if org.pk in member_of:
+        membership = memberships.get(org.pk)
+        if membership and membership.removed_at is None:
             return org
     for org in candidates:
+        if org.pk in memberships:
+            continue  # removed from this organization — no way back in by themselves
         if _take_seat(org, user):
             return org
     return None
@@ -56,14 +59,30 @@ def organization_for(user):
 def _take_seat(org, user) -> bool:
     with transaction.atomic():
         locked = Organization.objects.select_for_update().get(pk=org.pk)
-        if locked.seats is not None and locked.members.count() >= locked.seats:
+        if locked.seats is not None and locked.active_members.count() >= locked.seats:
             return False
         try:
             with transaction.atomic():
-                OrganizationMember.objects.create(organization=locked, user=user)
+                OrganizationMember.objects.create(
+                    organization=locked, user=user,
+                    # The organization's contact person runs its dashboard.
+                    is_manager=bool(locked.contact_email and locked.contact_email.lower() == user.email.lower()),
+                )
         except IntegrityError:
             pass  # joined a moment ago in another request
     return True
+
+
+def record_read(user, article, organization) -> None:
+    """Count one read for the organization's usage report (at most one per
+    member, article and day)."""
+    from django.utils import timezone
+
+    from .models import OrganizationRead
+
+    OrganizationRead.objects.get_or_create(
+        organization=organization, user=user, article=article, read_on=timezone.localdate(),
+    )
 
 
 def pending_organization_for(user):

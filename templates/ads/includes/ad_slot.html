@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 Rendered exclusively via the `ad_slot` template tag (ads/templatetags/ads_tags.py) —
 usage: {% load ads_tags %} then {% ad_slot 'zone_value' wrapper_class='...' %}.
 Not meant to be {% include %}d directly: `ad` and `wrapper_class` come from
@@ -28,7 +28,7 @@ is removed instead, so neither an orphaned "AD" tag nor an empty gap
 (the header bar, sidebar margins) is left behind.
 {% endcomment %}
 {% if ad %}
-<div class="{{ wrapper_class }}" data-ad-slot>
+<div class="{{ wrapper_class }}" data-ad-slot role="complementary" aria-label="{% trans 'Advertisement' %} — {{ zone_label }}">
     <a href="{% url 'ads:click' ad.pk %}" target="_blank" rel="sponsored noopener"
        class="relative block mx-auto max-w-full" style="width: {{ ad.width }}px;">
         <img src="{{ ad.image.url }}" alt="{{ ad.sponsor_name }} (advertisement)"
@@ -44,7 +44,7 @@ is removed instead, so neither an orphaned "AD" tag nor an empty gap
 ads/models.py:AdSettings.placeholder_zones, set per zone at /manage/ads/ — never shown to an
 ad-free (subscriber) reader, see ads_tags.py; sized to the zone like a real ad would be.
 {% endcomment %}
-<div class="{{ wrapper_class }}" data-ad-slot>
+<div class="{{ wrapper_class }}" data-ad-slot role="complementary" aria-label="{% trans 'Advertisement' %} — {{ zone_label }}">
     <div class="inline-flex flex-col items-center justify-center text-center border border-dashed border-border bg-secondary/40 max-w-full p-4"
          style="width: {{ placeholder.width }}px; max-width: 100%; aspect-ratio: {{ placeholder.width }} / {{ placeholder.height }};">
         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">ADVERTISE HERE</p>

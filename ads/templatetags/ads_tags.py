@@ -37,4 +37,6 @@ def ad_slot(context, zone, wrapper_class=''):
             'height': height,
             'contact_email': context.get('JOURNAL_CONTACT_EMAIL'),
         }
-    return {'ad': ad, 'placeholder': placeholder, 'wrapper_class': wrapper_class}
+    # The zone's name labels the slot for screen readers ("Advertisement —
+    # Header leaderboard"), so each ad landmark on a page is distinguishable.
+    return {'ad': ad, 'placeholder': placeholder, 'wrapper_class': wrapper_class, 'zone_label': AdSlot.Zone(zone).label}

@@ -1,0 +1,21 @@
+{% extends 'email/base.html' %}
+{% block title %}Usage report{% endblock %}
+{% block preheader %}{{ reads }} articles read by {{ active_readers }} of your members in {{ start|date:"F Y" }}.{% endblock %}
+{% block eyebrow %}{{ organization.name }}{% endblock %}
+{% block heading %}Your usage in {{ start|date:"F Y" }}{% endblock %}
+{% block content %}
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 8px 0 18px; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
+        <tr><td style="padding: 6px 0; color: #6b6860;">Articles read</td><td align="right" style="padding: 6px 0; font-weight: bold;">{{ reads }}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b6860;">Members who read</td><td align="right" style="padding: 6px 0;">{{ active_readers }} of {{ member_count }}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b6860;">Seats</td><td align="right" style="padding: 6px 0;">{% if seats %}{{ member_count }} of {{ seats }} used{% else %}No limit{% endif %}</td></tr>
+    </table>
+    {% if top_articles %}
+        <p style="font-weight: bold; margin-bottom: 4px;">Most read</p>
+        <ol style="margin-top: 0; padding-left: 20px;">{% for row in top_articles|slice:":5" %}<li>{{ row.article__title }} ({{ row.n }})</li>{% endfor %}</ol>
+    {% endif %}
+    <p>The attached CSV has each member's figures. Individual reading lists are never shared — only counts.</p>
+    {% include 'email/includes/button.html' with url=dashboard_url label='Open your dashboard' %}
+    {% if account_manager %}<p>Questions, more seats or renewal: {{ account_manager.get_full_name }} — <a href="mailto:{{ account_manager.email }}">{{ account_manager.email }}</a>.</p>{% endif %}
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you manage {{ organization.name }}'s subscription to {{ journal_name }}.{% endblock %}

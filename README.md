@@ -228,12 +228,40 @@ Billing needs these in the server `.env` (see `.env.example`):
 - `VAT_RATE` — default 13. Every price is VAT-exclusive and checkout adds it.
 - `BUSINESS_LEGAL_NAME`, `BUSINESS_PAN`, `BUSINESS_ADDRESS` — printed on every receipt.
   `check --deploy` warns (`ajna.W001`) when payments are live without them.
-- `RECEIPT_PREFIX` — receipt numbers are this plus a gap-free sequence.
+- `RECEIPT_PREFIX` — receipt numbers are this plus the Nepali fiscal year plus a gap-free
+  sequence that restarts each year (`AHL-2083-84-000001`; credit notes `AHL-CN-2083-84-…`).
+- `INVOICE_DATE_DISPLAY` — `both` (BS and AD, default), `bs` or `ad` on invoices
+  (`billing/nepali.py`).
+- `SUBSCRIPTION_CANCEL_DAYS` — default 3: readers can cancel for a full refund that many days
+  after paying (`billing.payments.cancel_subscription`).
 - `GOOGLE_ANALYTICS_ID` — loaded only for readers who accept analytics cookies; empty switches
   analytics off.
 
 The `qcluster` worker also sends the subscription expiry reminders (daily, 08:00) and runs the
 privacy clean-up (daily, 03:30 — `users/privacy.py`).
+It also emails the encrypted database backup (daily, 02:00), sends organizations' monthly
+usage reports (1st of the month, 07:00) and renewal reminders (daily, 08:30), and writes a
+heartbeat every 5 minutes.
+
+Operations and security (all in `.env.example`; walkthrough in TUTORIAL.MD §18):
+
+- `ADMIN_EMAILS` — get every server error, broken internal links, worker-down and failed-task
+  alerts. `check --deploy` warns (`ajna.W003`) when empty.
+- `SENTRY_DSN` — optional error tracking (`sentry-sdk`, no personal data sent).
+- Cron: `*/15 * * * * … manage.py check_health` — the worker can't report its own death.
+  Uptime monitors can poll `/healthz/` (200/503 JSON).
+- `BACKUP_EMAIL`, `BACKUP_ENCRYPTION_PASSWORD`, `BACKUP_EMAIL_MAX_MB` — nightly encrypted dump by
+  email (`ajna_health_lens/backups.py`); restore with `manage.py decrypt_backup`. `ajna.W002`
+  warns when not set.
+- `STAFF_TWO_FACTOR_REQUIRED` — default True: staff sign in with an authenticator-app code
+  (`users/two_factor.py`, django-otp). Off only for local development; the test runner switches it
+  off except in `users/test_two_factor.py`. `ajna.W004` warns when off. Lost phone:
+  `manage.py reset_two_step <email>`.
+- `CSP_REPORT_ONLY` — the Content-Security-Policy (`CSP_DIRECTIVES` in settings,
+  `ajna_health_lens/middleware.py`) blocks by default; violations are logged via `/csp-report/`.
+- Search uses MySQL FULLTEXT indexes on `Article.search_text` (word parser) and the title (ngram,
+  for Nepali and partial words) — `articles/search.py`. After bulk-importing articles, run
+  `manage.py rebuild_search_index`.
 
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.

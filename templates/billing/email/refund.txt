@@ -1,10 +1,10 @@
-Hi {{ payment.payer_name }},
+{% load money_tags %}Hi {{ payment.payer_name }},
 
 We've refunded your payment for {{ payment.description }}. The money goes back the way you paid; depending on your bank it can take a few working days to show.
 
 Credit note no.: {{ payment.credit_note_number }}
 For receipt: {{ payment.receipt_number }}
-Date: {{ payment.refunded_at|date:"j M Y" }}
+Date: {{ payment.refunded_at|invoice_date }}
 Price: {{ subtotal }}
 VAT ({{ vat_rate }}%): {{ vat }}
 Total refunded: {{ total }}

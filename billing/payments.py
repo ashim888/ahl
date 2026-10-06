@@ -17,6 +17,7 @@ Prices are VAT-exclusive; every payment charges price + VAT (money.vat_breakdown
 """
 import datetime
 import logging
+import re
 from decimal import Decimal
 
 from django.conf import settings
@@ -46,7 +47,23 @@ def safe_return_path(path: str) -> str:
     return ''
 
 
-def start_payment(user, *, kind, price, description, plan=None, article=None, course=None, return_path='') -> Payment:
+def clean_pan(value: str) -> str:
+    """'' or a 9-digit PAN; raises ValueError otherwise."""
+    value = ''.join((value or '').split())
+    if value and not re.fullmatch(r'\d{9}', value):
+        raise ValueError('A PAN is 9 digits.')
+    return value
+
+
+def last_buyer_pan(user) -> str:
+    """The PAN the reader gave last time, to pre-fill the next checkout."""
+    return Payment.objects.filter(user=user).exclude(buyer_pan='').order_by('-created_at').values_list(
+        'buyer_pan', flat=True,
+    ).first() or ''
+
+
+def start_payment(user, *, kind, price, description, plan=None, article=None, course=None, return_path='',
+                  buyer_pan='') -> Payment:
     """Reuses the reader's still-open payment for the same item, otherwise
     asks Fonepay for a new QR for price + VAT. Raises fonepay.FonepayError
     if that fails."""
@@ -56,15 +73,16 @@ def start_payment(user, *, kind, price, description, plan=None, article=None, co
         status=Payment.Status.PENDING, expires_at__gt=timezone.now() + datetime.timedelta(minutes=2),
     ).first()
     if open_payment and open_payment.amount == total:
-        if return_path and open_payment.return_path != return_path:
-            open_payment.return_path = safe_return_path(return_path)
-            open_payment.save(update_fields=['return_path'])
+        open_payment.return_path = safe_return_path(return_path) or open_payment.return_path
+        open_payment.buyer_pan = buyer_pan or open_payment.buyer_pan
+        open_payment.save(update_fields=['return_path', 'buyer_pan'])
         return open_payment
 
     payment = Payment(
         user=user, kind=kind, plan=plan, article=article, course=course,
         subtotal=subtotal, vat_amount=vat, amount=total,
         description=description[:255], gateway=Payment.Gateway.FONEPAY, return_path=safe_return_path(return_path),
+        buyer_pan=buyer_pan,
         expires_at=timezone.now() + datetime.timedelta(minutes=settings.FONEPAY_PAYMENT_TIMEOUT_MINUTES),
     )
     data = fonepay.generate_intent_qr(total, bill_id=f'{kind}-{user.pk}', reference=payment.reference)
@@ -84,12 +102,20 @@ def _next_number(sequence_name: str, prefix: str) -> str:
     return f'{prefix}{sequence.last_number:06d}'
 
 
-def next_receipt_number() -> str:
-    return _next_number('receipts', settings.RECEIPT_PREFIX)
+def next_receipt_number(when=None) -> str:
+    """'AHL-2083-84-000001' — numbering restarts each Nepali fiscal year
+    (Shrawan 1), as IRD expects of tax invoices."""
+    from .nepali import fiscal_year
+
+    year = fiscal_year(when)
+    return _next_number(f'receipts-{year}', f'{settings.RECEIPT_PREFIX}{year}-')
 
 
-def next_credit_note_number() -> str:
-    return _next_number('credit_notes', f'{settings.RECEIPT_PREFIX}CN-')
+def next_credit_note_number(when=None) -> str:
+    from .nepali import fiscal_year
+
+    year = fiscal_year(when)
+    return _next_number(f'credit_notes-{year}', f'{settings.RECEIPT_PREFIX}CN-{year}-')
 
 
 def seats_taken(course, *, exclude_user=None) -> int:
@@ -163,7 +189,7 @@ def complete_payment(payment: Payment, *, grant: bool = True) -> Payment:
     when the caller has already granted access itself (a staff grant form)."""
     payment.status = Payment.Status.SUCCESS
     payment.completed_at = payment.completed_at or timezone.now()
-    payment.receipt_number = next_receipt_number()
+    payment.receipt_number = next_receipt_number(payment.completed_at)
     payment.billed_name = payment.payer_name[:255]
     payment.billed_email = payment.payer_email
     payment.save()
@@ -176,7 +202,7 @@ def complete_payment(payment: Payment, *, grant: bool = True) -> Payment:
 @transaction.atomic
 def record_paid_payment(*, user=None, organization=None, kind, description, gateway, price=None, total_paid=None,
                         plan=None, article=None, course=None, reference='', recorded_by=None, grant=True,
-                        return_path='') -> Payment:
+                        return_path='', buyer_pan='') -> Payment:
     """A payment that is already settled — staff recording money received
     (gateway=manual, `total_paid` VAT included) or the development stub
     gateway (`price`, VAT added on top). Numbers, grants and emails it."""
@@ -187,6 +213,7 @@ def record_paid_payment(*, user=None, organization=None, kind, description, gate
         user=user, organization=organization, kind=kind, plan=plan, article=article, course=course,
         subtotal=subtotal, vat_amount=vat, amount=total, description=description[:255], gateway=gateway,
         expires_at=timezone.now(), recorded_by=recorded_by, return_path=safe_return_path(return_path),
+        buyer_pan=buyer_pan or (organization.pan if organization else ''),
     )
     if reference:
         payment.reference = reference[:30]
@@ -235,6 +262,45 @@ def verify_payment(payment: Payment) -> Payment:
         return locked
 
 
+def cancellation_deadline(payment: Payment):
+    """Until when the reader may cancel this subscription payment for a
+    full refund (SUBSCRIPTION_CANCEL_DAYS after paying), or None if it isn't
+    cancellable at all."""
+    if payment.kind != Payment.Kind.SUBSCRIPTION or payment.status != Payment.Status.SUCCESS \
+            or payment.refund_requested_at or not payment.completed_at or not payment.user_id:
+        return None
+    return payment.completed_at + datetime.timedelta(days=settings.SUBSCRIPTION_CANCEL_DAYS)
+
+
+def can_cancel(payment: Payment) -> bool:
+    deadline = cancellation_deadline(payment)
+    return bool(deadline and timezone.now() <= deadline)
+
+
+class CancellationError(Exception):
+    """Outside the cancellation window, or not a cancellable payment."""
+
+
+@transaction.atomic
+def cancel_subscription(payment: Payment) -> Payment:
+    """The reader cancels within the window: access ends now, and the
+    payment is flagged so staff send the refund and record it (which issues
+    the credit note — refund_payment)."""
+    from .models import UserSubscription
+
+    locked = Payment.objects.select_for_update().get(pk=payment.pk)
+    if not can_cancel(locked):
+        raise CancellationError(
+            f'Subscriptions can only be cancelled within {settings.SUBSCRIPTION_CANCEL_DAYS} days of paying.',
+        )
+    UserSubscription.objects.filter(payment_reference=locked.reference).update(status=UserSubscription.Status.CANCELLED)
+    locked.refund_requested_at = timezone.now()
+    locked.attention = f'Reader cancelled within {settings.SUBSCRIPTION_CANCEL_DAYS} days — send the refund, then record it.'
+    locked.save(update_fields=['refund_requested_at', 'attention'])
+    transaction.on_commit(lambda: emails.send_cancellation_confirmation(locked))
+    return locked
+
+
 class RefundError(Exception):
     """A refund that can't be recorded (the payment isn't a paid one)."""
 
@@ -265,7 +331,7 @@ def refund_payment(payment: Payment, *, by, reason: str) -> Payment:
     locked.refunded_at = timezone.now()
     locked.refunded_by = by
     locked.refund_reason = reason
-    locked.credit_note_number = next_credit_note_number()
+    locked.credit_note_number = next_credit_note_number(locked.refunded_at)
     locked.attention = ''
     locked.save()
     transaction.on_commit(lambda: emails.send_refund_confirmation(locked))

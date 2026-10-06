@@ -6,6 +6,7 @@ See CLAUDE.md and ARCHITECTURE.md for the full spec this file implements.
 
 import datetime
 import os
+import re
 from decimal import Decimal
 from pathlib import Path
 
@@ -75,6 +76,33 @@ SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0' if DEBUG els
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', not DEBUG)
 SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', not DEBUG)
 X_FRAME_OPTIONS = os.environ.get('X_FRAME_OPTIONS', 'DENY')
+# Content Security Policy (ajna_health_lens/middleware.py): where scripts,
+# frames, images and connections may come from. 'unsafe-inline' is needed
+# for the templates' inline scripts and editors' chart code; the host lists
+# still stop an injected <script src> or data leak to any other site.
+# Violations are logged via /csp-report/. CSP_REPORT_ONLY=True only reports.
+CSP_REPORT_ONLY = env_bool('CSP_REPORT_ONLY', False)
+CSP_DIRECTIVES = {
+    'default-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://d3js.org',
+                   'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://challenges.cloudflare.com'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+    'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+    'font-src': ["'self'", 'data:'],
+    'connect-src': ["'self'", 'https://*.google-analytics.com', 'https://*.analytics.google.com',
+                    'https://*.googletagmanager.com', 'wss://*.fonepay.com', 'https://challenges.cloudflare.com'],
+    'frame-src': ['https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://player.vimeo.com',
+                  'https://www.dailymotion.com', 'https://open.spotify.com', 'https://challenges.cloudflare.com'],
+    'media-src': ["'self'"],
+    'object-src': ["'none'"],
+    'base-uri': ["'self'"],
+    'form-action': ["'self'"],
+    'frame-ancestors': ["'none'"],
+}
+# Browser features nothing on the site uses.
+PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), usb=(), interest-cohort=()'
+# A friendly "please try again" page instead of Django's bare CSRF 403.
+CSRF_FAILURE_VIEW = 'ajna_health_lens.error_views.csrf_failure'
 
 
 # Application definition
@@ -115,10 +143,19 @@ INSTALLED_APPS = [
     'ads',
     'pitches',
     'pages',
+    # Two-step sign-in (TOTP authenticator apps + backup codes) for staff — users/two_factor.py.
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Emails MANAGERS (= ADMINS) when a page on this site links to a URL that
+    # 404s — a broken internal link. Outside links and bots are ignored (see
+    # IGNORABLE_404_URLS). Must come before LocaleMiddleware (Django docs).
+    # Only links on our own pages — see ajna_health_lens/middleware.py.
+    'ajna_health_lens.middleware.InternalBrokenLinkEmailsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     # Must sit after SessionMiddleware, before CommonMiddleware (Django's
     # documented ordering) — reads the django_language cookie/session key set
@@ -129,6 +166,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Staff must set up / pass two-step sign-in before using the site (users/two_factor.py).
+    # (django-otp's own OTPMiddleware is deliberately NOT used: it sets
+    # request.user.is_verified to a function, which collides with our
+    # User.is_verified field and breaks saving the signed-in user.)
+    'users.two_factor.StaffTwoFactorMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # django-axes' docs require this to be the last middleware in the list —
@@ -136,6 +178,8 @@ MIDDLEWARE = [
     # (see AUTHENTICATION_BACKENDS/AXES_* below) and, only then, rewrites the
     # response into a 429. Debug Toolbar inserts itself at index 1 below,
     # which doesn't disturb this middleware staying last.
+    # Content-Security-Policy + Permissions-Policy headers (settings CSP_*).
+    'ajna_health_lens.middleware.SecurityHeadersMiddleware',
     'axes.middleware.AxesMiddleware',
 ]
 
@@ -526,6 +570,13 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@ajnahealthle
 # ADMIN_EMAILS to actually receive these.
 ADMINS = [('Admin', e.strip()) for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()]
 MANAGERS = ADMINS
+# Bot probes and browser guesses that 404 all day — never worth an email.
+IGNORABLE_404_URLS = [
+    re.compile(pattern) for pattern in (
+        r'\.(php|asp|aspx|jsp|cgi|env|git|bak|sql|ini|log)$', r'^/(wp-|wordpress|phpmyadmin|pma|xmlrpc|cgi-bin|\.well-known/)',
+        r'^/(favicon\.ico|apple-touch-icon.*\.png|robots\.txt|ads\.txt|sitemap\.xml\.gz)$',
+    )
+]
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
 
 LOGGING = {
@@ -636,6 +687,32 @@ GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID', 'G-KDLXMLM9WD')
 # Name of the cookie that remembers a reader's cookie choice.
 COOKIE_CONSENT_COOKIE = 'cookie_consent'
 
+# Error tracking (Sentry) — on only when SENTRY_DSN is set. send_default_pii
+# stays False: no emails, IPs or cookies in error reports.
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN, environment=os.environ.get('SENTRY_ENVIRONMENT', 'production'),
+        send_default_pii=False, traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0')),
+    )
+# How old the background worker's last heartbeat may be before /healthz/
+# and `check_health` call it down (ajna_health_lens/health.py).
+WORKER_HEARTBEAT_MAX_AGE_MINUTES = 15
+
+# Two-step sign-in (users/two_factor.py): every Editor, Editor-in-Chief and
+# Admin needs an authenticator app. Only switch off for local development.
+STAFF_TWO_FACTOR_REQUIRED = env_bool('STAFF_TWO_FACTOR_REQUIRED', True)
+OTP_TOTP_ISSUER = JOURNAL_NAME  # the name shown in the authenticator app
+
+# Off-site backup by email (ajna_health_lens/backups.py): the database,
+# encrypted with BACKUP_ENCRYPTION_PASSWORD, emailed nightly to BACKUP_EMAIL.
+# Both empty = off. Keep the password OFF this server (password manager).
+BACKUP_EMAIL = os.environ.get('BACKUP_EMAIL', '')
+BACKUP_ENCRYPTION_PASSWORD = os.environ.get('BACKUP_ENCRYPTION_PASSWORD', '')
+BACKUP_EMAIL_MAX_MB = int(os.environ.get('BACKUP_EMAIL_MAX_MB', '20'))
+
 # Billing — every price (plans, special articles, courses) is VAT-exclusive;
 # checkout adds VAT_RATE percent on top (billing/money.py vat_breakdown).
 VAT_RATE = Decimal(os.environ.get('VAT_RATE', '13'))
@@ -645,9 +722,15 @@ BUSINESS_LEGAL_NAME = os.environ.get('BUSINESS_LEGAL_NAME', JOURNAL_NAME)
 BUSINESS_PAN = os.environ.get('BUSINESS_PAN', '')
 BUSINESS_ADDRESS = os.environ.get('BUSINESS_ADDRESS', '')
 RECEIPT_PREFIX = os.environ.get('RECEIPT_PREFIX', 'AHL-')
+# Invoice dates: 'both' (AD with BS alongside), 'ad' or 'bs' (billing/nepali.py).
+INVOICE_DATE_DISPLAY = os.environ.get('INVOICE_DATE_DISPLAY', 'both').strip().lower()
 # Expiry reminder emails go out this many days before a subscription ends
 # (and once the day after it has ended) — billing/reminders.py.
 SUBSCRIPTION_REMINDER_DAYS = (7, 1)
+# A paid subscription can be cancelled by the reader for a full refund within
+# this many days of paying (billing.views.subscription_cancel); after that it
+# runs to its end date.
+SUBSCRIPTION_CANCEL_DAYS = int(os.environ.get('SUBSCRIPTION_CANCEL_DAYS', '3'))
 
 
 # Cloudflare Turnstile (CAPTCHA) — pitches app, story-pitch submission

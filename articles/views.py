@@ -7,8 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Case, Count, F, FloatField, IntegerField, Q, Value, When, prefetch_related_objects
-from django.db.models.expressions import RawSQL
+from django.db.models import Case, Count, F, Q, When, prefetch_related_objects
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -339,6 +338,35 @@ class HomeView(TemplateView):
         return context
 
 
+class CorrectionListView(ListView):
+    """/corrections/ — every correction, clarification and update on a
+    published story, newest first: the public record of what we got wrong
+    and fixed (built from ArticleCorrection, the notes editors add)."""
+
+    template_name = 'articles/correction_list.html'
+    context_object_name = 'corrections'
+    paginate_by = 30
+
+    def get_queryset(self):
+        queryset = ArticleCorrection.objects.filter(article__status=Article.Status.PUBLISHED).select_related(
+            'article', 'article__section',
+        ).order_by('-created_at')
+        kind = self.request.GET.get('kind')
+        if kind in ArticleCorrection.Kind.values:
+            queryset = queryset.filter(kind=kind)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['kinds'] = ArticleCorrection.Kind.choices
+        context['selected_kind'] = self.request.GET.get('kind', '')
+        context['meta_title'] = f'Corrections — {settings.JOURNAL_NAME}'
+        context['meta_description'] = (
+            f'Every correction, clarification and update {settings.JOURNAL_NAME} has made to a published story.'
+        )
+        return context
+
+
 class VideoListView(ListView):
     """/videos/ — every published story with a YouTube video (the "Videos"
     menu entry), newest first; the newest is shown large at the top."""
@@ -553,6 +581,15 @@ class ArticleDetailView(DetailView):
                     'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
                 }
         context['show_full_text'] = show_full_text
+        user = self.request.user
+        if show_full_text and user.is_authenticated and not user.is_editorial_staff \
+                and self.object.status == Article.Status.PUBLISHED and not self.kwargs.get('preview'):
+            # Organization usage reports (billing/org_reports.py): a member's read counts once a day.
+            from billing.institutions import organization_for, record_read
+
+            organization = organization_for(user)
+            if organization:
+                record_read(user, self.object, organization)
         if not show_full_text and self.request.user.is_authenticated:
             # Their organization subscribes, they just haven't confirmed their
             # email yet — the paywall offers that instead of a checkout.
@@ -852,104 +889,98 @@ class ReadingListView(ListView):
         return context
 
 
-# Chars MySQL's BOOLEAN MODE gives special meaning to (+ - < > ( ) ~ * " @) —
-# stripped from each token before it's wrapped as a required prefix match,
-# so a reader typing e.g. "COVID-19" doesn't accidentally write boolean syntax.
-_BOOLEAN_MODE_SPECIAL_CHARS = re.compile(r'[+\-<>()~*"@]')
-
-
-def _fulltext_boolean_query(raw_query):
-    """Turns free-text input into a MySQL BOOLEAN MODE AGAINST() expression:
-    every word becomes a required (+), prefix (*) match, so word order and
-    which indexed column it landed in don't matter, and partial words still
-    match (e.g. "tubercul" finds "tuberculosis"). Tokens under 3 characters
-    are dropped — MySQL's own minimum indexed token length (innodb_ft_min_token_size,
-    default 3) would never match them anyway, and a bare "+" is a BOOLEAN MODE
-    syntax error. Returns '' if nothing usable is left (e.g. a query that's
-    only short acronyms), signaling the caller to skip full-text matching
-    and rely on the icontains fallback instead.
-    """
-    tokens = []
-    for word in raw_query.split():
-        cleaned = _BOOLEAN_MODE_SPECIAL_CHARS.sub('', word)
-        if len(cleaned) >= 3:
-            tokens.append(f'+{cleaned}*')
-    return ' '.join(tokens)
+SEARCH_WHEN = {'week': 7, 'month': 31, 'year': 366}
 
 
 @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True), name='dispatch')
 class SearchView(ListView):
-    """Public search — backed by a MySQL FULLTEXT index on (title, abstract)
-    (see migration 0015, narrowed in 0021 when keywords moved off this table
-    onto Keyword/keyword_tags — see articles/models.py) for real word-based
-    matching, e.g. word order doesn't matter and results aren't limited to a
-    single contiguous substring. The plain icontains scan is kept alongside
-    it (not replaced) for three reasons: author name and keyword name aren't
-    part of the FULLTEXT index, and short tokens (under MySQL's ~3-char
-    minimum, common for medical acronyms like "TB"/"HIV"/"flu") would
-    otherwise silently stop matching anything.
+    """Public search (articles/search.py): every word of the query must
+    appear somewhere in an article — title, summary, text, keywords,
+    authors or section, in English or Nepali — with title matches first.
+    Filters: section, story type, date range; sort by relevance or newest.
+    Result ids are cached for a few minutes; only the shown page is loaded.
     """
 
-    model = Article
     template_name = 'articles/search_results.html'
-    context_object_name = 'articles'
+    context_object_name = 'result_ids'
     paginate_by = 10
 
     def get_queryset(self):
-        self.query = self.request.GET.get('q', '').strip()
-        # ARCHIVED included — "full searchability... of historical
-        # articles" (Session 7) is specifically what makes archival access
-        # worth gating as a perk; excluding archived content from search
-        # would make grants_full_archive largely undiscoverable.
-        queryset = Article.objects.filter(
-            status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED],
-        ).prefetch_related('articleauthor_set__author__user')
-        if self.query:
-            boolean_query = _fulltext_boolean_query(self.query)
-            icontains_filter = (
-                Q(title__icontains=self.query)
-                | Q(abstract__icontains=self.query)
-                | Q(keyword_tags__name__icontains=self.query)
-                | Q(authors__name__icontains=self.query)
-            )
-            if boolean_query:
-                relevance = RawSQL(
-                    'MATCH(articles_article.title, articles_article.abstract) '
-                    'AGAINST (%s IN BOOLEAN MODE)',
-                    (boolean_query,), output_field=FloatField(),
-                )
-                queryset = queryset.annotate(relevance=relevance).filter(
-                    icontains_filter | Q(relevance__gt=0),
-                )
-            else:
-                queryset = queryset.annotate(
-                    relevance=Value(0.0, output_field=FloatField()),
-                ).filter(icontains_filter)
-            # A title match still ranks first regardless of full-text score —
-            # deterministic and keeps the most obviously-relevant result on
-            # top rather than trusting MySQL's opaque relevance number for
-            # the primary sort.
-            queryset = queryset.distinct().annotate(
-                title_match=Case(When(title__icontains=self.query, then=0), default=1, output_field=IntegerField()),
-            ).order_by('title_match', '-relevance', '-published_at', '-created_at')
-        else:
-            queryset = queryset.order_by('-published_at', '-created_at')
-        return queryset
+        from . import search
+
+        params = self.request.GET
+        self.query = params.get('q', '').strip()[:200]
+        self.filters = {
+            'section': params.get('section', ''), 'type': params.get('type', ''),
+            'when': params.get('when', ''), 'sort': params.get('sort', ''),
+        }
+        if not self.query:
+            return []
+
+        def compute():
+            # ARCHIVED included — searching old articles is part of what
+            # grants_full_archive is for.
+            queryset = Article.objects.filter(status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED])
+            if self.filters['section']:
+                queryset = queryset.filter(Q(section__slug=self.filters['section']) | Q(section__parent__slug=self.filters['section']))
+            if self.filters['type'] in Article.ArticleType.values:
+                queryset = queryset.filter(article_type=self.filters['type'])
+            if self.filters['when'] in SEARCH_WHEN:
+                queryset = queryset.filter(published_at__gte=timezone.now() - datetime.timedelta(days=SEARCH_WHEN[self.filters['when']]))
+            return search.search_ids(queryset, self.query, newest=self.filters['sort'] == 'newest')
+
+        return search.cached_ids((self.query.lower(), tuple(sorted(self.filters.items()))), compute)
 
     def get_context_data(self, **kwargs):
+        from sections.models import Section
+
+        from . import search
+
         context = super().get_context_data(**kwargs)
+        ids = list(context['result_ids'])
+        by_id = Article.objects.filter(pk__in=ids).select_related('section').prefetch_related('articleauthor_set__author')
+        by_id = {article.pk: article for article in by_id}
+        articles = [by_id[pk] for pk in ids if pk in by_id]
+        for article in articles:
+            article.search_snippet = search.snippet(article, self.query)
+        context['articles'] = articles
         context['query'] = self.query
+        context['filters'] = self.filters
+        context['result_count'] = context['paginator'].count if context.get('paginator') else 0
+        if self.query and not context['result_count']:
+            context['did_you_mean'] = search.did_you_mean(self.query)
+        context['sections'] = Section.objects.filter(parent__isnull=True).order_by('order')
+        context['types'] = Article.ArticleType.choices
         context['meta_title'] = (
             f'Search results for "{self.query}" — {settings.JOURNAL_NAME}' if self.query
             else f'Search — {settings.JOURNAL_NAME}'
         )
-        context['meta_description'] = f'Search {settings.JOURNAL_NAME} for articles by title, abstract, author, or keyword.'
+        context['meta_description'] = f'Search {settings.JOURNAL_NAME} for articles by title, text, author, or keyword.'
         # Internal search-result pages are thin/near-duplicate content that
-        # shouldn't compete with the real article/list pages they surface —
-        # standard practice (Google's own crawling docs recommend it), not
-        # specific to this being a health-news site.
+        # shouldn't compete with the real article/list pages they surface.
         context['meta_robots'] = 'noindex, follow'
         return context
+
+
+@ratelimit(key='ip', rate='120/m', block=True)
+def search_suggest(request):
+    """Type-ahead for the header search box: up to 6 titles as JSON."""
+    from django.core.cache import cache
+
+    from . import search
+
+    query = request.GET.get('q', '').strip()[:100]
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    key = f'search:suggest:{cache.get(search.GENERATION_KEY) or 0}:{abs(hash(query.lower()))}'
+    results = cache.get(key)
+    if results is None:
+        results = [
+            {'title': article.title, 'url': article.get_absolute_url(), 'section': article.section.name if article.section else ''}
+            for article in search.suggestions(query)
+        ]
+        cache.set(key, results, 60)
+    return JsonResponse({'results': results})
 
 
 @ratelimit(key='ip', rate='30/m', method='GET', block=True)

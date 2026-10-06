@@ -1,4 +1,5 @@
 {% extends 'email/base.html' %}
+{% load money_tags %}
 {% block title %}Refund {{ payment.credit_note_number }}{% endblock %}
 {% block preheader %}{{ total }} refunded — {{ payment.description }}.{% endblock %}
 {% block eyebrow %}Refund{% endblock %}
@@ -9,7 +10,7 @@
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 18px 0; border-top: 1px solid #e5e2dc; font-family: Arial, Helvetica, sans-serif; font-size: 14px;">
         <tr><td style="padding: 8px 0; color: #6b6860;">Credit note no.</td><td align="right" style="padding: 8px 0;">{{ payment.credit_note_number }}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b6860;">For receipt</td><td align="right" style="padding: 8px 0;">{{ payment.receipt_number }}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b6860;">Date</td><td align="right" style="padding: 8px 0;">{{ payment.refunded_at|date:"j M Y" }}</td></tr>
+        <tr><td style="padding: 8px 0; color: #6b6860;">Date</td><td align="right" style="padding: 8px 0;">{{ payment.refunded_at|invoice_date }}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b6860;">Price</td><td align="right" style="padding: 8px 0;">{{ subtotal }}</td></tr>
         <tr><td style="padding: 8px 0; color: #6b6860;">VAT ({{ vat_rate }}%)</td><td align="right" style="padding: 8px 0;">{{ vat }}</td></tr>
         <tr><td style="padding: 10px 0; border-top: 1px solid #111110; font-weight: bold;">Total refunded</td><td align="right" style="padding: 10px 0; border-top: 1px solid #111110; font-weight: bold;">{{ total }}</td></tr>

@@ -95,3 +95,24 @@ def send_refund_confirmation(payment) -> bool:
         },
         recipient_list=[recipient],
     )
+
+
+def send_cancellation_confirmation(payment) -> bool:
+    """To the reader (refund on its way) and to the people who send refunds."""
+    context = {
+        'payment': payment, 'total': format_money(payment.amount), 'contact_email': settings.JOURNAL_CONTACT_EMAIL,
+        'receipt_url': _absolute(reverse('billing:receipt', args=[payment.reference])),
+    }
+    sent = send_templated_email(
+        subject=f'Your subscription is cancelled — refund of {format_money(payment.amount)} on its way',
+        template='billing/email/cancellation', context=context, recipient_list=[payment.payer_email],
+    )
+    from users.models import User
+
+    staff = set(User.objects.filter(role__in=User.SENIOR_STAFF_ROLES, is_active=True).values_list('email', flat=True))
+    staff.add(settings.JOURNAL_CONTACT_EMAIL)
+    send_templated_email(
+        subject=f'Refund to send: {payment.receipt_number} — {format_money(payment.amount)}',
+        template='billing/email/refund_due', context=context, recipient_list=sorted(staff),
+    )
+    return sent

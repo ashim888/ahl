@@ -1,0 +1,9 @@
+{% load i18n %}
+{% comment %}Optional buyer PAN for a VAT invoice — inside a checkout <form>. Pre-filled from the reader's last purchase.{% endcomment %}
+<details class="mb-4 text-sm"{% if buyer_pan %} open{% endif %}>
+    <summary class="cursor-pointer text-muted-foreground hover:text-accent">{% trans "Need a tax invoice with your PAN? (optional)" %}</summary>
+    <label for="buyer-pan" class="block mt-3 font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "YOUR PAN / VAT NUMBER" %}</label>
+    <input id="buyer-pan" name="buyer_pan" value="{{ buyer_pan }}" inputmode="numeric" pattern="\d{9}" maxlength="9" autocomplete="off"
+           class="mt-1.5 w-full border border-border bg-card px-3 py-2" placeholder="123456789">
+    <p class="mt-1 text-xs text-muted-foreground">{% trans "9 digits. It’s printed on your invoice." %}</p>
+</details>

@@ -29,6 +29,7 @@
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.contact_name %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.contact_email %}
             </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.pan %}
             {% include 'admin_dashboard/includes/form_field.html' with field=form.amount_received %}
             {% include 'admin_dashboard/includes/form_field.html' with field=form.notes %}
         </div>
@@ -40,12 +41,35 @@
 </div>
 
 {% if object %}
+<div class="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <h3 class="text-base font-semibold text-gray-900">Usage this month</h3>
+            <p class="mt-1 text-sm text-gray-600">{{ usage.reads }} article{{ usage.reads|pluralize }} read by {{ usage.active_readers }} of {{ usage.member_count }} member{{ usage.member_count|pluralize }}.
+                The organization's managers see the full report at <span class="font-mono text-xs">/organization/</span>, and get it emailed on the 1st of each month.</p>
+        </div>
+        <form method="post" action="{% url 'billing:manage_organization_send_report' object.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Send {{ last_month|date:"F" }} report now</button>
+        </form>
+    </div>
+</div>
 <div class="mt-6 grid lg:grid-cols-2 gap-6">
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h3 class="text-base font-semibold text-gray-900">Members ({{ members|length }}{% if object.seats %} of {{ object.seats }}{% endif %})</h3>
+        <h3 class="text-base font-semibold text-gray-900">Members ({{ usage.member_count }}{% if object.seats %} of {{ object.seats }}{% endif %})</h3>
+        <p class="mt-1 text-xs text-gray-500">Managers run the organization's dashboard. The contact email becomes a manager automatically when they join.</p>
         <ul class="mt-3 divide-y divide-gray-100 text-sm">
             {% for member in members %}
-                <li class="py-2 flex justify-between gap-3"><span>{{ member.user.get_full_name }} <span class="text-gray-400">{{ member.user.email }}</span></span><span class="text-gray-400 whitespace-nowrap">{{ member.joined_at|date:"M j, Y" }}</span></li>
+                <li class="py-2 flex justify-between gap-3{% if member.removed_at %} opacity-60{% endif %}">
+                    <span>{{ member.user.get_full_name }} <span class="text-gray-400">{{ member.user.email }}</span>
+                        {% if member.is_manager %}<span class="ml-1 rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-semibold text-white">MANAGER</span>{% endif %}
+                        {% if member.removed_at %}<span class="ml-1 text-xs text-red-600">removed {{ member.removed_at|date:"M j, Y" }}</span>{% endif %}</span>
+                    <span class="flex items-center gap-3 whitespace-nowrap text-gray-400">{{ member.joined_at|date:"M j, Y" }}
+                        {% if not member.removed_at %}
+                            <form method="post" action="{% url 'billing:manage_organization_member_manager' object.pk member.pk %}">{% csrf_token %}<button type="submit" class="text-xs text-gray-700 underline">{% if member.is_manager %}Remove manager{% else %}Make manager{% endif %}</button></form>
+                        {% endif %}
+                    </span>
+                </li>
             {% empty %}
                 <li class="py-2 text-gray-500">Nobody has joined yet.</li>
             {% endfor %}

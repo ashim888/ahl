@@ -41,7 +41,9 @@ def export_user_data(user) -> dict:
     from django_comments_xtd.models import XtdComment
 
     from articles.models import Author, Bookmark, KeywordFollow
-    from billing.models import ArticleGift, ArticlePurchase, OrganizationMember, Payment, UserSubscription
+    from billing.models import (
+        ArticleGift, ArticlePurchase, OrganizationMember, OrganizationRead, Payment, UserSubscription,
+    )
     from newsletter.models import Subscriber
     from pitches.models import StoryPitch
     from sections.models import SectionFollow
@@ -96,7 +98,12 @@ def export_user_data(user) -> dict:
             for e in Enrollment.objects.filter(user=user).select_related('course')
         ],
         'organizations': [
-            {'organization': m.organization.name, 'joined_at': _iso(m.joined_at)}
+            {'organization': m.organization.name, 'joined_at': _iso(m.joined_at),
+             'removed_at': _iso(m.removed_at), 'is_manager': m.is_manager,
+             'articles_read_through_it': [
+                 {'article': r.article.title if r.article else None, 'read_on': _iso(r.read_on)}
+                 for r in OrganizationRead.objects.filter(user=user, organization=m.organization_id).select_related('article')
+             ]}
             for m in OrganizationMember.objects.filter(user=user).select_related('organization')
         ],
         'saved_articles': [
@@ -145,7 +152,7 @@ def erase_user(user, *, remove_comments: bool = False) -> None:
     from django_comments_xtd.models import XtdComment
 
     from articles.models import Author, Bookmark, KeywordFollow
-    from billing.models import ArticleGift, MeteredArticleRead, OrganizationMember, UserSubscription
+    from billing.models import ArticleGift, MeteredArticleRead, OrganizationMember, OrganizationRead, UserSubscription
     from newsletter.models import Subscriber
     from pitches.models import StoryPitch
     from sections.models import SectionFollow
@@ -165,6 +172,8 @@ def erase_user(user, *, remove_comments: bool = False) -> None:
     ArticleGift.objects.filter(gifter=user).delete()
     MeteredArticleRead.objects.filter(user=user).delete()
     OrganizationMember.objects.filter(user=user).delete()
+    # Their reads stay in the organization's usage totals, without them.
+    OrganizationRead.objects.filter(user=user).update(user=None)
     Subscriber.objects.filter(user=user).delete()
     Subscriber.objects.filter(email__iexact=old_email).delete()
     StoryPitch.objects.filter(submitter=user).exclude(

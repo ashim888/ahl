@@ -138,7 +138,7 @@ class OrganizationForm(forms.ModelForm):
         model = Organization
         fields = [
             'name', 'email_domains', 'plan', 'start_date', 'end_date', 'seats', 'is_active',
-            'contact_name', 'contact_email', 'notes',
+            'contact_name', 'contact_email', 'pan', 'account_manager', 'notes',
         ]
         widgets = {
             'email_domains': forms.Textarea(attrs={'rows': 3, 'placeholder': 'nhrc.gov.np'}),
@@ -150,6 +150,13 @@ class OrganizationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['plan'].queryset = SubscriptionPlan.objects.order_by('-is_active', 'name')
+        self.fields['account_manager'].queryset = User.objects.filter(
+            role__in=User.EDITORIAL_ROLES, is_active=True,
+        ).order_by('first_name', 'last_name')
+        self.fields['account_manager'].help_text = (
+            'Our staff contact for this organization — named on their dashboard, copied on usage reports '
+            'and renewal reminders.'
+        )
 
     def clean_email_domains(self):
         from .institutions import PUBLIC_EMAIL_DOMAINS

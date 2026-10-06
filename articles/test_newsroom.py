@@ -346,3 +346,28 @@ class HelperBranchTests(TestCase):
         self.assertEqual([html[:end][-10:] for end in ends], ['<p>One</p>', '<p>Two</p>'])
         # An unclosed script swallows the rest: no ad slot inside it.
         self.assertEqual(top_level_paragraph_ends('<p>One</p><script>never closed <p>x</p>'), [len('<p>One</p>')])
+
+
+class CorrectionsPageTests(TestCase):
+    """/corrections/ — the public record of corrections."""
+
+    def setUp(self):
+        self.live = make_article('corrected-story', status=Article.Status.PUBLISHED)
+        self.draft = make_article('draft-corrected')
+        ArticleCorrection.objects.create(article=self.live, kind=ArticleCorrection.Kind.CORRECTION, note='Fixed the dose figure.')
+        ArticleCorrection.objects.create(article=self.live, kind=ArticleCorrection.Kind.UPDATE, note='Added the ministry response.')
+        ArticleCorrection.objects.create(article=self.draft, note='Not public yet.')
+
+    def test_lists_corrections_on_published_stories_newest_first(self):
+        response = self.client.get(reverse('articles:correction_list'))
+        notes = [c.note for c in response.context['corrections']]
+        self.assertEqual(notes, ['Added the ministry response.', 'Fixed the dose figure.'])
+        self.assertContains(response, f'{self.live.get_absolute_url()}#corrections')
+
+    def test_filter_by_kind(self):
+        response = self.client.get(reverse('articles:correction_list'), {'kind': 'correction'})
+        self.assertEqual([c.note for c in response.context['corrections']], ['Fixed the dose figure.'])
+
+    def test_linked_from_the_article_footer_and_sitemap(self):
+        self.assertContains(self.client.get(self.live.get_absolute_url()), reverse('articles:correction_list'))
+        self.assertContains(self.client.get('/sitemap.xml'), '/corrections/')

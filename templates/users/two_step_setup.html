@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Set up two-step sign-in" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-14">
+    <p class="section-label text-accent">{% trans "STAFF SECURITY" %}</p>
+    <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">{% trans "Set up two-step sign-in" %}</h1>
+    <p class="mt-3 text-muted-foreground">{% trans "Staff accounts can publish and see readers’ data, so they need a second step when signing in: a 6-digit code from an app on your phone." %}</p>
+    <ol class="mt-8 space-y-6">
+        <li>
+            <p class="font-medium">{% trans "1. Install an authenticator app" %}</p>
+            <p class="text-sm text-muted-foreground">{% trans "Google Authenticator, Microsoft Authenticator or Authy — any of them works." %}</p>
+        </li>
+        <li>
+            <p class="font-medium">{% trans "2. Scan this code with the app" %}</p>
+            <div class="mt-3 inline-block bg-white p-2 border border-border w-48 h-48" role="img" aria-label="{% trans 'QR code to add this account to your authenticator app' %}">{{ qr_svg }}</div>
+            <p class="mt-2 text-xs text-muted-foreground">{% trans "Can’t scan it? Choose “enter a setup key” in the app and type:" %}</p>
+            <p class="font-mono-editorial text-sm tracking-wider select-all">{{ secret }}</p>
+        </li>
+        <li>
+            <p class="font-medium">{% trans "3. Enter the 6-digit code the app shows" %}</p>
+            <form method="post" class="mt-3 flex gap-2 max-w-xs">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+                <label for="code" class="sr-only">{% trans "6-digit code" %}</label>
+                <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus
+                       class="flex-1 border border-border bg-card px-3 py-2 font-mono-editorial tracking-widest text-lg"{% if error %} aria-invalid="true" aria-describedby="code-error"{% endif %}>
+                <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 hover:bg-accent">{% trans "TURN ON" %}</button>
+            </form>
+            {% if error %}<p id="code-error" class="mt-2 text-sm text-accent" role="alert">{{ error }}</p>{% endif %}
+        </li>
+    </ol>
+    <form method="post" action="{% url 'users:logout' %}" class="mt-10">{% csrf_token %}<button type="submit" class="text-xs text-muted-foreground underline">{% trans "Sign out instead" %}</button></form>
+</div>
+{% endblock %}
