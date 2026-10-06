@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load i18n %}
 {% block title %}Pitch a Story — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block extra_head %}
@@ -43,8 +43,9 @@
         {% if turnstile_site_key %}
             <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
         {% endif %}
-        <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent transition-colors">
-            SUBMIT PITCH
+        {% include 'includes/privacy_notice.html' with kind='pitch' %}
+        <button type="submit" data-loading-text="{% trans 'SENDING…' %}" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent transition-colors">
+            {% trans "SUBMIT PITCH" %}
         </button>
     </form>
 </div>

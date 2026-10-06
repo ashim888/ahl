@@ -8,7 +8,7 @@ from articles.sanitize import sanitize_page_html
 
 class SitePage(models.Model):
     """The site's standing pages readers and payment providers expect —
-    Terms, Privacy, Refund policy. One row each (seeded by migration as
+    Terms, Privacy, Refund policy — plus the FAQ. One row each (seeded by migration as
     unpublished drafts); senior staff edit them at /manage/pages/. A page
     that isn't published is a 404 to the public and isn't linked anywhere.
     """
@@ -17,6 +17,7 @@ class SitePage(models.Model):
         TERMS = 'terms', 'Terms of use'
         PRIVACY = 'privacy', 'Privacy policy'
         REFUNDS = 'refund-policy', 'Refund policy'
+        FAQ = 'faq', 'Frequently asked questions'
 
     slug = models.SlugField(max_length=50, unique=True, choices=Slug.choices)
     title = models.CharField(max_length=200)
@@ -38,6 +39,7 @@ class SitePage(models.Model):
     def get_absolute_url(self):
         return reverse({
             self.Slug.TERMS: 'pages:terms', self.Slug.PRIVACY: 'pages:privacy', self.Slug.REFUNDS: 'pages:refunds',
+            self.Slug.FAQ: 'pages:faq',
         }[self.slug])
 
     def save(self, *args, **kwargs):

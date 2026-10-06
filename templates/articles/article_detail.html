@@ -368,6 +368,8 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 </div>
             {% endif %}
 
+            {% include 'articles/includes/health_disclaimer.html' %}
+
             {% if corrections %}
                 <section id="corrections" class="mt-12 border-l-2 border-accent bg-secondary px-5 py-4">
                     <h2 class="section-label text-accent mb-3">{% trans "CORRECTIONS & UPDATES" %}</h2>

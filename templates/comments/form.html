@@ -68,4 +68,5 @@ styling from templates/base.html, so no per-field classes are needed here.
             {% trans "Post Comment" %}
         </button>
     </div>
+    {% include 'includes/privacy_notice.html' with kind='comment' class='mt-3 text-xs text-muted-foreground' %}
 </form>

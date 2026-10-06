@@ -202,7 +202,8 @@ required to publish.
      i, ii, iii), and **Increase/Decrease indent** for nested points.
    - **Link**, **Upload image**, **Insert media**, **Table**, **Block quote**, **Horizontal
      line**, **Special characters**, inline **Code** and **Code block**, **Find and replace**.
-   - **Images:** click Upload image (JPG, PNG, GIF or WebP, up to 5 MB) or use its arrow to
+   - **Images:** click Upload image (JPG, PNG, GIF or WebP, up to 5 MB — stored at most 2400 px on the long
+     side, compressed and with camera/location data removed; the same happens to every image uploaded anywhere) or use its arrow to
      insert one by URL. Click an image for its toolbar: **alt text** (required: what the
      picture shows — an article can't be published for the first time while an image in the text
      has none), **caption**, **align** left/centre/right (text wraps around left/right
@@ -640,8 +641,12 @@ split. The rate and the business name, PAN and address printed on receipts come 
 
 ---
 
-**Terms, privacy and refunds** (`/manage/pages/`, Editor-in-Chief/Admin): three pages at
-`/terms/`, `/privacy/` and `/refund-policy/`, covering the whole site, not just payments.
+**Terms, privacy, refunds and FAQ** (`/manage/pages/`, Editor-in-Chief/Admin): four pages at
+`/terms/`, `/privacy/`, `/refund-policy/` and `/faq/`. The first three cover the whole site, not just payments.
+
+- **FAQ:** readers' common questions about reading, subscriptions and payments, organizations, accounts and pitching.
+  Each question is a **Heading 3** with its answer below. Google can show them as expandable answers in search
+  results. Keep that layout when you add questions. Once published, it's linked as "FAQ" in the footer.
 
 - **Terms of use:** reading and the free-article allowance, accounts, author verification,
   payments, training, organization access, gift links, how our content may be used, the
@@ -839,4 +844,11 @@ means adding it to `CSP_DIRECTIVES` in `settings.py`. Anything blocked is logged
 
 **Search index.** Articles are indexed for search as they're saved. After importing articles
 straight into the database, run `python manage.py rebuild_search_index`.
+
+**Images.** Every uploaded image is web-sized automatically (`ajna_health_lens/images.py`).
+Phone photos are turned upright, the longest side is cut to `IMAGE_MAX_DIMENSION` (2400 px),
+it's re-compressed (`IMAGE_JPEG_QUALITY`, 82), and camera and GPS data are removed. Ads keep
+their exact size. To do the same to images uploaded before this, run
+`python manage.py compress_images --dry-run` to see the saving, then without `--dry-run`. Back up
+`media/` first: files are rewritten in place.
 

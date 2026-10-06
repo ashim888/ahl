@@ -3,6 +3,7 @@
 
 {% block title %}{{ page.title }} — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block extra_head %}{% if faq_json_ld %}<script type="application/ld+json">{{ faq_json_ld }}</script>{% endif %}{% endblock %}
 {% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto px-6 py-14">

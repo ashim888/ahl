@@ -118,6 +118,10 @@ class PlanBrowseView(ListView):
         context.update(_subscription_context(self.request))
         context['comparison_matrix'] = build_comparison_matrix(context['plans'])
         context['contact_email'] = settings.JOURNAL_CONTACT_EMAIL
+        context['meta_description'] = (
+            f'Subscribe to {settings.JOURNAL_NAME}: every subscriber article, monthly or yearly, paid with Fonepay. '
+            f'No automatic renewal — cancel within {settings.SUBSCRIPTION_CANCEL_DAYS} days for a full refund.'
+        )
         return context
 
 

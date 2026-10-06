@@ -34,7 +34,8 @@
             </div>
         {% endif %}{% endfor %}
         <p class="text-xs text-muted-foreground">{% trans "An editor reads every report. We don’t share your name or email with the person you’re reporting." %}</p>
-        <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent">{% trans "SEND REPORT" %}</button>
+        {% include 'includes/privacy_notice.html' with kind='report' %}
+        <button type="submit" data-loading-text="{% trans 'SENDING…' %}" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent">{% trans "SEND REPORT" %}</button>
     </form>
 </div>
 {% endblock %}

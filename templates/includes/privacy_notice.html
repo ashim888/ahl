@@ -1,0 +1,8 @@
+{% load i18n %}{# Short "what we do with this" note under forms that collect personal data. kind: newsletter | comment | pitch | report. #}
+<p class="{{ class|default:'text-xs text-muted-foreground' }}">
+    {% if kind == 'newsletter' %}{% trans "We use your email only to send the newsletter — confirm by email first, unsubscribe in one click." %}
+    {% elif kind == 'comment' %}{% trans "Your name and comment are shown publicly; your email isn’t. We keep your IP address for 90 days to fight spam." %}
+    {% elif kind == 'pitch' %}{% trans "Our editors use your details only to review your pitch and reply to you." %}
+    {% elif kind == 'report' %}{% trans "Your email is optional and used only to reply about this report." %}{% endif %}
+    {% if privacy_page %}<a href="{{ privacy_page.get_absolute_url }}" class="underline hover:opacity-100">{% trans "Privacy policy" %}</a>{% endif %}
+</p>

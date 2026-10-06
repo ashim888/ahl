@@ -1,6 +1,7 @@
 from django.views.static import serve
 from django.urls import re_path
 from django.conf import settings
+from django.views.generic import RedirectView
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
@@ -55,6 +56,8 @@ urlpatterns = [
         name='news_sitemap',
     ),
     path('robots.txt', robots_txt, name='robots_txt'),
+    # Browsers and crawlers ask for /favicon.ico regardless of <link rel=icon>.
+    path('favicon.ico', RedirectView.as_view(url=f'{settings.STATIC_URL if settings.STATIC_URL.startswith("/") else "/" + settings.STATIC_URL}favicon.ico', permanent=True)),
     # Article PDFs and CVs — access-checked on every request, never public
     # (ajna_health_lens/storage.py). Deliberately not under /media/.
     path('protected-media/<path:path>', protected_media, name='protected_media'),

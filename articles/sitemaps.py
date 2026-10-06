@@ -78,9 +78,25 @@ class StaticViewSitemap(Sitemap):
         return reverse(item)
 
 
+class SitePageSitemap(Sitemap):
+    """Published Terms, Privacy, Refund policy and FAQ (pages app)."""
+
+    changefreq = 'monthly'
+    priority = 0.4
+
+    def items(self):
+        from pages.models import SitePage
+
+        return SitePage.objects.filter(is_published=True).order_by('slug')
+
+    def lastmod(self, item):
+        return item.updated_at
+
+
 sitemaps = {
     'articles': ArticleSitemap,
     'issues': IssueSitemap,
     'sections': SectionSitemap,
     'pages': StaticViewSitemap,
+    'site-pages': SitePageSitemap,
 }

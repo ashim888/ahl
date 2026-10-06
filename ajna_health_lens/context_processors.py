@@ -11,10 +11,25 @@ def _legal_pages() -> dict:
     pages = published_pages()
     by_slug = {page.slug: page for page in pages}
     return {
-        'legal_pages': pages,
+        'legal_pages': [page for page in pages if page.slug != SitePage.Slug.FAQ],
+        'faq_page': by_slug.get(SitePage.Slug.FAQ),
         'terms_page': by_slug.get(SitePage.Slug.TERMS),
         'refund_page': by_slug.get(SitePage.Slug.REFUNDS),
+        'privacy_page': by_slug.get(SitePage.Slug.PRIVACY),
     }
+
+
+def _wants_subscribe_bar(request) -> bool:
+    """The sticky "Subscribe" bar on phones: for readers without a
+    subscription (or organization access); never for staff."""
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated:
+        return True
+    if user.is_editorial_staff:
+        return False
+    from billing.access import user_has_active_subscription
+
+    return not user_has_active_subscription(user)
 
 
 def journal_settings(request):
@@ -24,7 +39,7 @@ def journal_settings(request):
     from articles.seo import sitewide_structured_data
     from sections.models import Section
 
-    default_og_image_url = request.build_absolute_uri(static('images/logo.png'))
+    default_og_image_url = request.build_absolute_uri(static('images/og-default.png'))
 
     return {
         'JOURNAL_NAME': settings.JOURNAL_NAME,
@@ -34,6 +49,8 @@ def journal_settings(request):
         'JOURNAL_CONTACT_EMAIL': settings.JOURNAL_CONTACT_EMAIL,
         # Published Terms/Privacy/Refund pages, for the footer and checkout.
         **_legal_pages(),
+        # Called by the template only where the phone subscribe bar can show.
+        'show_subscribe_bar': lambda: _wants_subscribe_bar(request),
         # Cookie consent (templates/includes/cookie_consent.html): analytics
         # only render once the reader has accepted them.
         'GOOGLE_ANALYTICS_ID': settings.GOOGLE_ANALYTICS_ID,

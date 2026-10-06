@@ -480,6 +480,12 @@ CKEDITOR_5_UPLOAD_FILE_TYPES = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 CKEDITOR_5_MAX_FILE_SIZE = 5  # MB
 CKEDITOR_5_FILE_STORAGE = 'ajna_health_lens.ckeditor_views.InlineImageStorage'
 
+# Uploaded images are resized, stripped of metadata and re-compressed
+# before they're stored (ajna_health_lens/images.py).
+IMAGE_OPTIMIZE_UPLOADS = env_bool('IMAGE_OPTIMIZE_UPLOADS', True)
+IMAGE_MAX_DIMENSION = int(os.environ.get('IMAGE_MAX_DIMENSION', '2400'))
+IMAGE_JPEG_QUALITY = int(os.environ.get('IMAGE_JPEG_QUALITY', '82'))
+
 
 # Reader comments (django-comments-xtd) — threaded comments on articles.
 # django.contrib.sites (SITE_ID) is a hard dependency of django_comments;

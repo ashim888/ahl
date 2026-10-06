@@ -47,22 +47,32 @@ class PitchCreateView(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['turnstile_site_key'] = settings.TURNSTILE_SITE_KEY
+        context['meta_description'] = (
+            f'Got a health story Nepal should hear? Pitch it to the editors of {settings.JOURNAL_NAME} — '
+            f'no account needed, and we reply to every pitch.'
+        )
         return context
 
     def form_valid(self, form):
         if self.request.user.is_authenticated:
             form.instance.submitter = self.request.user
         response = super().form_valid(form)
-        messages.success(self.request, 'Your pitch has been submitted — the editorial team will review it soon.')
+        self.request.session['pitch_thanks'] = self.object.pk
         return response
 
     def get_success_url(self):
-        # An anonymous submitter has no account to see pitches:my_pitches
-        # with — the success message above is their only confirmation, so
-        # send them back to the homepage where it'll actually render.
-        if self.request.user.is_authenticated:
-            return reverse('pitches:my_pitches')
-        return reverse('articles:home')
+        return reverse('pitches:pitch_thanks')
+
+
+def pitch_thanks(request):
+    """/pitches/thanks/ — the confirmation after sending a pitch: what
+    happens next, and where to follow it (signed-in) or which email we'll
+    reply to (anonymous). Shown once per pitch; afterwards it's generic."""
+    pitch = None
+    pitch_pk = request.session.pop('pitch_thanks', None)
+    if pitch_pk:
+        pitch = StoryPitch.objects.filter(pk=pitch_pk).first()
+    return render(request, 'pitches/pitch_thanks.html', {'pitch': pitch})
 
 
 @method_decorator(login_required, name='dispatch')

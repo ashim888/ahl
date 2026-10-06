@@ -169,14 +169,23 @@ class AnonymousPitchSubmissionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(StoryPitch.objects.filter(title='No Email').exists())
 
-    def test_anonymous_redirect_goes_to_homepage_not_my_pitches(self):
-        # An anonymous submitter has no account to view pitches:my_pitches
-        # with — the confirmation message is their only feedback.
+    def test_anonymous_submitter_gets_a_thank_you_page(self):
         response = self.client.post(reverse('pitches:pitch_create'), {
             'title': 'Redirect Check', 'summary': 'x',
             'submitter_name': 'Guest', 'submitter_email': 'redirect-check@example.com',
-        })
-        self.assertRedirects(response, reverse('articles:home'))
+        }, follow=True)
+        self.assertRedirects(response, reverse('pitches:pitch_thanks'))
+        self.assertContains(response, 'Redirect Check')
+        self.assertContains(response, 'redirect-check@example.com')
+        self.assertNotContains(response, reverse('pitches:my_pitches'))
+        # Shown once: a reload is the generic page.
+        self.assertNotContains(self.client.get(reverse('pitches:pitch_thanks')), 'Redirect Check')
+
+    def test_signed_in_submitter_is_pointed_to_my_pitches(self):
+        author = make_verified_author('thanks@example.com')
+        self.client.force_login(author)
+        response = self.client.post(reverse('pitches:pitch_create'), {'title': 'Mine', 'summary': 'x'}, follow=True)
+        self.assertContains(response, reverse('pitches:my_pitches'))
 
     def test_anonymous_form_shows_contact_fields(self):
         response = self.client.get(reverse('pitches:pitch_create'))
