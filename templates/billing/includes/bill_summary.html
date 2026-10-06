@@ -3,7 +3,39 @@
 Price / VAT / total rows for a checkout card. Every price is VAT-exclusive;
 VAT is added here, exactly as billing.money.vat_breakdown charges it.
 Usage: {% include 'billing/includes/bill_summary.html' with price=plan.price label="30 days access" %}
+With a promo code, pass quote= (billing.promotions.quote) instead of price:
+the list price, the discount and the price after it are shown, and VAT is
+on the discounted price.
 {% endcomment %}
+{% if quote %}
+    {% with bill=quote %}
+    <dl class="border-t border-border px-5 py-4 space-y-2 text-sm" aria-live="polite">
+        <div class="flex items-baseline justify-between gap-4">
+            <dt class="text-muted-foreground">{{ label|default:_("Price") }}</dt>
+            <dd{% if bill.discount %} class="line-through text-muted-foreground"{% endif %}>{{ bill.list_price|money }}</dd>
+        </div>
+        {% if bill.discount %}
+            <div class="flex items-baseline justify-between gap-4 text-accent">
+                <dt>{% blocktrans with code=bill.code.code %}Discount ({{ code }}){% endblocktrans %}</dt>
+                <dd>− {{ bill.discount|money }}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-4">
+                <dt class="text-muted-foreground">{% trans "Price after discount" %}</dt>
+                <dd>{{ bill.price|money }}</dd>
+            </div>
+        {% endif %}
+        {% vat_breakdown bill.price as vat_bill %}
+        <div class="flex items-baseline justify-between gap-4">
+            <dt class="text-muted-foreground">{% blocktrans with rate=vat_bill.rate %}VAT ({{ rate }}%){% endblocktrans %}</dt>
+            <dd>{{ bill.vat|money }}</dd>
+        </div>
+        <div class="flex items-baseline justify-between gap-4 pt-2 border-t border-border">
+            <dt class="font-mono-editorial text-xs tracking-widest">{% trans "TOTAL" %}</dt>
+            <dd class="font-display text-2xl font-bold">{% if bill.is_free %}{% trans "Free" %}{% else %}{{ bill.total|money }}{% endif %}</dd>
+        </div>
+    </dl>
+    {% endwith %}
+{% else %}
 {% vat_breakdown price as bill %}
 <dl class="border-t border-border px-5 py-4 space-y-2 text-sm">
     <div class="flex items-baseline justify-between gap-4">
@@ -19,3 +51,4 @@ Usage: {% include 'billing/includes/bill_summary.html' with price=plan.price lab
         <dd class="font-display text-2xl font-bold">{{ bill.total|money }}</dd>
     </div>
 </dl>
+{% endif %}

@@ -51,8 +51,18 @@
             <tbody>
                 <tr class="border-t border-border">
                     <td class="py-3 pr-4">{{ payment.description }}</td>
-                    <td class="py-3 text-right whitespace-nowrap">{{ payment.subtotal|money }}</td>
+                    <td class="py-3 text-right whitespace-nowrap">{% if payment.discount_amount %}{{ payment.list_price|money }}{% else %}{{ payment.subtotal|money }}{% endif %}</td>
                 </tr>
+                {% if payment.discount_amount %}
+                    <tr class="border-t border-border">
+                        <td class="py-3 pr-4 text-muted-foreground">{% if payment.promo_code %}{% blocktrans with code=payment.promo_code.code %}Discount (code {{ code }}){% endblocktrans %}{% else %}{% trans "Discount" %}{% endif %}</td>
+                        <td class="py-3 text-right whitespace-nowrap">− {{ payment.discount_amount|money }}</td>
+                    </tr>
+                    <tr class="border-t border-border">
+                        <td class="py-3 pr-4 text-muted-foreground">{% trans "Taxable amount" %}</td>
+                        <td class="py-3 text-right whitespace-nowrap">{{ payment.subtotal|money }}</td>
+                    </tr>
+                {% endif %}
                 <tr class="border-t border-border">
                     <td class="py-3 pr-4 text-muted-foreground">{% blocktrans with rate=vat_rate %}VAT ({{ rate }}%){% endblocktrans %}</td>
                     <td class="py-3 text-right whitespace-nowrap">{{ payment.vat_amount|money }}</td>

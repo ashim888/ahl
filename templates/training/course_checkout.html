@@ -25,7 +25,7 @@
         </div>
         {% if course.price %}
             {% trans "One-time enrollment" as enrollment_label %}
-            {% include 'billing/includes/bill_summary.html' with price=course.price label=enrollment_label %}
+            {% include 'billing/includes/bill_summary.html' with quote=quote label=enrollment_label %}
         {% else %}
             <div class="border-t border-border px-5 py-4 flex items-baseline justify-between">
                 <span class="font-mono-editorial text-xs text-muted-foreground">{% trans "One-time enrollment" %}</span>
@@ -42,12 +42,14 @@
     </p>
     {% endif %}
 
+    {% if course.price %}{% include 'billing/includes/promo_field.html' %}{% endif %}
+
     <form method="post" class="mt-6">
         {% csrf_token %}
         {% include 'billing/includes/buyer_pan_field.html' %}
         <button type="submit" data-loading-text="{% if PAYMENTS_LIVE %}{% trans 'TAKING YOU TO FONEPAY…' %}{% else %}{% trans 'PLEASE WAIT…' %}{% endif %}"
                 class="w-full font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
-            {% if PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & ENROLL" %}{% endif %}
+            {% if quote.is_free %}{% trans "CONFIRM — FREE WITH YOUR CODE" %}{% elif PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & ENROLL" %}{% endif %}
         </button>
     </form>
     {% include 'billing/includes/agree_terms.html' %}

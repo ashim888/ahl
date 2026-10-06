@@ -5,8 +5,11 @@ We've received your payment for {{ payment.description }}.
 {% if seller.pan %}Tax invoice no.{% else %}Receipt no.{% endif %}: {{ payment.receipt_number }}{% if payment.buyer_pan %}
 Your PAN: {{ payment.buyer_pan }}{% endif %}
 Date: {{ payment.completed_at|invoice_date }}
-Price: {{ subtotal }}
-VAT ({{ vat_rate }}%): {{ vat }}
+{% if discount %}Price: {{ list_price }}
+Discount{% if payment.promo_code %} ({{ payment.promo_code.code }}){% endif %}: − {{ discount }}
+Taxable amount: {{ subtotal }}
+{% else %}Price: {{ subtotal }}
+{% endif %}VAT ({{ vat_rate }}%): {{ vat }}
 Total paid: {{ total }}
 Paid via: {{ payment.get_gateway_display }}{% if payment.gateway_trace_id %} (ref. {{ payment.gateway_trace_id }}){% endif %}
 

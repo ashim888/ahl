@@ -48,8 +48,15 @@ Jump to the section that matches what you're trying to do:
 
 No account needed for any of this.
 
-- **Browse articles** at `/articles/` — filter by type using the dropdown, or click a keyword
-  pill on any article to see everything tagged with it.
+- **Browse articles** at `/articles/` — filter by type using the dropdown.
+- **Topics (#hashtags):** every keyword is a topic with its own page — `/topics/dengue/` lists
+  every story tagged with it, related topics, and a **Follow** button (followed topics feed
+  *For you* and the weekly digest). Hashtags appear on the article page (under the headline and at
+  the end), on article cards and in search results; **Trending topics** on the homepage shows the
+  most-used ones of the last 30 days; `/topics/` (footer: *Topics*) lists them all A–Z. Nepali
+  tags work too (`#मानसिक_स्वास्थ्य`).
+- **Share** an article from the buttons beside it (Facebook, WhatsApp, X, LinkedIn, copy link);
+  on phones a **Share…** button opens the phone's own share sheet (Messenger, Viber…).
 - **Search** from the box in the header, or go to `/search/` directly. Search matches title,
   summary, article text, keywords, section and author names — short medical acronyms (e.g. "TB",
   "HIV") and Nepali words work too. Typing in the header box suggests matching headlines and topics.
@@ -190,9 +197,21 @@ filterable by type/status/homepage section.
 **Creating an article** (`+ New Article`) — everything is on one page. You write on the left;
 the right-hand panel has the buttons and the settings. Fields marked with a red <span>*</span> are
 required to publish.
-1. **Title** is the only thing needed to save a draft. Add a **Summary** if you want one: one or
-   two sentences under the headline and on article cards. Short news pieces can skip it; cards
-   then use the opening words of the text (for free articles only, so paid text never leaks).
+1. **Title** is the only thing needed to save a draft.
+   - **URL slug** sits right under it, with a live score out of 100. It checks the slug is short
+     (60 characters or less, 3–6 words), lowercase, joined by hyphens, has no filler words
+     ("the", "of", "ra", "ko"…), no repeated words or years, and includes the story's main word. It
+     suggests a better one; **Use "…"** fills it in. Leave the slug empty and one is made from the
+     headline — Nepali headlines are romanized (`मानसिक स्वास्थ्य` → `manasik-swasthya`). Once a
+     story is published, don't change its slug: shared links and search results would break, and
+     the checker warns you.
+   - **Summary**: one or two sentences (about 120–220 characters) under the headline and on
+     article cards. A guide under the box says when it's too short or too long. **Suggest
+     one-liners from the text** offers three options taken from your own article — the lead
+     sentence, two lines together, and the key fact with a number — so nothing is invented;
+     **Use** puts one in the box to edit. It's built in: nothing leaves the site. Short news
+     pieces can skip the summary; cards then use the opening words of the text (free articles
+     only, so paid text never leaks).
 2. Write the **Article text** in the editor. The toolbar has:
    - **Headings** (Heading / Subheading / Minor heading — the headline itself is the top level),
      bold, italic, underline, strikethrough, sub/superscript, and **Remove format** (cleans up
@@ -227,7 +246,7 @@ required to publish.
 6. In the right-hand panel: **Placement** (article type, menu section, homepage spot, coverage
    series, pin to top), **Access** (Free / Subscribers / Special with its own price),
    **Featured image**, and **Authors** (available once the draft is saved). **More details**
-   holds the URL slug, a PDF version, and journal fields (DOI, volume, pages).
+   holds a PDF version and journal fields (DOI, volume, pages).
 7. **Related articles** (the panel under the text): choose the articles to show under "Related
    reading" (the page shows three at most, newest first). A **suggestions** list shows the most
    similar published articles with a **+ Add** button; if you pick nothing, the top suggestions
@@ -609,6 +628,28 @@ split. The rate and the business name, PAN and address printed on receipts come 
   - The edit page shows this month's usage, the members (with **Make manager**, and anyone the
     organization removed), payments, and **Send last month's report now**.
 
+**Promo codes** (`/manage/billing/promos/`, Editor-in-Chief/Admin) — launch offers, student
+pricing, partner deals and free trials.
+
+- **Discount codes** take a **percentage** or a **fixed amount** off the price before VAT; VAT is
+  charged on what's left, and the receipt shows the list price, the code and the discount. Tick
+  where it works (subscriptions, special articles, courses) and optionally limit it to some plans
+  or courses. A 100% code gives the item straight away with no payment and no receipt.
+- **Free trials** (trial days + a plan): free access for people who have **never subscribed**,
+  no payment details, and it simply ends. Readers start it from the code's link — there's no
+  public trial button.
+- **Conditions:** start/end dates, total uses, uses per person, new subscribers only, and
+  **email domains** — e.g. `edu.np` for **student pricing** or a partner's domain. Domain codes
+  need a confirmed email address at that domain.
+- **Partner deals:** set kind *Partner deal* and the partner's name. Use one shared code, or
+  **Also make single-use copies** (e.g. 50 codes like `NMA-7K2QX`, each usable once) to hand out.
+- **Sharing:** every code has a link (`/redeem/CODE/`, shown on its page) — opening it applies
+  the code at checkout or shows the trial offer. Readers can also type it at checkout ("Have a
+  promo, student or partner code?") or at `/redeem/`.
+- Each code's page shows uses, paid orders, revenue (before VAT) and discount given, every use,
+  and a **CSV** for partner reports. A use counts only when the payment completes, so abandoned
+  checkouts don't use codes up. Switch a code off with *Active*.
+
 **What organizations get** — they're the biggest buyers, so they get the most:
 
 - **Their own dashboard** (`/organization/`) for their **managers**. The contact email becomes a
@@ -851,4 +892,10 @@ it's re-compressed (`IMAGE_JPEG_QUALITY`, 82), and camera and GPS data are remov
 their exact size. To do the same to images uploaded before this, run
 `python manage.py compress_images --dry-run` to see the saving, then without `--dry-run`. Back up
 `media/` first: files are rewritten in place.
+
+**Slug checker for Chrome.** The same checks as the article editor, for any page on any site
+(ours, a competitor's, a draft URL): `tools/slug-checker-extension/`. Run `npm run build:extension`,
+then in Chrome open `chrome://extensions`, turn on *Developer mode*, **Load unpacked** and pick that
+folder. Click its icon on any page, or paste a slug. Details, and how to publish it on the Chrome Web
+Store, are in its README.
 

@@ -402,14 +402,15 @@ class KeywordBrowsingTests(TestCase):
     not an icontains substring match against a joined string.
     """
 
-    def test_keyword_pill_links_to_filtered_list(self):
+    def test_keyword_pill_links_to_topic_page(self):
         article = Article.objects.create(
             title='Tagged Article', slug='tagged-article', abstract='Abstract',
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
         )
         article.keyword_tags.set([make_keyword('Tuberculosis'), make_keyword('Screening')])
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
-        self.assertContains(response, '?keyword=tuberculosis')
+        self.assertContains(response, reverse('articles:topic_detail', args=['tuberculosis']))
+        self.assertContains(response, '#Tuberculosis')
 
     def test_article_list_filters_by_keyword(self):
         tb_keyword = make_keyword('Tuberculosis')

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import org_views, views
+from . import org_views, promo_views, views
 
 app_name = 'billing'
 
@@ -17,6 +17,13 @@ urlpatterns = [
     path('account/receipts/<str:reference>/', views.receipt, name='receipt'),
     path('account/subscriptions/<str:reference>/cancel/', views.subscription_cancel, name='subscription_cancel'),
     # Organization dashboard — the institution's own managers (billing/org_views.py)
+    path('redeem/', promo_views.redeem, name='redeem'),
+    path('redeem/<str:code>/', promo_views.redeem, name='redeem_code'),
+    path('redeem/<str:code>/start-trial/', promo_views.start_trial, name='start_trial'),
+    path('manage/billing/promos/', promo_views.PromoListView.as_view(), name='manage_promo_list'),
+    path('manage/billing/promos/new/', promo_views.PromoCreateView.as_view(), name='manage_promo_create'),
+    path('manage/billing/promos/<int:pk>/edit/', promo_views.PromoUpdateView.as_view(), name='manage_promo_update'),
+    path('manage/billing/promos/<int:pk>/export.csv', promo_views.promo_export, name='manage_promo_export'),
     path('organization/', org_views.dashboard, name='org_dashboard'),
     path('organization/<int:pk>/', org_views.dashboard, name='org_dashboard_for'),
     path('organization/<int:pk>/report.csv', org_views.report_csv, name='org_report_csv'),

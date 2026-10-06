@@ -21,7 +21,7 @@
             </div>
         </div>
         {% trans "One-time purchase" as purchase_label %}
-        {% include 'billing/includes/bill_summary.html' with price=article.price label=purchase_label %}
+        {% include 'billing/includes/bill_summary.html' with quote=quote label=purchase_label %}
     </div>
 
     {% if PAYMENTS_LIVE %}
@@ -33,12 +33,14 @@
     </p>
     {% endif %}
 
+    {% include 'billing/includes/promo_field.html' %}
+
     <form method="post" class="mt-6">
         {% csrf_token %}
         {% include 'billing/includes/buyer_pan_field.html' %}
         <button type="submit" data-loading-text="{% if PAYMENTS_LIVE %}{% trans 'TAKING YOU TO FONEPAY…' %}{% else %}{% trans 'PLEASE WAIT…' %}{% endif %}"
                 class="w-full font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
-            {% if PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & UNLOCK ARTICLE" %}{% endif %}
+            {% if quote.is_free %}{% trans "CONFIRM — FREE WITH YOUR CODE" %}{% elif PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & UNLOCK ARTICLE" %}{% endif %}
         </button>
     </form>
     {% include 'billing/includes/agree_terms.html' %}

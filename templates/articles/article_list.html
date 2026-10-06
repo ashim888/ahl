@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time %}
+{% load news_time topic_tags %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -90,6 +90,7 @@
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h2>
                     {% with summary=article.summary %}{% if summary %}<p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% article_hashtags article 3 'mt-2' %}
                     <div class="flex items-center gap-2 mt-3">
                         {% with a=article.articleauthor_set.all|first %}
                             {% if a %}

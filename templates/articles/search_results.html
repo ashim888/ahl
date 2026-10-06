@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time %}
+{% load news_time topic_tags %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -9,7 +9,7 @@
     <div class="rule-editorial mb-6"></div>
     <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Search" %}</h1>
 
-    <form method="get" role="search" class="mt-6">
+    <form method="get" role="search" aria-label="{% trans 'Search and filter articles' %}" class="mt-6">
         <div class="flex border border-foreground">
             <label for="search-q" class="sr-only">{% trans "Search articles" %}</label>
             <input id="search-q" type="search" name="q" value="{{ query }}" placeholder="{% trans 'Words from the title, text, an author or a topic' %}"
@@ -47,6 +47,12 @@
             {% blocktrans count counter=result_count %}{{ counter }} RESULT FOR "{{ query }}"{% plural %}{{ counter }} RESULTS FOR "{{ query }}"{% endblocktrans %}
         </p>
     {% endif %}
+    {% if matching_topics %}
+        <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "TOPICS" %}</span>
+            {% for topic in matching_topics %}<a href="{{ topic.get_absolute_url }}" class="border border-border px-2.5 py-1 hover:border-foreground hover:text-accent">{{ topic.name|hashtag }} <span class="text-muted-foreground">{{ topic.article_count }}</span></a>{% endfor %}
+        </div>
+    {% endif %}
 
     <div class="mt-8 divide-y divide-border">
         {% for article in articles %}
@@ -56,6 +62,7 @@
                     <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                 </h2>
                 {% if article.search_snippet %}<p class="mt-2 text-sm text-muted-foreground leading-relaxed search-snippet">{{ article.search_snippet }}</p>{% endif %}
+                {% article_hashtags article 3 'mt-2' %}
                 <div class="flex items-center gap-2 mt-3">
                     {% with a=article.articleauthor_set.all|first %}
                         <span class="text-xs text-muted-foreground font-medium">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>

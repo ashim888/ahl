@@ -300,7 +300,7 @@
                 </button>
 
                 <div class="hidden md:flex flex-1">
-                    <form method="get" action="{% url 'articles:search' %}" role="search" data-search-suggest class="flex items-center border border-border max-w-[220px]">
+                    <form method="get" action="{% url 'articles:search' %}" role="search" aria-label="{% trans 'Site search' %}" data-search-suggest class="flex items-center border border-border max-w-[220px]">
                         <input type="search" name="q" placeholder="{% trans 'Search…' %}" aria-label="{% trans 'Search articles' %}"
                                class="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0 !w-auto">
                     </form>
@@ -333,7 +333,7 @@
                     </a>
                     {% if user.is_authenticated %}
                         <div class="relative hidden md:block">
-                            <button type="button" id="profile-menu-button" class="flex items-center gap-2 text-foreground hover:text-accent">
+                            <button type="button" id="profile-menu-button" aria-label="{% trans 'Account menu' %}" class="flex items-center gap-2 text-foreground hover:text-accent">
                                 {% if user.photo %}
                                     <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0">
                                 {% else %}
@@ -418,7 +418,7 @@
         </div>
 
         <div id="mobile-menu-dropdown" class="hidden md:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
-            <form method="get" action="{% url 'articles:search' %}" role="search" data-search-suggest class="flex items-center border border-border mx-4 mt-4">
+            <form method="get" action="{% url 'articles:search' %}" role="search" aria-label="{% trans 'Site search' %}" data-search-suggest class="flex items-center border border-border mx-4 mt-4">
                 <input type="search" name="q" placeholder="{% trans 'Search…' %}" aria-label="{% trans 'Search articles' %}"
                        class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
             </form>
@@ -551,6 +551,7 @@
                     <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'JOURNAL' %}</p>
                     <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Issue Archive" %}</a>
                     <a href="{% url 'articles:archive_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Article Archive" %}</a>
+                    <a href="{% url 'articles:topic_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Topics" %}</a>
                     <a href="{% url 'articles:article_list' %}?type=original_research" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Research" %}</a>
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Policy" %}</a>
                 </div>

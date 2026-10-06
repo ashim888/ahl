@@ -50,7 +50,7 @@ class IssueDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['issue_articles'] = self.object.articles.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-created_at').prefetch_related('articleauthor_set__author__user', 'keyword_tags')
         context['meta_title'] = f'{self.object.title} — {settings.JOURNAL_NAME}'
         context['meta_description'] = (
             (self.object.editorial_note or '')[:200]

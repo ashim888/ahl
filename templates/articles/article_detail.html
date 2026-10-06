@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load money_tags %}
+{% load topic_tags %}
 {% load i18n %}
 {% load text_filters ads_tags comments comments_xtd %}
 
@@ -85,6 +86,14 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
 
         <aside class="hidden lg:flex lg:col-span-1 flex-col items-center pt-16" aria-label="{% trans 'Share' %}">
             <div class="sticky top-24 flex flex-col gap-3">
+                <button type="button" data-share="facebook"
+                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on Facebook' %}">
+                    <span aria-hidden="true" class="font-mono-editorial text-[0.6rem] font-bold">FB</span><span class="sr-only">{% trans 'Share on Facebook' %}</span>
+                </button>
+                <button type="button" data-share="whatsapp"
+                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on WhatsApp' %}">
+                    <span aria-hidden="true" class="font-mono-editorial text-[0.6rem] font-bold">WA</span><span class="sr-only">{% trans 'Share on WhatsApp' %}</span>
+                </button>
                 <button type="button" data-share="x"
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on X' %}">
                     <span aria-hidden="true" class="font-mono-editorial text-[0.6rem] font-bold">X</span><span class="sr-only">{% trans 'Share on X' %}</span>
@@ -133,10 +142,10 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% if keyword_list %}
                 <div class="flex flex-wrap gap-2 mb-6">
                     {% for kw in keyword_list %}
-                        <a href="{% url 'articles:article_list' %}?keyword={{ kw.slug }}"
+                        <a href="{{ kw.get_absolute_url }}"
                            {% if not preview_mode %}data-keyword-click="{% url 'articles:keyword_click' kw.pk %}" data-placement="header"{% endif %}
-                           class="font-mono-editorial text-[0.65rem] tracking-wider uppercase bg-secondary text-muted-foreground px-2.5 py-1 rounded-full hover:bg-foreground hover:text-primary-foreground transition-colors">
-                            {{ kw.name }}
+                           class="font-mono-editorial text-[0.7rem] tracking-wide bg-secondary text-foreground px-2.5 py-1 rounded-full hover:bg-foreground hover:text-primary-foreground transition-colors">
+                            {{ kw.name|hashtag }}
                         </a>
                     {% endfor %}
                 </div>
@@ -400,10 +409,10 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% if keyword_list %}
                 <div class="flex flex-wrap gap-2 mt-12 pt-8 border-t border-border">
                     {% for kw in keyword_list %}
-                        <a href="{% url 'articles:article_list' %}?keyword={{ kw.slug }}"
+                        <a href="{{ kw.get_absolute_url }}"
                            {% if not preview_mode %}data-keyword-click="{% url 'articles:keyword_click' kw.pk %}" data-placement="footer"{% endif %}
                            class="font-mono-editorial text-xs border border-border px-3 py-1 hover:border-foreground hover:text-accent transition-colors">
-                            {{ kw.name }}
+                            {{ kw.name|hashtag }}
                         </a>
                     {% endfor %}
                 </div>
@@ -420,8 +429,11 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 </div>
             {% endif %}
 
-            <div class="flex items-center gap-3 mt-8 lg:hidden">
+            <div class="flex flex-wrap items-center gap-2 mt-8 lg:hidden">
                 <span class="font-mono-editorial text-xs text-muted-foreground">{% trans "Share:" %}</span>
+                <button type="button" data-share="native" hidden class="font-mono-editorial text-xs bg-foreground text-primary-foreground px-3 py-1.5">{% trans "Share…" %}</button>
+                <button type="button" data-share="facebook" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "Facebook" %}</button>
+                <button type="button" data-share="whatsapp" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "WhatsApp" %}</button>
                 <button type="button" data-share="x" class="font-mono-editorial text-xs border border-border px-3 py-1.5">X</button>
                 <button type="button" data-share="linkedin" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "LinkedIn" %}</button>
                 <button type="button" id="copy-link-btn-mobile" data-copy-url="{{ canonical_url }}" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "Copy link" %}</button>
@@ -667,17 +679,32 @@ document.addEventListener('DOMContentLoaded', function () {
         headings.forEach(function (h) { tocObserver.observe(h); });
     }
 
-    var pageUrl = window.location.href;
-    var pageTitle = document.title;
+    // Share the canonical address — never the current one, which can carry
+    // a reader's ?gift= token or tracking parameters.
+    var pageUrl = '{{ canonical_url|escapejs }}' || (window.location.origin + window.location.pathname);
+    var pageTitle = '{{ article.title|escapejs }}';
+    var SHARE_URLS = {
+        facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(pageUrl),
+        whatsapp: 'https://wa.me/?text=' + encodeURIComponent(pageTitle + ' ' + pageUrl),
+        x: 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(pageUrl) + '&text=' + encodeURIComponent(pageTitle),
+        linkedin: 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(pageUrl)
+    };
     document.querySelectorAll('[data-share]').forEach(function (btn) {
+        var network = btn.getAttribute('data-share');
+        if (network === 'native') {
+            // Phones: the system share sheet (Messenger, Viber, WhatsApp…) where the browser has one.
+            if (!navigator.share) return;
+            btn.hidden = false;
+            btn.addEventListener('click', function () {
+                navigator.share({ title: pageTitle, url: pageUrl }).catch(function () {});
+            });
+            return;
+        }
         btn.addEventListener('click', function () {
-            var network = btn.getAttribute('data-share');
-            var shareUrl = network === 'x'
-                ? 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(pageUrl) + '&text=' + encodeURIComponent(pageTitle)
-                : 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(pageUrl);
-            window.open(shareUrl, '_blank', 'noopener,width=600,height=500');
+            window.open(SHARE_URLS[network], '_blank', 'noopener,width=600,height=500');
         });
     });
+
 
     function copyLink(btn) {
         var url = btn.getAttribute('data-copy-url') || pageUrl;

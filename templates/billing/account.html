@@ -20,7 +20,7 @@
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <span class="section-label text-accent">{{ current.plan.get_plan_type_display }}</span>
-                        <h2 class="font-display text-2xl font-bold mt-1">{{ current.plan.name }}</h2>
+                        <h2 class="font-display text-2xl font-bold mt-1">{{ current.plan.name }}{% if current.is_trial %} <span class="align-middle font-mono-editorial text-xs tracking-widest text-accent border border-accent px-2 py-0.5">{% trans "FREE TRIAL" %}</span>{% endif %}</h2>
                         <p class="mt-1 text-sm text-muted-foreground">
                             {% blocktrans with start=current.start_date|date:"j M Y" end=current.end_date|date:"j M Y" %}{{ start }} – {{ end }}{% endblocktrans %}
                         </p>
@@ -144,7 +144,7 @@
             <div class="divide-y divide-border border-y border-border">
                 {% for subscription in past %}
                     <div class="py-3 flex items-center justify-between gap-4 text-sm">
-                        <span>{{ subscription.plan.name }}{% if subscription.status == 'cancelled' %} · <span class="text-muted-foreground">{% trans "cancelled" %}</span>{% endif %}</span>
+                        <span>{{ subscription.plan.name }}{% if subscription.is_trial %} · {% trans "free trial" %}{% endif %}{% if subscription.status == 'cancelled' %} · <span class="text-muted-foreground">{% trans "cancelled" %}</span>{% endif %}</span>
                         <span class="text-muted-foreground whitespace-nowrap">{{ subscription.start_date|date:"j M Y" }} – {{ subscription.end_date|date:"j M Y" }}</span>
                     </div>
                 {% endfor %}

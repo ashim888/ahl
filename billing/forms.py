@@ -6,7 +6,7 @@ from django.db import transaction
 from articles.models import Article
 from users.models import User
 
-from .models import ArticlePurchase, Organization, SubscriptionPlan, UserSubscription
+from .models import ArticlePurchase, Organization, PromoCode, SubscriptionPlan, UserSubscription
 from .services import start_subscription
 
 DOMAIN_RE = re.compile(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}')
@@ -186,3 +186,104 @@ class OrganizationForm(forms.ModelForm):
         if cleaned.get('amount_received') and not cleaned.get('contact_email'):
             self.add_error('contact_email', 'Add a contact email so the receipt has somewhere to go.')
         return cleaned
+
+
+class PromoCodeForm(forms.ModelForm):
+    """A promo code (billing/promotions.py). Either money off — a percentage
+    or an amount — or a free trial, never both."""
+
+    copies = forms.IntegerField(
+        label='Also make single-use copies', min_value=0, max_value=500, required=False,
+        help_text='For partner deals: makes this many extra codes (e.g. PARTNER-7K2Q), each usable once, with the '
+                  'same settings. Leave empty for one shared code.',
+    )
+
+    class Meta:
+        model = PromoCode
+        fields = [
+            'code', 'kind', 'description', 'campaign', 'partner_name',
+            'percent_off', 'amount_off', 'trial_days', 'trial_plan',
+            'applies_to_subscriptions', 'applies_to_articles', 'applies_to_courses', 'plans', 'courses',
+            'valid_from', 'valid_until', 'max_redemptions', 'per_user_limit', 'new_subscribers_only', 'email_domains',
+            'is_active', 'notes',
+        ]
+        widgets = {
+            'valid_from': forms.DateInput(attrs={'type': 'date'}),
+            'valid_until': forms.DateInput(attrs={'type': 'date'}),
+            'email_domains': forms.Textarea(attrs={'rows': 3, 'placeholder': 'edu.np\nku.edu.np'}),
+            'notes': forms.Textarea(attrs={'rows': 2}),
+            'plans': forms.CheckboxSelectMultiple,
+            'courses': forms.CheckboxSelectMultiple,
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['trial_plan'].queryset = SubscriptionPlan.objects.exclude(
+            plan_type=SubscriptionPlan.PlanType.INSTITUTIONAL).order_by('-is_active', 'price')
+        self.fields['plans'].queryset = SubscriptionPlan.objects.exclude(
+            plan_type=SubscriptionPlan.PlanType.INSTITUTIONAL).order_by('-is_active', 'price')
+        if self.instance.pk:
+            del self.fields['copies']
+
+    def clean_code(self):
+        code = self.cleaned_data['code'].strip().upper()
+        if PromoCode.objects.filter(code=code).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('That code already exists.')
+        return code
+
+    def clean_email_domains(self):
+        from .institutions import PUBLIC_EMAIL_DOMAINS
+
+        domains = [d.strip().lower().lstrip('@.') for d in self.cleaned_data['email_domains'].replace(',', '\n').splitlines()
+                   if d.strip()]
+        public = [d for d in domains if d in PUBLIC_EMAIL_DOMAINS]
+        if public:
+            raise forms.ValidationError(f'Anyone can get an address at {", ".join(public)} — that limits nothing.')
+        bad = [d for d in domains if not re.fullmatch(r'[a-z0-9-]+(\.[a-z0-9-]+)+', d)]
+        if bad:
+            raise forms.ValidationError(f'Not a domain: {", ".join(bad)}')
+        return '\n'.join(domains)
+
+    def clean(self):
+        cleaned = super().clean()
+        benefits = [name for name in ('percent_off', 'amount_off', 'trial_days') if cleaned.get(name)]
+        if len(benefits) != 1:
+            raise forms.ValidationError('Choose exactly one: a percentage off, an amount off, or free trial days.')
+        if cleaned.get('percent_off') and cleaned['percent_off'] > 100:
+            self.add_error('percent_off', 'At most 100%.')
+        if cleaned.get('trial_days') and not cleaned.get('trial_plan'):
+            self.add_error('trial_plan', 'Choose which plan the trial gives.')
+        if not cleaned.get('trial_days') and not any(
+                cleaned.get(f) for f in ('applies_to_subscriptions', 'applies_to_articles', 'applies_to_courses')):
+            raise forms.ValidationError('Tick at least one of subscriptions, special articles or courses.')
+        if cleaned.get('valid_from') and cleaned.get('valid_until') and cleaned['valid_until'] < cleaned['valid_from']:
+            self.add_error('valid_until', 'Ends before it starts.')
+        if cleaned.get('trial_days'):
+            cleaned['kind'] = PromoCode.Kind.TRIAL
+            cleaned['new_subscribers_only'] = True
+            self.instance.kind = PromoCode.Kind.TRIAL
+        return cleaned
+
+    def make_copies(self, original, user) -> list:
+        """The single-use copies asked for (create only)."""
+        import secrets
+
+        count = self.cleaned_data.get('copies') or 0
+        alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        made = []
+        while len(made) < count:
+            suffix = ''.join(secrets.choice(alphabet) for _ in range(5))
+            code = f'{original.code[:30]}-{suffix}'
+            if PromoCode.objects.filter(code=code).exists():
+                continue
+            copy = PromoCode.objects.get(pk=original.pk)
+            copy.pk = None
+            copy.code = code
+            copy.max_redemptions = 1
+            copy.per_user_limit = 1
+            copy.created_by = user
+            copy.save()
+            copy.plans.set(original.plans.all())
+            copy.courses.set(original.courses.all())
+            made.append(copy)
+        return made

@@ -1,9 +1,10 @@
 {% load news_time %}
-{% load i18n %}
+{% load i18n topic_tags %}
 {% comment %}
 Cover card for an article, matching the training course cards (cover on
 top, lift-on-hover). Used on issue, section and related-reading grids.
-Expects `article` with articleauthor_set prefetched (…__user).
+Expects `article` with articleauthor_set prefetched (…__user) and, ideally,
+keyword_tags (the #topics line).
 {% endcomment %}
 <article class="group relative flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all">
     <div class="relative aspect-video bg-secondary overflow-hidden">
@@ -27,6 +28,7 @@ Expects `article` with articleauthor_set prefetched (…__user).
         <h3 class="font-display text-lg font-bold leading-snug mt-2 group-hover:text-accent transition-colors" style="letter-spacing: -0.01em;">
             <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0">{{ article.title }}</a>
         </h3>
+        {% article_hashtags article 2 'mt-2' %}
         {% if show_summary %}{% with summary=article.summary %}{% if summary %}<p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}{% endif %}
         <div class="mt-auto pt-4 flex items-center gap-2 text-xs text-muted-foreground">
             {% with a=article.articleauthor_set.all|first %}

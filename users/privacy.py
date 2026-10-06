@@ -42,7 +42,7 @@ def export_user_data(user) -> dict:
 
     from articles.models import Author, Bookmark, KeywordFollow
     from billing.models import (
-        ArticleGift, ArticlePurchase, OrganizationMember, OrganizationRead, Payment, UserSubscription,
+        ArticleGift, ArticlePurchase, OrganizationMember, OrganizationRead, Payment, PromoRedemption, UserSubscription,
     )
     from newsletter.models import Subscriber
     from pitches.models import StoryPitch
@@ -96,6 +96,10 @@ def export_user_data(user) -> dict:
             {'course': e.course.title, 'status': e.get_status_display(), 'payment': e.get_payment_status_display(),
              'enrolled_at': _iso(e.enrolled_at)}
             for e in Enrollment.objects.filter(user=user).select_related('course')
+        ],
+        'promo_codes_used': [
+            {'code': r.code.code, 'used_on': r.item, 'discount_before_vat': str(r.discount_amount), 'date': _iso(r.created_at)}
+            for r in PromoRedemption.objects.filter(user=user).select_related('code')
         ],
         'organizations': [
             {'organization': m.organization.name, 'joined_at': _iso(m.joined_at),

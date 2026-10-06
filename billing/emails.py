@@ -31,6 +31,8 @@ def send_receipt(payment) -> bool:
             'payment': payment, 'seller': _seller(), 'vat_rate': settings.VAT_RATE.normalize(),
             'receipt_url': receipt_url, 'account_url': _absolute(reverse('billing:account')),
             'subtotal': format_money(payment.subtotal), 'vat': format_money(payment.vat_amount),
+            'list_price': format_money(payment.list_price or payment.subtotal),
+            'discount': format_money(payment.discount_amount) if payment.discount_amount else '',
             'total': format_money(payment.amount),
         },
         recipient_list=[recipient],

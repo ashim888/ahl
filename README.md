@@ -259,6 +259,15 @@ Operations and security (all in `.env.example`; walkthrough in TUTORIAL.MD §18)
   `manage.py reset_two_step <email>`.
 - `CSP_REPORT_ONLY` — the Content-Security-Policy (`CSP_DIRECTIVES` in settings,
   `ajna_health_lens/middleware.py`) blocks by default; violations are logged via `/csp-report/`.
+- Promo codes and trials: `billing/promotions.py` (logic), `billing/promo_views.py` (`/redeem/`,
+  `/manage/billing/promos/`); checkouts go through `billing.views.checkout_promo` and
+  `_pay_with_quote`. A use is recorded when the payment completes (`payments.complete_payment`).
+- Topics: `articles/topics.py` (`/topics/`, hashtags, trending); keyword slugs keep Nepali letters
+  (`articles.models.keyword_slug`). Article slugs romanize Nepali headlines
+  (`articles/transliterate.py`, mirrored in `static/js/slug_quality.js`).
+- Editor helpers: `static/js/slug_quality.js` (slug checker — also the Chrome extension in
+  `tools/slug-checker-extension/`; `npm run build:extension` copies it, `npm run test:slug` tests it)
+  and `articles/summarize.py` (one/two-line summary suggestions, built in, no AI).
 - Uploaded images are resized, re-compressed and stripped of EXIF on save (`ajna_health_lens/images.py`;
   `IMAGE_OPTIMIZE_UPLOADS`, `IMAGE_MAX_DIMENSION`, `IMAGE_JPEG_QUALITY`). For media uploaded earlier:
   `manage.py compress_images [--dry-run]`.

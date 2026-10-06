@@ -60,6 +60,10 @@
             <p class="md:col-span-3 border border-dashed border-border px-6 py-14 text-center text-muted-foreground">{% trans "No plans available right now — check back soon." %}</p>
         {% endfor %}
     </div>
+    <p class="mt-6 text-sm text-muted-foreground">
+        {% if request.session.promo_code %}{% blocktrans with code=request.session.promo_code %}Code <strong class="font-mono-editorial text-foreground">{{ code }}</strong> will be applied at checkout.{% endblocktrans %}
+        {% else %}{% trans "Have a launch, student, partner or free-trial code?" %} <a href="{% url 'billing:redeem' %}" class="underline hover:text-accent">{% trans "Redeem it" %}</a>{% endif %}
+    </p>
 
     {% if plans|length > 1 %}
         <div class="mt-16 pt-10 border-t-2 border-foreground">

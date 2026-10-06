@@ -140,6 +140,7 @@ class UserSubscription(models.Model):
     # TODO: Integrate Stripe — store the Stripe subscription/customer id here
     # once checkout exists; blank for manually-granted subscriptions.
     payment_reference = models.CharField(max_length=255, blank=True)
+    is_trial = models.BooleanField(default=False, help_text='A free trial from a code (billing/promotions.py).')
     created_at = models.DateTimeField(auto_now_add=True)
     # Which expiry emails went out ("7", "1", "ended") — see billing/reminders.py.
     reminders_sent = models.JSONField(default=list, blank=True)
@@ -416,6 +417,14 @@ class Payment(models.Model):
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     article = models.ForeignKey('articles.Article', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     course = models.ForeignKey('training.TrainingCourse', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
+    list_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Price before any discount, before VAT. Empty when no code was used.',
+    )
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Discount, before VAT.')
+    promo_code = models.ForeignKey(
+        'PromoCode', on_delete=models.SET_NULL, null=True, blank=True, related_name='payments',
+    )
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Price before VAT.')
     vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Total paid, VAT included.')
@@ -488,3 +497,121 @@ class Payment(models.Model):
         if self.organization_id:
             return self.organization.contact_email
         return self.user.email if self.user_id else ''
+
+
+class PromoCode(models.Model):
+    """A code a reader enters at checkout (or at /redeem/) — launch offers,
+    student pricing, partner deals and free trials (billing/promotions.py).
+
+    A code either takes money off (percent_off or amount_off, before VAT) or
+    gives a free trial (trial_days of trial_plan, no payment). Conditions:
+    dates, a total limit, a per-person limit, new subscribers only, and email
+    domains (with a confirmed address — e.g. student pricing for edu.np).
+    """
+
+    class Kind(models.TextChoices):
+        LAUNCH = 'launch', 'Launch offer'
+        STUDENT = 'student', 'Student pricing'
+        PARTNER = 'partner', 'Partner deal'
+        TRIAL = 'trial', 'Free trial'
+        OTHER = 'other', 'Other'
+
+    code = models.CharField(
+        max_length=40, unique=True,
+        validators=[RegexValidator(r'^[A-Z0-9][A-Z0-9-]{2,39}$', 'Letters, digits and hyphens (3–40), e.g. LAUNCH50.')],
+        help_text='What readers type. Stored in capitals; typing is case-insensitive.',
+    )
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.LAUNCH)
+    campaign = models.CharField(max_length=100, blank=True, help_text='Groups codes in reports, e.g. "Launch 2026".')
+    partner_name = models.CharField(max_length=150, blank=True, help_text='For partner deals: who it was made for.')
+    description = models.CharField(
+        max_length=200, blank=True, help_text='Shown to the reader when the code is applied, e.g. "Launch offer — 50% off".',
+    )
+
+    percent_off = models.PositiveSmallIntegerField(null=True, blank=True, help_text='e.g. 50 for half price. 100 = free.')
+    amount_off = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, help_text='Rupees off the price before VAT.',
+    )
+    trial_days = models.PositiveSmallIntegerField(null=True, blank=True, help_text='Free days of the trial plan, no payment.')
+    trial_plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.PROTECT, null=True, blank=True, related_name='trial_codes',
+        help_text='The plan the trial gives access to.',
+    )
+
+    applies_to_subscriptions = models.BooleanField(default=True)
+    applies_to_articles = models.BooleanField('Applies to special articles', default=False)
+    applies_to_courses = models.BooleanField('Applies to training courses', default=False)
+    plans = models.ManyToManyField(
+        SubscriptionPlan, blank=True, related_name='promo_codes', help_text='Only these plans (none = every plan).',
+    )
+    courses = models.ManyToManyField(
+        'training.TrainingCourse', blank=True, related_name='promo_codes', help_text='Only these courses (none = every course).',
+    )
+
+    valid_from = models.DateField(null=True, blank=True)
+    valid_until = models.DateField(null=True, blank=True, help_text='Last day it can be used.')
+    max_redemptions = models.PositiveIntegerField(null=True, blank=True, help_text='Total uses. Empty = no limit.')
+    per_user_limit = models.PositiveSmallIntegerField(default=1, help_text='Uses per person.')
+    new_subscribers_only = models.BooleanField(
+        default=False, help_text='Only for people who have never had a subscription.',
+    )
+    email_domains = models.TextField(
+        blank=True, help_text='Only for confirmed email addresses at these domains (one per line, subdomains count) '
+                              '— e.g. edu.np for students, or a partner\'s domain. Empty = anyone.',
+    )
+    is_active = models.BooleanField(default=True)
+
+    notes = models.TextField(blank=True, help_text='Internal.')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.code
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or '').strip().upper()
+        super().save(*args, **kwargs)
+
+    @property
+    def is_trial(self) -> bool:
+        return bool(self.trial_days)
+
+    @property
+    def domains(self) -> list[str]:
+        return [d.strip().lower().lstrip('@.') for d in self.email_domains.replace(',', '\n').splitlines() if d.strip()]
+
+    @property
+    def benefit_label(self) -> str:
+        if self.trial_days:
+            return f'{self.trial_days}-day free trial'
+        if self.percent_off:
+            return f'{self.percent_off}% off'
+        if self.amount_off:
+            return f'{format_money(self.amount_off)} off'
+        return '—'
+
+
+class PromoRedemption(models.Model):
+    """One use of a PromoCode: by whom, on which payment (none for a trial
+    or a 100%-off code) and how much it took off (before VAT)."""
+
+    code = models.ForeignKey(PromoCode, on_delete=models.PROTECT, related_name='redemptions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promo_redemptions')
+    payment = models.OneToOneField(
+        Payment, on_delete=models.SET_NULL, null=True, blank=True, related_name='promo_redemption',
+    )
+    item = models.CharField(max_length=255, help_text='What it was used on.')
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Before VAT.')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['code', 'user'])]
+
+    def __str__(self):
+        return f'{self.code} — {self.user_id} — {self.item}'

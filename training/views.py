@@ -11,9 +11,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 
 from articles.seo import breadcrumb_list_structured_data
 from billing import payments
-from billing.gateway import charge_safely
 from billing.models import Payment
-from billing.money import price_with_vat
 from users.decorators import role_required
 from users.models import User
 
@@ -157,16 +155,25 @@ def course_checkout(request, pk):
         return redirect('training:course_detail', pk=pk)
 
     # Fonepay's minimum is Rs. 1 — a free course enrolls directly.
-    from billing.views import _buyer_pan, _start_fonepay
+    from billing.views import _buyer_pan, _pay_with_quote, checkout_promo
 
-    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' else ('', None)
-    if pan_error:
+    quote, handled = checkout_promo(request, kind=Payment.Kind.COURSE, price=course.price, course=course)
+    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' and not handled else ('', None)
+    if handled:
+        pass
+    elif pan_error:
         messages.error(request, pan_error)
-    elif request.method == 'POST' and payments.uses_fonepay() and course.price > 0:
-        return _start_fonepay(
-            request, kind=Payment.Kind.COURSE, price=course.price, description=f'Training — {course.title}', course=course,
-            buyer_pan=buyer_pan,
+    elif request.method == 'POST' and course.price > 0:
+        description = f'Training — {course.title}'
+        result = _pay_with_quote(
+            request, quote, kind=Payment.Kind.COURSE, description=description, course=course,
+            success=reverse('training:course_detail', args=[pk]), buyer_pan=buyer_pan,
         )
+        if isinstance(result, Payment):
+            messages.success(request, f'Enrolled in "{course.title}".')
+            return redirect('training:course_detail', pk=pk)
+        if result is not None:
+            return result
     elif request.method == 'POST' and course.price <= 0:
         # Free course: no payment, no receipt.
         if existing:
@@ -176,21 +183,9 @@ def course_checkout(request, pk):
             Enrollment.objects.create(user=request.user, course=course, payment_status=Enrollment.PaymentStatus.PAID)
         messages.success(request, f'Enrolled in "{course.title}".')
         return redirect('training:course_detail', pk=pk)
-    elif request.method == 'POST':
-        description = f'Training — {course.title}'
-        result = charge_safely(request.user, price_with_vat(course.price), description)
-        if result.success:
-            payment = payments.record_paid_payment(
-                user=request.user, kind=Payment.Kind.COURSE, course=course, price=course.price,
-                description=description, gateway=Payment.Gateway.STUB, buyer_pan=buyer_pan,
-            )
-            Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
-            messages.success(request, f'Enrolled in "{course.title}".')
-            return redirect('training:course_detail', pk=pk)
-        messages.error(request, result.error or 'Payment failed — please try again.')
 
     return render(request, 'training/course_checkout.html', {
-        'course': course, 'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
+        'course': course, 'quote': quote, 'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
     })
 
 

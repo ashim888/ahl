@@ -1,4 +1,5 @@
 {% extends 'admin_dashboard/base.html' %}
+{% load static %}
 
 {% block title %}{% if is_create %}New Article{% else %}Edit Article{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}{% if is_create %}New Article{% else %}Edit Article{% endif %}{% endblock %}
@@ -79,7 +80,25 @@
         <div class="space-y-6 min-w-0">
             <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8 space-y-5">
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.title %}
+                {% comment %}Web address + live slug check (static/js/slug_quality.js — the same rules as the Chrome extension in tools/slug-checker-extension/).{% endcomment %}
+                <div id="slug-helper" data-published="{% if form.instance.status == 'published' %}1{% endif %}" data-original="{{ form.instance.slug|default:'' }}">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
+                    <div class="-mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span id="slug-grade" class="inline-flex items-center rounded-full px-2 py-0.5 font-semibold"></span>
+                        <span class="text-gray-500 truncate">{{ request.get_host }}/articles/<span id="slug-preview" class="text-gray-800"></span>/</span>
+                        <button type="button" id="slug-use-suggestion" class="hidden ml-auto px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-gray-700"></button>
+                    </div>
+                    <ul id="slug-issues" class="mt-2 space-y-1 text-xs"></ul>
+                </div>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.abstract %}
+                {% comment %}Summary helper (articles/summarize.py): live length guide + one/two-line options taken from the article's own sentences. Built in — nothing is sent outside the site.{% endcomment %}
+                <div id="summary-helper" class="-mt-3" data-url="{% url 'articles:manage_article_summary_suggestions' %}">
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <p id="summary-meter" class="text-gray-500" aria-live="polite"></p>
+                        <button type="button" id="summary-suggest-btn" class="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-gray-700">Suggest one-liners from the text</button>
+                    </div>
+                    <ul id="summary-options" class="mt-2 space-y-2 hidden" aria-label="Summary suggestions"></ul>
+                </div>
 
                 <div>
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.video_url %}
@@ -453,7 +472,6 @@
                     <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
                 </summary>
                 <div class="mt-4 space-y-4">
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
                     <div>
                         <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.pdf_file.label }}</label>
                         {% if form.instance.pdf_file %}
@@ -482,6 +500,7 @@
 {% endwith %}
 
 {{ content_templates|json_script:"content-templates-data" }}
+<script src="{% static 'js/slug_quality.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.getElementById('article-form');
@@ -686,6 +705,144 @@ document.addEventListener('DOMContentLoaded', function () {
     // one; TagifyKeywordsField.to_python() creates it on save. Suggestions
     // come from articles:keyword_autocomplete, re-fetched on every
     // keystroke and debounced by Tagify's own built-in input event.
+    // ---- Slug checker (static/js/slug_quality.js) ------------------------
+    (function () {
+        var helper = document.getElementById('slug-helper');
+        var slug = document.getElementById('id_slug');
+        var title = document.getElementById('id_title');
+        if (!helper || !slug || !window.SlugQuality) return;
+        var grade = document.getElementById('slug-grade');
+        var preview = document.getElementById('slug-preview');
+        var issuesList = document.getElementById('slug-issues');
+        var useButton = document.getElementById('slug-use-suggestion');
+        var COLOURS = {good: 'bg-emerald-50 text-emerald-700', ok: 'bg-amber-50 text-amber-700', poor: 'bg-red-50 text-red-700'};
+        var ICON = {error: '✕', warning: '!', tip: 'i'};
+        var LEVEL = {error: 'text-red-600', warning: 'text-amber-700', tip: 'text-gray-500'};
+        function keywordNames() {
+            var raw = (document.getElementById('id_keywords') || {}).value || '';
+            try { return JSON.parse(raw).map(function (t) { return t.value; }); } catch (e) { return raw.split(',').filter(Boolean); }
+        }
+        function render() {
+            var context = {title: title ? title.value : '', keywords: keywordNames(),
+                           published: helper.dataset.published === '1', original: helper.dataset.original};
+            var value = slug.value.trim();
+            var shown = value || SlugQuality.suggest(context.title, context.keywords);
+            var result = SlugQuality.check(value || shown, context);
+            preview.textContent = shown || '…';
+            grade.className = 'inline-flex items-center rounded-full px-2 py-0.5 font-semibold ' + COLOURS[result.grade];
+            grade.textContent = (value ? 'Slug ' : 'Auto slug ') + result.score + '/100';
+            issuesList.innerHTML = '';
+            result.issues.forEach(function (issue) {
+                var li = document.createElement('li');
+                li.className = 'flex gap-2 ' + LEVEL[issue.level];
+                var icon = document.createElement('span');
+                icon.className = 'font-bold w-3 shrink-0 text-center';
+                icon.textContent = ICON[issue.level];
+                var text = document.createElement('span');
+                text.textContent = issue.message;
+                li.appendChild(icon); li.appendChild(text);
+                issuesList.appendChild(li);
+            });
+            var suggestion = result.suggestion && result.suggestion !== value ? result.suggestion : '';
+            useButton.classList.toggle('hidden', !suggestion);
+            useButton.textContent = 'Use “' + suggestion + '”';
+            useButton.dataset.slug = suggestion;
+        }
+        useButton.addEventListener('click', function () {
+            slug.value = useButton.dataset.slug;
+            render();
+        });
+        [slug, title].forEach(function (el) { if (el) el.addEventListener('input', render); });
+        var keywords = document.getElementById('id_keywords');
+        if (keywords) keywords.addEventListener('change', render);
+        render();
+    })();
+
+    // ---- Summary helper: length guide + suggestions ----------------------
+    (function () {
+        var helper = document.getElementById('summary-helper');
+        var field = document.getElementById('id_abstract');
+        if (!helper || !field) return;
+        var meter = document.getElementById('summary-meter');
+        var list = document.getElementById('summary-options');
+        var button = document.getElementById('summary-suggest-btn');
+        var KIND = {lead: 'Lead sentence', two_lines: 'Two lines', key_fact: 'Key fact', alternative: 'Alternative'};
+
+        function sentenceCount(text) {
+            return (text.match(/[.!?।](\s|$)/g) || []).length || (text.trim() ? 1 : 0);
+        }
+        function updateMeter() {
+            var text = field.value.trim();
+            var n = text.length, s = sentenceCount(text);
+            if (!n) { meter.textContent = 'Aim for 1–2 sentences, about 120–220 characters — shown under the headline and on cards.'; meter.className = 'text-gray-500'; return; }
+            var ok = n >= 80 && n <= 240 && s <= 2;
+            var tooLong = n > 280 || s > 2;
+            meter.textContent = n + ' characters · ' + s + ' sentence' + (s === 1 ? '' : 's') + ' — ' +
+                (ok ? 'good length for cards' : tooLong ? 'too long: cards cut it off; keep to 1–2 sentences' : n < 80 ? 'a little short — add the key fact' : 'fine, a bit long for cards');
+            meter.className = ok ? 'text-emerald-700' : tooLong ? 'text-red-600' : 'text-amber-700';
+        }
+        field.addEventListener('input', updateMeter);
+        updateMeter();
+
+        function bodyHtml() {
+            var content = document.getElementById('id_html_content');
+            var editor = content && window.editors && window.editors[content.id];
+            return editor ? editor.getData() : (content ? content.value : '');
+        }
+        function keywordNames() {
+            var raw = (document.getElementById('id_keywords') || {}).value || '';
+            try { return JSON.parse(raw).map(function (t) { return t.value; }).join(','); } catch (e) { return raw; }
+        }
+        button.addEventListener('click', function () {
+            var data = new FormData();
+            data.append('title', (document.getElementById('id_title') || {}).value || '');
+            data.append('html', bodyHtml());
+            data.append('keywords', keywordNames());
+            data.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            button.disabled = true;
+            button.textContent = 'Reading the article…';
+            fetch(helper.dataset.url, {method: 'POST', body: data, credentials: 'same-origin'})
+                .then(function (r) { return r.ok ? r.json() : {suggestions: []}; })
+                .catch(function () { return {suggestions: []}; })
+                .then(function (result) {
+                    button.disabled = false;
+                    button.textContent = 'Suggest again';
+                    list.innerHTML = '';
+                    list.classList.remove('hidden');
+                    if (!result.suggestions.length) {
+                        var empty = document.createElement('li');
+                        empty.className = 'text-xs text-gray-500';
+                        empty.textContent = 'Write a few full sentences in the article text first — suggestions come from it.';
+                        list.appendChild(empty);
+                        return;
+                    }
+                    result.suggestions.forEach(function (s) {
+                        var item = document.createElement('li');
+                        item.className = 'flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3';
+                        var text = document.createElement('p');
+                        text.className = 'flex-1 text-sm text-gray-800';
+                        text.textContent = s.text;
+                        var meta = document.createElement('span');
+                        meta.className = 'block mt-1 text-[11px] uppercase tracking-wide text-gray-400';
+                        meta.textContent = (KIND[s.kind] || s.kind) + ' · ' + s.chars + ' characters';
+                        text.appendChild(meta);
+                        var use = document.createElement('button');
+                        use.type = 'button';
+                        use.className = 'shrink-0 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800';
+                        use.textContent = 'Use';
+                        use.addEventListener('click', function () {
+                            field.value = s.text;
+                            field.dispatchEvent(new Event('input', {bubbles: true}));
+                            field.focus();
+                        });
+                        item.appendChild(text);
+                        item.appendChild(use);
+                        list.appendChild(item);
+                    });
+                });
+        });
+    })();
+
     var keywordsInput = document.getElementById('id_keywords');
     if (keywordsInput && window.Tagify) {
         var tagify = new Tagify(keywordsInput, {

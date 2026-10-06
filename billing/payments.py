@@ -62,14 +62,22 @@ def last_buyer_pan(user) -> str:
     ).first() or ''
 
 
+def _discount_fields(promo, list_price, price) -> dict:
+    """Payment fields recording a promo code (billing/promotions.py)."""
+    if not promo:
+        return {}
+    return {'promo_code': promo, 'list_price': list_price, 'discount_amount': Decimal(str(list_price)) - Decimal(str(price))}
+
+
 def start_payment(user, *, kind, price, description, plan=None, article=None, course=None, return_path='',
-                  buyer_pan='') -> Payment:
+                  buyer_pan='', promo_code=None, list_price=None) -> Payment:
     """Reuses the reader's still-open payment for the same item, otherwise
-    asks Fonepay for a new QR for price + VAT. Raises fonepay.FonepayError
-    if that fails."""
+    asks Fonepay for a new QR for price + VAT. `price` is after any promo
+    discount (`list_price` is before it). Raises fonepay.FonepayError if
+    Fonepay fails."""
     subtotal, vat, total = vat_breakdown(price)
     open_payment = Payment.objects.filter(
-        user=user, kind=kind, plan=plan, article=article, course=course,
+        user=user, kind=kind, plan=plan, article=article, course=course, promo_code=promo_code,
         status=Payment.Status.PENDING, expires_at__gt=timezone.now() + datetime.timedelta(minutes=2),
     ).first()
     if open_payment and open_payment.amount == total:
@@ -82,7 +90,7 @@ def start_payment(user, *, kind, price, description, plan=None, article=None, co
         user=user, kind=kind, plan=plan, article=article, course=course,
         subtotal=subtotal, vat_amount=vat, amount=total,
         description=description[:255], gateway=Payment.Gateway.FONEPAY, return_path=safe_return_path(return_path),
-        buyer_pan=buyer_pan,
+        buyer_pan=buyer_pan, **_discount_fields(promo_code, list_price, price),
         expires_at=timezone.now() + datetime.timedelta(minutes=settings.FONEPAY_PAYMENT_TIMEOUT_MINUTES),
     )
     data = fonepay.generate_intent_qr(total, bill_id=f'{kind}-{user.pk}', reference=payment.reference)
@@ -193,6 +201,11 @@ def complete_payment(payment: Payment, *, grant: bool = True) -> Payment:
     payment.billed_name = payment.payer_name[:255]
     payment.billed_email = payment.payer_email
     payment.save()
+    if payment.promo_code_id and not hasattr(payment, 'promo_redemption'):
+        from .promotions import record
+
+        record(payment.promo_code, payment.user, item=payment.description, discount=payment.discount_amount,
+               payment=payment)
     if grant:
         _fulfil(payment)
     transaction.on_commit(lambda: emails.send_receipt(payment))
@@ -202,7 +215,7 @@ def complete_payment(payment: Payment, *, grant: bool = True) -> Payment:
 @transaction.atomic
 def record_paid_payment(*, user=None, organization=None, kind, description, gateway, price=None, total_paid=None,
                         plan=None, article=None, course=None, reference='', recorded_by=None, grant=True,
-                        return_path='', buyer_pan='') -> Payment:
+                        return_path='', buyer_pan='', promo_code=None, list_price=None) -> Payment:
     """A payment that is already settled — staff recording money received
     (gateway=manual, `total_paid` VAT included) or the development stub
     gateway (`price`, VAT added on top). Numbers, grants and emails it."""
@@ -214,6 +227,7 @@ def record_paid_payment(*, user=None, organization=None, kind, description, gate
         subtotal=subtotal, vat_amount=vat, amount=total, description=description[:255], gateway=gateway,
         expires_at=timezone.now(), recorded_by=recorded_by, return_path=safe_return_path(return_path),
         buyer_pan=buyer_pan or (organization.pan if organization else ''),
+        **_discount_fields(promo_code, list_price, price if price is not None else subtotal),
     )
     if reference:
         payment.reference = reference[:30]

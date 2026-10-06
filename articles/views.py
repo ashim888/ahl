@@ -13,6 +13,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse, reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.html import strip_tags
@@ -204,7 +205,7 @@ def _trending_articles(limit=5):
     )
     view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
     articles = list(
-        Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__author__user'),
+        Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__author__user', 'keyword_tags'),
     )
     articles.sort(key=lambda article: -view_counts_by_pk[article.pk])
     for article in articles:
@@ -287,9 +288,9 @@ class HomeView(TemplateView):
         # Sections are built as plain lists (picks + autofill concatenated),
         # not querysets, so prefetching happens post-hoc via
         # prefetch_related_objects instead of queryset.prefetch_related().
-        prefetch_related_objects(latest_news, 'articleauthor_set__author__user')
-        prefetch_related_objects(opinion_pieces, 'articleauthor_set__author__user')
-        prefetch_related_objects(research_highlights, 'articleauthor_set__author__user', 'issue')
+        prefetch_related_objects(latest_news, 'articleauthor_set__author__user', 'keyword_tags')
+        prefetch_related_objects(opinion_pieces, 'articleauthor_set__author__user', 'keyword_tags')
+        prefetch_related_objects(research_highlights, 'articleauthor_set__author__user', 'issue', 'keyword_tags')
 
         sections['latest_news'] = latest_news
         sections['opinion_pieces'] = opinion_pieces
@@ -305,6 +306,9 @@ class HomeView(TemplateView):
         # to the used_pks dedup above; it's fine for a trending piece to
         # also appear in a curated section.
         sections['trending_articles'] = _trending_articles(limit=5)
+        from .topics import trending_topics
+
+        sections['trending_topics'] = trending_topics(10)
         return sections
 
     def get_context_data(self, **kwargs):
@@ -378,7 +382,7 @@ class VideoListView(ListView):
     def get_queryset(self):
         return (
             Article.objects.filter(status=Article.Status.PUBLISHED).exclude(video_url='')
-            .select_related('section').prefetch_related('articleauthor_set__author__user')
+            .select_related('section').prefetch_related('articleauthor_set__author__user', 'keyword_tags')
             .order_by('-is_pinned', '-published_at', '-created_at')
         )
 
@@ -406,7 +410,7 @@ class ArticleListView(ListView):
     def get_queryset(self):
         queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
             '-is_pinned', '-published_at', '-created_at',
-        ).prefetch_related('articleauthor_set__author__user')
+        ).prefetch_related('articleauthor_set__author__user', 'keyword_tags')
         article_type = self.request.GET.get('type')
         if article_type:
             queryset = queryset.filter(article_type=article_type)
@@ -448,6 +452,9 @@ class ArticleListView(ListView):
             if selected_keyword_label else '[]'
         )
         if selected_keyword_label:
+            # The topic page is the one address search engines should index.
+            context['canonical_url'] = self.request.build_absolute_uri(
+                reverse('articles:topic_detail', args=[selected_keyword_slug]))
             context['meta_title'] = f'Articles tagged "{selected_keyword_label}" — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'Articles about {selected_keyword_label} from {settings.JOURNAL_NAME}.'
         elif context['selected_type']:
@@ -477,7 +484,7 @@ class ArchiveListView(ListView):
     def get_queryset(self):
         return Article.objects.filter(
             status=Article.Status.ARCHIVED,
-        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user', 'keyword_tags')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -516,7 +523,7 @@ class ForYouView(ListView):
             status=Article.Status.PUBLISHED,
         ).distinct().order_by(
             '-is_pinned', '-published_at', '-created_at',
-        ).prefetch_related('articleauthor_set__author__user')
+        ).prefetch_related('articleauthor_set__author__user', 'keyword_tags')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -633,7 +640,7 @@ class ArticleDetailView(DetailView):
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
             ]
         context['related_articles'] = related_articles_for(self.object)
-        prefetch_related_objects(context['related_articles'], 'articleauthor_set__author__user')
+        prefetch_related_objects(context['related_articles'], 'articleauthor_set__author__user', 'keyword_tags')
 
         # Fetch one extra and trim, so excluding the article being viewed
         # (it'd be a strange thing to see "trending" on its own page) still
@@ -715,7 +722,7 @@ class AuthorDetailView(DetailView):
         author = self.object
         context['author_articles'] = author.articles.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user', 'keyword_tags')
         context['board_membership'] = (
             author.user.board_memberships.filter(is_active=True).first() if author.user_id else None
         )
@@ -880,7 +887,7 @@ class ReadingListView(ListView):
         preserved_order = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(bookmarked_article_ids)])
         return Article.objects.filter(
             pk__in=bookmarked_article_ids, status=Article.Status.PUBLISHED,
-        ).order_by(preserved_order).prefetch_related('articleauthor_set__author__user')
+        ).order_by(preserved_order).prefetch_related('articleauthor_set__author__user', 'keyword_tags')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -938,7 +945,7 @@ class SearchView(ListView):
 
         context = super().get_context_data(**kwargs)
         ids = list(context['result_ids'])
-        by_id = Article.objects.filter(pk__in=ids).select_related('section').prefetch_related('articleauthor_set__author')
+        by_id = Article.objects.filter(pk__in=ids).select_related('section').prefetch_related('articleauthor_set__author', 'keyword_tags')
         by_id = {article.pk: article for article in by_id}
         articles = [by_id[pk] for pk in ids if pk in by_id]
         for article in articles:
@@ -949,6 +956,11 @@ class SearchView(ListView):
         context['result_count'] = context['paginator'].count if context.get('paginator') else 0
         if self.query and not context['result_count']:
             context['did_you_mean'] = search.did_you_mean(self.query)
+        if self.query and len(self.query.strip()) >= 2 and not self.request.GET.get('page'):
+            from .topics import public_topics
+
+            context['matching_topics'] = list(
+                public_topics().filter(name__icontains=self.query.strip()).order_by('-article_count')[:6])
         context['sections'] = Section.objects.filter(parent__isnull=True).order_by('order')
         context['types'] = Article.ArticleType.choices
         context['meta_title'] = (
@@ -1022,6 +1034,19 @@ def related_article_autocomplete(request):
 
 
 @role_required(*EDITORIAL_ROLES)
+@require_POST
+@ratelimit(key='user', rate='60/m', block=True)
+def summary_suggestions(request):
+    """One/two-line standfirst options for the article form, from the
+    unsaved title, text and topics (articles/summarize.py — built in, no AI)."""
+    from .summarize import suggest
+
+    keywords = [k.strip() for k in request.POST.get('keywords', '').split(',') if k.strip()]
+    suggestions = suggest(request.POST.get('title', ''), request.POST.get('html', '')[:200_000], keywords)
+    return JsonResponse({'suggestions': suggestions})
+
+
+@role_required(*EDITORIAL_ROLES)
 def related_article_suggestions(request):
     """Most text-similar published articles for the article form's
     "Related" tab (see articles/similarity.py), with the cosine similarity
@@ -1067,7 +1092,10 @@ def keyword_follow_toggle(request, slug):
             raise Http404
         KeywordFollow.objects.create(user=request.user, keyword=keyword)
         messages.success(request, _('Following "%(name)s" — new articles will appear in your feed and weekly digest.') % {'name': keyword.name})
-    return redirect(f"{reverse('articles:article_list')}?keyword={keyword.slug}")
+    target = request.POST.get('next', '')
+    if target.startswith('/') and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return redirect(target)
+    return redirect(keyword.get_absolute_url())
 
 
 # -- Editorial article management (CRUD, not public browsing) --------------

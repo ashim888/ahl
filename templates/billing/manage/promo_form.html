@@ -1,0 +1,99 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load money_tags %}
+
+{% block title %}{% if object %}{{ object.code }}{% else %}New promo code{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if object %}{{ object.code }}{% else %}New promo code{% endif %}{% endblock %}
+
+{% block content %}
+{% if object %}
+<div class="mb-6 grid sm:grid-cols-4 gap-4">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"><p class="text-xs uppercase tracking-wide text-gray-500">Uses</p><p class="mt-1 text-2xl font-semibold">{{ stats.uses }}{% if object.max_redemptions %} <span class="text-base text-gray-400">/ {{ object.max_redemptions }}</span>{% endif %}</p></div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"><p class="text-xs uppercase tracking-wide text-gray-500">Paid orders</p><p class="mt-1 text-2xl font-semibold">{{ stats.paid_count }}</p></div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"><p class="text-xs uppercase tracking-wide text-gray-500">Revenue (excl. VAT)</p><p class="mt-1 text-2xl font-semibold">{{ stats.revenue|money }}</p></div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"><p class="text-xs uppercase tracking-wide text-gray-500">Discount given</p><p class="mt-1 text-2xl font-semibold">{{ stats.discount|money }}</p></div>
+</div>
+<div class="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-sm">
+    <p class="text-gray-500">Share link — opening it applies the code (or shows the trial offer):</p>
+    <p class="mt-1 font-mono break-all">{{ share_url }}</p>
+</div>
+{% endif %}
+
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="space-y-5">
+            <div class="grid sm:grid-cols-2 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.code %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.kind %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.description %}
+            <div class="grid sm:grid-cols-2 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.campaign %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.partner_name %}
+            </div>
+
+            <fieldset class="border-t border-gray-100 pt-5">
+                <legend class="text-sm font-semibold text-gray-900">What it gives — choose one</legend>
+                <div class="mt-3 grid sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.percent_off %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.amount_off %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.trial_days %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.trial_plan %}
+                </div>
+            </fieldset>
+
+            <fieldset class="border-t border-gray-100 pt-5">
+                <legend class="text-sm font-semibold text-gray-900">Where it works (discounts)</legend>
+                <div class="mt-3 grid sm:grid-cols-3 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.applies_to_subscriptions %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.applies_to_articles %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.applies_to_courses %}
+                </div>
+                <div class="mt-3 grid sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.plans %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.courses %}
+                </div>
+            </fieldset>
+
+            <fieldset class="border-t border-gray-100 pt-5">
+                <legend class="text-sm font-semibold text-gray-900">Who and when</legend>
+                <div class="mt-3 grid sm:grid-cols-2 gap-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.valid_from %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.valid_until %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.max_redemptions %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.per_user_limit %}
+                </div>
+                <div class="mt-3 space-y-5">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.new_subscribers_only %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.email_domains %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.is_active %}
+                    {% if form.copies %}{% include 'admin_dashboard/includes/form_field.html' with field=form.copies %}{% endif %}
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.notes %}
+                </div>
+            </fieldset>
+        </div>
+        <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800">Save</button>
+            <a href="{% url 'billing:manage_promo_list' %}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if object %}
+<div class="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div class="flex items-center justify-between">
+        <h3 class="text-base font-semibold text-gray-900">Uses</h3>
+        <a href="{% url 'billing:manage_promo_export' object.pk %}" class="text-sm underline">Download CSV</a>
+    </div>
+    <ul class="mt-3 divide-y divide-gray-100 text-sm">
+        {% for row in redemptions %}
+            <li class="py-2 flex justify-between gap-3">
+                <span>{{ row.user.get_full_name }} <span class="text-gray-400">{{ row.user.email }}</span><span class="block text-xs text-gray-500">{{ row.item }}</span></span>
+                <span class="text-right whitespace-nowrap text-gray-600">{{ row.created_at|date:"M j, Y" }}<span class="block text-xs">−{{ row.discount_amount|money }}{% if row.payment %} · <a href="{% url 'billing:receipt' row.payment.reference %}" class="underline">{{ row.payment.receipt_number }}</a>{% endif %}</span></span>
+            </li>
+        {% empty %}<li class="py-2 text-gray-500">Not used yet.</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load i18n topic_tags %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-12 md:py-16">
+    <nav aria-label="{% trans 'Breadcrumb' %}" class="font-mono-editorial text-xs text-muted-foreground">
+        <a href="{% url 'articles:topic_list' %}" class="hover:text-accent">{% trans "TOPICS" %}</a> <span aria-hidden="true">/</span>
+    </nav>
+    <div class="mt-3 flex flex-wrap items-end justify-between gap-4 pb-6 border-b-2 border-foreground">
+        <div>
+            <h1 class="font-display text-4xl md:text-5xl font-bold" style="letter-spacing: -0.025em;"><span class="text-accent">#</span>{{ hashtag|slice:"1:" }}</h1>
+            <p class="mt-2 text-sm text-muted-foreground">
+                {{ keyword.name }} ·
+                {% blocktrans count n=total %}{{ n }} story{% plural %}{{ n }} stories{% endblocktrans %}
+            </p>
+        </div>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'articles:keyword_follow_toggle' keyword.slug %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="font-mono-editorial text-xs tracking-widest px-4 py-2 border {% if is_following %}border-foreground bg-foreground text-primary-foreground hover:bg-accent hover:border-accent{% else %}border-foreground hover:border-accent hover:text-accent{% endif %} transition-colors">
+                    {% if is_following %}{% trans "FOLLOWING ✓" %}{% else %}{% trans "+ FOLLOW" %}{% endif %}
+                </button>
+            </form>
+        {% else %}
+            <a href="{% url 'users:login' %}?next={{ request.path|urlencode }}" class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:border-accent hover:text-accent">{% trans "LOG IN TO FOLLOW" %}</a>
+        {% endif %}
+    </div>
+
+    <div class="mt-10 grid gap-10 lg:grid-cols-12">
+        <section class="lg:col-span-9" aria-labelledby="topic-stories">
+            <h2 id="topic-stories" class="sr-only">{% trans "Stories" %}</h2>
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {% for article in articles %}
+                    {% include 'articles/includes/article_card.html' with show_summary=True %}
+                {% endfor %}
+            </div>
+            {% if page_obj.has_other_pages %}
+                <nav class="mt-10 flex items-center justify-between font-mono-editorial text-xs tracking-widest" aria-label="{% trans 'Pages' %}">
+                    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="border border-foreground px-4 py-2 hover:text-accent hover:border-accent">← {% trans "NEWER" %}</a>{% else %}<span></span>{% endif %}
+                    <span class="text-muted-foreground">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="border border-foreground px-4 py-2 hover:text-accent hover:border-accent">{% trans "OLDER" %} →</a>{% else %}<span></span>{% endif %}
+                </nav>
+            {% endif %}
+        </section>
+        <aside class="lg:col-span-3" aria-labelledby="related-topics">
+            {% if related %}
+                <h2 id="related-topics" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "RELATED TOPICS" %}</h2>
+                <ul class="flex flex-wrap gap-2">
+                    {% for topic in related %}
+                        <li><a href="{{ topic.get_absolute_url }}" class="inline-block border border-border px-3 py-1.5 text-sm hover:border-foreground hover:text-accent">{{ topic.name|hashtag }}</a></li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            <a href="{% url 'articles:topic_list' %}" class="mt-6 inline-block font-mono-editorial text-xs tracking-widest underline hover:text-accent">{% trans "ALL TOPICS →" %}</a>
+        </aside>
+    </div>
+</div>
+{% endblock %}

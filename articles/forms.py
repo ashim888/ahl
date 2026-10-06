@@ -12,7 +12,7 @@ from sections.models import Section
 from users.models import User
 
 from . import bylines as byline_utils
-from .models import Article, ArticleCorrection, ArticleNote, Author, Keyword
+from .models import Article, ArticleCorrection, ArticleNote, Author, Keyword, keyword_slug
 from .sanitize import sanitize_editorial_html
 
 
@@ -44,7 +44,7 @@ class TagifyKeywordsField(forms.CharField):
         keywords = []
         for raw_name in raw_names:
             name = raw_name.strip()
-            slug = slugify(name)
+            slug = keyword_slug(name)
             if not slug or slug in seen_slugs:
                 continue
             seen_slugs.add(slug)
@@ -179,7 +179,8 @@ class ArticleForm(forms.ModelForm):
         }
         help_texts = {
             'title': '',
-            'abstract': 'Optional. One or two sentences shown under the headline and on article cards.',
+            'abstract': 'One or two sentences (about 120–220 characters) shown under the headline and on article cards. '
+                        'Use “Suggest one-liners” to pick the strongest lines from your text, then edit.',
             'video_url': 'Optional. A YouTube link (watch, youtu.be, Shorts or live). The player appears at the top of '
                          'the story; on a free story its thumbnail is used when there is no featured image. For a '
                          'subscriber-only video, upload it to YouTube as Unlisted and add a featured image — '

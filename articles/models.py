@@ -1,4 +1,5 @@
 import datetime
+import re
 import secrets
 import string
 
@@ -41,6 +42,19 @@ def generate_short_code():
     return ''.join(secrets.choice(SHORT_CODE_ALPHABET) for _ in range(SHORT_CODE_LENGTH))
 
 
+def keyword_slug(name: str) -> str:
+    """URL slug for a keyword. English: Django's slugify ('Type 2
+    Diabetes' → 'type-2-diabetes'). Anything else keeps its letters —
+    Django's slugify(allow_unicode=True) would drop Devanagari vowel signs
+    and viramas and mangle the word — with spaces and punctuation turned
+    into hyphens ('मानसिक स्वास्थ्य' → 'मानसिक-स्वास्थ्य')."""
+    ascii_slug = slugify(name)
+    if ascii_slug and name.isascii():
+        return ascii_slug
+    cleaned = re.sub(r'[^\w\u0900-\u097F]+', '-', name.strip().lower())
+    return cleaned.strip('-_')[:100] or ascii_slug
+
+
 class Keyword(models.Model):
     """A normalized tag, replacing what used to be a raw comma-separated
     string on Article.keywords (August 2026) — the free-text version let
@@ -55,7 +69,7 @@ class Keyword(models.Model):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True, allow_unicode=True)
 
     class Meta:
         ordering = ['name']
@@ -65,8 +79,12 @@ class Keyword(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = keyword_slug(self.name)
         super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        """The topic page (/topics/<slug>/, articles/topics.py)."""
+        return reverse('articles:topic_detail', args=[self.slug])
 
 
 class Article(models.Model):
@@ -347,7 +365,11 @@ class Article(models.Model):
         # uniqueness retry loop needed here the way _unique_article_slug
         # needs one elsewhere for slugs without a code suffix.
         if not self.slug:
-            base = slugify(self.title) or 'article'
+            # Nepali headlines are romanized first (articles/transliterate.py) —
+            # slugify alone drops Devanagari and left "article-3f2a4".
+            from .transliterate import romanize
+
+            base = slugify(romanize(self.title))[:80].rstrip('-') or 'article'
             self.slug = f'{base}-{self.short_code}'
         # published_at/publication_date are automatic — stamped the moment
         # status becomes Published and never re-stamped by a later edit. A

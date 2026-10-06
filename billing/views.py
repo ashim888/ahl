@@ -10,6 +10,7 @@ from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.translation import gettext as _
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
@@ -26,7 +27,7 @@ from .forms import GrantPurchaseForm, GrantSubscriptionForm, OrganizationForm, S
 from .gateway import charge_safely
 from . import org_views
 from .models import ArticlePurchase, Organization, OrganizationMember, Payment, SubscriptionPlan, UserSubscription
-from .money import format_money, vat_breakdown
+from .money import format_money
 from .services import next_start_date, paid_through
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,80 @@ def _buyer_pan(request):
         return payments.clean_pan(request.POST.get('buyer_pan', '')), None
     except ValueError as exc:
         return '', str(exc)
+
+
+def checkout_promo(request, *, kind, price, plan=None, article=None, course=None) -> tuple[dict, bool]:
+    """The promo code on a checkout (billing/promotions.py): applied with
+    the "Apply" button (or carried from a /redeem/<CODE>/ link in the
+    session), removed with "Remove". Re-validated on every request, so a code
+    that stopped being valid is dropped before payment.
+
+    Returns (quote, handled): `quote` is promotions.quote() for the price
+    to charge; `handled` is True when this POST only applied or removed a
+    code (the view just shows the page again)."""
+    from . import promotions
+
+    session_code = request.session.get(promotions.SESSION_KEY, '')
+    handled = False
+    if request.method == 'POST' and 'remove_code' in request.POST:
+        request.session.pop(promotions.SESSION_KEY, None)
+        return promotions.quote(price), True
+    if request.method == 'POST' and 'apply_code' in request.POST:
+        session_code = request.POST.get('promo_code', '').strip().upper()
+        handled = True
+        if not session_code:
+            return promotions.quote(price), True
+    code = promotions.find(session_code)
+    if session_code and code is None:
+        request.session.pop(promotions.SESSION_KEY, None)
+        if handled:
+            messages.error(request, _('We don’t recognise that code — check the spelling.'))
+        return promotions.quote(price), handled
+    if code is None:
+        return promotions.quote(price), handled
+    try:
+        promotions.validate(code, request.user, kind=kind, plan=plan, article=article, course=course)
+    except promotions.PromoError as exc:
+        if handled or request.method == 'POST':
+            messages.error(request, str(exc))
+        if handled:
+            request.session.pop(promotions.SESSION_KEY, None)
+        return promotions.quote(price), handled
+    request.session[promotions.SESSION_KEY] = code.code
+    if handled:
+        messages.success(request, _('Code %(code)s applied.') % {'code': code.code})
+    return promotions.quote(price, code), handled
+
+
+def _pay_with_quote(request, quote, *, kind, description, success, plan=None, article=None, course=None,
+                    return_path='', buyer_pan=''):
+    """Charge `quote['price']` (after any promo code) through Fonepay or the
+    stub gateway — or, when a code made it free, grant it with no payment.
+    Returns a redirect, or None when the stub payment failed (message shown)."""
+    from . import promotions
+
+    code = quote['code']
+    item = {'plan': plan, 'article': article, 'course': course}
+    if quote['is_free']:
+        promotions.grant_free(code, request.user, kind=kind, description=description, discount=quote['discount'], **item)
+        request.session.pop(promotions.SESSION_KEY, None)
+        messages.success(request, _('Done — code %(code)s covered the full price.') % {'code': code.code})
+        return redirect(success)
+    promo = {'promo_code': code, 'list_price': quote['list_price']} if code else {}
+    if payments.uses_fonepay():
+        return _start_fonepay(request, kind=kind, price=quote['price'], description=description,
+                              return_path=return_path, buyer_pan=buyer_pan, **item, **promo)
+    result = charge_safely(request.user, quote['total'], description)
+    if not result.success:
+        messages.error(request, result.error or 'Payment failed — please try again.')
+        return None
+    payment = payments.record_paid_payment(
+        user=request.user, kind=kind, price=quote['price'], description=description, gateway=Payment.Gateway.STUB,
+        return_path=return_path, buyer_pan=buyer_pan, **item, **promo,
+    )
+    Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
+    request.session.pop(promotions.SESSION_KEY, None)
+    return payment
 
 
 def _next_path(request) -> str:
@@ -165,29 +240,23 @@ def subscribe_checkout(request, pk):
     ends = starts + datetime.timedelta(days=plan.duration_days)
     description = f'Subscription — {plan.name}'
 
-    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' else ('', None)
+    quote, handled = checkout_promo(request, kind=Payment.Kind.SUBSCRIPTION, price=plan.price, plan=plan)
+    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' and not handled else ('', None)
     if pan_error:
         messages.error(request, pan_error)
-    elif request.method == 'POST' and payments.uses_fonepay():
-        return _start_fonepay(
-            request, kind=Payment.Kind.SUBSCRIPTION, price=plan.price, description=description, plan=plan,
-            return_path=next_path, buyer_pan=buyer_pan,
+    elif request.method == 'POST' and not handled:
+        result = _pay_with_quote(
+            request, quote, kind=Payment.Kind.SUBSCRIPTION, description=description, plan=plan,
+            success=next_path or reverse('billing:account'), return_path=next_path, buyer_pan=buyer_pan,
         )
-    elif request.method == 'POST':
-        subtotal, vat, total = vat_breakdown(plan.price)
-        result = charge_safely(request.user, total, description)
-        if result.success:
-            payment = payments.record_paid_payment(
-                user=request.user, kind=Payment.Kind.SUBSCRIPTION, plan=plan, price=plan.price,
-                description=description, gateway=Payment.Gateway.STUB, return_path=next_path, buyer_pan=buyer_pan,
-            )
-            Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
+        if isinstance(result, Payment):
             messages.success(request, f'Subscribed to "{plan.name}" — active until {ends:%-d %b %Y}.')
-            return redirect(payments.success_url(payment))
-        messages.error(request, result.error or 'Payment failed — please try again.')
+            return redirect(payments.success_url(result))
+        if result is not None:
+            return result
 
     return render(request, 'billing/subscribe_checkout.html', {
-        'plan': plan, 'starts': starts, 'ends': ends, 'is_renewal': starts > timezone.localdate(),
+        'plan': plan, 'starts': starts, 'ends': ends, 'is_renewal': starts > timezone.localdate(), 'quote': quote,
         'next_path': next_path, 'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
     })
 
@@ -202,29 +271,24 @@ def purchase_checkout(request, slug):
         return redirect('articles:article_detail', slug=article.slug)
 
     description = f'Article — {article.title}'
-    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' else ('', None)
+    quote, handled = checkout_promo(request, kind=Payment.Kind.ARTICLE, price=article.price, article=article)
+    buyer_pan, pan_error = _buyer_pan(request) if request.method == 'POST' and not handled else ('', None)
     if pan_error:
         messages.error(request, pan_error)
-    elif request.method == 'POST' and payments.uses_fonepay():
-        return _start_fonepay(
-            request, kind=Payment.Kind.ARTICLE, price=article.price, description=description, article=article,
-            buyer_pan=buyer_pan,
+    elif request.method == 'POST' and not handled:
+        result = _pay_with_quote(
+            request, quote, kind=Payment.Kind.ARTICLE, description=description, article=article,
+            success=article.get_absolute_url(), buyer_pan=buyer_pan,
         )
-    elif request.method == 'POST':
-        subtotal, vat, total = vat_breakdown(article.price)
-        result = charge_safely(request.user, total, description)
-        if result.success:
-            payment = payments.record_paid_payment(
-                user=request.user, kind=Payment.Kind.ARTICLE, article=article, price=article.price,
-                description=description, gateway=Payment.Gateway.STUB, buyer_pan=buyer_pan,
-            )
-            Payment.objects.filter(pk=payment.pk).update(gateway_trace_id=result.reference[:64])
+        if isinstance(result, Payment):
             messages.success(request, f'Purchased "{article.title}".')
             return redirect('articles:article_detail', slug=article.slug)
-        messages.error(request, result.error or 'Payment failed — please try again.')
+        if result is not None:
+            return result
 
     return render(request, 'billing/purchase_checkout.html', {
-        'article': article, 'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
+        'article': article, 'quote': quote,
+        'buyer_pan': request.POST.get('buyer_pan') or payments.last_buyer_pan(request.user),
     })
 
 

@@ -99,4 +99,4 @@
 .policy-text a:hover { color: #c0392b; }
 
 /* Search results (articles/search_results.html): matched words. */
-.search-snippet mark { background: #fde68a; color: inherit; padding: 0 0.1em; }
+.search-snippet mark { background: #fde68a; color: #111110; padding: 0 0.1em; }

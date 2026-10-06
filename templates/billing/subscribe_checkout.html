@@ -21,7 +21,7 @@
             {% else %}{% blocktrans with start=starts|date:"j M Y" end=ends|date:"j M Y" %}Access {{ start }} – {{ end }}{% endblocktrans %}{% endif %}
         </div>
         {% blocktrans asvar days_label with days=plan.duration_days %}{{ days }} days access{% endblocktrans %}
-        {% include 'billing/includes/bill_summary.html' with price=plan.price label=days_label %}
+        {% include 'billing/includes/bill_summary.html' with quote=quote label=days_label %}
     </div>
     <p class="mt-3 text-xs text-muted-foreground">{% trans "Subscriptions don’t renew automatically — we’ll email you before yours ends." %}</p>
 
@@ -33,13 +33,15 @@
     </p>
     {% endif %}
 
+    {% include 'billing/includes/promo_field.html' %}
+
     <form method="post" class="mt-6">
         {% csrf_token %}
         {% include 'billing/includes/buyer_pan_field.html' %}
         {% if next_path %}<input type="hidden" name="next" value="{{ next_path }}">{% endif %}
         <button type="submit" data-loading-text="{% if PAYMENTS_LIVE %}{% trans 'TAKING YOU TO FONEPAY…' %}{% else %}{% trans 'PLEASE WAIT…' %}{% endif %}"
                 class="w-full font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
-            {% if PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & SUBSCRIBE" %}{% endif %}
+            {% if quote.is_free %}{% trans "CONFIRM — FREE WITH YOUR CODE" %}{% elif PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & SUBSCRIBE" %}{% endif %}
         </button>
     </form>
     {% include 'billing/includes/agree_terms.html' %}
