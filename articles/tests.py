@@ -410,7 +410,7 @@ class KeywordBrowsingTests(TestCase):
         article.keyword_tags.set([make_keyword('Tuberculosis'), make_keyword('Screening')])
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
         self.assertContains(response, reverse('articles:topic_detail', args=['tuberculosis']))
-        self.assertContains(response, '#Tuberculosis')
+        self.assertContains(response, 'topic-pill__name">Tuberculosis<')
 
     def test_article_list_filters_by_keyword(self):
         tb_keyword = make_keyword('Tuberculosis')
@@ -1049,13 +1049,15 @@ class SlugAndShortCodeTests(TestCase):
         article = make_article('has-a-slug', Article.ArticleType.NEWS_COMMENTARY)
         self.assertEqual(len(article.short_code), 5)
 
-    def test_blank_slug_is_generated_from_title_plus_short_code(self):
+    def test_blank_slug_is_generated_from_the_title_without_a_code(self):
+        # The short code is the article's second address (/articles/<code>/),
+        # not part of the slug (articles/slugs.py).
         article = Article.objects.create(
             title='Tuberculosis Screening Update', abstract='Abstract',
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
         )
-        self.assertTrue(article.slug.startswith('tuberculosis-screening-update-'))
-        self.assertTrue(article.slug.endswith(article.short_code))
+        self.assertEqual(article.slug, 'tuberculosis-screening-update')
+        self.assertEqual(len(article.short_code), 5)
 
     def test_explicit_slug_is_not_overridden(self):
         article = make_article('my-custom-slug', Article.ArticleType.NEWS_COMMENTARY)
@@ -1123,7 +1125,7 @@ class SlugAndShortCodeTests(TestCase):
         })
         article = Article.objects.get(title='Freshly Typed Headline')
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(article.slug.startswith('freshly-typed-headline-'))
+        self.assertEqual(article.slug, 'freshly-typed-headline')
         self.assertEqual(len(article.short_code), 5)
 
 

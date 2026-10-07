@@ -8,3 +8,39 @@
   .bg-foreground .text-accent,
   .bg-foreground.text-accent { color: theme('colors.accent-on-dark'); }
 }
+
+/* Topic hashtags (#Dengue) — one component everywhere: article page, cards,
+   homepage "Trending", topic pages, search (articles/includes/topic_pill.html).
+   A soft tinted chip with the "#" in a red disc; it fills red and lifts on
+   hover. --hot is the dark variant for the top trending topics. */
+@layer components {
+  .topic-pill {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full border border-accent/20 bg-gradient-to-br from-accent/[0.07] to-amber-50/80
+           font-medium text-foreground whitespace-nowrap transition duration-200 ease-out
+           hover:-translate-y-px hover:border-accent hover:bg-accent hover:from-accent hover:to-accent hover:text-white
+           hover:shadow-[0_8px_18px_-8px_rgba(192,57,43,0.6)]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2;
+  }
+  .topic-pill__hash {
+    @apply inline-flex shrink-0 items-center justify-center rounded-full bg-accent font-sans font-extrabold leading-none text-white
+           transition-colors duration-200;
+  }
+  .topic-pill:hover .topic-pill__hash { @apply bg-white text-accent; }
+  .topic-pill__name { @apply min-w-0 truncate; }
+  .topic-pill__count {
+    @apply rounded-full bg-foreground/[0.06] px-1.5 py-px text-[0.85em] font-normal tabular-nums text-muted-foreground transition-colors;
+  }
+  .topic-pill:hover .topic-pill__count { @apply bg-white/20 text-white; }
+
+  .topic-pill--sm { @apply py-0.5 pl-0.5 pr-2.5 text-[11px]; }
+  .topic-pill--sm .topic-pill__hash { @apply h-4 w-4 text-[10px]; }
+  .topic-pill--md { @apply py-1 pl-1 pr-3 text-xs; }
+  .topic-pill--md .topic-pill__hash { @apply h-5 w-5 text-[12px]; }
+  .topic-pill--lg { @apply py-1.5 pl-1.5 pr-4 text-sm; }
+  .topic-pill--lg .topic-pill__hash { @apply h-6 w-6 text-[14px]; }
+
+  .topic-pill--hot { @apply border-foreground bg-foreground from-foreground to-foreground text-primary-foreground; }
+  .topic-pill--hot .topic-pill__count { @apply bg-white/15 text-white/80; }
+  .topic-pill__rank { @apply font-mono-editorial text-[0.8em] font-bold text-accent-on-dark; }
+  .topic-pill:hover .topic-pill__rank { @apply text-white; }
+}

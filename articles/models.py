@@ -130,7 +130,7 @@ class Article(models.Model):
     title = models.CharField(max_length=500)
     slug = models.SlugField(
         max_length=500, unique=True, blank=True,
-        help_text='Leave blank to generate from the title (plus a short unique code, e.g. "my-article-3f2a4").',
+        help_text='Leave blank to make it from the headline (e.g. "dengue-cases-rise-kathmandu").',
     )
     short_code = models.CharField(
         max_length=SHORT_CODE_LENGTH, unique=True, blank=True, editable=False,
@@ -356,21 +356,17 @@ class Article(models.Model):
         # seed_demo_data, Django admin, ...) since every path ends up here.
         if not self.short_code:
             code = generate_short_code()
-            while Article.objects.filter(short_code=code).exists():
+            while Article.objects.filter(Q(short_code=code) | Q(slug=code)).exists():
                 code = generate_short_code()
             self.short_code = code
-        # Auto-slug from the title when an editor leaves it blank
-        # (ArticleForm makes it optional) — the short_code suffix means two
-        # articles with the same title can never collide, so there's no
-        # uniqueness retry loop needed here the way _unique_article_slug
-        # needs one elsewhere for slugs without a code suffix.
+        # Auto-slug from the headline when an editor leaves it blank — the
+        # same slug the editor's slug checker suggests (articles/slugs.py),
+        # with "-2", "-3"… only on a clash. No code suffix: short_code is
+        # the article's second address already (/articles/<code>/).
         if not self.slug:
-            # Nepali headlines are romanized first (articles/transliterate.py) —
-            # slugify alone drops Devanagari and left "article-3f2a4".
-            from .transliterate import romanize
+            from .slugs import suggest_slug, unique_article_slug
 
-            base = slugify(romanize(self.title))[:80].rstrip('-') or 'article'
-            self.slug = f'{base}-{self.short_code}'
+            self.slug = unique_article_slug(suggest_slug(self.title) or f'article-{self.short_code}', exclude_pk=self.pk)
         # published_at/publication_date are automatic — stamped the moment
         # status becomes Published and never re-stamped by a later edit. A
         # time still in the future (left over from a schedule that was

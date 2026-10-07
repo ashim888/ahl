@@ -140,15 +140,11 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             </h1>
 
             {% if keyword_list %}
-                <div class="flex flex-wrap gap-2 mb-6">
+                <ul class="flex flex-wrap gap-2 mb-6" aria-label="{% trans 'Topics' %}">
                     {% for kw in keyword_list %}
-                        <a href="{{ kw.get_absolute_url }}"
-                           {% if not preview_mode %}data-keyword-click="{% url 'articles:keyword_click' kw.pk %}" data-placement="header"{% endif %}
-                           class="font-mono-editorial text-[0.7rem] tracking-wide bg-secondary text-foreground px-2.5 py-1 rounded-full hover:bg-foreground hover:text-primary-foreground transition-colors">
-                            {{ kw.name|hashtag }}
-                        </a>
+                        <li class="max-w-full">{% if preview_mode %}{% include 'articles/includes/topic_pill.html' with topic=kw %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=kw placement='header' %}{% endif %}</li>
                     {% endfor %}
-                </div>
+                </ul>
             {% endif %}
 
             {% if article.abstract %}
@@ -407,15 +403,15 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% endif %}
 
             {% if keyword_list %}
-                <div class="flex flex-wrap gap-2 mt-12 pt-8 border-t border-border">
-                    {% for kw in keyword_list %}
-                        <a href="{{ kw.get_absolute_url }}"
-                           {% if not preview_mode %}data-keyword-click="{% url 'articles:keyword_click' kw.pk %}" data-placement="footer"{% endif %}
-                           class="font-mono-editorial text-xs border border-border px-3 py-1 hover:border-foreground hover:text-accent transition-colors">
-                            {{ kw.name|hashtag }}
-                        </a>
-                    {% endfor %}
-                </div>
+                <section class="mt-12 pt-8 border-t border-border" aria-labelledby="story-topics">
+                    <h2 id="story-topics" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "TOPICS IN THIS STORY" %}</h2>
+                    <ul class="flex flex-wrap gap-2.5">
+                        {% for kw in keyword_list %}
+                            <li class="max-w-full">{% if preview_mode %}{% include 'articles/includes/topic_pill.html' with topic=kw size='lg' %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=kw size='lg' placement='footer' %}{% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{% url 'articles:topic_list' %}" class="mt-4 inline-block font-mono-editorial text-[0.7rem] tracking-widest text-muted-foreground hover:text-accent">{% trans "EXPLORE ALL TOPICS →" %}</a>
+                </section>
             {% endif %}
 
             {% if not preview_mode %}

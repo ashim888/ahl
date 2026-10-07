@@ -30,9 +30,10 @@ urlpatterns = [
     path('feed/', LatestArticlesFeed(), name='latest_feed'),
     path('feed/atom/', LatestArticlesAtomFeed(), name='latest_feed_atom'),
     # Must come before <slug:slug> below — a bare short code (e.g. "3f2a4")
-    # would otherwise match the slug converter too (it's a valid slug shape)
-    # and 404 there, since a real slug is the full "title-slug-code" string,
-    # never just the code alone. Django tries patterns in list order.
+    # would otherwise match the slug converter too (it's a valid slug shape).
+    # Every article answers at both /articles/<slug>/ and /articles/<code>/
+    # (which redirects to the slug); a slug is never another article's code
+    # (articles/slugs.py, ArticleForm.clean_slug). Django tries patterns in order.
     path('articles/<shortcode:code>/', views.article_short_link, name='article_short_link'),
     path('articles/<slug:slug>/', views.ArticleDetailView.as_view(), name='article_detail'),
     # Numeric form first: the old user-id URLs keep redirecting. Author.save()

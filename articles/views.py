@@ -1315,8 +1315,8 @@ def article_autosave(request):
     article = form.save(commit=False)
     if instance is None:
         article.status = Article.Status.DRAFT
-    # A blank slug is auto-generated (from the title + a unique short_code)
-    # by Article.save() itself now — no need to pre-fill it here.
+    # A blank slug is made from the headline by Article.save()
+    # (articles/slugs.py) — no need to pre-fill it here.
 
     try:
         article.save()

@@ -12,24 +12,24 @@
     {% if trending %}
         <section class="mt-10" aria-labelledby="trending-heading">
             <h2 id="trending-heading" class="font-mono-editorial text-xs tracking-widest text-accent mb-3">{% trans "TRENDING" %}</h2>
-            <ul class="flex flex-wrap gap-2">
+            <ul class="flex flex-wrap gap-2.5">
                 {% for topic in trending %}
-                    <li><a href="{{ topic.get_absolute_url }}" class="inline-block bg-foreground text-primary-foreground px-3.5 py-2 text-sm hover:bg-accent">{{ topic.name|hashtag }}</a></li>
+                    <li>{% if forloop.counter <= 3 %}{% include 'articles/includes/topic_pill.html' with topic=topic size='lg' count=topic.story_count rank=forloop.counter hot=True %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=topic size='lg' count=topic.story_count rank=forloop.counter %}{% endif %}</li>
                 {% endfor %}
             </ul>
         </section>
     {% endif %}
 
     <nav class="mt-10 flex flex-wrap gap-1 font-mono-editorial text-xs" aria-label="{% trans 'Jump to letter' %}">
-        {% for letter, topics in groups %}<a href="#letter-{{ forloop.counter }}" class="border border-border px-2 py-1 hover:border-foreground hover:text-accent">{{ letter }}</a>{% endfor %}
+        {% for letter, topics in groups %}<a href="#letter-{{ forloop.counter }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-border px-2 hover:border-accent hover:bg-accent hover:text-white transition-colors">{{ letter }}</a>{% endfor %}
     </nav>
-    <div class="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
         {% for letter, topics in groups %}
-            <section id="letter-{{ forloop.counter }}" aria-labelledby="letter-heading-{{ forloop.counter }}" class="scroll-mt-24">
+            <section id="letter-{{ forloop.counter }}" aria-labelledby="letter-heading-{{ forloop.counter }}" class="scroll-mt-24 min-w-0">
                 <h2 id="letter-heading-{{ forloop.counter }}" class="font-display text-2xl font-bold border-b border-border pb-1 mb-2">{{ letter }}</h2>
-                <ul class="space-y-1.5 text-sm">
+                <ul class="flex flex-wrap gap-2">
                     {% for topic in topics %}
-                        <li class="flex justify-between gap-3"><a href="{{ topic.get_absolute_url }}" class="hover:text-accent">{{ topic.name|hashtag }}</a><span class="text-muted-foreground">{{ topic.article_count }}</span></li>
+                        <li class="max-w-full">{% include 'articles/includes/topic_pill.html' with topic=topic count=topic.article_count %}</li>
                     {% endfor %}
                 </ul>
             </section>

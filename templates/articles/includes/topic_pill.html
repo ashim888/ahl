@@ -1,0 +1,12 @@
+{% load topic_tags %}{% comment %}
+One topic as a #hashtag pill (styles: .topic-pill in static/src/input.css).
+  topic      a Keyword
+  size       sm (cards) | md (default) | lg (topic pages)
+  count      optional story count shown at the end
+  rank       optional trending position (1, 2, 3…)
+  hot        dark variant, for the top trending topics
+  placement  article-page pills report clicks to keyword analytics (header/footer)
+  extra      extra classes (e.g. "relative z-10" inside a whole-card link)
+The class is built from `size`, so Tailwind needs the full names written out
+here to keep them in the CSS: topic-pill--sm topic-pill--md topic-pill--lg topic-pill--hot
+{% endcomment %}<a href="{{ topic.get_absolute_url }}" title="{{ topic.name }}" class="topic-pill topic-pill--{{ size|default:'md' }}{% if hot %} topic-pill--hot{% endif %}{% if extra %} {{ extra }}{% endif %}"{% if placement %} data-keyword-click="{% url 'articles:keyword_click' topic.pk %}" data-placement="{{ placement }}"{% endif %}>{% if rank %}<span class="topic-pill__rank">{{ rank|stringformat:"02d" }}</span>{% endif %}<span class="topic-pill__hash" aria-hidden="true">#</span><span class="topic-pill__name">{{ topic.name|hashtag|slice:"1:" }}</span>{% if count %}<span class="topic-pill__count"><span class="sr-only">, </span>{{ count }}<span class="sr-only"> stories</span></span>{% endif %}</a>

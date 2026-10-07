@@ -244,11 +244,17 @@ class ArticleForm(forms.ModelForm):
             self.fields['related_articles'].initial = json.dumps(
                 [{'value': a.title, 'id': a.pk} for a in self.instance.related_articles.all()],
             )
-        # Blank is valid — Article.save() auto-generates slug + short_code
-        # from the title when left empty (see articles/models.py). Django's
-        # own unique-value validation on the ModelForm already rejects an
-        # explicitly-typed slug that collides with another article's.
+        # Blank is valid — Article.save() makes the slug from the headline
+        # (articles/slugs.py). Django's own unique-value validation on the
+        # ModelForm already rejects a typed slug that another article has.
         self.fields['slug'].required = False
+
+    def clean_slug(self):
+        slug = self.cleaned_data.get('slug', '')
+        if slug and Article.objects.exclude(pk=self.instance.pk).filter(short_code=slug).exists():
+            # /articles/<that>/ is the other article's short link.
+            raise forms.ValidationError('That is another article’s short link — add a word to make it different.')
+        return slug
 
     def clean(self):
         cleaned_data = super().clean()

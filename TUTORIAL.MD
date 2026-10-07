@@ -201,8 +201,12 @@ required to publish.
    - **URL slug** sits right under it, with a live score out of 100. It checks the slug is short
      (60 characters or less, 3–6 words), lowercase, joined by hyphens, has no filler words
      ("the", "of", "ra", "ko"…), no repeated words or years, and includes the story's main word. It
-     suggests a better one; **Use "…"** fills it in. Leave the slug empty and one is made from the
-     headline — Nepali headlines are romanized (`मानसिक स्वास्थ्य` → `manasik-swasthya`). Once a
+     suggests a better one; **Use "…"** fills it in. Leave the slug empty and the same suggestion is
+     used, made from the headline — Nepali headlines are romanized (`मानसिक स्वास्थ्य` →
+     `manasik-swasthya`); a clash gets "-2", "-3". There's no code on the end any more: every
+     article also answers at its short link, `/articles/<code>/` (the **Copy short link** button),
+     which redirects to the slug. Older slugs ending in a code ("-a24x8") can drop it while still a
+     draft — the checker suggests the clean version. Once a
      story is published, don't change its slug: shared links and search results would break, and
      the checker warns you.
    - **Summary**: one or two sentences (about 120–220 characters) under the headline and on

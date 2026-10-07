@@ -1,2 +1,2 @@
-{# Topic links for a card or list row. `relative z-10` keeps them clickable above a card's whole-card link. #}
-{% load topic_tags %}{% if keywords %}<ul class="flex flex-wrap gap-x-3 gap-y-1 {{ extra_class }}">{% for kw in keywords %}<li><a href="{{ kw.get_absolute_url }}" class="relative z-10 font-mono-editorial text-[0.7rem] text-accent hover:underline">{{ kw.name|hashtag }}</a></li>{% endfor %}</ul>{% endif %}
+{# Topic pills on a card or list row (article_hashtags tag). `relative z-10` keeps them clickable above a card's whole-card link. #}
+{% if keywords %}<ul class="flex flex-wrap gap-1.5 {{ extra_class }}" aria-label="Topics">{% for kw in keywords %}<li class="max-w-full">{% include 'articles/includes/topic_pill.html' with topic=kw size='sm' extra='relative z-10' %}</li>{% endfor %}</ul>{% endif %}

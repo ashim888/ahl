@@ -49,7 +49,7 @@ class TopicPageTests(TestCase):
 
     def test_topic_page_lists_published_stories(self):
         response = self.client.get(reverse('articles:topic_detail', args=['dengue']))
-        self.assertContains(response, '#</span>Dengue')
+        self.assertContains(response, '<span>Dengue</span>')
         self.assertContains(response, 'Dengue cases rise')
         self.assertNotContains(response, 'Draft about dengue')
         self.assertEqual(response.context['total'], 2)
@@ -71,7 +71,7 @@ class TopicPageTests(TestCase):
 
     def test_topic_index_groups_and_trending(self):
         response = self.client.get(reverse('articles:topic_list'))
-        self.assertContains(response, '#Dengue')
+        self.assertContains(response, 'topic-pill__name">Dengue<')
         self.assertNotContains(response, 'SecretDraftTag')
         self.assertEqual(response.context['topic_count'], 2)
 
@@ -79,11 +79,13 @@ class TopicPageTests(TestCase):
         response = self.client.get(self.dengue.get_absolute_url())
         self.assertContains(response, f'href="{reverse("articles:topic_detail", args=["dengue"])}"')
         listing = self.client.get(reverse('articles:article_list'))
-        self.assertContains(listing, '#Monsoon')
+        self.assertContains(listing, 'topic-pill__name">Monsoon<')
 
     def test_homepage_trending_topics(self):
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, 'TRENDING TOPICS')
+        self.assertContains(response, 'topic-pill--hot')  # the top three
+        self.assertContains(response, 'topic-pill__rank">01<')
         self.assertContains(response, reverse('articles:topic_detail', args=['dengue']))
 
     def test_trending_prefers_recent_and_related_counts(self):

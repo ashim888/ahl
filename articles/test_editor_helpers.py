@@ -91,11 +91,42 @@ class RomanizedSlugTests(TestCase):
 
     def test_nepali_headline_gets_a_readable_slug(self):
         article = Article.objects.create(title='मानसिक स्वास्थ्य र युवा')
-        self.assertTrue(article.slug.startswith('manasik-swasthya-ra-yuwa-'), article.slug)
+        self.assertEqual(article.slug, 'manasik-swasthya-yuwa')
 
-    def test_english_headline_slug_unchanged(self):
-        article = Article.objects.create(title='Dengue cases rise')
-        self.assertTrue(article.slug.startswith('dengue-cases-rise-'))
+    def test_slug_is_the_clean_headline_with_no_code(self):
+        article = Article.objects.create(title='Dengue cases rise in the Kathmandu valley')
+        self.assertEqual(article.slug, 'dengue-cases-rise-kathmandu-valley')
+        self.assertNotIn(article.short_code, article.slug)
+
+    def test_clashes_get_a_number(self):
+        first = Article.objects.create(title='Dengue cases rise')
+        second = Article.objects.create(title='Dengue cases rise')
+        third = Article.objects.create(title='Dengue: cases rise!')
+        self.assertEqual([first.slug, second.slug, third.slug],
+                         ['dengue-cases-rise', 'dengue-cases-rise-2', 'dengue-cases-rise-3'])
+
+    def test_short_code_still_finds_the_article(self):
+        article = Article.objects.create(title='Dengue cases rise', status=Article.Status.PUBLISHED)
+        response = self.client.get(reverse('articles:article_short_link', args=[article.short_code]))
+        self.assertRedirects(response, article.get_absolute_url(), status_code=301)
+
+    def test_slug_never_equals_another_articles_short_code(self):
+        from .slugs import unique_article_slug
+
+        other = Article.objects.create(title='Something else')
+        self.assertEqual(unique_article_slug(other.short_code), f'{other.short_code}-2')
+
+    def test_typed_slug_that_is_a_short_code_is_refused(self):
+        from .forms import ArticleForm
+
+        other = Article.objects.create(title='Something else')
+        form = ArticleForm(data={'title': 'Mine', 'slug': other.short_code})
+        form.is_valid()
+        self.assertIn('slug', form.errors)
+
+    def test_headline_with_no_usable_words(self):
+        article = Article.objects.create(title='?!')
+        self.assertEqual(article.slug, f'article-{article.short_code}')
 
 
 class SlugCheckerTests(TestCase):
@@ -121,6 +152,23 @@ class SlugCheckerTests(TestCase):
                   'console.log(JSON.stringify(cases.map(c=>S.romanize(c))));')
         output = subprocess.run([node, '-e', script], capture_output=True, text=True, timeout=30, check=True).stdout
         self.assertEqual(json.loads(output), [romanize(text) for text in RomanizedSlugTests.CASES])
+
+    def test_js_and_python_suggestions_agree(self):
+        from .slugs import suggest_slug
+
+        node = shutil.which('node')
+        if not node:
+            self.skipTest('node not installed')
+        cases = [
+            ['Dengue cases rise in the Kathmandu valley', []], ['What is RADAR and why does it matter?', ['AI']],
+            ['मानसिक स्वास्थ्य र युवा', ['Mental health']], ['दशैं तथा चाडपर्वको समयमा स्वास्थ्य सजगता', []],
+            ['Nepal’s 2026 budget: what it means for health — and for you', ['Budget']], ['?!', []],
+        ]
+        script = (f'const S=require({json.dumps(str(CHECKER))});'
+                  f'const cases={json.dumps(cases, ensure_ascii=False)};'
+                  'console.log(JSON.stringify(cases.map(c=>S.suggest(c[0], c[1]))));')
+        output = subprocess.run([node, '-e', script], capture_output=True, text=True, timeout=30, check=True).stdout
+        self.assertEqual(json.loads(output), [suggest_slug(title, keywords) for title, keywords in cases])
 
     def test_node_suite_passes(self):
         node = shutil.which('node')

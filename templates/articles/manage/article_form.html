@@ -556,7 +556,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     previewSourcePkInput.value = data.article_pk;
                     editUrlInput.value = data.edit_url || '';
                     var slugField = document.getElementById('id_slug');
-                    if (slugField && !slugField.value) slugField.value = data.slug;
+                    if (slugField && !slugField.value) {
+                        slugField.value = data.slug;
+                        slugField.dispatchEvent(new Event('input', {bubbles: true}));  // refresh the slug check
+                    }
                     savedSnapshot = pending;
                     var tokenField = document.getElementById('id_edit_token');
                     if (tokenField && data.edit_token) tokenField.value = data.edit_token;
@@ -726,8 +729,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var context = {title: title ? title.value : '', keywords: keywordNames(),
                            published: helper.dataset.published === '1', original: helper.dataset.original};
             var value = slug.value.trim();
-            var shown = value || SlugQuality.suggest(context.title, context.keywords);
-            var result = SlugQuality.check(value || shown, context);
+            // A blank slug becomes suggest(headline) on save (articles/slugs.py) — preview exactly that.
+            var shown = value || SlugQuality.suggest(context.title, []);
+            var result = SlugQuality.check(shown, context);
             preview.textContent = shown || '…';
             grade.className = 'inline-flex items-center rounded-full px-2 py-0.5 font-semibold ' + COLOURS[result.grade];
             grade.textContent = (value ? 'Slug ' : 'Auto slug ') + result.score + '/100';
@@ -743,7 +747,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 li.appendChild(icon); li.appendChild(text);
                 issuesList.appendChild(li);
             });
-            var suggestion = result.suggestion && result.suggestion !== value ? result.suggestion : '';
+            // Offer the best slug (headline + topics) whenever the field doesn't already hold it —
+            // also when it's blank or was filled in automatically.
+            var best = SlugQuality.suggest(context.title, context.keywords);
+            var suggestion = best && best !== value ? best : '';
             useButton.classList.toggle('hidden', !suggestion);
             useButton.textContent = 'Use “' + suggestion + '”';
             useButton.dataset.slug = suggestion;
@@ -752,10 +759,12 @@ document.addEventListener('DOMContentLoaded', function () {
             slug.value = useButton.dataset.slug;
             render();
         });
-        [slug, title].forEach(function (el) { if (el) el.addEventListener('input', render); });
+        [slug, title].forEach(function (el) { if (el) { el.addEventListener('input', render); el.addEventListener('change', render); } });
         var keywords = document.getElementById('id_keywords');
         if (keywords) keywords.addEventListener('change', render);
         render();
+        // Again once Tagify has filled the topics field.
+        window.addEventListener('load', render);
     })();
 
     // ---- Summary helper: length guide + suggestions ----------------------

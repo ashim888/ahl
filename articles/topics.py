@@ -55,6 +55,9 @@ def trending_topics(limit: int = 12) -> list:
             taken = {k.pk for k in recent}
             recent += [k for k in public_topics().order_by('-article_count', 'name')[:limit * 2] if k.pk not in taken][
                 :limit - len(recent)]
+        for topic in recent:
+            # One number for the pill: stories in the window, or overall for fill-ins.
+            topic.story_count = getattr(topic, 'recent', None) or getattr(topic, 'article_count', 0)
         return recent
 
     return cache.get_or_set(f'topics:trending:{limit}', load, TRENDING_CACHE_SECONDS)

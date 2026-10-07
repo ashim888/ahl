@@ -50,7 +50,7 @@
     {% if matching_topics %}
         <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
             <span class="font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "TOPICS" %}</span>
-            {% for topic in matching_topics %}<a href="{{ topic.get_absolute_url }}" class="border border-border px-2.5 py-1 hover:border-foreground hover:text-accent">{{ topic.name|hashtag }} <span class="text-muted-foreground">{{ topic.article_count }}</span></a>{% endfor %}
+            {% for topic in matching_topics %}{% include 'articles/includes/topic_pill.html' with topic=topic count=topic.article_count %}{% endfor %}
         </div>
     {% endif %}
 

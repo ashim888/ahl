@@ -165,7 +165,9 @@
       if (meaningful.some(function (w) { return /^(19|20)\d\d$/.test(w) || /^20[78]\d$/.test(w); })) {
         add('tip', 'year', 'A year makes the address look out of date later — leave it out unless the date is the story.');
       }
-      if (codeSuffix) add('tip', 'code_suffix', 'The “-' + parts[parts.length - 1] + '” code keeps the address unique but means nothing to readers; drop it if the rest is unique.');
+      // Old slugs ended in the short code ("-m7syr"). The code is already the article's own short
+      // link (/articles/m7syr/), so it isn't needed in the slug — worth removing before publishing.
+      if (codeSuffix && !context.published) add('tip', 'code_suffix', 'Remove the “-' + parts[parts.length - 1] + '” on the end — it’s the article’s short-link code (/articles/' + parts[parts.length - 1] + '/ already works), not needed in the slug.');
 
       var focus = [];
       (context.keywords || []).forEach(function (k) { focus.push(words(k)); });
