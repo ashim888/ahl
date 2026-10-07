@@ -227,6 +227,13 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT', '3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
+            # Search (articles/search.py): the ngram FULLTEXT index on titles
+            # must be built without MySQL's stopword list, or every 2-letter
+            # chunk containing "a", "is"… is dropped and words like "malaria"
+            # never match. MySQL rebuilds FULLTEXT indexes whenever a migration
+            # rebuilds the table (e.g. adds a column), using the session's
+            # setting — so every connection, including `migrate`, keeps it off.
+            'init_command': 'SET SESSION innodb_ft_enable_stopword=OFF',
         },
     }
 }

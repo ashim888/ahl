@@ -855,6 +855,34 @@ document.addEventListener('DOMContentLoaded', function () {
             slug.value = useButton.dataset.slug;
             render();
         });
+
+        // Image description follows the slug (articles/slugs.py alt_from_slug)
+        // until an editor writes their own: it's only replaced while it's
+        // empty or still the last value filled in from the slug.
+        var alt = document.getElementById('id_featured_image_alt');
+        function altFromSlug(value) {
+            var words = (value || '').split('-').filter(Boolean);
+            if (words.length > 1 && /^\d{1,2}$/.test(words[words.length - 1])) words.pop();
+            var text = words.join(' ');
+            return (text.charAt(0).toUpperCase() + text.slice(1)).slice(0, 250);
+        }
+        if (alt) {
+            var lastAuto = alt.value.trim() ? null : '';
+            if (alt.value.trim() && alt.value === altFromSlug(slug.value.trim())) lastAuto = alt.value;
+            var syncAlt = function () {
+                if (lastAuto === null || alt.value !== lastAuto) return;  // the editor wrote their own
+                var current = slug.value.trim() || SlugQuality.suggest(title ? title.value : '', []);
+                alt.value = lastAuto = altFromSlug(current);
+            };
+            alt.addEventListener('input', function () { lastAuto = alt.value.trim() ? null : ''; syncAlt(); });
+            [slug, title].forEach(function (el) { if (el) el.addEventListener('input', syncAlt); });
+            useButton.addEventListener('click', syncAlt);
+            syncAlt();
+            var hint = document.createElement('p');
+            hint.className = 'mt-1 text-xs text-gray-500';
+            hint.textContent = 'Filled from the slug. Type your own to describe the picture instead.';
+            alt.insertAdjacentElement('afterend', hint);
+        }
         [slug, title].forEach(function (el) { if (el) { el.addEventListener('input', render); el.addEventListener('change', render); } });
         var keywords = document.getElementById('id_keywords');
         if (keywords) keywords.addEventListener('change', render);

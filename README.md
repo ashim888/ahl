@@ -273,7 +273,9 @@ Operations and security (all in `.env.example`; walkthrough in TUTORIAL.MD §18)
   `manage.py compress_images [--dry-run]`.
 - Search uses MySQL FULLTEXT indexes on `Article.search_text` (word parser) and the title (ngram,
   for Nepali and partial words) — `articles/search.py`. After bulk-importing articles, run
-  `manage.py rebuild_search_index`.
+  `manage.py rebuild_search_index`. The title index must be built with MySQL stopwords off, so
+  `DATABASES['default']['OPTIONS']['init_command']` turns them off on every connection — a migration
+  that rebuilds `articles_article` (adding a column does) then rebuilds the index correctly. Keep it.
 
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.

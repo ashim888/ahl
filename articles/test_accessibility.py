@@ -67,6 +67,25 @@ class ImageDescriptionTests(TestCase):
         self._publish(html_content='<p>Text</p><img src="/media/x.png" alt="Nurses at the Jumla clinic">')
         self.assertTrue(Article.objects.filter(slug='clinic-photos', status=Article.Status.PUBLISHED).exists())
 
-    def test_featured_image_needs_a_description(self):
-        response = self._publish(html_content='<p>Text</p>', featured_image=SimpleUploadedFile('f.png', png_bytes(), 'image/png'))
-        self.assertContains(response, 'Describe the featured image')
+    def test_featured_image_description_defaults_to_the_slug(self):
+        self._publish(html_content='<p>Text</p>', featured_image=SimpleUploadedFile('f.png', png_bytes(), 'image/png'))
+        article = Article.objects.get(slug='clinic-photos')
+        self.assertEqual(article.status, Article.Status.PUBLISHED)
+        self.assertEqual(article.featured_image_alt, 'Clinic photos')
+
+    def test_an_editors_own_description_is_kept(self):
+        self._publish(html_content='<p>Text</p>', featured_image=SimpleUploadedFile('f.png', png_bytes(), 'image/png'),
+                      featured_image_alt='Nurses outside the Jumla clinic')
+        self.assertEqual(Article.objects.get(slug='clinic-photos').featured_image_alt, 'Nurses outside the Jumla clinic')
+
+    def test_alt_from_slug(self):
+        from .slugs import alt_from_slug
+
+        self.assertEqual(alt_from_slug('dengue-cases-rise-kathmandu'), 'Dengue cases rise kathmandu')
+        self.assertEqual(alt_from_slug('dengue-cases-rise-2'), 'Dengue cases rise')
+        self.assertEqual(alt_from_slug('covid-19'), 'Covid')  # a short trailing number reads as a clash suffix
+        self.assertEqual(alt_from_slug(''), '')
+
+    def test_saving_without_the_form_fills_it_too(self):
+        article = Article.objects.create(title='Clinic photos', featured_image=SimpleUploadedFile('g.png', png_bytes(), 'image/png'))
+        self.assertEqual(article.featured_image_alt, 'Clinic photos')

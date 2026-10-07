@@ -281,6 +281,14 @@ class ArticleForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        # An empty image description is filled from the slug (or the slug the
+        # headline will get) — articles/slugs.py alt_from_slug.
+        has_image = bool(cleaned_data.get('featured_image') or (self.instance.pk and self.instance.featured_image))
+        if has_image and not (cleaned_data.get('featured_image_alt') or '').strip() and 'featured_image_alt' in self.fields:
+            from .slugs import alt_from_slug, suggest_slug
+
+            slug = cleaned_data.get('slug') or self.instance.slug or suggest_slug(cleaned_data.get('title', ''))
+            cleaned_data['featured_image_alt'] = alt_from_slug(slug)
         if cleaned_data.get('access_type') == Article.AccessType.PAY_PER_ARTICLE and not cleaned_data.get('price'):
             self.add_error('price', 'Set a price for pay-per-article articles.')
         if cleaned_data.get('article_type') == Article.ArticleType.VIDEO and not cleaned_data.get('video_url'):

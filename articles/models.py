@@ -259,7 +259,7 @@ class Article(models.Model):
     )
     featured_image_alt = models.CharField(
         'Image description (alt text)', max_length=250, blank=True,
-        help_text='What the image shows, for screen readers and search engines. Falls back to the headline.',
+        help_text='What the image shows, for screen readers and search engines. Filled from the slug when left empty.',
     )
     featured_image_caption = models.CharField(
         'Caption', max_length=300, blank=True, help_text='Shown under the image on the article page.',
@@ -438,6 +438,10 @@ class Article(models.Model):
             from .slugs import suggest_slug, unique_article_slug
 
             self.slug = unique_article_slug(suggest_slug(self.title) or f'article-{self.short_code}', exclude_pk=self.pk)
+        if self.featured_image and not (self.featured_image_alt or '').strip():
+            from .slugs import alt_from_slug
+
+            self.featured_image_alt = alt_from_slug(self.slug)
         # published_at/publication_date are automatic — stamped the moment
         # status becomes Published and never re-stamped by a later edit. A
         # time still in the future (left over from a schedule that was

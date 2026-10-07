@@ -44,6 +44,18 @@ def suggest_slug(title: str, keywords=()) -> str:
     return '-'.join(picked)
 
 
+def alt_from_slug(slug: str) -> str:
+    """The featured image's default description: the slug's words, e.g.
+    "dengue-cases-rise-kathmandu" → "Dengue cases rise kathmandu" (a clash
+    number like "-2" is dropped). Editors can replace it with a description
+    of the picture itself. Mirrored by altFromSlug() in article_form.html."""
+    words = [w for w in (slug or '').split('-') if w]
+    if len(words) > 1 and words[-1].isdigit() and len(words[-1]) < 3:
+        words = words[:-1]
+    text = ' '.join(words)
+    return (text[:1].upper() + text[1:])[:250]
+
+
 def unique_article_slug(base: str, *, exclude_pk=None) -> str:
     """`base`, or base-2, base-3… — never another article's slug, nor
     another article's short code (/articles/<code>/ is its short link)."""
