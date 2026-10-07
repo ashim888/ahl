@@ -304,6 +304,18 @@ running (see §18).
 it shows "Updated <time>" under the date — pinning or changing the homepage spot doesn't count as an
 update.
 
+**Framing the featured image:** the article banner is wide (about 2.5:1) and cards are 16:9, so a
+picture of a different shape has to be cropped or shown whole. Under the picture:
+- **Click the part that must stay visible** (a face, the main subject). The red dot marks it, and the
+  *Article banner* and *Card* previews show exactly what readers will see.
+- **How to show it:** *Auto* (the default) shows square and tall pictures — diagrams, charts,
+  posters, infographics — **whole**, centred on a soft blurred copy of themselves, and lets wide
+  photos fill the space, cropped around your dot. Choose *Fill the space* or *Show the whole image*
+  to decide yourself.
+- Best results: a **wide photo, 1600×900 or larger**. A diagram or chart reads best **inside the
+  article text** (Upload image in the editor), where it's always shown in full — use a photo as the
+  featured image when you have one.
+
 **Featured image details:** under the image upload, fill in the **Image description (alt
 text)** — what the picture shows, for screen readers and search engines. It's required before an
 article with a featured image is first published — plus an optional **Caption** and **Credit** ("Ram Shrestha / Ajna Health Lens"). The

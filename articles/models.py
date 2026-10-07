@@ -5,6 +5,7 @@ import string
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -232,7 +233,29 @@ class Article(models.Model):
         upload_to='articles/images/', null=True, blank=True,
         validators=[article_image_extension_validator, validate_featured_image_size],
         help_text='Hero/thumbnail image shown on the homepage, listing cards, and related-article links. '
-                   'JPG or PNG, up to 10 MB.',
+                   'JPG or PNG, up to 10 MB. Best: a wide photo, 1600×900 or larger.',
+    )
+    # Recorded by save() (_record_image_size) — not Django's width_field/
+    # height_field, which re-read the file whenever an article is loaded with
+    # no size yet and crash the page if the file is missing.
+    featured_image_width = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    featured_image_height = models.PositiveIntegerField(null=True, blank=True, editable=False)
+
+    class ImageFit(models.TextChoices):
+        AUTO = 'auto', 'Auto — whole image if it’s square or tall (diagrams), otherwise fill'
+        COVER = 'cover', 'Fill the space (crop the edges)'
+        CONTAIN = 'contain', 'Show the whole image'
+
+    featured_image_fit = models.CharField(
+        'How to show it', max_length=10, choices=ImageFit.choices, default=ImageFit.AUTO,
+        help_text='The banner and cards are wide. A photo can be cropped to fill them; a diagram, chart or poster '
+                  'should be shown whole.',
+    )
+    featured_image_focus_x = models.PositiveSmallIntegerField(
+        default=50, validators=[MaxValueValidator(100)], help_text='Focal point across, 0–100 (%).',
+    )
+    featured_image_focus_y = models.PositiveSmallIntegerField(
+        default=50, validators=[MaxValueValidator(100)], help_text='Focal point down, 0–100 (%).',
     )
     featured_image_alt = models.CharField(
         'Image description (alt text)', max_length=250, blank=True,
@@ -311,6 +334,53 @@ class Article(models.Model):
     def video_watch_url(self) -> str:
         return watch_url(self.video_url)
 
+    # Narrower than this (width/height) and Auto shows the image whole: the
+    # banner is ~2.5:1 and cards 16:9, so a square or tall image — usually a
+    # diagram, chart or poster — would lose its top and bottom.
+    WHOLE_IMAGE_BELOW_RATIO = 1.3
+
+    def _record_image_size(self):
+        """Width/height of the featured image, for featured_image_shows_whole:
+        read when a new picture was uploaded or the size isn't known yet. A
+        missing or unreadable file just leaves the size empty."""
+        image = self.featured_image
+        if not image:
+            self.featured_image_width = self.featured_image_height = None
+            return
+        if getattr(image, '_committed', True) is False or not (self.featured_image_width and self.featured_image_height):
+            try:
+                from django.core.files.images import get_image_dimensions
+
+                width, height = get_image_dimensions(image.file if not image._committed else image)
+            except (OSError, ValueError, TypeError):
+                width = height = None
+            self.featured_image_width, self.featured_image_height = width, height
+
+    @property
+    def featured_image_shows_whole(self) -> bool:
+        if not self.featured_image:
+            return False
+        if self.featured_image_fit == self.ImageFit.CONTAIN:
+            return True
+        if self.featured_image_fit == self.ImageFit.COVER:
+            return False
+        width, height = self.featured_image_width, self.featured_image_height
+        return bool(width and height and width / height < self.WHOLE_IMAGE_BELOW_RATIO)
+
+    @property
+    def featured_image_position(self) -> str:
+        return f'{self.featured_image_focus_x}% {self.featured_image_focus_y}%'
+
+    @property
+    def card_image_style(self) -> str:
+        """Inline style for every thumbnail of card_image_url: the whole
+        image on a soft background, or a crop that keeps the focal point."""
+        if not self.featured_image:
+            return ''
+        if self.featured_image_shows_whole:
+            return 'object-fit: contain; background-color: #efebe4;'
+        return f'object-position: {self.featured_image_position};'
+
     @property
     def card_image_url(self) -> str:
         """The picture for cards, lists and social previews: the featured
@@ -354,6 +424,7 @@ class Article(models.Model):
         # already exist by the time that runs. Applies regardless of how the
         # article was created (the editorial form, the pitches accept flow,
         # seed_demo_data, Django admin, ...) since every path ends up here.
+        self._record_image_size()
         if not self.short_code:
             code = generate_short_code()
             while Article.objects.filter(Q(short_code=code) | Q(slug=code)).exists():

@@ -103,3 +103,12 @@ def optimize_uploaded_images(sender, instance, raw=False, **kwargs):
         optimized = optimize_file(value.file, keep_size=keep_size)
         if optimized is not value.file:
             value.file = optimized
+            # Turning a phone photo upright swaps width and height — keep a
+            # recorded size (e.g. Article.featured_image_width/_height) true.
+            value.__dict__.pop('_dimensions_cache', None)
+            if hasattr(instance, f'{field.name}_width') and hasattr(instance, f'{field.name}_height'):
+                from django.core.files.images import get_image_dimensions
+
+                width, height = get_image_dimensions(optimized)
+                setattr(instance, f'{field.name}_width', width)
+                setattr(instance, f'{field.name}_height', height)

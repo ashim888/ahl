@@ -75,7 +75,7 @@
                 <a href="{% url 'articles:article_detail' article.slug %}" tabindex="-1" aria-hidden="true" class="relative overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
                     {% if article.card_image_url %}
                         <img src="{{ article.card_image_url }}" alt="{{ article.title }}"
-                             class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                             class="w-full h-full object-cover" style="filter: grayscale(10%); {{ article.card_image_style }}">
                         {% include 'articles/includes/play_badge.html' with article=article small=True %}
                     {% else %}
                         <div class="w-full h-full bg-secondary"></div>

@@ -9,7 +9,7 @@ keyword_tags (the #topics line).
 <article class="group relative flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all">
     <div class="relative aspect-video bg-secondary overflow-hidden">
         {% if article.card_image_url %}
-            <img src="{{ article.card_image_url }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
+            <img src="{{ article.card_image_url }}" style="{{ article.card_image_style }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
                  class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
             {% include 'articles/includes/play_badge.html' with article=article %}
         {% else %}

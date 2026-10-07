@@ -15,7 +15,7 @@
            class="lg:col-span-3 relative overflow-hidden bg-muted block" style="min-height: 480px;">
             {% if hero_article.card_image_url %}
                 <img src="{{ hero_article.card_image_url }}" alt="{{ hero_article.featured_image_alt|default:hero_article.title }}"
-                     class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);">
+                     class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);{% if hero_article.featured_image %} object-position: {{ hero_article.featured_image_position }};{% endif %}">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                 {% include 'articles/includes/play_badge.html' with article=hero_article %}
             {% else %}

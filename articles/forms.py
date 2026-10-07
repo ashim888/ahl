@@ -153,10 +153,14 @@ class ArticleForm(forms.ModelForm):
             'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned', 'homepage_section',
             'abstract', 'issue', 'section', 'volume', 'page_numbers', 'doi',
             'video_url', 'html_content', 'references', 'featured_image', 'featured_image_alt', 'featured_image_caption',
-            'featured_image_credit', 'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
+            'featured_image_credit', 'featured_image_fit', 'featured_image_focus_x', 'featured_image_focus_y',
+            'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
         ]
         widgets = {
             'abstract': forms.Textarea(attrs={'rows': 5}),
+            'featured_image_fit': forms.RadioSelect,
+            'featured_image_focus_x': forms.HiddenInput,
+            'featured_image_focus_y': forms.HiddenInput,
             # 'articles' config adds sourceEditing so a technical editor can
             # still drop into raw HTML (e.g. an embedded chart) — see the
             # CKEDITOR_5_CONFIGS comment in settings.py. Citations are typed
@@ -248,6 +252,25 @@ class ArticleForm(forms.ModelForm):
         # (articles/slugs.py). Django's own unique-value validation on the
         # ModelForm already rejects a typed slug that another article has.
         self.fields['slug'].required = False
+        # Framing is optional: forms (and API-ish posts) that don't send it
+        # keep the stored value, or the defaults — Auto, focal point centred.
+        for name in ('featured_image_fit', 'featured_image_focus_x', 'featured_image_focus_y'):
+            self.fields[name].required = False
+
+    def _framing_value(self, name, default):
+        value = self.cleaned_data.get(name)
+        if value in (None, ''):
+            return getattr(self.instance, name, None) if self.instance.pk else default
+        return value
+
+    def clean_featured_image_fit(self):
+        return self._framing_value('featured_image_fit', Article.ImageFit.AUTO) or Article.ImageFit.AUTO
+
+    def clean_featured_image_focus_x(self):
+        return self._framing_value('featured_image_focus_x', 50)
+
+    def clean_featured_image_focus_y(self):
+        return self._framing_value('featured_image_focus_y', 50)
 
     def clean_slug(self):
         slug = self.cleaned_data.get('slug', '')

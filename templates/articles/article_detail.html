@@ -69,10 +69,22 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
     </figure>
 {% elif article.featured_image %}
     <figure>
-        <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 520px);">
-            <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}"
-                 class="w-full h-full object-cover" style="filter: grayscale(15%);">
-        </div>
+        {% if article.featured_image_shows_whole %}
+            {# Square/tall images (diagrams, charts, posters) are shown whole, centred on a blurred copy of themselves (Article.featured_image_fit). #}
+            <div class="relative w-full overflow-hidden bg-foreground">
+                <img src="{{ article.featured_image.url }}" alt="" aria-hidden="true"
+                     class="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50">
+                <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}"
+                     {% if article.featured_image_width %}width="{{ article.featured_image_width }}" height="{{ article.featured_image_height }}"{% endif %}
+                     class="relative mx-auto block w-auto max-w-full h-auto object-contain py-6 sm:py-10 drop-shadow-2xl"
+                     style="max-height: min(78vh, 760px);">
+            </div>
+        {% else %}
+            <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 520px);">
+                <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}"
+                     class="w-full h-full object-cover" style="filter: grayscale(15%); object-position: {{ article.featured_image_position }};">
+            </div>
+        {% endif %}
         {% if article.featured_image_caption or article.featured_image_credit %}
             <figcaption class="max-w-7xl mx-auto px-6 pt-2 text-xs text-muted-foreground">
                 {{ article.featured_image_caption }}{% if article.featured_image_caption and article.featured_image_credit %} {% endif %}{% if article.featured_image_credit %}<span class="font-mono-editorial tracking-wide">{% blocktrans with credit=article.featured_image_credit %}Photo: {{ credit }}{% endblocktrans %}</span>{% endif %}
