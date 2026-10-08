@@ -306,6 +306,10 @@
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.article_type %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.section %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.homepage_section %}
+                {% comment %}What choosing Hero does (HomeView: newest Hero wins, a pinned one beats it; the one replaced moves to Latest News).{% endcomment %}
+                <p id="hero-note" class="-mt-2 hidden rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800"
+                   data-current="{{ current_hero.title|default:'' }}" data-current-pinned="{% if current_hero.is_pinned %}1{% endif %}"
+                   data-current-date="{{ current_hero.published_at|date:'c' }}" data-this-date="{% if form.instance.status == 'published' %}{{ form.instance.published_at|date:'c' }}{% endif %}"></p>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
                 {% if user.can_publish %}
@@ -728,6 +732,34 @@ document.addEventListener('DOMContentLoaded', function () {
     // one; TagifyKeywordsField.to_python() creates it on save. Suggestions
     // come from articles:keyword_autocomplete, re-fetched on every
     // keystroke and debounced by Tagify's own built-in input event.
+    // ---- Homepage spot: say what choosing Hero will do ----------------------
+    (function () {
+        var spot = document.getElementById('id_homepage_section');
+        var note = document.getElementById('hero-note');
+        var pinned = document.getElementById('id_is_pinned');
+        if (!spot || !note) return;
+        function update() {
+            if (spot.value !== 'hero') { note.classList.add('hidden'); return; }
+            var current = note.dataset.current;
+            var text;
+            if (!current) {
+                text = 'Nothing is the Hero right now — this story becomes the top story once published.';
+            } else if (note.dataset.currentPinned && !(pinned && pinned.checked)) {
+                text = '“' + current + '” is the Hero and it’s pinned, so it stays on top; this story shows in Latest News. Tick “Pin” here (or unpin that one) to make this the top story.';
+            } else if (note.dataset.thisDate && note.dataset.currentDate && note.dataset.thisDate < note.dataset.currentDate
+                       && !(pinned && pinned.checked && !note.dataset.currentPinned)) {
+                text = '“' + current + '” is newer, so it stays the Hero; this story shows in Latest News. Tick “Pin” to make this the top story instead.';
+            } else {
+                text = 'Hero now: “' + current + '”. Publishing this replaces it — that story moves to Latest News.';
+            }
+            note.textContent = text;
+            note.classList.remove('hidden');
+        }
+        spot.addEventListener('change', update);
+        if (pinned) pinned.addEventListener('change', update);
+        update();
+    })();
+
     // ---- Featured image framing: focal point, fit, live previews ----------
     (function () {
         var box = document.getElementById('image-framing');

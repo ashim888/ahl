@@ -392,10 +392,19 @@ the field to confirm the link was recognised.
   unpublish it (set to Draft or Archived) instead.
 
 **Issue assignment**, **Section** (subject-taxonomy placement — see §8, independent of the article
-type/format and of homepage curation below), **DOI**, **volume/page numbers**, and **homepage
-section** (Hero, Latest News, Opinion, Research Highlights) are all set on the same article form —
-homepage placement is editor-curated first, falling back to automatic recency-based fill for any
-slot you leave blank.
+type/format and of homepage curation below), **DOI** and **volume/page numbers** are set on the same
+article form, along with the **Homepage spot**:
+
+- **Latest News fills itself** — the six newest news stories, newest first. There's nothing to
+  pick: leave the spot on *Auto*.
+- **Hero (top story):** the newest story set to Hero is the top story; a **pinned** Hero beats a
+  newer one. When a new Hero takes over, the previous one moves into Latest News. The form tells you
+  which story is the Hero now and what choosing Hero will do.
+- **Opinion & Editorial, Research Highlights, Videos:** your picks first, then the newest stories of
+  that kind fill the rest.
+- **A full spot isn't a dead end:** a story whose spot is already taken (a second Hero, a fourth
+  Opinion) shows in Latest News instead, newest first. Latest News has six places, so keep only one
+  or two stories marked Hero — and only one pinned. No story appears twice on the homepage.
 
 ---
 

@@ -217,16 +217,19 @@ class HomeView(TemplateView):
     """Journal homepage: hero story, latest news, opinion, research
     highlights, special issues, and an editorial board preview.
 
-    Each section is editor-curated first: Article.homepage_section lets an
-    editor explicitly place a specific article in the Hero / Latest News /
-    Opinion & Editorial / Research Highlights slot, regardless of its
-    article_type (see /manage/articles/, Publishing tab). Any slots an
-    editor hasn't explicitly filled auto-fill from recent published articles
-    of the matching type — the previous, fully-automatic behavior — so a
-    section is never empty just because nothing's been curated yet. An
-    article picked for one section (explicit or auto-filled) never repeats
-    in a later one.
+    Hero, Opinion & Editorial, Research Highlights and Videos are
+    editor-curated first (Article.homepage_section), then filled with the
+    newest stories of their kind. Latest News is automatic: the newest news,
+    plus any editor pick that didn't fit its own spot (a second Hero, a
+    fourth Opinion…) — so nothing published vanishes from the homepage.
+    Hero is the newest story marked Hero (a pinned one wins); with none, the
+    newest story without a spot. No article appears in two sections.
     """
+
+    LATEST_NEWS_COUNT = 6
+    OPINION_COUNT = 3
+    RESEARCH_COUNT = 2
+    VIDEO_COUNT = 8
 
     template_name = 'home.html'
 
@@ -248,42 +251,48 @@ class HomeView(TemplateView):
         published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
             '-is_pinned', '-published_at', '-created_at',
         )
+        HomepageSection = Article.HomepageSection
         used_pks = set()
 
-        def pick(section, limit, type_filter=None):
-            picks = list(published.filter(homepage_section=section).exclude(pk__in=used_pks)[:limit])
+        def take(queryset, limit):
+            picks = list(queryset.exclude(pk__in=used_pks)[:limit])
             used_pks.update(a.pk for a in picks)
-            if len(picks) < limit:
-                # Autofill only draws from articles with no explicit
-                # homepage_section — one earmarked for a *different* section
-                # (not yet processed or not chosen for it) must never get
-                # swept up as filler here instead, even by Hero's fallback,
-                # which has no type_filter and would otherwise happily grab
-                # anything recent.
-                remaining = published.filter(homepage_section='').exclude(pk__in=used_pks)
-                if type_filter is not None:
-                    remaining = remaining.filter(type_filter)
-                autofill = list(remaining[:limit - len(picks)])
-                picks += autofill
-                used_pks.update(a.pk for a in autofill)
             return picks
 
-        HomepageSection = Article.HomepageSection
-        sections = {}
+        # 1. Editor picks for each spot, newest (or pinned) first. A pick that
+        #    doesn't fit — e.g. a second Hero — isn't lost: it flows on into
+        #    Latest News below.
+        hero_article = next(iter(take(published.filter(homepage_section=HomepageSection.HERO), 1)), None)
+        opinion_pieces = take(published.filter(homepage_section=HomepageSection.OPINION), self.OPINION_COUNT)
+        research_highlights = take(published.filter(homepage_section=HomepageSection.RESEARCH), self.RESEARCH_COUNT)
+        videos = take(published.filter(homepage_section=HomepageSection.VIDEOS), self.VIDEO_COUNT)
 
-        hero_picks = pick(HomepageSection.HERO, 1)
-        hero_article = hero_picks[0] if hero_picks else None
+        # 2. No Hero picked: the newest story with no spot of its own.
+        if hero_article is None:
+            hero_article = next(iter(take(published.filter(homepage_section=''), 1)), None)
+
+        # 3. Latest News is automatic: the newest news stories, plus any
+        #    editor pick that didn't fit its own spot. Nothing published
+        #    disappears from the homepage just because its spot was full.
+        latest_news = take(
+            published.filter(Q(article_type=Article.ArticleType.NEWS_COMMENTARY) | ~Q(homepage_section='')),
+            self.LATEST_NEWS_COUNT,
+        )
+
+        # 4. Fill the rest of each spot with the newest of its kind.
+        opinion_pieces += take(published.filter(homepage_section='', article_type__in=OPINION_TYPES),
+                               self.OPINION_COUNT - len(opinion_pieces))
+        research_highlights += take(published.filter(homepage_section='', article_type__in=RESEARCH_TYPES),
+                                    self.RESEARCH_COUNT - len(research_highlights))
+        # Any story with a YouTube link, not just type "Video" — a news story
+        # with a clip belongs in the video row too.
+        videos += take(published.filter(homepage_section='').exclude(video_url=''), self.VIDEO_COUNT - len(videos))
+
+        sections = {}
         sections['hero_article'] = hero_article
         sections['hero_authors'] = (
             list(hero_article.articleauthor_set.select_related('author__user').order_by('order')) if hero_article else []
         )
-
-        latest_news = pick(HomepageSection.LATEST_NEWS, 3, Q(article_type=Article.ArticleType.NEWS_COMMENTARY))
-        opinion_pieces = pick(HomepageSection.OPINION, 3, Q(article_type__in=OPINION_TYPES))
-        research_highlights = pick(HomepageSection.RESEARCH, 2, Q(article_type__in=RESEARCH_TYPES))
-        # Any story with a YouTube link, not just type "Video" — a news story
-        # with a clip belongs in the video row too.
-        videos = pick(HomepageSection.VIDEOS, 8, ~Q(video_url=''))
 
         # Sections are built as plain lists (picks + autofill concatenated),
         # not querysets, so prefetching happens post-hoc via
@@ -1412,6 +1421,14 @@ class ArticleFormMixin:
         context['my_author_json'] = json.dumps(byline_utils.author_payload(my_author)) if my_author else ''
         context['author_search_url'] = reverse('articles:manage_author_search')
         context['correction_form'] = ArticleCorrectionForm()
+        # Who holds the Hero now (HomeView picks the same way) — the form says
+        # what choosing Hero for this story would do to it.
+        current_hero = Article.objects.filter(
+            status=Article.Status.PUBLISHED, homepage_section=Article.HomepageSection.HERO,
+        ).order_by('-is_pinned', '-published_at', '-created_at')
+        if getattr(self, 'object', None) is not None and self.object.pk:
+            current_hero = current_hero.exclude(pk=self.object.pk)
+        context['current_hero'] = current_hero.only('title', 'is_pinned', 'published_at').first()
         return context
 
     def get_success_url(self):

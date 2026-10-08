@@ -61,27 +61,56 @@ class HomeViewSectionCurationTests(TestCase):
         response = self.client.get(reverse('articles:home'))
         self.assertEqual(response.context['hero_article'], newest)
 
-    def test_latest_news_autofills_unfilled_slots(self):
-        # An unrelated explicit Hero pick, so Hero's own fallback (no type
-        # filter — see pick() in views.py) doesn't compete with Latest News
-        # for the same pool of unflagged articles.
+    def test_latest_news_is_the_newest_news_automatically(self):
         make_article('unrelated-hero', Article.ArticleType.EDITORIAL, homepage_section=Article.HomepageSection.HERO)
+        news = [make_article(f'news-{n}', Article.ArticleType.NEWS_COMMENTARY, publication_date=datetime.date(2026, 1, n))
+                for n in range(1, 9)]
+        latest = self.client.get(reverse('articles:home')).context['latest_news']
+        self.assertEqual(latest, list(reversed(news))[:6])  # newest first, six of them
 
-        # Only one explicit pick, but the section holds 3 — the other 2
-        # slots should still autofill from recent news_commentary articles.
-        picked = make_article(
-            'curated-news', Article.ArticleType.NEWS_COMMENTARY,
-            homepage_section=Article.HomepageSection.LATEST_NEWS, publication_date=datetime.date(2026, 1, 1),
-        )
-        auto1 = make_article('auto-news-1', Article.ArticleType.NEWS_COMMENTARY, publication_date=datetime.date(2026, 6, 1))
-        auto2 = make_article('auto-news-2', Article.ArticleType.NEWS_COMMENTARY, publication_date=datetime.date(2026, 5, 1))
+    def test_a_second_hero_is_not_lost_it_shows_in_latest_news(self):
+        # The bug: an unpinned Hero that lost to another Hero vanished from the homepage.
+        first = make_article('first-hero', Article.ArticleType.NEWS_COMMENTARY,
+                             homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 1, 1))
+        second = make_article('second-hero', Article.ArticleType.ORIGINAL_RESEARCH,
+                              homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 2, 1))
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(context['hero_article'], second)  # newest Hero wins
+        self.assertIn(first, context['latest_news'])       # the older one moves down, not away
 
-        response = self.client.get(reverse('articles:home'))
-        latest_news = response.context['latest_news']
-        self.assertEqual(len(latest_news), 3)
-        self.assertIn(picked, latest_news)
-        self.assertIn(auto1, latest_news)
-        self.assertIn(auto2, latest_news)
+    def test_pinned_hero_beats_a_newer_one(self):
+        pinned = make_article('pinned-hero', Article.ArticleType.NEWS_COMMENTARY,
+                              homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 1, 1))
+        Article.objects.filter(pk=pinned.pk).update(is_pinned=True)
+        newer = make_article('newer-hero', Article.ArticleType.NEWS_COMMENTARY,
+                             homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 3, 1))
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(context['hero_article'], pinned)
+        self.assertIn(newer, context['latest_news'])
+
+    def test_overflowing_spot_picks_land_in_latest_news(self):
+        make_article('hero', Article.ArticleType.EDITORIAL, homepage_section=Article.HomepageSection.HERO)
+        opinions = [make_article(f'opinion-{n}', Article.ArticleType.EDITORIAL, homepage_section=Article.HomepageSection.OPINION,
+                                 publication_date=datetime.date(2026, 1, n)) for n in range(1, 5)]
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(len(context['opinion_pieces']), 3)
+        self.assertIn(opinions[0], context['latest_news'])  # the oldest of four picks
+
+    def test_latest_news_is_no_longer_a_spot(self):
+        self.assertNotIn('latest_news', Article.HomepageSection.values)
+
+    def test_editor_is_told_who_holds_the_hero(self):
+        from users.models import User
+
+        hero = make_article('current-hero', Article.ArticleType.NEWS_COMMENTARY, homepage_section=Article.HomepageSection.HERO)
+        editor = User.objects.create_user(email='spot-editor@example.com', password='pw', first_name='E', last_name='D',
+                                          role=User.Role.EDITOR)
+        self.client.force_login(editor)
+        response = self.client.get(reverse('articles:manage_article_create'))
+        self.assertEqual(response.context['current_hero'], hero)
+        self.assertContains(response, 'data-current="Current Hero"')
+        own = self.client.get(reverse('articles:manage_article_update', args=[hero.slug]))
+        self.assertIsNone(own.context['current_hero'])  # not compared with itself
 
     def test_article_never_appears_in_two_sections(self):
         # Explicitly featured as Hero — even though it's also a

@@ -26,7 +26,7 @@ from .validators import (
 # Shared with articles/views.py HomeView, which caches under this key —
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
-HOME_SECTIONS_CACHE_KEY = 'home:sections:v3'
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v4'
 # The current breaking-news article (or None) for the site-wide banner —
 # see ajna_health_lens/context_processors.py; cleared on every Article.save().
 BREAKING_CACHE_KEY = 'articles:breaking:v1'
@@ -122,8 +122,9 @@ class Article(models.Model):
         ARCHIVED = 'archived', 'Archived'
 
     class HomepageSection(models.TextChoices):
+        # No "Latest News" spot: that section fills itself with the newest
+        # news (articles.views.HomeView), so there's nothing to flag.
         HERO = 'hero', 'Hero (top story)'
-        LATEST_NEWS = 'latest_news', 'Latest News'
         OPINION = 'opinion', 'Opinion & Editorial'
         RESEARCH = 'research', 'Research Highlights'
         VIDEOS = 'videos', 'Videos'

@@ -190,7 +190,8 @@ class ArticleForm(forms.ModelForm):
                          'subscriber-only video, upload it to YouTube as Unlisted and add a featured image — '
                          'anyone with a public link can watch it on YouTube for free.',
             'section': 'Where the story appears in the site menu.',
-            'homepage_section': 'Put this story in a specific homepage spot, or leave on Auto.',
+            'homepage_section': 'Auto: news stories appear in Latest News by themselves, newest first. Pick a spot to '
+                                'feature it — if that spot is full, it shows in Latest News instead.',
             'is_pinned': 'Keep this story at the top of lists and the homepage.',
             'issue': 'Optional. Add the story to an ongoing coverage series.',
             'access_type': 'Who can read the full text.',
@@ -202,7 +203,7 @@ class ArticleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['homepage_section'].choices = [('', "Auto (don't feature)")] + list(Article.HomepageSection.choices)
+        self.fields['homepage_section'].choices = [('', 'Auto (Latest News if it’s news)')] + list(Article.HomepageSection.choices)
         self.fields['section'].required = False
         self.fields['issue'].empty_label = '— No issue —'
         self.fields['assigned_to'].queryset = User.objects.filter(
