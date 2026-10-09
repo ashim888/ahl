@@ -19,6 +19,9 @@ class IsolatedMediaTestRunner(DiscoverRunner):
         # sign-in would redirect every one of them. users/test_two_factor.py
         # switches it back on with override_settings.
         settings.STAFF_TWO_FACTOR_REQUIRED = False
+        # The site defaults to Nepali; the suite checks English wording, so
+        # it runs in English (ajna_health_lens/test_language.py covers Nepali).
+        settings.LANGUAGE_CODE = 'en'
         super().setup_test_environment(**kwargs)
         self._media_tmp = Path(tempfile.mkdtemp(prefix='ahl-test-media-'))
         self._saved_media = {}

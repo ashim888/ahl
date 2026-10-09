@@ -41,8 +41,14 @@ def journal_settings(request):
 
     default_og_image_url = request.build_absolute_uri(static('images/og-default.png'))
 
+    from django.utils.translation import get_language
+
+    nepali = (get_language() or '').startswith('ne')
     return {
-        'JOURNAL_NAME': settings.JOURNAL_NAME,
+        # The name in the reader's language; JOURNAL_NAME_EN wherever the
+        # registered English name must appear (copyright line, receipts).
+        'JOURNAL_NAME': settings.JOURNAL_NAME_NE if nepali and settings.JOURNAL_NAME_NE else settings.JOURNAL_NAME,
+        'JOURNAL_NAME_EN': settings.JOURNAL_NAME,
         'JOURNAL_TAGLINE': settings.JOURNAL_TAGLINE,
         'JOURNAL_ISSN': settings.JOURNAL_ISSN,
         'JOURNAL_PUBLISHER': settings.JOURNAL_PUBLISHER,

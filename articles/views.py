@@ -222,10 +222,12 @@ class HomeView(TemplateView):
     newest stories of their kind. Latest News is automatic: the newest news,
     plus any editor pick that didn't fit its own spot (a second Hero, a
     fourth Opinion…) — so nothing published vanishes from the homepage.
-    Hero is the newest story marked Hero (a pinned one wins); with none, the
-    newest story without a spot. No article appears in two sections.
+    Top stories: every pinned Hero rotates in a slider (up to HERO_SLIDES);
+    with none pinned, the newest Hero; with no Hero at all, the newest story
+    without a spot. No article appears in two sections.
     """
 
+    HERO_SLIDES = 5
     LATEST_NEWS_COUNT = 6
     OPINION_COUNT = 3
     RESEARCH_COUNT = 2
@@ -260,16 +262,20 @@ class HomeView(TemplateView):
             return picks
 
         # 1. Editor picks for each spot, newest (or pinned) first. A pick that
-        #    doesn't fit — e.g. a second Hero — isn't lost: it flows on into
-        #    Latest News below.
-        hero_article = next(iter(take(published.filter(homepage_section=HomepageSection.HERO), 1)), None)
+        #    doesn't fit — e.g. an unpinned Hero — isn't lost: it flows on
+        #    into Latest News below.
+        #    Top stories: every *pinned* Hero rotates in the slider (newest
+        #    first, up to HERO_SLIDES); with none pinned, the newest Hero.
+        heroes = published.filter(homepage_section=HomepageSection.HERO)
+        hero_slides = take(heroes.filter(is_pinned=True), self.HERO_SLIDES) or take(heroes, 1)
         opinion_pieces = take(published.filter(homepage_section=HomepageSection.OPINION), self.OPINION_COUNT)
         research_highlights = take(published.filter(homepage_section=HomepageSection.RESEARCH), self.RESEARCH_COUNT)
         videos = take(published.filter(homepage_section=HomepageSection.VIDEOS), self.VIDEO_COUNT)
 
         # 2. No Hero picked: the newest story with no spot of its own.
-        if hero_article is None:
-            hero_article = next(iter(take(published.filter(homepage_section=''), 1)), None)
+        if not hero_slides:
+            hero_slides = take(published.filter(homepage_section=''), 1)
+        hero_article = hero_slides[0] if hero_slides else None
 
         # 3. Latest News is automatic: the newest news stories, plus any
         #    editor pick that didn't fit its own spot. Nothing published
@@ -289,6 +295,8 @@ class HomeView(TemplateView):
         videos += take(published.filter(homepage_section='').exclude(video_url=''), self.VIDEO_COUNT - len(videos))
 
         sections = {}
+        prefetch_related_objects(hero_slides, 'articleauthor_set__author__user')
+        sections['hero_slides'] = hero_slides
         sections['hero_article'] = hero_article
         sections['hero_authors'] = (
             list(hero_article.articleauthor_set.select_related('author__user').order_by('order')) if hero_article else []

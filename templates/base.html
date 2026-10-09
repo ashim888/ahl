@@ -576,7 +576,7 @@
             </div>
             <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
                 <p class="font-mono-editorial text-xs opacity-65">
-                    &copy; {% now "Y" %} {{ BUSINESS_LEGAL_NAME|default:JOURNAL_NAME }}. {% trans "All rights reserved." %}
+                    &copy; {% now "Y" %} {{ BUSINESS_LEGAL_NAME|default:JOURNAL_NAME_EN }}. {% trans "All rights reserved." %}
                     {% if BUSINESS_PAN %}· PAN {{ BUSINESS_PAN }}{% endif %}{% if BUSINESS_ADDRESS %} · {{ BUSINESS_ADDRESS }}{% endif %}
                 </p>
                 <p class="font-mono-editorial text-xs opacity-65">

@@ -1,69 +1,107 @@
 {% extends 'base.html' %}
 {% load news_time topic_tags %}
 {% load i18n %}
-{% load ads_tags %}
+{% load ads_tags static %}
 
 {% block title %}{{ JOURNAL_NAME }} — {{ JOURNAL_TAGLINE }}{% endblock %}
 
 {% block content %}
 
 {% if hero_article %}
-<section class="max-w-7xl mx-auto px-6 pt-10 pb-8">
+{% comment %}
+Top stories (articles.views.HomeView): every pinned Hero rotates here, newest first — a slider
+(static/js/hero_slider.js) when there's more than one, a single top story otherwise. Without
+JavaScript the slides simply stack. Pictures that don't suit the ~1.5:1 frame (square, tall or very
+wide — Article.hero_shows_whole) are shown whole on a blurred copy of themselves.
+{% endcomment %}
+<section class="max-w-7xl mx-auto px-6 pt-10 pb-8" {% if hero_slides|length > 1 %}data-hero-slider aria-roledescription="carousel" aria-label="{% trans 'Top stories' %}"{% endif %}>
     <div class="rule-editorial mb-6"></div>
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-0">
-        <a href="{% url 'articles:article_detail' hero_article.slug %}"
-           class="lg:col-span-3 relative overflow-hidden bg-muted block" style="min-height: 480px;">
-            {% if hero_article.card_image_url %}
-                <img src="{{ hero_article.card_image_url }}" alt="{{ hero_article.featured_image_alt|default:hero_article.title }}"
-                     class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);{% if hero_article.featured_image %} object-position: {{ hero_article.featured_image_position }};{% endif %}">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                {% include 'articles/includes/play_badge.html' with article=hero_article %}
-            {% else %}
-                <div class="w-full h-full absolute inset-0 flex items-center justify-center bg-secondary">
-                    <span class="font-display text-2xl text-muted-foreground italic">{{ JOURNAL_NAME }}</span>
-                </div>
-                <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-            {% endif %}
-            <div class="absolute bottom-0 left-0 p-6">
-                <span class="section-label text-white">{{ hero_article.get_article_type_display }}</span>
-            </div>
-        </a>
-
-        <div class="lg:col-span-2 flex flex-col justify-between pl-0 lg:pl-10 pt-6 lg:pt-0">
-            <div>
-                <span class="section-label text-accent">{% trans "Cover Story · Featured" %}</span>
-                <h2 class="font-display text-3xl lg:text-4xl font-bold leading-tight mt-3 mb-5" style="letter-spacing: -0.02em;">
-                    <a href="{% url 'articles:article_detail' hero_article.slug %}" class="hover:underline">{{ hero_article.title }}</a>
-                </h2>
-                {% with summary=hero_article.summary %}{% if summary %}<p class="text-base leading-relaxed text-muted-foreground mb-6">{{ summary }}</p>{% endif %}{% endwith %}
-            </div>
-
-            <div>
-                <div class="rule-thin mb-4"></div>
-                <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-full bg-muted flex-shrink-0"
-                         style="background: linear-gradient(135deg, #6b6860 0%, #111110 100%);"></div>
-                    <div>
-                        <p class="font-semibold text-sm">
-                            {% for aa in hero_authors %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}<span>{{ aa.display_name }}</span>{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
-                        </p>
-                        {% with first_author=hero_authors.0 %}
-                            {% if first_author %}<p class="text-xs text-muted-foreground">{{ first_author.display_affiliation }}</p>{% endif %}
-                        {% endwith %}
+    <div class="relative" data-hero-track>
+    {% for story in hero_slides %}
+        <article class="hero-slide grid grid-cols-1 lg:grid-cols-5 gap-0" data-hero-slide
+                 {% if hero_slides|length > 1 %}role="group" aria-roledescription="slide" aria-label="{% blocktrans with n=forloop.counter total=hero_slides|length %}{{ n }} of {{ total }}{% endblocktrans %}"{% endif %}>
+            <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
+               class="lg:col-span-3 relative overflow-hidden bg-foreground block aspect-[16/10] lg:aspect-auto lg:min-h-[480px]">
+                {% if story.card_image_url %}
+                    {% if story.hero_shows_whole %}
+                        <img src="{{ story.card_image_url }}" alt="" class="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50">
+                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                             class="absolute inset-0 w-full h-full object-contain p-3 sm:p-5 drop-shadow-2xl">
+                    {% else %}
+                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                             class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);{% if story.featured_image %} object-position: {{ story.featured_image_position }};{% endif %}">
+                    {% endif %}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    {% include 'articles/includes/play_badge.html' with article=story %}
+                {% else %}
+                    <div class="w-full h-full absolute inset-0 flex items-center justify-center bg-secondary">
+                        <span class="font-display text-2xl text-muted-foreground italic">{{ JOURNAL_NAME }}</span>
                     </div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                {% endif %}
+                <div class="absolute bottom-0 left-0 p-6">
+                    <span class="section-label text-white">{{ story.get_article_type_display }}</span>
                 </div>
-                <div class="flex items-center gap-3 mt-4">
-                    <span class="font-mono-editorial text-xs text-muted-foreground">{{ hero_article.published_at|news_time }}</span>
-                    <span class="text-border">·</span>
-                    <span class="font-mono-editorial text-xs text-muted-foreground">{{ hero_article.estimated_read_minutes }} {% trans "min read" %}</span>
+            </a>
+
+            {# Text sits right under the headline and summary — no stretching to the picture's height. #}
+            <div class="lg:col-span-2 flex flex-col lg:justify-center gap-5 pl-0 lg:pl-10 pt-6 lg:pt-0 lg:pb-10">
+                <div>
+                    <span class="section-label text-accent">{% trans "Cover Story · Featured" %}</span>
+                    <h2 class="font-display text-3xl lg:text-4xl font-bold leading-tight mt-3" style="letter-spacing: -0.02em;">
+                        <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline">{{ story.title }}</a>
+                    </h2>
+                    {% with summary=story.summary %}{% if summary %}<p class="mt-4 text-base leading-relaxed text-muted-foreground line-clamp-4">{{ summary }}</p>{% endif %}{% endwith %}
                 </div>
-                <a href="{% url 'articles:article_detail' hero_article.slug %}"
-                   class="inline-block mt-5 font-mono-editorial text-[0.65rem] tracking-widest border-b-2 border-accent pb-0.5 hover:text-accent">
-                    {% trans "READ THE FULL STORY →" %}
-                </a>
+
+                <div>
+                    <div class="rule-thin mb-4"></div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-muted flex-shrink-0"
+                             style="background: linear-gradient(135deg, #6b6860 0%, #111110 100%);"></div>
+                        <div>
+                            <p class="font-semibold text-sm">
+                                {% for aa in story.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}<span>{{ aa.display_name }}</span>{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
+                            </p>
+                            {% with first_author=story.articleauthor_set.all|first %}
+                                {% if first_author %}<p class="text-xs text-muted-foreground">{{ first_author.display_affiliation }}</p>{% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 mt-4">
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ story.published_at|news_time }}</span>
+                        <span class="text-border">·</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ story.estimated_read_minutes }} {% trans "min read" %}</span>
+                    </div>
+                    <a href="{% url 'articles:article_detail' story.slug %}"
+                       class="inline-block mt-5 font-mono-editorial text-[0.65rem] tracking-widest border-b-2 border-accent pb-0.5 hover:text-accent">
+                        {% trans "READ THE FULL STORY →" %}
+                    </a>
+                </div>
             </div>
-        </div>
+        </article>
+    {% endfor %}
     </div>
+    {% if hero_slides|length > 1 %}
+        <div class="mt-5 flex items-center gap-4" data-hero-controls hidden>
+            <button type="button" data-hero-prev class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Previous story' %}">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <div class="flex items-center gap-2" role="group" aria-label="{% trans 'Choose a story' %}">
+                {% for story in hero_slides %}
+                    <button type="button" data-hero-dot="{{ forloop.counter0 }}" class="hero-dot h-2.5 rounded-full bg-border transition-all hover:bg-muted-foreground"
+                            aria-label="{% blocktrans with n=forloop.counter title=story.title %}Story {{ n }}: {{ title }}{% endblocktrans %}"></button>
+                {% endfor %}
+            </div>
+            <button type="button" data-hero-next class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Next story' %}">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <button type="button" data-hero-pause class="ml-auto font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent"
+                    data-label-pause="{% trans 'PAUSE' %}" data-label-play="{% trans 'PLAY' %}" aria-pressed="false">{% trans "PAUSE" %}</button>
+        </div>
+        <p class="sr-only" aria-live="polite" data-hero-status></p>
+        <script src="{% static 'js/hero_slider.js' %}" defer></script>
+    {% endif %}
     <div class="rule-thin mt-8"></div>
 </section>
 {% else %}

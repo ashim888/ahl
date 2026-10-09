@@ -259,6 +259,11 @@ Operations and security (all in `.env.example`; walkthrough in TUTORIAL.MD §18)
   `manage.py reset_two_step <email>`.
 - `CSP_REPORT_ONLY` — the Content-Security-Policy (`CSP_DIRECTIVES` in settings,
   `ajna_health_lens/middleware.py`) blocks by default; violations are logged via `/csp-report/`.
+- Languages: Nepali is the default (`LANGUAGE_CODE = 'ne'`); a browser that asks for English gets
+  English, and the switcher's choice (cookie) wins over both. The site name is `JOURNAL_NAME_NE`
+  ("अज्ना हेल्थ लेन्स") on Nepali pages and `JOURNAL_NAME` on English pages, the copyright line and
+  receipts. The test suite runs in English (`ajna_health_lens/test_runner.py`);
+  `ajna_health_lens/test_language.py` covers the Nepali default.
 - Promo codes and trials: `billing/promotions.py` (logic), `billing/promo_views.py` (`/redeem/`,
   `/manage/billing/promos/`); checkouts go through `billing.views.checkout_promo` and
   `_pay_with_quote`. A use is recorded when the payment completes (`payments.complete_payment`).

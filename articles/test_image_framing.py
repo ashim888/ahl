@@ -60,6 +60,13 @@ class FitTests(TestCase):
         self.assertEqual(self.client.get(article.get_absolute_url()).status_code, 200)
         self.assertEqual(self.client.get(reverse('articles:article_list')).status_code, 200)
 
+    def test_homepage_frame_also_shows_very_wide_images_whole(self):
+        self.assertTrue(make((2400, 800)).hero_shows_whole)       # 3:1 banner
+        self.assertFalse(make((2400, 800)).featured_image_shows_whole)  # fine on the wide article banner
+        self.assertFalse(make((1600, 1000)).hero_shows_whole)     # a normal photo is cropped to fill
+        self.assertTrue(make((1000, 1000)).hero_shows_whole)
+        self.assertFalse(make((2400, 800), featured_image_fit=Article.ImageFit.COVER).hero_shows_whole)
+
     def test_rotated_phone_photo_gets_the_upright_dimensions(self):
         # Stored 1600×900 with "rotate 90°" — shown (and optimized) upright as 900×1600.
         article = Article.objects.create(title='Phone photo', featured_image=image_file((1600, 900), exif_orientation=6))

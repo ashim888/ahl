@@ -44,3 +44,14 @@
   .topic-pill__rank { @apply font-mono-editorial text-[0.8em] font-bold text-accent-on-dark; }
   .topic-pill:hover .topic-pill__rank { @apply text-white; }
 }
+
+/* Homepage top-story slider (static/js/hero_slider.js): a short fade as a
+   slide comes in — none for readers who prefer reduced motion. */
+@layer components {
+  @keyframes hero-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .hero-slide--in { animation: hero-fade-in 0.45s ease-out; }
+  @media (prefers-reduced-motion: reduce) { .hero-slide--in { animation: none; } }
+  .hero-dot { width: 0.625rem; }
+  /* `hidden` must win over the slide's own display:grid / the controls' flex. */
+  .hero-slide[hidden], [data-hero-controls][hidden] { display: none !important; }
+}

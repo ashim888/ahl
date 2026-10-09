@@ -26,7 +26,7 @@ from .validators import (
 # Shared with articles/views.py HomeView, which caches under this key —
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
-HOME_SECTIONS_CACHE_KEY = 'home:sections:v4'
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v5'
 # The current breaking-news article (or None) for the site-wide banner —
 # see ajna_health_lens/context_processors.py; cleared on every Article.save().
 BREAKING_CACHE_KEY = 'articles:breaking:v1'
@@ -367,6 +367,20 @@ class Article(models.Model):
             return False
         width, height = self.featured_image_width, self.featured_image_height
         return bool(width and height and width / height < self.WHOLE_IMAGE_BELOW_RATIO)
+
+    # The homepage top-story frame is about 1.5:1 — a picture much wider
+    # than that (a banner, a wide chart) would lose its sides there too.
+    HERO_WHOLE_ABOVE_RATIO = 2.1
+
+    @property
+    def hero_shows_whole(self) -> bool:
+        """Show the whole picture in the homepage top-story frame?"""
+        if self.featured_image_shows_whole:
+            return True
+        if not self.featured_image or self.featured_image_fit == self.ImageFit.COVER:
+            return False
+        width, height = self.featured_image_width, self.featured_image_height
+        return bool(width and height and width / height > self.HERO_WHOLE_ABOVE_RATIO)
 
     @property
     def featured_image_position(self) -> str:

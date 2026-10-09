@@ -397,14 +397,19 @@ article form, along with the **Homepage spot**:
 
 - **Latest News fills itself** — the six newest news stories, newest first. There's nothing to
   pick: leave the spot on *Auto*.
-- **Hero (top story):** the newest story set to Hero is the top story; a **pinned** Hero beats a
-  newer one. When a new Hero takes over, the previous one moves into Latest News. The form tells you
-  which story is the Hero now and what choosing Hero will do.
+- **Hero (top stories):** every story set to Hero **and pinned** rotates in the top-story slider,
+  newest first, up to five (readers can use the arrows, dots or swipe, and pause it). With no pinned
+  Hero, the newest Hero is the single top story. An unpinned Hero, or a sixth pinned one, shows in
+  Latest News instead. The form tells you which story is the Hero now and what choosing Hero does.
+- **Pictures in the top-story frame** that are square, tall or very wide (banners, posters,
+  infographics) are shown whole on a blurred copy of themselves; normal photos fill the frame,
+  cropped around the focal point you set.
 - **Opinion & Editorial, Research Highlights, Videos:** your picks first, then the newest stories of
   that kind fill the rest.
 - **A full spot isn't a dead end:** a story whose spot is already taken (a second Hero, a fourth
-  Opinion) shows in Latest News instead, newest first. Latest News has six places, so keep only one
-  or two stories marked Hero — and only one pinned. No story appears twice on the homepage.
+  Opinion) shows in Latest News instead, newest first. Latest News has six places, so keep the
+  number of Hero stories small — the pinned ones you want in the slider, plus at most one more. No
+  story appears twice on the homepage.
 
 ---
 

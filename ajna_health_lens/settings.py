@@ -295,7 +295,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# Nepali first: most stories are in Nepali. A browser that asks for English
+# still gets English (LocaleMiddleware reads Accept-Language before falling
+# back to this), and the language switcher's choice is remembered.
+LANGUAGE_CODE = 'ne'
 
 # Nav/UI-chrome translation only for now (see ROADMAP.md) — article content
 # stays single-language. Needed here (not just at the LocaleMiddleware/
@@ -662,6 +665,9 @@ ANALYTICS_RETENTION_DAYS = int(os.environ.get('ANALYTICS_RETENTION_DAYS', '400')
 
 # Journal branding (see ARCHITECTURE.md §10.1)
 JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Health Lens')
+# The name shown on pages in Nepali (header, footer, page titles). English
+# pages, receipts and legal text keep JOURNAL_NAME.
+JOURNAL_NAME_NE = os.environ.get('JOURNAL_NAME_NE', 'अज्ना हेल्थ लेन्स')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
 JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
 JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing')

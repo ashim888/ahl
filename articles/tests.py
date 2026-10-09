@@ -96,6 +96,36 @@ class HomeViewSectionCurationTests(TestCase):
         self.assertEqual(len(context['opinion_pieces']), 3)
         self.assertIn(opinions[0], context['latest_news'])  # the oldest of four picks
 
+    def test_pinned_heroes_rotate_in_the_slider(self):
+        dates = [datetime.date(2026, 1, n) for n in (1, 2, 3)]
+        pinned = [make_article(f'pinned-{n}', Article.ArticleType.NEWS_COMMENTARY, homepage_section=Article.HomepageSection.HERO,
+                               publication_date=d) for n, d in enumerate(dates)]
+        Article.objects.filter(pk__in=[a.pk for a in pinned]).update(is_pinned=True)
+        unpinned = make_article('unpinned-hero', Article.ArticleType.NEWS_COMMENTARY,
+                                homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 5, 1))
+        response = self.client.get(reverse('articles:home'))
+        self.assertEqual([a.slug for a in response.context['hero_slides']], ['pinned-2', 'pinned-1', 'pinned-0'])
+        self.assertEqual(response.context['hero_article'].slug, 'pinned-2')
+        self.assertIn(unpinned, response.context['latest_news'])
+        self.assertContains(response, 'data-hero-slider')
+        self.assertContains(response, 'aria-label="3 of 3"')
+        self.assertContains(response, 'js/hero_slider.js')
+
+    def test_single_top_story_has_no_slider(self):
+        make_article('only-hero', Article.ArticleType.NEWS_COMMENTARY, homepage_section=Article.HomepageSection.HERO)
+        response = self.client.get(reverse('articles:home'))
+        self.assertEqual(len(response.context['hero_slides']), 1)
+        self.assertNotContains(response, 'data-hero-slider')
+
+    def test_slider_holds_at_most_five(self):
+        for n in range(7):
+            article = make_article(f'pin-{n}', Article.ArticleType.NEWS_COMMENTARY,
+                                   homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 1, n + 1))
+            Article.objects.filter(pk=article.pk).update(is_pinned=True)
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(len(context['hero_slides']), 5)
+        self.assertEqual({a.slug for a in context['latest_news']} & {'pin-0', 'pin-1'}, {'pin-0', 'pin-1'})
+
     def test_latest_news_is_no_longer_a_spot(self):
         self.assertNotIn('latest_news', Article.HomepageSection.values)
 
