@@ -89,6 +89,18 @@ def edit_token_for(article) -> str:
     return f'{article.updated_at.timestamp():.6f}' if article.updated_at else ''
 
 
+class LowercaseSlugField(forms.SlugField):
+    """A typed slug, tidied before it's checked: lowercase, spaces and
+    underscores turned into hyphens, no hyphens at the ends — so
+    "Dengue Cases_Rise" is saved as "dengue-cases-rise" instead of
+    being rejected."""
+
+    def to_python(self, value):
+        value = super().to_python(value)
+        value = re.sub(r'[\s_]+', '-', value.strip().lower())
+        return re.sub(r'-{2,}', '-', value).strip('-')
+
+
 class ArticleForm(forms.ModelForm):
     """Front-end editorial CRUD form. Authors (ArticleAuthor byline rows,
     with order and the corresponding-author flag) come in through the hidden
@@ -156,6 +168,7 @@ class ArticleForm(forms.ModelForm):
             'featured_image_credit', 'featured_image_fit', 'featured_image_focus_x', 'featured_image_focus_y',
             'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
         ]
+        field_classes = {'slug': LowercaseSlugField}
         widgets = {
             'abstract': forms.Textarea(attrs={'rows': 5}),
             'featured_image_fit': forms.RadioSelect,

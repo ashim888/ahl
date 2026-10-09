@@ -124,6 +124,25 @@ class RomanizedSlugTests(TestCase):
         form.is_valid()
         self.assertIn('slug', form.errors)
 
+    def test_typed_slug_with_capitals_or_spaces_is_tidied_not_refused(self):
+        from .forms import ArticleForm, PublishArticleForm
+
+        for typed, expected in (('Dengue-Cases-Rise', 'dengue-cases-rise'), (' Dengue Cases_Rise ', 'dengue-cases-rise'),
+                                ('HIV--Testing-', 'hiv-testing')):
+            form = ArticleForm(data={'title': 'Mine', 'slug': typed})
+            form.is_valid()
+            self.assertNotIn('slug', form.errors, typed)
+            self.assertEqual(form.cleaned_data['slug'], expected)
+        editor = User.objects.create_user(email='ed3@example.com', password='pw', first_name='E', last_name='D',
+                                          role=User.Role.EDITOR_IN_CHIEF)
+        self.client.force_login(editor)
+        self.client.post(reverse('articles:manage_article_create'), {
+            'title': 'Capital slug', 'slug': 'Capital-Slug', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+            'access_type': Article.AccessType.OPEN_ACCESS, 'action': 'draft', 'featured_image_fit': 'auto',
+        })
+        self.assertEqual(Article.objects.get(title='Capital slug').slug, 'capital-slug')
+        self.assertTrue(PublishArticleForm(data={'slug': 'A-B'}).fields['slug'].to_python('A-B') == 'a-b')
+
     def test_headline_with_no_usable_words(self):
         article = Article.objects.create(title='?!')
         self.assertEqual(article.slug, f'article-{article.short_code}')

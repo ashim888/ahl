@@ -4,7 +4,7 @@
 {% load i18n %}
 {% load text_filters ads_tags comments comments_xtd %}
 
-{% block title %}{{ article.seo_title|default:article.title }} — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{{ article.meta_title }} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block extra_head %}
     {% if show_full_text and article.html_content %}

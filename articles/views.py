@@ -52,6 +52,7 @@ from .models import (
     Keyword, KeywordEvent, KeywordFollow,
 )
 from .revisions import compare, record_revision, restore_revision
+from .share_card import share_card_url
 
 # A keyword used on this many articles or fewer has nothing meaningful to
 # "follow" yet — a keyword used exactly once is structurally guaranteed to
@@ -671,8 +672,8 @@ class ArticleDetailView(DetailView):
         # place on the site actually shared/linked out, so it's the one that
         # gets real per-page metadata rather than the sitewide default.
         # Search & social overrides (editor's "Search & social" card) win when set.
-        context['meta_title'] = self.object.seo_title or self.object.title
-        context['meta_description'] = self.object.seo_description or self.object.summary[:200]
+        context['meta_title'] = self.object.meta_title
+        context['meta_description'] = self.object.meta_description
         context['og_type'] = 'article'
         context['canonical_url'] = self.request.build_absolute_uri(self.request.path)
         context['short_url'] = self.request.build_absolute_uri(
@@ -681,7 +682,12 @@ class ArticleDetailView(DetailView):
         # card_image_url: the featured image, else a video story's YouTube
         # thumbnail (already absolute), so a video shares with a picture too.
         image_url = self.request.build_absolute_uri(self.object.card_image_url) if self.object.card_image_url else None
-        share_image = self.object.social_image.url if self.object.social_image else self.object.card_image_url
+        # Share picture: an uploaded Share image, else the automatic 1200×630
+        # card of the featured image (articles/share_card.py), else the plain
+        # card image (a video's thumbnail, or the featured image if the card
+        # couldn't be made).
+        share_image = (self.object.social_image.url if self.object.social_image
+                       else share_card_url(self.object) or self.object.card_image_url)
         context['meta_image_url'] = self.request.build_absolute_uri(share_image) if share_image else None
         context['structured_data_json'] = news_article_structured_data(
             self.object, journal_name=settings.JOURNAL_NAME, canonical_url=context['canonical_url'],

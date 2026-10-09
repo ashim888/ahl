@@ -330,11 +330,14 @@ with **Update live article** as usual — the note is what tells readers it chan
 deletes a note added by mistake. Every note also appears on the public **Corrections** page
 (`/corrections/`).
 
-**Search & social (optional):** the collapsed **Search & social** card lets you write a different
-**search headline** (~60 characters) and **search description** (~155) for Google results and
-share cards, with a live Google-style preview, and upload a separate **share image** (1200×630)
-for Facebook/X/WhatsApp. Leave them empty and the headline, summary and featured image are used.
-The headline on the article page itself never changes.
+**Search & social (automatic):** nothing to fill in. Google gets the headline and the summary
+(cut at a word, about 155 characters), and Facebook/WhatsApp/X get a 1200×630 share picture made
+from the featured image — cropped around your focal point, or shown whole on a blurred background
+for a poster or diagram, the same way the site frames it. The card shows a live Google preview
+and a share preview. Only if Google or a share should say something different, open **Use
+different words or picture** and type a search headline/description or upload a share image;
+clear the box (or tick *go back to automatic*) to undo. The headline on the article page itself
+never changes.
 
 **Breaking news:** in the *Placement* card, set **Breaking news** to 1–24 hours. Once the story is
 live, a red **BREAKING** banner appears under the site header on every page, linking to it (readers

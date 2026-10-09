@@ -199,20 +199,21 @@ class Article(models.Model):
     # save (pinning, homepage placement and counters don't count as an
     # update a reader should be told about).
     last_updated_at = models.DateTimeField(null=True, blank=True)
-    # Search & social overrides — optional; empty means use the headline,
-    # summary and featured image (see ArticleDetailView's meta tags).
+    # Search & social overrides — optional; empty means automatic: the
+    # headline, the summary (meta_description) and a share card made from the
+    # featured image (articles/share_card.py).
     seo_title = models.CharField(
         'Search headline', max_length=70, blank=True,
-        help_text='Shown in Google results and browser tabs. Up to ~60 characters reads best.',
+        help_text='Automatic: the headline. Type here only to show different words in Google results and browser tabs.',
     )
     seo_description = models.CharField(
         'Search description', max_length=160, blank=True,
-        help_text='The snippet under the headline in search results and share cards. ~150 characters.',
+        help_text='Automatic: the summary. Type here only to use different words under the headline in Google and share previews.',
     )
     social_image = models.ImageField(
         'Share image', upload_to='articles/social/', null=True, blank=True,
         validators=[article_image_extension_validator, validate_featured_image_size],
-        help_text='Image for Facebook/X/WhatsApp previews (1200×630 works best). Falls back to the featured image.',
+        help_text='Automatic: a 1200×630 card made from the featured image. Upload one only to share a different picture.',
     )
     # Breaking news: while now < breaking_until (and the article is live),
     # a site-wide banner links to it. Expires on its own.
@@ -322,6 +323,32 @@ class Article(models.Model):
         if self.access_type == self.AccessType.OPEN_ACCESS and self.html_content:
             return Truncator(' '.join(strip_tags(self.html_content).split())).words(40)
         return ''
+
+    # Google shows about this much of a description before cutting it off.
+    META_DESCRIPTION_LENGTH = 155
+
+    @property
+    def meta_title(self) -> str:
+        """Search/share headline: the editor's override, else the headline."""
+        return (self.seo_title or '').strip() or self.title
+
+    @property
+    def meta_description(self) -> str:
+        """Search/share description: the editor's override, else the summary
+        (see `summary` — never paywalled text) cut at a word boundary."""
+        override = (self.seo_description or '').strip()
+        if override:
+            return override
+        text = ' '.join(self.summary.split())
+        limit = self.META_DESCRIPTION_LENGTH
+        if len(text) <= limit:
+            return text
+        cut = text[:limit - 1]
+        if ' ' in cut:
+            cut = cut.rsplit(' ', 1)[0]
+        cut = cut.rstrip(' ,;:–—-')
+        # Cut right after a full stop: end there, no "…" after it.
+        return cut if cut.endswith(('.', '!', '?', '।')) else f'{cut}…'
 
     @property
     def has_video(self) -> bool:
