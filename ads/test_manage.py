@@ -1,5 +1,5 @@
 """Creating and editing an ad through /manage/ads/ end to end — the form
-insists on the zone's exact image size, so this is the path editors use."""
+checks the image against the zone's size, so this is the path editors use."""
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -31,12 +31,25 @@ class AdSlotFormViewTests(TestCase):
         data.update(overrides)
         return data
 
-    def test_create_page_lists_every_zone_size(self):
+    def test_create_page_shows_where_every_zone_appears(self):
         page = self.client.get(reverse('ads:manage_adslot_create'))
         self.assertTrue(page.context['is_create'])
-        self.assertEqual(len(page.context['zone_dimensions']), len(AdSlot.Zone.choices))
-        self.assertIn((AdSlot.Zone.HOMEPAGE_RECTANGLE_1, AdSlot.Zone.HOMEPAGE_RECTANGLE_1.label, 300, 250),
-                      page.context['zone_dimensions'])
+        info = page.context['zone_info']
+        self.assertEqual(set(info), set(AdSlot.Zone.values))
+        self.assertEqual((info[AdSlot.Zone.HOMEPAGE_RECTANGLE_1]['width'], info[AdSlot.Zone.HOMEPAGE_RECTANGLE_1]['height']),
+                         (300, 250))
+        self.assertEqual(info[AdSlot.Zone.MOBILE_ANCHOR]['screens'], 'Phones only')
+        self.assertContains(page, 'id="zone-map"')
+        for zone in AdSlot.Zone.values:  # every zone has a box in the picture
+            self.assertContains(page, f'data-zone-pick="{zone}"')
+
+    def test_running_count_leaves_out_the_ad_being_edited(self):
+        ad = make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR)
+        make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Other')
+        make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Stopped', is_active=False)
+        page = self.client.get(reverse('ads:manage_adslot_update', args=[ad.pk]))
+        self.assertEqual(page.context['zone_info'][AdSlot.Zone.ARTICLE_SIDEBAR]['running'], 1)
+        self.assertContains(page, 'data-zone-pick="article_sidebar" aria-pressed="true"')
 
     def test_create_with_the_right_size(self):
         response = self.client.post(reverse('ads:manage_adslot_create'), self._data(), follow=True)

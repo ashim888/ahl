@@ -2,6 +2,7 @@ import datetime
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -14,6 +15,7 @@ from users.models import User
 
 from .forms import AdSlotForm
 from .models import AdEvent, AdSettings, AdSlot
+from .placements import PLACEMENTS
 from .services import record_click
 
 # House-ad management is editorial content work, same boundary as Article/
@@ -70,13 +72,22 @@ class AdSlotFormMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Cheat-sheet on the create/edit form — the Zone select's label
-        # already states one zone's required size, but an editor picking a
-        # zone still needs to know it *before* choosing/cropping an image,
-        # not just get an error after uploading the wrong size.
-        context['zone_dimensions'] = [
-            (value, label, *AdSlot.ZONE_DIMENSIONS[value]) for value, label in AdSlot.Zone.choices
-        ]
+        # The layout picture on the form (ads/placements.py): where each zone
+        # shows, on which screens, its size, and how many other ads are
+        # running there now — so an editor sees the zone before choosing it
+        # and knows the size before cropping an image.
+        today = timezone.localdate()
+        running = (AdSlot.objects.filter(is_active=True, start_date__lte=today)
+                   .filter(Q(end_date__isnull=True) | Q(end_date__gte=today)))
+        if getattr(self, 'object', None) and self.object.pk:
+            running = running.exclude(pk=self.object.pk)
+        running_by_zone = dict(running.values_list('zone').annotate(n=Count('id')).order_by())
+        context['zone_info'] = {
+            value: {'label': label, 'width': AdSlot.ZONE_DIMENSIONS[value][0],
+                    'height': AdSlot.ZONE_DIMENSIONS[value][1], 'running': running_by_zone.get(value, 0),
+                    **PLACEMENTS[value]}
+            for value, label in AdSlot.Zone.choices
+        }
         return context
 
 

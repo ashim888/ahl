@@ -1,0 +1,10 @@
+{% comment %} One ad zone in the layout picture (adslot_form.html). Clicking it picks the zone.
+   Both looks are written out here so Tailwind keeps them:
+   picked — bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 border-solid
+   other  — bg-amber-50 text-amber-900 border-amber-400 border-dashed hover:bg-amber-100 {% endcomment %}
+<button type="button" data-zone-pick="{{ zone }}" aria-pressed="{% if zone == picked %}true{% else %}false{% endif %}"
+        aria-label="{{ name }}{% if note %} — {{ note }}{% endif %}" title="{{ name }}{% if note %} — {{ note }}{% endif %}"
+        class="zone-box relative flex items-center justify-center overflow-hidden rounded-[3px] border bg-cover bg-center text-[9px] font-semibold leading-none transition-colors {% if zone == picked %}bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300 border-solid{% else %}bg-amber-50 text-amber-900 border-amber-400 border-dashed hover:bg-amber-100{% endif %} {% if not width %}w-full {% endif %}{{ extra }}"
+        style="aspect-ratio: {{ ratio }};{% if width %} width: {{ width }};{% endif %}">
+    <span class="zone-box__label rounded-sm px-0.5 whitespace-nowrap">{{ size }}{% if note %} <span class="font-normal">{{ note }}</span>{% endif %}</span>
+</button>
