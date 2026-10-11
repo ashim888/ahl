@@ -543,8 +543,11 @@ and **More courses** (same topic first).
 `/manage/ads/` — house/direct-sold ad creatives, not an ad-network integration.
 
 1. **Create an ad**: pick a zone (each has required pixel dimensions — the cheat-sheet on the
-   form highlights the size for whichever zone is currently selected), upload a correctly-sized
-   image, sponsor name, link URL, and an optional date range.
+   form highlights the size for whichever zone is currently selected), upload the image, sponsor
+   name, link URL, and an optional date range. The image can be the zone's size or a larger copy
+   of the same shape — a 2× or 3× export (e.g. 1456×180 or 2184×270 for a 728×90 leaderboard)
+   looks sharper on phones and high-resolution screens; anything over 2× is shrunk to 2×. A
+   smaller image (blurry) or a different shape (it would be cropped) is refused.
 2. Ads are **never shown to a subscriber** — ad-free reading is an enforced subscriber perk, not
    just a promise.
 3. **"Advertise Here" placeholders**: expand the panel at the top of the ad list to choose, per

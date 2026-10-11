@@ -284,6 +284,45 @@ class AdSlotFormDimensionValidationTests(TestCase):
         self.assertIn('300×250', message)
 
 
+    def _form(self, size, zone=AdSlot.Zone.HEADER_LEADERBOARD, fmt='JPEG'):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        buffer = io.BytesIO()
+        Image.new('RGB', size, (200, 40, 40)).save(buffer, format=fmt)
+        upload = SimpleUploadedFile(f'ad.{fmt.lower()}', buffer.getvalue(), content_type=f'image/{fmt.lower()}')
+        return AdSlotForm(data={
+            'sponsor_name': 'Sponsor', 'zone': zone, 'link_url': 'https://example.com',
+            'start_date': timezone.localdate(), 'is_active': True,
+        }, files={'image': upload})
+
+    def test_larger_copy_of_the_same_shape_is_accepted_and_kept_at_2x(self):
+        form = self._form((2184, 270))  # 3× a 728×90 leaderboard
+        self.assertTrue(form.is_valid(), form.errors)
+        image = Image.open(form.cleaned_data['image'])
+        self.assertEqual(image.size, (1456, 180))
+        ad = form.save()
+        self.assertEqual(Image.open(ad.image.path).size, (1456, 180))
+        self.assertEqual((ad.width, ad.height), (728, 90))  # still shown at the zone size
+
+    def test_2x_png_is_kept_as_it_is(self):
+        form = self._form((600, 500), zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, fmt='PNG')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(Image.open(form.cleaned_data['image']).size, (600, 500))
+
+    def test_off_by_a_pixel_shape_is_fine(self):
+        self.assertTrue(self._form((2185, 270)).is_valid())
+
+    def test_smaller_than_the_zone_is_refused_as_blurry(self):
+        form = self._form((364, 45))
+        self.assertFalse(form.is_valid())
+        self.assertIn('blurry', form.errors['image'][0])
+        self.assertIn('1456×180', form.errors['image'][0])
+
+    def test_different_shape_is_refused_as_cut_off(self):
+        form = self._form((1456, 400))
+        self.assertFalse(form.is_valid())
+        self.assertIn('cut off', form.errors['image'][0])
+
 class AdSlotTemplateTagTests(TestCase):
     """ads.templatetags.ads_tags.ad_slot — the one call site every ad
     placement (header, mobile anchor, homepage, article page, ...) goes
