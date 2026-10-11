@@ -1,0 +1,20 @@
+{% comment %} One figure for the period, with its change against the previous period
+   (admin_custom/analytics.py _kpi). `k.good` colours the change: green when it's
+   good news, red when it isn't (more cancellations is bad news). {% endcomment %}
+<div class="bg-white rounded-2xl border border-gray-100 p-5">
+    <p class="text-sm text-gray-600">{{ k.label }}</p>
+    <p class="mt-1.5 text-3xl font-bold text-gray-900 tabular-nums">{{ k.display }}</p>
+    <p class="mt-1.5 text-xs">
+        {% if k.new %}
+            <span class="font-semibold text-emerald-700">New</span> <span class="text-gray-600">· none in the previous period</span>
+        {% elif k.direction == 'flat' %}
+            <span class="text-gray-600">Same as the previous period</span>
+        {% else %}
+            <span class="font-semibold {% if k.good %}text-emerald-700{% else %}text-red-700{% endif %}">
+                {% if k.direction == 'up' %}▲{% else %}▼{% endif %} {% if k.pct_abs is not None %}{{ k.pct_abs }}%{% endif %}
+            </span>
+            <span class="text-gray-600">vs {{ k.previous_display }} before</span>
+        {% endif %}
+    </p>
+    {% if k.hint %}<p class="mt-2 text-xs text-gray-500">{{ k.hint }}</p>{% endif %}
+</div>

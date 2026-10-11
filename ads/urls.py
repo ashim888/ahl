@@ -9,7 +9,7 @@ urlpatterns = [
 
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
     path('manage/ads/', views.AdSlotListView.as_view(), name='manage_adslot_list'),
-    path('manage/ads/analytics/', views.AdSlotAnalyticsOverviewView.as_view(), name='manage_ads_analytics'),
+    path('manage/ads/analytics/', views.ads_analytics_overview, name='manage_ads_analytics'),
     path('manage/ads/new/', views.AdSlotCreateView.as_view(), name='manage_adslot_create'),
     path('manage/ads/<int:pk>/edit/', views.AdSlotUpdateView.as_view(), name='manage_adslot_update'),
     path('manage/ads/<int:pk>/delete/', views.AdSlotDeleteView.as_view(), name='manage_adslot_delete'),

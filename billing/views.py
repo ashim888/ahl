@@ -584,7 +584,8 @@ class SubscriptionGrantView(CreateView):
 def subscription_revoke(request, pk):
     subscription = get_object_or_404(UserSubscription, pk=pk)
     subscription.status = UserSubscription.Status.CANCELLED
-    subscription.save(update_fields=['status'])
+    subscription.cancelled_at = timezone.now()
+    subscription.save(update_fields=['status', 'cancelled_at'])
     messages.success(request, f'Subscription for {subscription.user.email} cancelled.')
     return redirect('billing:manage_subscription_list')
 

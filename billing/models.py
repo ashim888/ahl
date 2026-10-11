@@ -142,6 +142,10 @@ class UserSubscription(models.Model):
     payment_reference = models.CharField(max_length=255, blank=True)
     is_trial = models.BooleanField(default=False, help_text='A free trial from a code (billing/promotions.py).')
     created_at = models.DateTimeField(auto_now_add=True)
+    # When it was cancelled (staff revoke, reader cancellation, refund) — for
+    # "cancelled in this period" on the Subscriptions analytics page. Empty
+    # for cancellations made before October 2026, which weren't timed.
+    cancelled_at = models.DateTimeField(null=True, blank=True)
     # Which expiry emails went out ("7", "1", "ended") — see billing/reminders.py.
     reminders_sent = models.JSONField(default=list, blank=True)
 

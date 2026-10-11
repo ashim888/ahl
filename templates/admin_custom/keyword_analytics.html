@@ -1,7 +1,7 @@
 {% extends 'admin_dashboard/base.html' %}
 
 {% block title %}Keyword Analytics — {{ JOURNAL_NAME }}{% endblock %}
-{% block page_title %}Keyword Analytics{% endblock %}
+{% block page_title %}Analytics{% endblock %}
 
 {% block page_actions %}
 <a href="{% url 'admin_custom:keyword_analytics_csv_export' %}?days={{ days }}&sort={{ sort }}{% if query %}&q={{ query|urlencode }}{% endif %}"
@@ -9,6 +9,7 @@
 {% endblock %}
 
 {% block content %}
+{% include 'admin_custom/includes/analytics_tabs.html' with active='topics' %}
 {% comment %}
 One GET form for every control on the page (days, q, sort) so changing
 one keeps the others — same approach as the ads analytics page.

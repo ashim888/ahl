@@ -151,16 +151,30 @@ Everything from here down requires an Editor (or higher) account. The dashboard 
 - **Dashboard home** (`/editorial/`) — KPI cards (published/draft articles, pending
   verifications, active enrollments, active subscriptions with an expiring-soon warning,
   newsletter subscribers, open pitches) and activity charts.
-- **Analytics** (`/editorial/analytics/`) — article readership, subscription/ad/newsletter
-  trends, cross-domain BI view. Money figures (monthly revenue, purchase totals) show only to an
-  Editor-in-Chief or Admin; editors see the counts.
+- **Analytics** (`/editorial/analytics/`) — one page per area, chosen with the tabs at the top:
+  - **Overview** — the headline figures of every area, each linking to its own page.
+  - **Readership** — page views, unique readers, stories published, saves and comments; the
+    most-read stories; views by section, story type and free/paid. Filter by section or type.
+  - **Topics** — keyword analytics (below).
+  - **Subscriptions** — started, free trials, cancelled, didn't renew; active today, net change,
+    trial conversions, subscriptions ending soon, figures per plan, special-article purchases and
+    codes used.
+  - **Ads** — impressions, clicks and click-through rate by zone and by ad. Filter by zone.
+  - **Newsletter** — new subscribers, unsubscribes, sign-ups still unconfirmed, issues sent.
+
+  One period applies to every tab: **7 days, 30 days, 90 days, 12 months**, or any dates in
+  the from–to boxes. Each figure is compared with the same number of days just before
+  (▲/▼ in green when it's good news, red when it isn't). Charts group by day, week or month
+  depending on the period length; **Show the numbers** under a chart lists the exact values.
+  **Download CSV** saves the current page for the same period and filters. Only things that
+  happened in the period are counted, so there are no lifetime totals mixed in. Money figures
+  show only to an Editor-in-Chief or Admin; editors see the counts. Cancellations are dated from
+  October 2026 on, so earlier ones don't appear in a period.
 - **Revenue** (`/editorial/revenue/`, Editor-in-Chief/Admin only) — combined training + subscriptions + purchases total, with
   MRR shown separately since it's a forward-looking projection, not money already collected.
   Cross-links to two focused pages: **Training** (`/editorial/revenue/training/`, collected-revenue
   trend) and **Subscriptions** (`/editorial/revenue/subscriptions/`, per-plan active count and
   lifetime revenue, MRR, purchase revenue).
-- **Keywords** (`/editorial/keywords/`) — how readers respond to article keywords. See
-  "Keyword analytics" below.
 - The sidebar shows a **badge count** next to Pitch Queue and Verification Queue whenever there's
   something waiting on you, and next to Comments when new comments were posted in the last 24
   hours — visible from anywhere in the workspace, not just the dashboard home.
@@ -535,8 +549,8 @@ and **More courses** (same topic first).
    just a promise.
 3. **"Advertise Here" placeholders**: expand the panel at the top of the ad list to choose, per
    zone, whether an empty (unsold) slot shows a placeholder box instead of just disappearing.
-4. **Analytics** (`/manage/ads/analytics/`) — impressions/clicks/CTR, sitewide or filtered to one
-   zone, with an independent date-range selector for the chart.
+4. **Analytics** — *Analytics → Ads* (`/editorial/analytics/ads/`): impressions, clicks and CTR
+   by zone and by ad for any period. The chart icon on each ad in the list shows that ad day by day.
 5. **Delete** vs. **deactivate**: deactivating (the toggle button) just stops showing the ad;
    deleting is permanent and also removes its recorded impression/click history.
 

@@ -1,0 +1,70 @@
+{% extends 'admin_custom/analytics/base.html' %}
+
+{% block analytics %}
+<form method="get" class="mb-5 flex flex-wrap items-end gap-3 text-sm">
+    {% if period.preset %}<input type="hidden" name="range" value="{{ period.preset }}">{% else %}<input type="hidden" name="from" value="{{ period.start|date:'Y-m-d' }}"><input type="hidden" name="to" value="{{ period.end|date:'Y-m-d' }}">{% endif %}
+    <label class="flex flex-col gap-1"><span class="text-xs text-gray-600">Ad zone</span>
+        <select name="zone" class="rounded-lg border border-gray-200 px-2 py-1.5 text-sm" style="width: auto; min-width: 14rem;">
+            <option value="">All zones</option>
+            {% for value, label in zone_choices %}<option value="{{ value }}" {% if zone == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select></label>
+    <button type="submit" class="rounded-lg bg-gray-900 px-3 py-1.5 font-medium text-white hover:bg-gray-700">Filter</button>
+    {% if zone %}<a href="?{{ period.query }}" class="py-1.5 text-gray-600 underline">All zones</a>{% endif %}
+    <a href="{% url 'ads:manage_adslot_list' %}" class="ml-auto py-1.5 text-gray-600 underline">Manage ads →</a>
+</form>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    {% for k in kpis %}{% include 'admin_custom/includes/analytics_kpi.html' %}{% endfor %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Impressions by {{ period.granularity }}{% if zone %} · {{ zone_label }}{% endif %}</h2>
+        {% include 'admin_custom/includes/analytics_chart.html' with c=impressions_chart %}
+    </section>
+    <section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Clicks by {{ period.granularity }}{% if zone %} · {{ zone_label }}{% endif %}</h2>
+        {% include 'admin_custom/includes/analytics_chart.html' with c=clicks_chart %}
+    </section>
+</div>
+
+{% if zone_rows %}
+<section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">By zone</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[480px] text-sm">
+            <thead><tr class="text-left text-xs text-gray-600 border-b border-gray-100"><th class="py-2 font-medium">Zone</th><th class="py-2 font-medium text-right">Impressions</th><th class="py-2 font-medium text-right">Clicks</th><th class="py-2 font-medium text-right">Click-through</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for r in zone_rows %}<tr>
+                    <td class="py-2.5"><a href="?{{ period.query }}&zone={{ r.value }}" class="hover:underline">{{ r.label }}</a></td>
+                    <td class="py-2.5 text-right tabular-nums font-semibold">{{ r.impressions }} <span class="text-xs font-normal text-gray-500">{{ r.pct }}%</span></td>
+                    <td class="py-2.5 text-right tabular-nums">{{ r.clicks }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{% if r.ctr is not None %}{{ r.ctr }}%{% else %}—{% endif %}</td>
+                </tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <h2 class="text-base font-semibold text-gray-900">By ad{% if zone %} · {{ zone_label }}{% endif %}</h2>
+    <p class="text-xs text-gray-600 mb-4">Ads running now, plus any that were shown in the period. {{ running_count }} running now.</p>
+    {% if ad_rows %}
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[560px] text-sm">
+            <thead><tr class="text-left text-xs text-gray-600 border-b border-gray-100"><th class="py-2 font-medium">Ad</th><th class="py-2 font-medium text-right">Impressions</th><th class="py-2 font-medium text-right">Clicks</th><th class="py-2 font-medium text-right">Click-through</th><th class="py-2"></th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for r in ad_rows %}<tr>
+                    <td class="py-2.5">{{ r.ad.sponsor_name }} <span class="text-xs text-gray-600">· {{ r.ad.get_zone_display }} · {% if r.running %}<span class="text-emerald-700">running</span>{% else %}stopped{% endif %}</span></td>
+                    <td class="py-2.5 text-right tabular-nums font-semibold">{{ r.impressions }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{{ r.clicks }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{% if r.ctr is not None %}{{ r.ctr }}%{% else %}—{% endif %}</td>
+                    <td class="py-2.5 text-right"><a href="{% url 'ads:manage_adslot_analytics' r.ad.pk %}" class="text-xs underline text-gray-600">day by day</a></td>
+                </tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<p class="text-sm text-gray-500">No ads running or shown in this period.</p>{% endif %}
+</section>
+{% endblock %}

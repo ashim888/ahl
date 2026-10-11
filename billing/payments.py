@@ -307,7 +307,9 @@ def cancel_subscription(payment: Payment) -> Payment:
         raise CancellationError(
             f'Subscriptions can only be cancelled within {settings.SUBSCRIPTION_CANCEL_DAYS} days of paying.',
         )
-    UserSubscription.objects.filter(payment_reference=locked.reference).update(status=UserSubscription.Status.CANCELLED)
+    UserSubscription.objects.filter(payment_reference=locked.reference).update(
+        status=UserSubscription.Status.CANCELLED, cancelled_at=timezone.now(),
+    )
     locked.refund_requested_at = timezone.now()
     locked.attention = f'Reader cancelled within {settings.SUBSCRIPTION_CANCEL_DAYS} days — send the refund, then record it.'
     locked.save(update_fields=['refund_requested_at', 'attention'])
@@ -334,7 +336,9 @@ def refund_payment(payment: Payment, *, by, reason: str) -> Payment:
     if locked.status != Payment.Status.SUCCESS:
         raise RefundError(f'Only a paid payment can be refunded (this one is {locked.get_status_display().lower()}).')
     if locked.kind == Payment.Kind.SUBSCRIPTION:
-        UserSubscription.objects.filter(payment_reference=locked.reference).update(status=UserSubscription.Status.CANCELLED)
+        UserSubscription.objects.filter(payment_reference=locked.reference).update(
+            status=UserSubscription.Status.CANCELLED, cancelled_at=timezone.now(),
+        )
     elif locked.kind == Payment.Kind.ARTICLE:
         ArticlePurchase.objects.filter(payment_reference=locked.reference).delete()
     elif locked.kind == Payment.Kind.COURSE:

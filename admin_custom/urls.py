@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import reports, views
+from . import analytics, reports, views
 
 app_name = 'admin_custom'
 
@@ -9,7 +9,11 @@ urlpatterns = [
     path('revenue/', views.RevenueOverviewView.as_view(), name='revenue'),
     path('revenue/training/', views.RevenueTrainingView.as_view(), name='revenue_training'),
     path('revenue/subscriptions/', views.RevenueSubscriptionsView.as_view(), name='revenue_subscriptions'),
-    path('analytics/', views.AnalyticsView.as_view(), name='analytics'),
+    path('analytics/', analytics.OverviewView.as_view(), name='analytics'),
+    path('analytics/readership/', analytics.ReadershipView.as_view(), name='analytics_readership'),
+    path('analytics/subscriptions/', analytics.SubscriptionsView.as_view(), name='analytics_subscriptions'),
+    path('analytics/ads/', analytics.AdsView.as_view(), name='analytics_ads'),
+    path('analytics/newsletter/', analytics.NewsletterView.as_view(), name='analytics_newsletter'),
     path('analytics/export/', views.analytics_csv_export, name='analytics_csv_export'),
     path('keywords/', views.KeywordAnalyticsView.as_view(), name='keyword_analytics'),
     path('keywords/export/', views.keyword_analytics_csv_export, name='keyword_analytics_csv_export'),

@@ -1,0 +1,62 @@
+{% extends 'admin_custom/analytics/base.html' %}
+
+{% block analytics %}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    {% for k in kpis %}{% include 'admin_custom/includes/analytics_kpi.html' %}{% endfor %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
+    <section class="lg:col-span-8 bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900">Started and lost, by {{ period.granularity }}</h2>
+        <p class="text-xs text-gray-600 mb-4">Lost = cancelled, or ran out without renewing.</p>
+        {% include 'admin_custom/includes/analytics_chart.html' with c=trend %}
+    </section>
+    <section class="lg:col-span-4 bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Where things stand</h2>
+        <dl class="space-y-3 text-sm">
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Active paid subscriptions today</dt><dd class="font-semibold tabular-nums">{{ active_now }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Free trials running today</dt><dd class="font-semibold tabular-nums">{{ trials_active }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Net change in the period</dt><dd class="font-semibold tabular-nums {% if net_change > 0 %}text-emerald-700{% elif net_change < 0 %}text-red-700{% endif %}">{% if net_change > 0 %}+{% endif %}{{ net_change }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Lost, as a share of the {{ active_at_start }} active at the start</dt><dd class="font-semibold tabular-nums">{% if churn_rate is not None %}{{ churn_rate }}%{% else %}—{% endif %}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Trials converted to paid</dt><dd class="font-semibold tabular-nums">{{ trials_converted }} of {{ trial_count }}{% if trial_conversion is not None %} ({{ trial_conversion }}%){% endif %}</dd></div>
+            <div class="border-t border-gray-100 pt-3 flex justify-between gap-3"><dt class="text-gray-600">Ending in the next 7 days</dt><dd class="font-semibold tabular-nums">{{ expiring_7 }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Ending in the next 30 days</dt><dd class="font-semibold tabular-nums">{{ expiring_30 }}</dd></div>
+        </dl>
+        <p class="mt-4 text-xs text-gray-500">Readers get reminder emails 7 days and 1 day before their subscription ends.</p>
+    </section>
+</div>
+
+<section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">By plan</h2>
+    {% if plans %}
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[480px] text-sm">
+            <thead><tr class="text-left text-xs text-gray-600 border-b border-gray-100"><th class="py-2 font-medium">Plan</th><th class="py-2 font-medium text-right">Active today</th><th class="py-2 font-medium text-right">Started in period</th><th class="py-2 font-medium text-right">Lost in period</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for p in plans %}<tr>
+                    <td class="py-2.5">{{ p.plan.name }} <span class="text-xs text-gray-600">· {{ p.plan.get_plan_type_display }}{% if not p.plan.is_active %} · no longer sold{% endif %}</span></td>
+                    <td class="py-2.5 text-right tabular-nums font-semibold">{{ p.active }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{{ p.new }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{{ p.lost }}</td>
+                </tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<p class="text-sm text-gray-500">No plans yet.</p>{% endif %}
+</section>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 {% if show_money %}xl:grid-cols-4{% else %}xl:grid-cols-2{% endif %} gap-4">
+    {% include 'admin_custom/includes/analytics_kpi.html' with k=purchases %}
+    <section class="bg-white rounded-2xl border border-gray-100 p-5">
+        <p class="text-sm text-gray-600">Discount and trial codes used</p>
+        {% if top_codes %}
+            <ul class="mt-2 space-y-1.5 text-sm">{% for c in top_codes %}<li class="flex justify-between gap-3"><span class="font-mono text-gray-800">{{ c.code__code }}</span><span class="font-semibold tabular-nums">{{ c.n }}</span></li>{% endfor %}</ul>
+        {% else %}<p class="mt-2 text-sm text-gray-500">None in this period.</p>{% endif %}
+    </section>
+    {% if show_money %}
+        {% include 'admin_custom/includes/analytics_kpi.html' with k=revenue %}
+        {% include 'admin_custom/includes/analytics_kpi.html' with k=purchase_revenue %}
+    {% endif %}
+</div>
+{% if show_money %}<p class="mt-4 text-xs text-gray-600">Full money detail is on the <a href="{% url 'admin_custom:revenue_subscriptions' %}" class="underline">Revenue → Subscriptions</a> page.</p>{% endif %}
+{% endblock %}

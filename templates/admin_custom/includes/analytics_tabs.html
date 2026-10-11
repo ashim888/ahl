@@ -1,0 +1,13 @@
+{% comment %} The analytics area tabs — on every analytics page and on Topics (keyword
+   analytics). `active` is the current tab; `q` carries the period between pages. {% endcomment %}
+<nav aria-label="Analytics areas" class="-mt-2 mb-5 border-b border-gray-200 overflow-x-auto">
+    <ul class="flex gap-1 text-sm whitespace-nowrap">
+        {% url 'admin_custom:analytics' as u %}{% include 'admin_custom/includes/analytics_tab.html' with key='overview' label='Overview' url=u %}
+        {% url 'admin_custom:analytics_readership' as u %}{% include 'admin_custom/includes/analytics_tab.html' with key='readership' label='Readership' url=u %}
+        {% url 'admin_custom:keyword_analytics' as u %}{% include 'admin_custom/includes/analytics_tab.html' with key='topics' label='Topics' url=u no_period=True %}
+        {% url 'admin_custom:analytics_subscriptions' as u %}{% include 'admin_custom/includes/analytics_tab.html' with key='subscriptions' label='Subscriptions' url=u %}
+        {% url 'admin_custom:analytics_ads' as u %}{% include 'admin_custom/includes/analytics_tab.html' with key='ads' label='Ads' url=u %}
+        {% url 'admin_custom:analytics_newsletter' as u %}{% include 'admin_custom/includes/analytics_tab.html' with key='newsletter' label='Newsletter' url=u %}
+        {% if user.is_senior_staff %}{% url 'admin_custom:revenue' as u %}{% include 'admin_custom/includes/analytics_tab.html' with key='revenue' label='Revenue' url=u no_period=True %}{% endif %}
+    </ul>
+</nav>

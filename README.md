@@ -214,7 +214,7 @@ Each Django app owns one concern:
 | `ads` | House-sold ad zones, impressions/clicks |
 | `pitches` | Public story-pitch intake → editorial review queue |
 | `pages` | Terms, privacy and refund policy pages, edited at `/manage/pages/` |
-| `admin_custom` | The editorial dashboard (KPIs, BI analytics, keyword analytics, comment alerts, analytics retention) |
+| `admin_custom` | The editorial dashboard (KPIs, analytics pages per area — `analytics.py`, keyword analytics, comment alerts, analytics retention) |
 
 ## Deployment
 
