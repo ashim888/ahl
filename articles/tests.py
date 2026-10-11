@@ -1803,6 +1803,39 @@ class TableOfContentsTests(TestCase):
         self.assertEqual(extract_toc(''), ('', []))
         self.assertEqual(extract_toc(None), (None, []))
 
+    def test_bold_paragraphs_become_headings_when_there_are_none(self):
+        """Text pasted from Word/Google Docs has bold paragraphs, not headings."""
+        html, entries = extract_toc(
+            '<p style="text-align:justify;"><strong>&nbsp;एपेन्डिक्स के हो?</strong></p><p>Text.</p>'
+            '<p><strong>२.१ तथ्याङ्क स्रोत</strong></p><p>More <strong>bold words</strong> inside.</p>'
+            '<p><b>Treatment</b>&nbsp;</p><p><strong>Label:</strong> a sentence that goes on.</p>'
+            '<blockquote><p><strong>Quoted</strong></p></blockquote><ul><li><p><strong>In a list</strong></p></li></ul>'
+        )
+        self.assertEqual([(e['level'], e['text']) for e in entries],
+                         [(2, 'एपेन्डिक्स के हो?'), (3, '२.१ तथ्याङ्क स्रोत'), (2, 'Treatment')])
+        self.assertIn('<h2 id="एपेन्डिक्स-के-हो">एपेन्डिक्स के हो?</h2>', html)
+        self.assertIn('<p>More <strong>bold words</strong> inside.</p>', html)
+        self.assertIn('<blockquote><p><strong>Quoted</strong></p></blockquote>', html)
+        self.assertIn('<li><p><strong>In a list</strong></p></li>', html)
+
+    def test_bold_paragraphs_left_alone_when_real_headings_exist(self):
+        _html, entries = extract_toc('<h2>Real</h2><p><strong>Just emphasis</strong></p><h2>Also real</h2>')
+        self.assertEqual([e['text'] for e in entries], ['Real', 'Also real'])
+
+    def test_very_long_bold_paragraph_is_not_a_heading(self):
+        _html, entries = extract_toc(f'<p><strong>{"word " * 40}</strong></p>')
+        self.assertEqual(entries, [])
+
+    def test_article_page_shows_in_this_article_for_pasted_text(self):
+        article = Article.objects.create(
+            title='Pasted', slug='pasted-toc', status=Article.Status.PUBLISHED, access_type=Article.AccessType.OPEN_ACCESS,
+            html_content='<p><strong>What is it?</strong></p><p>One.</p><p><strong>Symptoms</strong></p><p>Two.</p>',
+        )
+        response = self.client.get(article.get_absolute_url())
+        self.assertContains(response, 'id="article-toc"')
+        self.assertContains(response, '<h2 id="what-is-it">What is it?</h2>')
+        self.assertContains(response, 'href="#symptoms"')
+
 
 class ArticleDetailTocRenderingTests(TestCase):
     def test_toc_rendered_for_article_with_multiple_headings(self):
