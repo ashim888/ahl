@@ -296,7 +296,7 @@ class HomeView(TemplateView):
         videos += take(published.filter(homepage_section='').exclude(video_url=''), self.VIDEO_COUNT - len(videos))
 
         sections = {}
-        prefetch_related_objects(hero_slides, 'articleauthor_set__author__user')
+        prefetch_related_objects(hero_slides, 'articleauthor_set__author__user', 'keyword_tags')
         sections['hero_slides'] = hero_slides
         sections['hero_article'] = hero_article
         sections['hero_authors'] = (

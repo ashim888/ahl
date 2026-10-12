@@ -105,3 +105,26 @@ class RenderingTests(TestCase):
         article = Article.objects.get(title='Framed')
         self.assertEqual((article.featured_image_fit, article.featured_image_focus_x, article.featured_image_focus_y),
                          ('cover', 35, 15))
+
+
+class CoverHeadlineTests(TestCase):
+    """The homepage cover's two-tone headline (text_filters.headline_parts)."""
+
+    def test_splits(self):
+        from .templatetags.text_filters import headline_parts
+
+        self.assertEqual(headline_parts('डिमेन्सिया (बिर्सने रोग)'),
+                         {'main': 'डिमेन्सिया', 'accent': '(बिर्सने रोग)', 'subtitle': ''})
+        self.assertEqual(headline_parts('The Human Brain: How It Works'),
+                         {'main': 'The Human Brain', 'accent': '', 'subtitle': 'How It Works'})
+        self.assertEqual(headline_parts('Nepal (2026) budget')['main'], 'Nepal (2026) budget')  # not at the end
+        self.assertEqual(headline_parts('What is RADAR?')['main'], 'What is RADAR?')
+
+    def test_homepage_cover(self):
+        story = make((1600, 900), homepage_section=Article.HomepageSection.HERO)
+        story.title = 'Dengue: what to know'
+        story.save()
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, 'Read the full story')
+        self.assertContains(response, '<span class="mt-2 block text-2xl sm:text-3xl lg:text-4xl font-semibold text-white/90">what to know</span>')
+        self.assertContains(response, story.get_absolute_url())
