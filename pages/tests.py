@@ -85,6 +85,42 @@ class SitePageTests(TestCase):
             page.save()
             self.assertEqual(SitePage.objects.get(pk=page.pk).title, 'प्रयोगका सर्तहरू')
 
+    def test_blank_looking_nepali_text_falls_back_to_english(self):
+        """The editor leaves '<p>&nbsp;</p>' behind when a box is cleared —
+        that used to show Nepali readers (the default) an empty page."""
+        from .models import is_blank_html
+
+        for blank in ('', '<p>&nbsp;</p>', '<p><br></p>', ' <p> </p>\n<p>&nbsp;&nbsp;</p>', '<div><strong> </strong></div>'):
+            self.assertTrue(is_blank_html(blank), blank)
+        for real in ('<p>नमस्ते</p>', '<p><img src="/a.png" alt=""></p>', '<p>&amp;</p>'):
+            self.assertFalse(is_blank_html(real), real)
+
+        self.client.force_login(self.eic)
+        page = SitePage.objects.get(slug='faq')
+        self.client.post(reverse('pages:manage_page_update', args=['faq']), {
+            'title_en': page.title_en, 'body_en': '<p>How do subscriptions work?</p>', 'title_ne': '',
+            'body_ne': '<p>&nbsp;</p>', 'is_published': 'on',
+        })
+        page.refresh_from_db()
+        self.assertEqual(page.body_ne, '')
+        cache.clear()
+        response = self.client.get(reverse('pages:faq'), HTTP_ACCEPT_LANGUAGE='ne')
+        self.assertContains(response, 'How do subscriptions work?')
+
+    def test_cleanup_migration_clears_blank_nepali_text(self):
+        import importlib
+
+        from django.db import connection
+        from django.db.migrations.executor import MigrationExecutor
+
+        # The models as the migration sees them (no translation descriptors).
+        apps = MigrationExecutor(connection).loader.project_state(('pages', '0010_clear_blank_nepali_text')).apps
+        SitePage.objects.filter(slug='faq').update(body_ne='<p>&nbsp;</p>')
+        SitePage.objects.filter(slug='terms').update(body_ne='<p>सर्त</p>')
+        importlib.import_module('pages.migrations.0010_clear_blank_nepali_text').clear_blank(apps, None)
+        self.assertEqual(SitePage.objects.get(slug='faq').body_ne, '')
+        self.assertEqual(SitePage.objects.get(slug='terms').body_ne, '<p>सर्त</p>')
+
     def test_only_senior_staff_edit(self):
         self.client.force_login(make_user('editor-pages@example.com', User.Role.EDITOR))
         self.assertEqual(self.client.get(reverse('pages:manage_page_list')).status_code, 403)

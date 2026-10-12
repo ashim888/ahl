@@ -8,6 +8,8 @@
 # ran 0050. Then flush the index cache (rebuild_search_index does the same).
 from django.db import migrations
 
+from articles import fulltext
+
 FORWARD = [
     'SET SESSION innodb_ft_enable_stopword=OFF',
     'ALTER TABLE articles_article DROP INDEX articles_article_title_ngram',
@@ -22,9 +24,15 @@ FORWARD = [
 
 
 def rebuild(apps, schema_editor):
-    if schema_editor.connection.vendor != 'mysql':
+    connection = schema_editor.connection
+    if connection.vendor != 'mysql':
         return
-    with schema_editor.connection.cursor() as cursor:
+    if fulltext.is_mariadb(connection):
+        # No ngram index and no stopword problem on MariaDB — just make sure
+        # both indexes exist (articles/fulltext.py).
+        fulltext.setup(connection)
+        return
+    with connection.cursor() as cursor:
         for statement in FORWARD:
             cursor.execute(statement)
             if statement.startswith('OPTIMIZE'):

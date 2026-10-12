@@ -5,6 +5,8 @@ import html
 from django.db import migrations, models
 from django.utils.html import strip_tags
 
+from articles import fulltext
+
 DIGITS = str.maketrans('०१२३४५६७८९', '0123456789')
 
 
@@ -22,22 +24,46 @@ def backfill(apps, schema_editor):
         Article.objects.filter(pk=article.pk).update(search_text=text)
 
 
-# ngram parser: matches Devanagari, short terms and partial words. Stopwords
-# must be off while the index is built — with the default list the ngram
-# parser drops every 2-letter chunk containing "a" or "i" (so "malaria"
-# would never match). The setting is stored with the index.
-FORWARD_SQL = [
-    'SET SESSION innodb_ft_enable_stopword=OFF',
-    'ALTER TABLE articles_article DROP INDEX articles_article_fulltext',
-    'ALTER TABLE articles_article ADD FULLTEXT INDEX articles_article_search_ngram (search_text) WITH PARSER ngram',
-    'ALTER TABLE articles_article ADD FULLTEXT INDEX articles_article_title_ngram (title) WITH PARSER ngram',
-    'SET SESSION innodb_ft_enable_stopword=ON',
-]
-REVERSE_SQL = [
-    'ALTER TABLE articles_article DROP INDEX articles_article_search_ngram',
-    'ALTER TABLE articles_article DROP INDEX articles_article_title_ngram',
-    'ALTER TABLE articles_article ADD FULLTEXT INDEX articles_article_fulltext (title, abstract)',
-]
+def add_column(apps, schema_editor):
+    """The search_text column — unless it's already there: on MariaDB an
+    earlier, failed run of this migration may have added it (MariaDB can't
+    roll table changes back)."""
+    if fulltext.column_exists(schema_editor.connection, 'search_text'):
+        return
+    field = models.TextField(blank=True, editable=False)
+    field.set_attributes_from_name('search_text')
+    schema_editor.add_field(apps.get_model('articles', 'Article'), field)
+
+
+def remove_column(apps, schema_editor):
+    if fulltext.column_exists(schema_editor.connection, 'search_text'):
+        field = models.TextField(blank=True, editable=False)
+        field.set_attributes_from_name('search_text')
+        schema_editor.remove_field(apps.get_model('articles', 'Article'), field)
+
+
+def indexes(apps, schema_editor):
+    """Replace the old title+abstract index with the title search index:
+    ngram on MySQL (matches Devanagari, short terms and partial words;
+    stopwords off while it's built, or "malaria" would never match), word-
+    based on MariaDB, which has no ngram parser. The article-text index
+    follows in 0047. See articles/fulltext.py."""
+    connection = schema_editor.connection
+    if connection.vendor != 'mysql':
+        return
+    with connection.cursor() as cursor:
+        fulltext.drop_indexes(cursor, ['articles_article_fulltext'])
+        fulltext.add_title_index(cursor, connection)
+
+
+def indexes_reverse(apps, schema_editor):
+    connection = schema_editor.connection
+    if connection.vendor != 'mysql':
+        return
+    with connection.cursor() as cursor:
+        fulltext.drop_indexes(cursor, [fulltext.TITLE_INDEX])
+        if 'articles_article_fulltext' not in fulltext.index_names(cursor):
+            cursor.execute('ALTER TABLE articles_article ADD FULLTEXT INDEX articles_article_fulltext (title, abstract)')
 
 
 class Migration(migrations.Migration):
@@ -47,11 +73,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='article',
-            name='search_text',
-            field=models.TextField(blank=True, editable=False),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[migrations.AddField(
+                model_name='article', name='search_text', field=models.TextField(blank=True, editable=False),
+            )],
+            database_operations=[migrations.RunPython(add_column, remove_column)],
         ),
         migrations.RunPython(backfill, migrations.RunPython.noop),
-        migrations.RunSQL(FORWARD_SQL, REVERSE_SQL),
+        migrations.RunPython(indexes, indexes_reverse),
     ]

@@ -1,9 +1,28 @@
+import re
+from html import unescape
+
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
 from django.urls import reverse
 
 from articles.sanitize import sanitize_page_html
+
+
+# Something a reader would see even with no text: a picture, video, embed or rule.
+VISIBLE_TAG_RE = re.compile(r'<(img|iframe|video|audio|object|embed|svg|hr)\b', re.IGNORECASE)
+TAG_RE = re.compile(r'<[^>]+>')
+
+
+def is_blank_html(html: str) -> bool:
+    """True for text the editor leaves behind when a box is emptied —
+    '<p>&nbsp;</p>', '<p><br></p>', bare whitespace — which a reader would
+    see as an empty page."""
+    if not html:
+        return True
+    if VISIBLE_TAG_RE.search(html):
+        return False
+    return not unescape(TAG_RE.sub('', html)).replace('\xa0', ' ').strip()
 
 
 class SitePage(models.Model):
@@ -47,6 +66,12 @@ class SitePage(models.Model):
         for field in ('body', 'body_en', 'body_ne'):
             if getattr(self, field, None):
                 setattr(self, field, sanitize_page_html(getattr(self, field)))
+        # A translation that only *looks* empty ('<p>&nbsp;</p>' from the
+        # editor) is stored as truly empty, so the page falls back to English
+        # instead of showing readers a blank page.
+        for field in ('body_ne', 'title_ne'):
+            if getattr(self, field, None) and is_blank_html(getattr(self, field)):
+                setattr(self, field, '')
         super().save(*args, **kwargs)
         cache.delete(PUBLISHED_CACHE_KEY)
 
