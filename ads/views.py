@@ -2,7 +2,7 @@ import datetime
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -73,19 +73,25 @@ class AdSlotFormMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # The layout picture on the form (ads/placements.py): where each zone
-        # shows, on which screens, its size, and how many other ads are
-        # running there now — so an editor sees the zone before choosing it
-        # and knows the size before cropping an image.
+        # shows, on which screens, its size, and the ads already running
+        # there (drawn into the picture with their own image) — so an editor
+        # sees the zone, and what's in it, before choosing it.
         today = timezone.localdate()
         running = (AdSlot.objects.filter(is_active=True, start_date__lte=today)
-                   .filter(Q(end_date__isnull=True) | Q(end_date__gte=today)))
+                   .filter(Q(end_date__isnull=True) | Q(end_date__gte=today)).order_by('-created_at'))
         if getattr(self, 'object', None) and self.object.pk:
             running = running.exclude(pk=self.object.pk)
-        running_by_zone = dict(running.values_list('zone').annotate(n=Count('id')).order_by())
+        running_by_zone = {}
+        for ad in running:
+            running_by_zone.setdefault(ad.zone, []).append({
+                'sponsor': ad.sponsor_name, 'image': ad.image.url if ad.image else '',
+                'until': ad.end_date.strftime('%b %-d, %Y') if ad.end_date else '',
+                'edit_url': reverse('ads:manage_adslot_update', args=[ad.pk]),
+            })
         context['zone_info'] = {
             value: {'label': label, 'width': AdSlot.ZONE_DIMENSIONS[value][0],
-                    'height': AdSlot.ZONE_DIMENSIONS[value][1], 'running': running_by_zone.get(value, 0),
-                    **PLACEMENTS[value]}
+                    'height': AdSlot.ZONE_DIMENSIONS[value][1], 'ads': running_by_zone.get(value, []),
+                    'running': len(running_by_zone.get(value, [])), **PLACEMENTS[value]}
             for value, label in AdSlot.Zone.choices
         }
         return context

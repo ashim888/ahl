@@ -4,8 +4,10 @@ an editor can see a zone before choosing it.
 
 Keep in step with the templates that place the zones: templates/base.html
 (header leaderboard, mobile anchor), templates/home.html (the homepage
-zones) and templates/articles/article_detail.html with
-articles/content_ads.py (the article zones).
+zones), templates/articles/article_detail.html with articles/content_ads.py
+(the article zones), templates/sections/section_detail.html and
+templates/articles/topic_detail.html (section banner), and the story list,
+search, archive and videos templates (list banner).
 """
 from .models import AdSlot
 
@@ -58,5 +60,30 @@ PLACEMENTS = {
     Z.ARTICLE_SIDEBAR_HALF_PAGE: {
         'page': 'Article pages', 'screens': 'All screens',
         'where': 'A tall box in the right-hand column, under the sidebar rectangle (below the article on phones).',
+    },
+    Z.HOMEPAGE_MID_BANNER: {
+        'page': 'Homepage', 'screens': 'All screens',
+        'where': 'A strip in the middle of the homepage, between Latest News and Opinion (scaled down to fit '
+                 'on phones).',
+    },
+    Z.MOBILE_LOWER_BANNER: {
+        'page': 'Homepage', 'screens': 'Phones only',
+        'where': 'Lower down the homepage on a phone, after the videos.',
+    },
+    Z.ARTICLE_END: {
+        'page': 'Article pages', 'screens': 'All screens',
+        'where': 'Right where readers finish an article — after the topics and share buttons, before the '
+                 'comments.',
+    },
+    Z.SECTION_BANNER: {
+        'page': 'Section & topic pages', 'screens': 'All screens',
+        'where': 'On every section page (Policy & Economy, Health Tech…) after the lead story (above the stories '
+                 'on later pages), and on every topic page (#Dengue…) after the sixth story. Scaled down to fit '
+                 'on phones.',
+    },
+    Z.LIST_BANNER: {
+        'page': 'Story lists & search', 'screens': 'All screens',
+        'where': 'After the fifth story on All articles, search results and the archive, and under the main '
+                 'video on the videos page. Scaled down to fit on phones.',
     },
 }

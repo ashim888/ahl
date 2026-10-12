@@ -48,7 +48,15 @@ class AdSlotFormViewTests(TestCase):
         make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Other')
         make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Stopped', is_active=False)
         page = self.client.get(reverse('ads:manage_adslot_update', args=[ad.pk]))
-        self.assertEqual(page.context['zone_info'][AdSlot.Zone.ARTICLE_SIDEBAR]['running'], 1)
+        info = page.context['zone_info']
+        self.assertEqual(info[AdSlot.Zone.ARTICLE_SIDEBAR]['running'], 1)
+        # The running ad is drawn into the layout picture: its name, image and an edit link.
+        [running] = info[AdSlot.Zone.ARTICLE_SIDEBAR]['ads']
+        self.assertEqual(running['sponsor'], 'Other')
+        self.assertTrue(running['image'].endswith('.jpg'))
+        self.assertIn('/edit/', running['edit_url'])
+        self.assertEqual(info[AdSlot.Zone.MOBILE_ANCHOR]['ads'], [])
+        self.assertContains(page, 'zone-box__badge')
         self.assertContains(page, 'data-zone-pick="article_sidebar" aria-pressed="true"')
 
     def test_create_with_the_right_size(self):

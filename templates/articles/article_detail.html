@@ -448,6 +448,8 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 <button type="button" id="copy-short-link-btn-mobile" data-copy-url="{{ short_url }}" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "Short link" %}</button>
             </div>
 
+            {% ad_slot 'article_end' wrapper_class='mt-10 flex justify-center' %}
+
             {% if not preview_mode %}
                 <p class="mt-10 text-xs text-muted-foreground">
                     {% trans "Spotted an error, or something that shouldn’t be here?" %}

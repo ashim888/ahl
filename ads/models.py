@@ -62,6 +62,17 @@ class AdSlot(models.Model):
         # not a Skyscraper — value renamed along with it, see migration 0006)
         # uses most of that width instead.
         ARTICLE_SIDEBAR_HALF_PAGE = 'article_sidebar_half_page', 'Article Sidebar — Half Page (300×600)'
+        # October 2026: more inventory. A banner between Latest News and
+        # Opinion on every screen, a second phone banner lower on the
+        # homepage, a box where readers finish an article, and one shared
+        # banner zone each for the section/topic pages and for story lists
+        # and search (not one zone per section — the same "one ad at random
+        # from those running" rule as everywhere else).
+        HOMEPAGE_MID_BANNER = 'homepage_mid_banner', 'Homepage — Mid Banner (728×90)'
+        MOBILE_LOWER_BANNER = 'mobile_lower_banner', 'Mobile — Lower Banner (320×100)'
+        ARTICLE_END = 'article_end', 'Article End — Large Rectangle (336×280)'
+        SECTION_BANNER = 'section_banner', 'Section & Topic Pages — Banner (728×90)'
+        LIST_BANNER = 'list_banner', 'Story Lists & Search — Banner (728×90)'
 
     # Standard IAB ad unit sizes (px) — the single source of truth for both
     # upload-time validation (AdSlotForm.clean, "an ad this size" not "an ad
@@ -82,6 +93,11 @@ class AdSlot(models.Model):
         Zone.ARTICLE_CONTENT_BANNER: (728, 90),
         Zone.ARTICLE_SIDEBAR: (300, 250),
         Zone.ARTICLE_SIDEBAR_HALF_PAGE: (300, 600),
+        Zone.HOMEPAGE_MID_BANNER: (728, 90),
+        Zone.MOBILE_LOWER_BANNER: (320, 100),
+        Zone.ARTICLE_END: (336, 280),
+        Zone.SECTION_BANNER: (728, 90),
+        Zone.LIST_BANNER: (728, 90),
     }
 
     sponsor_name = models.CharField(max_length=255)

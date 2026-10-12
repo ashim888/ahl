@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n ads_tags %}
 
 {% block title %}{% trans "Videos" %} — {{ JOURNAL_NAME }}{% endblock %}
 
@@ -16,6 +16,7 @@
                 </div>
             {% endwith %}
         {% endif %}
+        {% ad_slot 'list_banner' wrapper_class='mb-12 flex justify-center' %}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
             {% for article in videos %}
                 {% if page_obj.has_previous or not forloop.first %}

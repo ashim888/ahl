@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time %}
+{% load news_time ads_tags %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
@@ -47,6 +47,7 @@
                     </div>
                 </div>
             </article>
+            {% if forloop.counter == 5 or forloop.last and forloop.counter < 5 %}{% ad_slot 'list_banner' wrapper_class='py-6 flex justify-center' %}{% endif %}
         {% empty %}
             <p class="text-muted-foreground py-10">Nothing in the archive yet.</p>
         {% endfor %}
