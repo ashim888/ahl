@@ -54,4 +54,16 @@
   .hero-dot { width: 0.625rem; }
   /* `hidden` must win over the slide's own display:grid / the controls' flex. */
   .hero-slide[hidden], [data-hero-controls][hidden] { display: none !important; }
+  /* A whole (uncropped) picture fades out at its edges into the blurred copy
+     of itself behind it, instead of sitting on it like a pasted-on card. */
+  .hero-feather {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+                        linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+                linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+    mask-composite: intersect;
+  }
+  /* Keeps the centred hero text readable over any part of a photo. */
+  .hero-text-shadow { text-shadow: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 18px rgb(0 0 0 / 0.45); }
 }

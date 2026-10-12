@@ -9,60 +9,77 @@
 
 {% if hero_article %}
 {% comment %}
-Top stories (articles.views.HomeView): every pinned Hero rotates here, newest first — a slider
-(static/js/hero_slider.js) when there's more than one, a single top story otherwise. Without
-JavaScript the slides simply stack. Pictures that don't suit the ~1.5:1 frame (square, tall or very
-wide — Article.hero_shows_whole) are shown whole on a blurred copy of themselves.
+Top stories (articles.views.HomeView), full-width cover style: every pinned Hero rotates here, newest
+first — a slider (static/js/hero_slider.js) when there's more than one, a single top story otherwise.
+Without JavaScript the slides simply stack. The picture runs edge to edge with the headline centred
+over it; a picture that shouldn't be cropped (square, tall or very wide — Article.hero_shows_whole) is
+shown whole — beside the text on computers, above it on phones — its edges fading into a blurred copy
+of itself (.hero-feather in static/src/input.css).
 {% endcomment %}
-<section class="max-w-7xl mx-auto px-6 pt-10 pb-8" {% if hero_slides|length > 1 %}data-hero-slider aria-roledescription="carousel" aria-label="{% trans 'Top stories' %}"{% endif %}>
-    <div class="rule-editorial mb-6"></div>
+<section class="pb-8" {% if hero_slides|length > 1 %}data-hero-slider aria-roledescription="carousel" aria-label="{% trans 'Top stories' %}"{% endif %}>
     <div class="relative" data-hero-track>
     {% for story in hero_slides %}
-        <article class="hero-slide grid grid-cols-1 lg:grid-cols-5 gap-0" data-hero-slide
+        <article class="hero-slide relative isolate overflow-hidden bg-foreground text-primary-foreground" data-hero-slide
                  {% if hero_slides|length > 1 %}role="group" aria-roledescription="slide" aria-label="{% blocktrans with n=forloop.counter total=hero_slides|length %}{{ n }} of {{ total }}{% endblocktrans %}"{% endif %}>
-            <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
-               class="lg:col-span-3 relative overflow-hidden bg-foreground block aspect-[16/10] lg:aspect-auto lg:min-h-[460px]">
+            {# The picture fills the slide; the text layer above lets clicks through to it. #}
+            <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true" class="absolute inset-0 -z-10 block">
                 {% if story.card_image_url %}
                     {% if story.hero_shows_whole %}
-                        <img src="{{ story.card_image_url }}" alt="" class="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50">
-                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
-                             class="absolute inset-0 w-full h-full object-contain p-3 sm:p-5 drop-shadow-2xl">
+                        {# Backdrop only — the whole picture itself is drawn above the fade, below. #}
+                        <img src="{{ story.card_image_url }}" alt="" class="absolute inset-0 w-full h-full object-cover scale-110 blur-3xl opacity-90 saturate-150">
                     {% else %}
                         <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
-                             class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);{% if story.featured_image %} object-position: {{ story.featured_image_position }};{% endif %}">
+                             class="absolute inset-0 w-full h-full object-cover" {% if story.featured_image %}style="object-position: {{ story.featured_image_position }};"{% endif %}>
                     {% endif %}
                     {% include 'articles/includes/play_badge.html' with article=story %}
-                {% else %}
-                    <div class="w-full h-full absolute inset-0 flex items-center justify-center bg-secondary">
-                        <span class="font-display text-2xl text-muted-foreground italic">{{ JOURNAL_NAME }}</span>
-                    </div>
                 {% endif %}
             </a>
-
-            {# Dark panel, same height as the picture; text centred in it, byline on one line — no gaps however short the summary. #}
-            <div class="lg:col-span-2 bg-foreground text-primary-foreground flex flex-col justify-center gap-5 p-6 sm:p-8 lg:p-10">
-                <span class="section-label text-accent">{% trans "Cover Story" %} · {{ story.get_article_type_display }}</span>
-                <h2 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight" style="letter-spacing: -0.02em;">
-                    <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline decoration-2 underline-offset-4">{{ story.title }}</a>
-                </h2>
-                {% with summary=story.summary %}{% if summary %}<p class="text-base leading-relaxed text-white/75 line-clamp-4">{{ summary }}</p>{% endif %}{% endwith %}
-                <div class="flex items-center gap-3 border-t border-white/15 pt-4 text-xs">
-                    <span class="w-8 h-8 rounded-full shrink-0" style="background: linear-gradient(135deg, #ef6b5c 0%, #c0392b 100%);" aria-hidden="true"></span>
-                    <p class="min-w-0 leading-snug">
-                        <span class="font-semibold text-sm text-white">{% for aa in story.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:underline">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}</span>
-                        <span class="block font-mono-editorial text-white/60">{{ story.published_at|news_time }} · {{ story.estimated_read_minutes }} {% trans "min read" %}</span>
-                    </p>
-                </div>
-                <a href="{% url 'articles:article_detail' story.slug %}"
-                   class="self-start font-mono-editorial text-[0.65rem] tracking-widest border-b-2 border-accent-on-dark pb-0.5 hover:text-accent-on-dark">
-                    {% trans "READ THE FULL STORY →" %}
+            {% comment %}Shade for the text, which sits in the middle: an even tint on phones (text can be anywhere
+               over the photo), a fade from the left on wide screens (text on the left, picture clear on the right).{% endcomment %}
+            <div class="pointer-events-none absolute inset-0 -z-10 bg-black/60 lg:bg-black/15" aria-hidden="true"></div>
+            <div class="pointer-events-none absolute inset-0 -z-10 hidden lg:block bg-gradient-to-r from-black/85 from-20% via-black/60 via-55% to-transparent" aria-hidden="true"></div>
+            {% if story.card_image_url and story.hero_shows_whole %}
+                {# Wide screens: the whole picture on the right, undimmed. #}
+                <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
+                   class="absolute inset-y-0 right-0 hidden lg:flex w-[48%] items-center justify-center p-10">
+                    <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                         class="hero-feather max-h-full max-w-full object-contain">
                 </a>
+            {% endif %}
+
+            <div class="pointer-events-none relative max-w-7xl mx-auto px-6 min-h-[540px] sm:min-h-[580px] lg:min-h-[640px] flex flex-col justify-center gap-6 py-10 lg:py-14">
+                {% if story.card_image_url and story.hero_shows_whole %}
+                    {# Phones and tablets: the whole picture above the text, never under it. #}
+                    <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true" class="pointer-events-auto lg:hidden block">
+                        <img src="{{ story.card_image_url }}" alt="" loading="lazy" class="hero-feather mx-auto max-h-[300px] w-auto max-w-full object-contain">
+                    </a>
+                {% endif %}
+                <div class="hero-text-shadow pointer-events-auto max-w-2xl {% if story.hero_shows_whole %}lg:max-w-[46%]{% endif %} flex flex-col gap-4">
+                    <span class="section-label text-accent-on-dark">{% trans "Cover Story" %} · {{ story.get_article_type_display }}</span>
+                    <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.1] text-white" style="letter-spacing: -0.02em; text-wrap: balance;">
+                        <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline decoration-2 underline-offset-4">{{ story.title }}</a>
+                    </h2>
+                    {% with summary=story.summary %}{% if summary %}<p class="text-base sm:text-lg leading-relaxed text-white/85 line-clamp-3 max-w-2xl">{{ summary }}</p>{% endif %}{% endwith %}
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1 text-xs">
+                        <p class="flex items-center gap-3 min-w-0 leading-snug">
+                            <span class="w-8 h-8 rounded-full shrink-0" style="background: linear-gradient(135deg, #ef6b5c 0%, #c0392b 100%);" aria-hidden="true"></span>
+                            <span class="min-w-0">
+                                <span class="block font-semibold text-sm text-white">{% for aa in story.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:underline">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}</span>
+                                <span class="block font-mono-editorial text-white/75">{{ story.published_at|news_time }} · {{ story.estimated_read_minutes }} {% trans "min read" %}</span>
+                            </span>
+                        </p>
+                        <a href="{% url 'articles:article_detail' story.slug %}"
+                           class="font-mono-editorial text-[0.65rem] tracking-widest text-white border-b-2 border-accent-on-dark pb-0.5 hover:text-accent-on-dark">
+                            {% trans "READ THE FULL STORY →" %}
+                        </a>
+                    </div>
+                </div>
             </div>
         </article>
     {% endfor %}
     </div>
     {% if hero_slides|length > 1 %}
-        <div class="mt-5 flex items-center gap-4" data-hero-controls hidden>
+        <div class="max-w-7xl mx-auto px-6 mt-5 flex items-center gap-4" data-hero-controls hidden>
             <button type="button" data-hero-prev class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Previous story' %}">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
@@ -81,7 +98,7 @@ wide — Article.hero_shows_whole) are shown whole on a blurred copy of themselv
         <p class="sr-only" aria-live="polite" data-hero-status></p>
         <script src="{% static 'js/hero_slider.js' %}" defer></script>
     {% endif %}
-    <div class="rule-thin mt-8"></div>
+    <div class="max-w-7xl mx-auto px-6"><div class="rule-thin mt-8"></div></div>
 </section>
 {% else %}
 <section class="max-w-7xl mx-auto px-6 py-24 text-center">
