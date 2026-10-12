@@ -2,7 +2,8 @@
 
 Each article keeps a plain-text `search_text` (title, summary, body,
 keywords, authors, section names in English and Nepali — build_search_text)
-with a word-based MySQL FULLTEXT index (migration 0047): fast even for
+with a word-based FULLTEXT index (migration 0047; articles/fulltext.py
+covers MySQL and the production MariaDB): fast even for
 common words on a large archive, handles Devanagari words, and matches
 word beginnings ("vacc" → vaccine). The title also has an **ngram** index
 (0046) — used for type-ahead, to rank title matches first, and for
@@ -20,9 +21,12 @@ import html
 import re
 
 from django.core.cache import cache
+from django.db import connection
 from django.db.models import Case, FloatField, IntegerField, Q, Value, When
 from django.db.models.expressions import RawSQL
 from django.utils.html import strip_tags
+
+from . import fulltext
 
 # Devanagari digits ०-९ → 0-9 in both the index and queries, so "२०८२" and
 # "2082" find each other.
@@ -75,7 +79,17 @@ def terms(query: str) -> list[str]:
 
 
 def _title_ngram(words):
-    expression = ' '.join(f'+{word}' for word in words)
+    """Title relevance. MySQL: the ngram index matches any part of a word.
+    MariaDB has no ngram parser (articles/fulltext.py) — its word index
+    matches word beginnings ("vacc*") of 3+ letters; shorter terms fall
+    through to the substring fallback in search_ids."""
+    if fulltext.is_mariadb(connection):
+        words = [word for word in words if len(word) >= 3]
+        if not words:
+            return Value(0.0, output_field=FloatField())
+        expression = ' '.join(f'+{word}*' for word in words)
+    else:
+        expression = ' '.join(f'+{word}' for word in words)
     return RawSQL('MATCH(articles_article.title) AGAINST (%s IN BOOLEAN MODE)', (expression,), output_field=FloatField())
 
 
