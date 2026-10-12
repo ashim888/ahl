@@ -1,0 +1,15 @@
+{{ organization.name }} — your {{ journal_name }} usage in {{ start|date:"F Y" }}
+
+Articles read: {{ reads }}
+Members who read: {{ active_readers }} of {{ member_count }}
+Seats: {% if seats %}{{ member_count }} of {{ seats }} used{% else %}No limit{% endif %}
+{% if top_articles %}
+Most read:
+{% for row in top_articles|slice:":5" %}- {{ row.article__title }} ({{ row.n }})
+{% endfor %}{% endif %}
+The attached CSV has each member's figures. Individual reading lists are never shared — only counts.
+
+Your dashboard: {{ dashboard_url }}
+{% if account_manager %}Questions, more seats or renewal: {{ account_manager.get_full_name }} — {{ account_manager.email }}{% endif %}
+
+— {{ journal_name }}

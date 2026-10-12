@@ -1,10 +1,15 @@
 import secrets
 
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
 from .money import format_money
+
+
+# Nepal PAN / VAT registration numbers are 9 digits.
+pan_validator = RegexValidator(r'^\d{9}$', 'A PAN is 9 digits.')
 
 
 def generate_gift_token():
@@ -135,7 +140,14 @@ class UserSubscription(models.Model):
     # TODO: Integrate Stripe — store the Stripe subscription/customer id here
     # once checkout exists; blank for manually-granted subscriptions.
     payment_reference = models.CharField(max_length=255, blank=True)
+    is_trial = models.BooleanField(default=False, help_text='A free trial from a code (billing/promotions.py).')
     created_at = models.DateTimeField(auto_now_add=True)
+    # When it was cancelled (staff revoke, reader cancellation, refund) — for
+    # "cancelled in this period" on the Subscriptions analytics page. Empty
+    # for cancellations made before October 2026, which weren't timed.
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    # Which expiry emails went out ("7", "1", "ended") — see billing/reminders.py.
+    reminders_sent = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -248,33 +260,211 @@ def generate_payment_reference() -> str:
     return 'AHL' + secrets.token_hex(10).upper()
 
 
+class Organization(models.Model):
+    """An institution (hospital, university, NGO) whose staff read under one
+    subscription: anyone with a confirmed email address at one of its
+    domains gets the plan's access while the deal is current. Set up by
+    senior staff after a deal is agreed (/manage/billing/organizations/);
+    there's no self-serve checkout for these.
+    """
+
+    name = models.CharField(max_length=255)
+    email_domains = models.TextField(
+        help_text='One per line, e.g. nhrc.gov.np. Addresses at subdomains (staff@dept.nhrc.gov.np) count too. '
+                  'Public email providers (gmail.com and the like) are refused.',
+    )
+    plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.PROTECT, related_name='organizations',
+        help_text='Decides what members get (ad-free, archive, gifting…).',
+    )
+    start_date = models.DateField(default=timezone.localdate)
+    end_date = models.DateField()
+    seats = models.PositiveIntegerField(
+        null=True, blank=True, help_text='Most people who can join. Leave empty for no limit.',
+    )
+    is_active = models.BooleanField(default=True, help_text='Untick to stop access straight away.')
+    contact_name = models.CharField(max_length=255, blank=True)
+    contact_email = models.EmailField(blank=True, help_text='Gets the receipt for payments recorded against this organization.')
+    pan = models.CharField(
+        'PAN', max_length=9, blank=True, validators=[pan_validator],
+        help_text='Printed on their tax invoices (9 digits).',
+    )
+    notes = models.TextField(blank=True, help_text='Staff only — contract details, invoice numbers.')
+    account_manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_organizations',
+        help_text='The staff member this organization deals with — shown on their dashboard and in reports.',
+    )
+    # Renewal reminders already sent for the current end date ("30", "7", "ended").
+    reminders_sent = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def domains(self) -> list[str]:
+        return [line.strip().lower().lstrip('@') for line in self.email_domains.splitlines() if line.strip()]
+
+    def matches_email(self, email: str) -> bool:
+        domain = (email or '').rpartition('@')[2].lower()
+        return bool(domain) and any(domain == d or domain.endswith(f'.{d}') for d in self.domains)
+
+    @property
+    def is_current(self) -> bool:
+        return self.is_active and self.start_date <= timezone.localdate() <= self.end_date
+
+    @property
+    def active_members(self):
+        return self.members.filter(removed_at__isnull=True)
+
+    @property
+    def seats_left(self):
+        return None if self.seats is None else max(self.seats - self.active_members.count(), 0)
+
+
+class OrganizationMember(models.Model):
+    """Someone reading under an Organization — recorded the first time
+    their confirmed email gets them access, for seat counting and the
+    usage figures an institution asks for."""
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='organization_memberships')
+    joined_at = models.DateTimeField(auto_now_add=True)
+    # Can see the organization's dashboard (/organization/), invite and remove members.
+    is_manager = models.BooleanField(default=False)
+    # Removed by a manager or staff: no access, seat freed, can't rejoin by
+    # confirming their email again (only a manager/staff can restore them).
+    removed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-joined_at']
+        unique_together = ('organization', 'user')
+
+    def __str__(self):
+        return f'{self.user} at {self.organization}'
+
+
+class OrganizationRead(models.Model):
+    """One member reading one article on one day through their
+    organization's subscription — the organization's usage figures
+    (billing/org_reports.py). Organizations only ever see counts, never
+    which articles a member read. `user` becomes empty if the member deletes
+    their account (users/privacy.py), so totals stay right."""
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='reads')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    article = models.ForeignKey('articles.Article', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    read_on = models.DateField()
+
+    class Meta:
+        indexes = [models.Index(fields=['organization', 'read_on'])]
+        constraints = [models.UniqueConstraint(fields=['organization', 'user', 'article', 'read_on'], name='one_read_per_member_article_day')]
+
+    def __str__(self):
+        return f'{self.organization} read on {self.read_on}'
+
+
+class ReceiptSequence(models.Model):
+    """Hands out gap-free receipt numbers (billing/payments.py
+    next_receipt_number) — one row, locked while a number is taken, so two
+    payments confirmed at the same moment never share or skip a number."""
+
+    name = models.CharField(max_length=30, unique=True)
+    last_number = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f'{self.name}: {self.last_number}'
+
+
 class Payment(models.Model):
-    """One checkout through a real gateway (Fonepay): created when the
-    reader starts paying, confirmed only by a server-side status check
-    (billing/payments.py verify_payment). Access — the subscription,
-    article purchase or course enrollment — is granted exactly once, on the
-    transition to Success.
+    """Every payment that bought access — the one money ledger. Fonepay
+    checkouts start Pending and are confirmed only by a server-side status
+    check (billing/payments.py verify_payment); payments staff record by
+    hand (bank transfer, cheque) and the development stub gateway are
+    created already Paid. Access — the subscription, article purchase or
+    course enrollment — is granted exactly once, on the transition to Paid,
+    which also assigns the receipt number and emails the receipt.
+
+    Prices are VAT-exclusive: `subtotal` is the price, `vat_amount` the VAT
+    on top, `amount` what was actually paid (subtotal + VAT).
     """
 
     class Kind(models.TextChoices):
         SUBSCRIPTION = 'subscription', 'Subscription'
         ARTICLE = 'article', 'Article purchase'
         COURSE = 'course', 'Training course'
+        INSTITUTIONAL = 'institutional', 'Institutional subscription'
+
+    class Gateway(models.TextChoices):
+        FONEPAY = 'fonepay', 'Fonepay'
+        MANUAL = 'manual', 'Recorded by staff'
+        STUB = 'stub', 'Test gateway'
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'Waiting for payment'
         SUCCESS = 'success', 'Paid'
         FAILED = 'failed', 'Failed'
         EXPIRED = 'expired', 'Expired'
+        REFUNDED = 'refunded', 'Refunded'
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payments')
+    # Empty only for an institutional payment (the organization paid).
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='payments',
+    )
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, null=True, blank=True, related_name='payments',
+    )
     kind = models.CharField(max_length=20, choices=Kind.choices)
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     article = models.ForeignKey('articles.Article', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
     course = models.ForeignKey('training.TrainingCourse', on_delete=models.PROTECT, null=True, blank=True, related_name='payments')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    list_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Price before any discount, before VAT. Empty when no code was used.',
+    )
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Discount, before VAT.')
+    promo_code = models.ForeignKey(
+        'PromoCode', on_delete=models.SET_NULL, null=True, blank=True, related_name='payments',
+    )
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Price before VAT.')
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Total paid, VAT included.')
     description = models.CharField(max_length=255)
-    gateway = models.CharField(max_length=20, default='fonepay')
+    gateway = models.CharField(max_length=20, choices=Gateway.choices, default=Gateway.FONEPAY)
+    receipt_number = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    # Who the receipt was made out to, frozen when the payment completed —
+    # receipts are tax records and must stay readable even after the payer
+    # deletes their account (users/privacy.py erase_user).
+    billed_name = models.CharField(max_length=255, blank=True)
+    billed_email = models.EmailField(blank=True)
+    # Optional, for a business buyer's VAT records — printed on the invoice.
+    buyer_pan = models.CharField('Buyer PAN', max_length=9, blank=True, validators=[pan_validator])
+    # Where to send the reader after paying (e.g. the article whose paywall
+    # they subscribed from) — a site-relative path, checked when set.
+    return_path = models.CharField(max_length=255, blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+        help_text='The staff member who recorded a manual payment.',
+    )
+    # Something a person should look at — set when a paid payment couldn't
+    # be granted cleanly (already owned, course over capacity…). Shown on
+    # the Payments screen; cleared by staff once handled.
+    attention = models.CharField(max_length=255, blank=True)
+    # Refunds (billing/payments.py refund_payment): always the full amount,
+    # money returned outside the site (bank transfer / Fonepay merchant
+    # portal); recording it here removes the access and issues a credit note.
+    refunded_at = models.DateTimeField(null=True, blank=True)
+    refunded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    refund_reason = models.TextField(blank=True)
+    # The reader cancelled within the cancellation window and is owed a
+    # refund — access already ended; staff send the money and record it.
+    refund_requested_at = models.DateTimeField(null=True, blank=True)
+    credit_note_number = models.CharField(max_length=30, unique=True, null=True, blank=True)
     reference = models.CharField(max_length=30, unique=True, default=generate_payment_reference)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
     qr_message = models.TextField(blank=True, help_text='Fonepay QR payload, shown as a QR or passed to a bank app.')
@@ -295,3 +485,137 @@ class Payment(models.Model):
     @property
     def is_expired(self) -> bool:
         return self.status == self.Status.PENDING and timezone.now() >= self.expires_at
+
+    @property
+    def payer_name(self) -> str:
+        if self.billed_name:
+            return self.billed_name
+        if self.organization_id:
+            return self.organization.name
+        return self.user.get_full_name() or self.user.email if self.user_id else ''
+
+    @property
+    def payer_email(self) -> str:
+        if self.billed_email:
+            return self.billed_email
+        if self.organization_id:
+            return self.organization.contact_email
+        return self.user.email if self.user_id else ''
+
+
+class PromoCode(models.Model):
+    """A code a reader enters at checkout (or at /redeem/) — launch offers,
+    student pricing, partner deals and free trials (billing/promotions.py).
+
+    A code either takes money off (percent_off or amount_off, before VAT) or
+    gives a free trial (trial_days of trial_plan, no payment). Conditions:
+    dates, a total limit, a per-person limit, new subscribers only, and email
+    domains (with a confirmed address — e.g. student pricing for edu.np).
+    """
+
+    class Kind(models.TextChoices):
+        LAUNCH = 'launch', 'Launch offer'
+        STUDENT = 'student', 'Student pricing'
+        PARTNER = 'partner', 'Partner deal'
+        TRIAL = 'trial', 'Free trial'
+        OTHER = 'other', 'Other'
+
+    code = models.CharField(
+        max_length=40, unique=True,
+        validators=[RegexValidator(r'^[A-Z0-9][A-Z0-9-]{2,39}$', 'Letters, digits and hyphens (3–40), e.g. LAUNCH50.')],
+        help_text='What readers type. Stored in capitals; typing is case-insensitive.',
+    )
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.LAUNCH)
+    campaign = models.CharField(max_length=100, blank=True, help_text='Groups codes in reports, e.g. "Launch 2026".')
+    partner_name = models.CharField(max_length=150, blank=True, help_text='For partner deals: who it was made for.')
+    description = models.CharField(
+        max_length=200, blank=True, help_text='Shown to the reader when the code is applied, e.g. "Launch offer — 50% off".',
+    )
+
+    percent_off = models.PositiveSmallIntegerField(null=True, blank=True, help_text='e.g. 50 for half price. 100 = free.')
+    amount_off = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, help_text='Rupees off the price before VAT.',
+    )
+    trial_days = models.PositiveSmallIntegerField(null=True, blank=True, help_text='Free days of the trial plan, no payment.')
+    trial_plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.PROTECT, null=True, blank=True, related_name='trial_codes',
+        help_text='The plan the trial gives access to.',
+    )
+
+    applies_to_subscriptions = models.BooleanField(default=True)
+    applies_to_articles = models.BooleanField('Applies to special articles', default=False)
+    applies_to_courses = models.BooleanField('Applies to training courses', default=False)
+    plans = models.ManyToManyField(
+        SubscriptionPlan, blank=True, related_name='promo_codes', help_text='Only these plans (none = every plan).',
+    )
+    courses = models.ManyToManyField(
+        'training.TrainingCourse', blank=True, related_name='promo_codes', help_text='Only these courses (none = every course).',
+    )
+
+    valid_from = models.DateField(null=True, blank=True)
+    valid_until = models.DateField(null=True, blank=True, help_text='Last day it can be used.')
+    max_redemptions = models.PositiveIntegerField(null=True, blank=True, help_text='Total uses. Empty = no limit.')
+    per_user_limit = models.PositiveSmallIntegerField(default=1, help_text='Uses per person.')
+    new_subscribers_only = models.BooleanField(
+        default=False, help_text='Only for people who have never had a subscription.',
+    )
+    email_domains = models.TextField(
+        blank=True, help_text='Only for confirmed email addresses at these domains (one per line, subdomains count) '
+                              '— e.g. edu.np for students, or a partner\'s domain. Empty = anyone.',
+    )
+    is_active = models.BooleanField(default=True)
+
+    notes = models.TextField(blank=True, help_text='Internal.')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.code
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or '').strip().upper()
+        super().save(*args, **kwargs)
+
+    @property
+    def is_trial(self) -> bool:
+        return bool(self.trial_days)
+
+    @property
+    def domains(self) -> list[str]:
+        return [d.strip().lower().lstrip('@.') for d in self.email_domains.replace(',', '\n').splitlines() if d.strip()]
+
+    @property
+    def benefit_label(self) -> str:
+        if self.trial_days:
+            return f'{self.trial_days}-day free trial'
+        if self.percent_off:
+            return f'{self.percent_off}% off'
+        if self.amount_off:
+            return f'{format_money(self.amount_off)} off'
+        return '—'
+
+
+class PromoRedemption(models.Model):
+    """One use of a PromoCode: by whom, on which payment (none for a trial
+    or a 100%-off code) and how much it took off (before VAT)."""
+
+    code = models.ForeignKey(PromoCode, on_delete=models.PROTECT, related_name='redemptions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='promo_redemptions')
+    payment = models.OneToOneField(
+        Payment, on_delete=models.SET_NULL, null=True, blank=True, related_name='promo_redemption',
+    )
+    item = models.CharField(max_length=255, help_text='What it was used on.')
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Before VAT.')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['code', 'user'])]
+
+    def __str__(self):
+        return f'{self.code} — {self.user_id} — {self.item}'

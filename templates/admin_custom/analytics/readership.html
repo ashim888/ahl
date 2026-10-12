@@ -1,0 +1,63 @@
+{% extends 'admin_custom/analytics/base.html' %}
+
+{% block analytics %}
+<form method="get" class="mb-5 flex flex-wrap items-end gap-3 text-sm">
+    {% if period.preset %}<input type="hidden" name="range" value="{{ period.preset }}">{% else %}<input type="hidden" name="from" value="{{ period.start|date:'Y-m-d' }}"><input type="hidden" name="to" value="{{ period.end|date:'Y-m-d' }}">{% endif %}
+    <label class="flex flex-col gap-1"><span class="text-xs text-gray-600">Section</span>
+        <select name="section" class="rounded-lg border border-gray-200 px-2 py-1.5 text-sm" style="width: auto; min-width: 12rem;">
+            <option value="">All sections</option>
+            {% for pk, name in section_choices %}<option value="{{ pk }}" {% if filters.section == pk|stringformat:'s' %}selected{% endif %}>{{ name }}</option>{% endfor %}
+        </select></label>
+    <label class="flex flex-col gap-1"><span class="text-xs text-gray-600">Story type</span>
+        <select name="type" class="rounded-lg border border-gray-200 px-2 py-1.5 text-sm" style="width: auto; min-width: 12rem;">
+            <option value="">All types</option>
+            {% for value, label in type_choices %}<option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select></label>
+    <button type="submit" class="rounded-lg bg-gray-900 px-3 py-1.5 font-medium text-white hover:bg-gray-700">Filter</button>
+    {% if filters %}<a href="?{{ period.query }}" class="py-1.5 text-gray-600 underline">Clear filters</a>{% endif %}
+</form>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+    {% for k in kpis %}{% include 'admin_custom/includes/analytics_kpi.html' %}{% endfor %}
+</div>
+
+<section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Page views by {{ period.granularity }}</h2>
+    {% include 'admin_custom/includes/analytics_chart.html' with c=trend %}
+</section>
+
+<section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-900">Most-read stories</h2>
+    <p class="text-xs text-gray-600 mb-4">Ranked by page views in the period. <span class="rounded bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">New</span> = published in this period.</p>
+    {% if top_stories %}
+    <div class="overflow-x-auto -mx-5 sm:mx-0">
+        <table class="w-full min-w-[640px] text-sm">
+            <thead><tr class="text-left text-xs text-gray-600 border-b border-gray-100">
+                <th class="py-2 pl-5 sm:pl-0 font-medium">Story</th><th class="py-2 font-medium text-right">Page views</th>
+                <th class="py-2 font-medium text-right">Readers</th><th class="py-2 font-medium text-right">Saved</th>
+                <th class="py-2 pr-5 sm:pr-0 font-medium text-right">Comments</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for s in top_stories %}
+                <tr>
+                    <td class="py-2.5 pl-5 sm:pl-0 pr-3">
+                        <a href="{{ s.article.get_absolute_url }}" class="font-medium text-gray-900 hover:underline line-clamp-1">{{ s.article.title }}</a>
+                        <span class="text-xs text-gray-600">{% if s.new %}<span class="rounded bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">New</span> {% endif %}{{ s.article.section.name|default:"No section" }} · {{ s.article.get_article_type_display }} · {{ s.article.published_at|date:"M j, Y" }} · <a href="{% url 'articles:manage_article_update' s.article.slug %}" class="underline">edit</a></span>
+                    </td>
+                    <td class="py-2.5 text-right tabular-nums"><span class="font-semibold">{{ s.views }}</span> <span class="text-xs text-gray-500">{{ s.share }}%</span></td>
+                    <td class="py-2.5 text-right tabular-nums">{{ s.readers }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{{ s.saved }}</td>
+                    <td class="py-2.5 pr-5 sm:pr-0 text-right tabular-nums">{{ s.comments }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<p class="text-sm text-gray-500">No stories were read in this period{% if filters %} with these filters{% endif %}.</p>{% endif %}
+</section>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    {% include 'admin_custom/includes/analytics_share.html' with title='By section' rows=by_section unit='views' %}
+    {% include 'admin_custom/includes/analytics_share.html' with title='By story type' rows=by_type unit='views' %}
+    {% include 'admin_custom/includes/analytics_share.html' with title='Free or paid' rows=by_access unit='views' %}
+</div>
+{% endblock %}

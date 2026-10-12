@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Thank you" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-16 text-center">
+    <p class="section-label text-accent">{% trans "REPORT SENT" %}</p>
+    <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">{% trans "Thank you for telling us" %}</h1>
+    <p class="mt-4 text-muted-foreground">{% trans "An editor will look at it, usually within two working days. If you left an email address, we’ll let you know what we did." %}</p>
+    {% if article %}<a href="{{ article.get_absolute_url }}" class="inline-block mt-8 bg-foreground text-primary-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:bg-accent">{% trans "BACK TO THE ARTICLE" %}</a>{% endif %}
+</div>
+{% endblock %}

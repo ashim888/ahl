@@ -13,7 +13,7 @@ from .access import (
     free_sample_reads_used, get_valid_article_gift, gift_articles_remaining,
 )
 from .gateway import PaymentResult
-from .models import ArticlePurchase, PlanFeature, SubscriptionPlan, UserSubscription
+from .models import ArticlePurchase, Payment, PlanFeature, SubscriptionPlan, UserSubscription
 from .views import build_comparison_matrix
 
 
@@ -587,17 +587,28 @@ class SelfServeCheckoutTests(TestCase):
         self.assertEqual(response.status_code, 302)
         subscription = UserSubscription.objects.get(user=self.reader, plan=self.plan)
         self.assertTrue(subscription.is_currently_active)
-        self.assertTrue(subscription.payment_reference.startswith('stub-'))
+        # The ledger has the payment (price + 13% VAT); the stub's own
+        # reference is kept as the trace id.
+        payment = Payment.objects.get(reference=subscription.payment_reference)
+        self.assertEqual((payment.gateway, payment.status), (Payment.Gateway.STUB, Payment.Status.SUCCESS))
+        self.assertEqual((str(payment.subtotal), str(payment.vat_amount), str(payment.amount)), ('5.00', '0.65', '5.65'))
+        self.assertTrue(payment.gateway_trace_id.startswith('stub-'))
+        self.assertTrue(payment.receipt_number)
 
-    def test_already_subscribed_reader_is_not_double_charged(self):
+    def test_renewing_early_starts_after_the_current_subscription(self):
         today = timezone.localdate()
         UserSubscription.objects.create(
             user=self.reader, plan=self.plan, start_date=today, end_date=today + datetime.timedelta(days=30),
         )
         self.client.force_login(self.reader)
+        page = self.client.get(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
+        self.assertTrue(page.context['is_renewal'])
         response = self.client.post(reverse('billing:subscribe_checkout', args=[self.plan.pk]))
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(UserSubscription.objects.filter(user=self.reader).count(), 1)
+        renewal = UserSubscription.objects.filter(user=self.reader).order_by('-start_date').first()
+        self.assertEqual(renewal.start_date, today + datetime.timedelta(days=31))
+        self.assertEqual(renewal.end_date, today + datetime.timedelta(days=61))
+        self.assertEqual(UserSubscription.objects.filter(user=self.reader).count(), 2)
 
     def test_purchase_checkout_creates_purchase_and_unlocks_article(self):
         article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=3)
@@ -605,7 +616,8 @@ class SelfServeCheckoutTests(TestCase):
         response = self.client.post(reverse('billing:purchase_checkout', args=[article.slug]))
         self.assertEqual(response.status_code, 302)
         purchase = ArticlePurchase.objects.get(user=self.reader, article=article)
-        self.assertTrue(purchase.payment_reference.startswith('stub-'))
+        self.assertEqual(str(purchase.amount), '3.00')  # the price; VAT is on the payment
+        self.assertEqual(str(Payment.objects.get(reference=purchase.payment_reference).amount), '3.39')
         self.assertTrue(article_is_accessible(self.reader, article))
 
     def test_declined_subscribe_charge_shows_error_and_creates_nothing(self):
@@ -946,7 +958,7 @@ class FonepayCheckoutTests(TestCase):
         self._start()
         payment = Payment.objects.get()
         url = reverse('billing:payment_check', args=[payment.reference])
-        with self._status(paymentStatus='success', totalTransactionAmount='499.00', fonepayTraceId=3301232):
+        with self._status(paymentStatus='success', totalTransactionAmount='563.87', fonepayTraceId=3301232):
             first = self.client.get(url).json()
             second = self.client.get(url).json()
         self.assertEqual(first['status'], 'success')
@@ -1033,7 +1045,7 @@ class FonepayCheckoutTests(TestCase):
         from .payments import verify_pending_payments
 
         self._start()
-        with self._status(paymentStatus='success', totalTransactionAmount='499.00'):
+        with self._status(paymentStatus='success', totalTransactionAmount='563.87'):
             self.assertEqual(verify_pending_payments(), 1)
         self.assertEqual(Payment.objects.get().status, Payment.Status.SUCCESS)
         self.assertTrue(UserSubscription.objects.filter(user=self.reader).exists())
@@ -1056,7 +1068,7 @@ class FonepayCheckoutTests(TestCase):
         with patch('billing.fonepay.generate_intent_qr', return_value=self.QR):
             self.client.post(reverse('training:course_checkout', args=[paid.pk]))
         payment = Payment.objects.get(kind=Payment.Kind.COURSE)
-        with self._status(paymentStatus='success', totalTransactionAmount='2900.00'):
+        with self._status(paymentStatus='success', totalTransactionAmount='3277.00'):
             self.client.get(reverse('billing:payment_check', args=[payment.reference]))
         self.assertEqual(Enrollment.objects.get(user=self.reader, course=paid).payment_status, Enrollment.PaymentStatus.PAID)
         with patch('billing.fonepay.generate_intent_qr') as generate:

@@ -1,0 +1,11 @@
+{
+  "name": "Ajna Health Lens",
+  "short_name": "Ajna Health",
+  "icons": [
+    {"src": "/static/images/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/static/images/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ],
+  "theme_color": "#111110",
+  "background_color": "#fafaf8",
+  "display": "browser"
+}

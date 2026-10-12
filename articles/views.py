@@ -7,13 +7,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import IntegrityError
-from django.db.models import Case, Count, F, FloatField, IntegerField, Q, Value, When, prefetch_related_objects
-from django.db.models.expressions import RawSQL
+from django.db.models import Case, Count, F, Q, When, prefetch_related_objects
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.urls import reverse, reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.html import strip_tags
@@ -52,6 +52,7 @@ from .models import (
     Keyword, KeywordEvent, KeywordFollow,
 )
 from .revisions import compare, record_revision, restore_revision
+from .share_card import share_card_url
 
 # A keyword used on this many articles or fewer has nothing meaningful to
 # "follow" yet — a keyword used exactly once is structurally guaranteed to
@@ -205,7 +206,7 @@ def _trending_articles(limit=5):
     )
     view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
     articles = list(
-        Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__author__user'),
+        Article.objects.filter(pk__in=view_counts_by_pk).prefetch_related('articleauthor_set__author__user', 'keyword_tags'),
     )
     articles.sort(key=lambda article: -view_counts_by_pk[article.pk])
     for article in articles:
@@ -217,16 +218,21 @@ class HomeView(TemplateView):
     """Journal homepage: hero story, latest news, opinion, research
     highlights, special issues, and an editorial board preview.
 
-    Each section is editor-curated first: Article.homepage_section lets an
-    editor explicitly place a specific article in the Hero / Latest News /
-    Opinion & Editorial / Research Highlights slot, regardless of its
-    article_type (see /manage/articles/, Publishing tab). Any slots an
-    editor hasn't explicitly filled auto-fill from recent published articles
-    of the matching type — the previous, fully-automatic behavior — so a
-    section is never empty just because nothing's been curated yet. An
-    article picked for one section (explicit or auto-filled) never repeats
-    in a later one.
+    Hero, Opinion & Editorial, Research Highlights and Videos are
+    editor-curated first (Article.homepage_section), then filled with the
+    newest stories of their kind. Latest News is automatic: the newest news,
+    plus any editor pick that didn't fit its own spot (a second Hero, a
+    fourth Opinion…) — so nothing published vanishes from the homepage.
+    Top stories: every pinned Hero rotates in a slider (up to HERO_SLIDES);
+    with none pinned, the newest Hero; with no Hero at all, the newest story
+    without a spot. No article appears in two sections.
     """
+
+    HERO_SLIDES = 5
+    LATEST_NEWS_COUNT = 6
+    OPINION_COUNT = 3
+    RESEARCH_COUNT = 2
+    VIDEO_COUNT = 8
 
     template_name = 'home.html'
 
@@ -248,49 +254,61 @@ class HomeView(TemplateView):
         published = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
             '-is_pinned', '-published_at', '-created_at',
         )
+        HomepageSection = Article.HomepageSection
         used_pks = set()
 
-        def pick(section, limit, type_filter=None):
-            picks = list(published.filter(homepage_section=section).exclude(pk__in=used_pks)[:limit])
+        def take(queryset, limit):
+            picks = list(queryset.exclude(pk__in=used_pks)[:limit])
             used_pks.update(a.pk for a in picks)
-            if len(picks) < limit:
-                # Autofill only draws from articles with no explicit
-                # homepage_section — one earmarked for a *different* section
-                # (not yet processed or not chosen for it) must never get
-                # swept up as filler here instead, even by Hero's fallback,
-                # which has no type_filter and would otherwise happily grab
-                # anything recent.
-                remaining = published.filter(homepage_section='').exclude(pk__in=used_pks)
-                if type_filter is not None:
-                    remaining = remaining.filter(type_filter)
-                autofill = list(remaining[:limit - len(picks)])
-                picks += autofill
-                used_pks.update(a.pk for a in autofill)
             return picks
 
-        HomepageSection = Article.HomepageSection
-        sections = {}
+        # 1. Editor picks for each spot, newest (or pinned) first. A pick that
+        #    doesn't fit — e.g. an unpinned Hero — isn't lost: it flows on
+        #    into Latest News below.
+        #    Top stories: every *pinned* Hero rotates in the slider (newest
+        #    first, up to HERO_SLIDES); with none pinned, the newest Hero.
+        heroes = published.filter(homepage_section=HomepageSection.HERO)
+        hero_slides = take(heroes.filter(is_pinned=True), self.HERO_SLIDES) or take(heroes, 1)
+        opinion_pieces = take(published.filter(homepage_section=HomepageSection.OPINION), self.OPINION_COUNT)
+        research_highlights = take(published.filter(homepage_section=HomepageSection.RESEARCH), self.RESEARCH_COUNT)
+        videos = take(published.filter(homepage_section=HomepageSection.VIDEOS), self.VIDEO_COUNT)
 
-        hero_picks = pick(HomepageSection.HERO, 1)
-        hero_article = hero_picks[0] if hero_picks else None
+        # 2. No Hero picked: the newest story with no spot of its own.
+        if not hero_slides:
+            hero_slides = take(published.filter(homepage_section=''), 1)
+        hero_article = hero_slides[0] if hero_slides else None
+
+        # 3. Latest News is automatic: the newest news stories, plus any
+        #    editor pick that didn't fit its own spot. Nothing published
+        #    disappears from the homepage just because its spot was full.
+        latest_news = take(
+            published.filter(Q(article_type=Article.ArticleType.NEWS_COMMENTARY) | ~Q(homepage_section='')),
+            self.LATEST_NEWS_COUNT,
+        )
+
+        # 4. Fill the rest of each spot with the newest of its kind.
+        opinion_pieces += take(published.filter(homepage_section='', article_type__in=OPINION_TYPES),
+                               self.OPINION_COUNT - len(opinion_pieces))
+        research_highlights += take(published.filter(homepage_section='', article_type__in=RESEARCH_TYPES),
+                                    self.RESEARCH_COUNT - len(research_highlights))
+        # Any story with a YouTube link, not just type "Video" — a news story
+        # with a clip belongs in the video row too.
+        videos += take(published.filter(homepage_section='').exclude(video_url=''), self.VIDEO_COUNT - len(videos))
+
+        sections = {}
+        prefetch_related_objects(hero_slides, 'articleauthor_set__author__user')
+        sections['hero_slides'] = hero_slides
         sections['hero_article'] = hero_article
         sections['hero_authors'] = (
             list(hero_article.articleauthor_set.select_related('author__user').order_by('order')) if hero_article else []
         )
 
-        latest_news = pick(HomepageSection.LATEST_NEWS, 3, Q(article_type=Article.ArticleType.NEWS_COMMENTARY))
-        opinion_pieces = pick(HomepageSection.OPINION, 3, Q(article_type__in=OPINION_TYPES))
-        research_highlights = pick(HomepageSection.RESEARCH, 2, Q(article_type__in=RESEARCH_TYPES))
-        # Any story with a YouTube link, not just type "Video" — a news story
-        # with a clip belongs in the video row too.
-        videos = pick(HomepageSection.VIDEOS, 8, ~Q(video_url=''))
-
         # Sections are built as plain lists (picks + autofill concatenated),
         # not querysets, so prefetching happens post-hoc via
         # prefetch_related_objects instead of queryset.prefetch_related().
-        prefetch_related_objects(latest_news, 'articleauthor_set__author__user')
-        prefetch_related_objects(opinion_pieces, 'articleauthor_set__author__user')
-        prefetch_related_objects(research_highlights, 'articleauthor_set__author__user', 'issue')
+        prefetch_related_objects(latest_news, 'articleauthor_set__author__user', 'keyword_tags')
+        prefetch_related_objects(opinion_pieces, 'articleauthor_set__author__user', 'keyword_tags')
+        prefetch_related_objects(research_highlights, 'articleauthor_set__author__user', 'issue', 'keyword_tags')
 
         sections['latest_news'] = latest_news
         sections['opinion_pieces'] = opinion_pieces
@@ -306,6 +324,9 @@ class HomeView(TemplateView):
         # to the used_pks dedup above; it's fine for a trending piece to
         # also appear in a curated section.
         sections['trending_articles'] = _trending_articles(limit=5)
+        from .topics import trending_topics
+
+        sections['trending_topics'] = trending_topics(10)
         return sections
 
     def get_context_data(self, **kwargs):
@@ -339,6 +360,35 @@ class HomeView(TemplateView):
         return context
 
 
+class CorrectionListView(ListView):
+    """/corrections/ — every correction, clarification and update on a
+    published story, newest first: the public record of what we got wrong
+    and fixed (built from ArticleCorrection, the notes editors add)."""
+
+    template_name = 'articles/correction_list.html'
+    context_object_name = 'corrections'
+    paginate_by = 30
+
+    def get_queryset(self):
+        queryset = ArticleCorrection.objects.filter(article__status=Article.Status.PUBLISHED).select_related(
+            'article', 'article__section',
+        ).order_by('-created_at')
+        kind = self.request.GET.get('kind')
+        if kind in ArticleCorrection.Kind.values:
+            queryset = queryset.filter(kind=kind)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['kinds'] = ArticleCorrection.Kind.choices
+        context['selected_kind'] = self.request.GET.get('kind', '')
+        context['meta_title'] = f'Corrections — {settings.JOURNAL_NAME}'
+        context['meta_description'] = (
+            f'Every correction, clarification and update {settings.JOURNAL_NAME} has made to a published story.'
+        )
+        return context
+
+
 class VideoListView(ListView):
     """/videos/ — every published story with a YouTube video (the "Videos"
     menu entry), newest first; the newest is shown large at the top."""
@@ -350,7 +400,7 @@ class VideoListView(ListView):
     def get_queryset(self):
         return (
             Article.objects.filter(status=Article.Status.PUBLISHED).exclude(video_url='')
-            .select_related('section').prefetch_related('articleauthor_set__author__user')
+            .select_related('section').prefetch_related('articleauthor_set__author__user', 'keyword_tags')
             .order_by('-is_pinned', '-published_at', '-created_at')
         )
 
@@ -378,7 +428,7 @@ class ArticleListView(ListView):
     def get_queryset(self):
         queryset = Article.objects.filter(status=Article.Status.PUBLISHED).order_by(
             '-is_pinned', '-published_at', '-created_at',
-        ).prefetch_related('articleauthor_set__author__user')
+        ).prefetch_related('articleauthor_set__author__user', 'keyword_tags')
         article_type = self.request.GET.get('type')
         if article_type:
             queryset = queryset.filter(article_type=article_type)
@@ -420,6 +470,9 @@ class ArticleListView(ListView):
             if selected_keyword_label else '[]'
         )
         if selected_keyword_label:
+            # The topic page is the one address search engines should index.
+            context['canonical_url'] = self.request.build_absolute_uri(
+                reverse('articles:topic_detail', args=[selected_keyword_slug]))
             context['meta_title'] = f'Articles tagged "{selected_keyword_label}" — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'Articles about {selected_keyword_label} from {settings.JOURNAL_NAME}.'
         elif context['selected_type']:
@@ -449,7 +502,7 @@ class ArchiveListView(ListView):
     def get_queryset(self):
         return Article.objects.filter(
             status=Article.Status.ARCHIVED,
-        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user', 'keyword_tags')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -488,7 +541,7 @@ class ForYouView(ListView):
             status=Article.Status.PUBLISHED,
         ).distinct().order_by(
             '-is_pinned', '-published_at', '-created_at',
-        ).prefetch_related('articleauthor_set__author__user')
+        ).prefetch_related('articleauthor_set__author__user', 'keyword_tags')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -553,6 +606,21 @@ class ArticleDetailView(DetailView):
                     'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
                 }
         context['show_full_text'] = show_full_text
+        user = self.request.user
+        if show_full_text and user.is_authenticated and not user.is_editorial_staff \
+                and self.object.status == Article.Status.PUBLISHED and not self.kwargs.get('preview'):
+            # Organization usage reports (billing/org_reports.py): a member's read counts once a day.
+            from billing.institutions import organization_for, record_read
+
+            organization = organization_for(user)
+            if organization:
+                record_read(user, self.object, organization)
+        if not show_full_text and self.request.user.is_authenticated:
+            # Their organization subscribes, they just haven't confirmed their
+            # email yet — the paywall offers that instead of a checkout.
+            from billing.institutions import pending_organization_for
+
+            context['pending_organization'] = pending_organization_for(self.request.user)
         context['is_bookmarked'] = (
             self.request.user.is_authenticated
             and Bookmark.objects.filter(user=self.request.user, article=self.object).exists()
@@ -590,7 +658,7 @@ class ArticleDetailView(DetailView):
                 line.strip() for line in self.object.references.strip().splitlines() if line.strip()
             ]
         context['related_articles'] = related_articles_for(self.object)
-        prefetch_related_objects(context['related_articles'], 'articleauthor_set__author__user')
+        prefetch_related_objects(context['related_articles'], 'articleauthor_set__author__user', 'keyword_tags')
 
         # Fetch one extra and trim, so excluding the article being viewed
         # (it'd be a strange thing to see "trending" on its own page) still
@@ -604,8 +672,8 @@ class ArticleDetailView(DetailView):
         # place on the site actually shared/linked out, so it's the one that
         # gets real per-page metadata rather than the sitewide default.
         # Search & social overrides (editor's "Search & social" card) win when set.
-        context['meta_title'] = self.object.seo_title or self.object.title
-        context['meta_description'] = self.object.seo_description or self.object.summary[:200]
+        context['meta_title'] = self.object.meta_title
+        context['meta_description'] = self.object.meta_description
         context['og_type'] = 'article'
         context['canonical_url'] = self.request.build_absolute_uri(self.request.path)
         context['short_url'] = self.request.build_absolute_uri(
@@ -614,7 +682,12 @@ class ArticleDetailView(DetailView):
         # card_image_url: the featured image, else a video story's YouTube
         # thumbnail (already absolute), so a video shares with a picture too.
         image_url = self.request.build_absolute_uri(self.object.card_image_url) if self.object.card_image_url else None
-        share_image = self.object.social_image.url if self.object.social_image else self.object.card_image_url
+        # Share picture: an uploaded Share image, else the automatic 1200×630
+        # card of the featured image (articles/share_card.py), else the plain
+        # card image (a video's thumbnail, or the featured image if the card
+        # couldn't be made).
+        share_image = (self.object.social_image.url if self.object.social_image
+                       else share_card_url(self.object) or self.object.card_image_url)
         context['meta_image_url'] = self.request.build_absolute_uri(share_image) if share_image else None
         context['structured_data_json'] = news_article_structured_data(
             self.object, journal_name=settings.JOURNAL_NAME, canonical_url=context['canonical_url'],
@@ -672,7 +745,7 @@ class AuthorDetailView(DetailView):
         author = self.object
         context['author_articles'] = author.articles.filter(
             status=Article.Status.PUBLISHED,
-        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user')
+        ).order_by('-published_at', '-created_at').prefetch_related('articleauthor_set__author__user', 'keyword_tags')
         context['board_membership'] = (
             author.user.board_memberships.filter(is_active=True).first() if author.user_id else None
         )
@@ -837,7 +910,7 @@ class ReadingListView(ListView):
         preserved_order = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(bookmarked_article_ids)])
         return Article.objects.filter(
             pk__in=bookmarked_article_ids, status=Article.Status.PUBLISHED,
-        ).order_by(preserved_order).prefetch_related('articleauthor_set__author__user')
+        ).order_by(preserved_order).prefetch_related('articleauthor_set__author__user', 'keyword_tags')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -846,104 +919,103 @@ class ReadingListView(ListView):
         return context
 
 
-# Chars MySQL's BOOLEAN MODE gives special meaning to (+ - < > ( ) ~ * " @) —
-# stripped from each token before it's wrapped as a required prefix match,
-# so a reader typing e.g. "COVID-19" doesn't accidentally write boolean syntax.
-_BOOLEAN_MODE_SPECIAL_CHARS = re.compile(r'[+\-<>()~*"@]')
-
-
-def _fulltext_boolean_query(raw_query):
-    """Turns free-text input into a MySQL BOOLEAN MODE AGAINST() expression:
-    every word becomes a required (+), prefix (*) match, so word order and
-    which indexed column it landed in don't matter, and partial words still
-    match (e.g. "tubercul" finds "tuberculosis"). Tokens under 3 characters
-    are dropped — MySQL's own minimum indexed token length (innodb_ft_min_token_size,
-    default 3) would never match them anyway, and a bare "+" is a BOOLEAN MODE
-    syntax error. Returns '' if nothing usable is left (e.g. a query that's
-    only short acronyms), signaling the caller to skip full-text matching
-    and rely on the icontains fallback instead.
-    """
-    tokens = []
-    for word in raw_query.split():
-        cleaned = _BOOLEAN_MODE_SPECIAL_CHARS.sub('', word)
-        if len(cleaned) >= 3:
-            tokens.append(f'+{cleaned}*')
-    return ' '.join(tokens)
+SEARCH_WHEN = {'week': 7, 'month': 31, 'year': 366}
 
 
 @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True), name='dispatch')
 class SearchView(ListView):
-    """Public search — backed by a MySQL FULLTEXT index on (title, abstract)
-    (see migration 0015, narrowed in 0021 when keywords moved off this table
-    onto Keyword/keyword_tags — see articles/models.py) for real word-based
-    matching, e.g. word order doesn't matter and results aren't limited to a
-    single contiguous substring. The plain icontains scan is kept alongside
-    it (not replaced) for three reasons: author name and keyword name aren't
-    part of the FULLTEXT index, and short tokens (under MySQL's ~3-char
-    minimum, common for medical acronyms like "TB"/"HIV"/"flu") would
-    otherwise silently stop matching anything.
+    """Public search (articles/search.py): every word of the query must
+    appear somewhere in an article — title, summary, text, keywords,
+    authors or section, in English or Nepali — with title matches first.
+    Filters: section, story type, date range; sort by relevance or newest.
+    Result ids are cached for a few minutes; only the shown page is loaded.
     """
 
-    model = Article
     template_name = 'articles/search_results.html'
-    context_object_name = 'articles'
+    context_object_name = 'result_ids'
     paginate_by = 10
 
     def get_queryset(self):
-        self.query = self.request.GET.get('q', '').strip()
-        # ARCHIVED included — "full searchability... of historical
-        # articles" (Session 7) is specifically what makes archival access
-        # worth gating as a perk; excluding archived content from search
-        # would make grants_full_archive largely undiscoverable.
-        queryset = Article.objects.filter(
-            status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED],
-        ).prefetch_related('articleauthor_set__author__user')
-        if self.query:
-            boolean_query = _fulltext_boolean_query(self.query)
-            icontains_filter = (
-                Q(title__icontains=self.query)
-                | Q(abstract__icontains=self.query)
-                | Q(keyword_tags__name__icontains=self.query)
-                | Q(authors__name__icontains=self.query)
-            )
-            if boolean_query:
-                relevance = RawSQL(
-                    'MATCH(articles_article.title, articles_article.abstract) '
-                    'AGAINST (%s IN BOOLEAN MODE)',
-                    (boolean_query,), output_field=FloatField(),
-                )
-                queryset = queryset.annotate(relevance=relevance).filter(
-                    icontains_filter | Q(relevance__gt=0),
-                )
-            else:
-                queryset = queryset.annotate(
-                    relevance=Value(0.0, output_field=FloatField()),
-                ).filter(icontains_filter)
-            # A title match still ranks first regardless of full-text score —
-            # deterministic and keeps the most obviously-relevant result on
-            # top rather than trusting MySQL's opaque relevance number for
-            # the primary sort.
-            queryset = queryset.distinct().annotate(
-                title_match=Case(When(title__icontains=self.query, then=0), default=1, output_field=IntegerField()),
-            ).order_by('title_match', '-relevance', '-published_at', '-created_at')
-        else:
-            queryset = queryset.order_by('-published_at', '-created_at')
-        return queryset
+        from . import search
+
+        params = self.request.GET
+        self.query = params.get('q', '').strip()[:200]
+        self.filters = {
+            'section': params.get('section', ''), 'type': params.get('type', ''),
+            'when': params.get('when', ''), 'sort': params.get('sort', ''),
+        }
+        if not self.query:
+            return []
+
+        def compute():
+            # ARCHIVED included — searching old articles is part of what
+            # grants_full_archive is for.
+            queryset = Article.objects.filter(status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED])
+            if self.filters['section']:
+                queryset = queryset.filter(Q(section__slug=self.filters['section']) | Q(section__parent__slug=self.filters['section']))
+            if self.filters['type'] in Article.ArticleType.values:
+                queryset = queryset.filter(article_type=self.filters['type'])
+            if self.filters['when'] in SEARCH_WHEN:
+                queryset = queryset.filter(published_at__gte=timezone.now() - datetime.timedelta(days=SEARCH_WHEN[self.filters['when']]))
+            return search.search_ids(queryset, self.query, newest=self.filters['sort'] == 'newest')
+
+        return search.cached_ids((self.query.lower(), tuple(sorted(self.filters.items()))), compute)
 
     def get_context_data(self, **kwargs):
+        from sections.models import Section
+
+        from . import search
+
         context = super().get_context_data(**kwargs)
+        ids = list(context['result_ids'])
+        by_id = Article.objects.filter(pk__in=ids).select_related('section').prefetch_related('articleauthor_set__author', 'keyword_tags')
+        by_id = {article.pk: article for article in by_id}
+        articles = [by_id[pk] for pk in ids if pk in by_id]
+        for article in articles:
+            article.search_snippet = search.snippet(article, self.query)
+        context['articles'] = articles
         context['query'] = self.query
+        context['filters'] = self.filters
+        context['result_count'] = context['paginator'].count if context.get('paginator') else 0
+        if self.query and not context['result_count']:
+            context['did_you_mean'] = search.did_you_mean(self.query)
+        if self.query and len(self.query.strip()) >= 2 and not self.request.GET.get('page'):
+            from .topics import public_topics
+
+            context['matching_topics'] = list(
+                public_topics().filter(name__icontains=self.query.strip()).order_by('-article_count')[:6])
+        context['sections'] = Section.objects.filter(parent__isnull=True).order_by('order')
+        context['types'] = Article.ArticleType.choices
         context['meta_title'] = (
             f'Search results for "{self.query}" — {settings.JOURNAL_NAME}' if self.query
             else f'Search — {settings.JOURNAL_NAME}'
         )
-        context['meta_description'] = f'Search {settings.JOURNAL_NAME} for articles by title, abstract, author, or keyword.'
+        context['meta_description'] = f'Search {settings.JOURNAL_NAME} for articles by title, text, author, or keyword.'
         # Internal search-result pages are thin/near-duplicate content that
-        # shouldn't compete with the real article/list pages they surface —
-        # standard practice (Google's own crawling docs recommend it), not
-        # specific to this being a health-news site.
+        # shouldn't compete with the real article/list pages they surface.
         context['meta_robots'] = 'noindex, follow'
         return context
+
+
+@ratelimit(key='ip', rate='120/m', block=True)
+def search_suggest(request):
+    """Type-ahead for the header search box: up to 6 titles as JSON."""
+    from django.core.cache import cache
+
+    from . import search
+
+    query = request.GET.get('q', '').strip()[:100]
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    key = f'search:suggest:{cache.get(search.GENERATION_KEY) or 0}:{abs(hash(query.lower()))}'
+    results = cache.get(key)
+    if results is None:
+        results = [
+            {'title': article.title, 'url': article.get_absolute_url(), 'section': article.section.name if article.section else ''}
+            for article in search.suggestions(query)
+        ]
+        cache.set(key, results, 60)
+    return JsonResponse({'results': results})
 
 
 @ratelimit(key='ip', rate='30/m', method='GET', block=True)
@@ -982,6 +1054,19 @@ def related_article_autocomplete(request):
     return JsonResponse(
         [{'value': a.title, 'id': a.pk, 'type': a.get_article_type_display()} for a in articles], safe=False,
     )
+
+
+@role_required(*EDITORIAL_ROLES)
+@require_POST
+@ratelimit(key='user', rate='60/m', block=True)
+def summary_suggestions(request):
+    """One/two-line standfirst options for the article form, from the
+    unsaved title, text and topics (articles/summarize.py — built in, no AI)."""
+    from .summarize import suggest
+
+    keywords = [k.strip() for k in request.POST.get('keywords', '').split(',') if k.strip()]
+    suggestions = suggest(request.POST.get('title', ''), request.POST.get('html', '')[:200_000], keywords)
+    return JsonResponse({'suggestions': suggestions})
 
 
 @role_required(*EDITORIAL_ROLES)
@@ -1030,7 +1115,10 @@ def keyword_follow_toggle(request, slug):
             raise Http404
         KeywordFollow.objects.create(user=request.user, keyword=keyword)
         messages.success(request, _('Following "%(name)s" — new articles will appear in your feed and weekly digest.') % {'name': keyword.name})
-    return redirect(f"{reverse('articles:article_list')}?keyword={keyword.slug}")
+    target = request.POST.get('next', '')
+    if target.startswith('/') and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return redirect(target)
+    return redirect(keyword.get_absolute_url())
 
 
 # -- Editorial article management (CRUD, not public browsing) --------------
@@ -1250,8 +1338,8 @@ def article_autosave(request):
     article = form.save(commit=False)
     if instance is None:
         article.status = Article.Status.DRAFT
-    # A blank slug is auto-generated (from the title + a unique short_code)
-    # by Article.save() itself now — no need to pre-fill it here.
+    # A blank slug is made from the headline by Article.save()
+    # (articles/slugs.py) — no need to pre-fill it here.
 
     try:
         article.save()
@@ -1347,6 +1435,14 @@ class ArticleFormMixin:
         context['my_author_json'] = json.dumps(byline_utils.author_payload(my_author)) if my_author else ''
         context['author_search_url'] = reverse('articles:manage_author_search')
         context['correction_form'] = ArticleCorrectionForm()
+        # Who holds the Hero now (HomeView picks the same way) — the form says
+        # what choosing Hero for this story would do to it.
+        current_hero = Article.objects.filter(
+            status=Article.Status.PUBLISHED, homepage_section=Article.HomepageSection.HERO,
+        ).order_by('-is_pinned', '-published_at', '-created_at')
+        if getattr(self, 'object', None) is not None and self.object.pk:
+            current_hero = current_hero.exclude(pk=self.object.pk)
+        context['current_hero'] = current_hero.only('title', 'is_pinned', 'published_at').first()
         return context
 
     def get_success_url(self):

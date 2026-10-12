@@ -170,8 +170,32 @@ python manage.py migrate
 python manage.py test
 ```
 
-Every app has its own `tests.py`; there's no single "critical path" suite to run selectively —
-`python manage.py test` runs everything.
+Every app has its own `tests.py`, plus focused `test_*.py` files beside it (e.g.
+`billing/test_fonepay.py` for the Fonepay client, `users/test_manage.py` for staff/role screens,
+`ajna_health_lens/test_access.py` for the role-by-route access matrix). There's no single
+"critical path" suite to run selectively — `python manage.py test` runs everything, and no test
+talks to Fonepay or YouTube.
+
+To see what isn't tested yet (`pip install coverage` first; it's a dev tool, not in
+requirements.txt):
+
+```bash
+coverage run --source=. --omit='*/migrations/*,*/tests.py,*/test_*.py,.venv/*' manage.py test
+coverage report -m --skip-covered --sort=miss
+```
+
+## Fonts
+
+Fonts are served from this site (`static/css/fonts.css` + `static/fonts/`), not Google Fonts, so
+visitors' IP addresses don't go to Google. They're the Fontsource builds of Playfair Display,
+Inter, Space Mono and Noto Sans/Serif Devanagari (latin, latin-ext and devanagari subsets; SIL Open
+Font License). To change a font, `npm install @fontsource-variable/<name>` in a scratch folder,
+copy the `.woff2` files for those subsets into `static/fonts/`, and add matching `@font-face` rules
+to `fonts.css`.
+
+## Incidents
+
+If personal data may have been exposed, follow [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md).
 
 ## Project layout
 
@@ -189,7 +213,8 @@ Each Django app owns one concern:
 | `newsletter` | Free email newsletter, double opt-in, async bulk send |
 | `ads` | House-sold ad zones, impressions/clicks |
 | `pitches` | Public story-pitch intake → editorial review queue |
-| `admin_custom` | The editorial dashboard (KPIs, BI analytics, keyword analytics, comment alerts, analytics retention) |
+| `pages` | Terms, privacy and refund policy pages, edited at `/manage/pages/` |
+| `admin_custom` | The editorial dashboard (KPIs, analytics pages per area — `analytics.py`, keyword analytics, comment alerts, analytics retention) |
 
 ## Deployment
 
@@ -197,6 +222,65 @@ After pulling new code on the server: run `deploy.sh` (migrations, translations,
 checks), make sure the `qcluster` worker is running, and restart the app so `.env` changes take
 effect. The compiled CSS (`static/css/tailwind.css`) is committed, so the server doesn't need
 Node.js.
+
+Billing needs these in the server `.env` (see `.env.example`):
+
+- `VAT_RATE` — default 13. Every price is VAT-exclusive and checkout adds it.
+- `BUSINESS_LEGAL_NAME`, `BUSINESS_PAN`, `BUSINESS_ADDRESS` — printed on every receipt.
+  `check --deploy` warns (`ajna.W001`) when payments are live without them.
+- `RECEIPT_PREFIX` — receipt numbers are this plus the Nepali fiscal year plus a gap-free
+  sequence that restarts each year (`AHL-2083-84-000001`; credit notes `AHL-CN-2083-84-…`).
+- `INVOICE_DATE_DISPLAY` — `both` (BS and AD, default), `bs` or `ad` on invoices
+  (`billing/nepali.py`).
+- `SUBSCRIPTION_CANCEL_DAYS` — default 3: readers can cancel for a full refund that many days
+  after paying (`billing.payments.cancel_subscription`).
+- `GOOGLE_ANALYTICS_ID` — loaded only for readers who accept analytics cookies; empty switches
+  analytics off.
+
+The `qcluster` worker also sends the subscription expiry reminders (daily, 08:00) and runs the
+privacy clean-up (daily, 03:30 — `users/privacy.py`).
+It also emails the encrypted database backup (daily, 02:00), sends organizations' monthly
+usage reports (1st of the month, 07:00) and renewal reminders (daily, 08:30), and writes a
+heartbeat every 5 minutes.
+
+Operations and security (all in `.env.example`; walkthrough in TUTORIAL.MD §18):
+
+- `ADMIN_EMAILS` — get every server error, broken internal links, worker-down and failed-task
+  alerts. `check --deploy` warns (`ajna.W003`) when empty.
+- `SENTRY_DSN` — optional error tracking (`sentry-sdk`, no personal data sent).
+- Cron: `*/15 * * * * … manage.py check_health` — the worker can't report its own death.
+  Uptime monitors can poll `/healthz/` (200/503 JSON).
+- `BACKUP_EMAIL`, `BACKUP_ENCRYPTION_PASSWORD`, `BACKUP_EMAIL_MAX_MB` — nightly encrypted dump by
+  email (`ajna_health_lens/backups.py`); restore with `manage.py decrypt_backup`. `ajna.W002`
+  warns when not set.
+- `STAFF_TWO_FACTOR_REQUIRED` — default True: staff sign in with an authenticator-app code
+  (`users/two_factor.py`, django-otp). Off only for local development; the test runner switches it
+  off except in `users/test_two_factor.py`. `ajna.W004` warns when off. Lost phone:
+  `manage.py reset_two_step <email>`.
+- `CSP_REPORT_ONLY` — the Content-Security-Policy (`CSP_DIRECTIVES` in settings,
+  `ajna_health_lens/middleware.py`) blocks by default; violations are logged via `/csp-report/`.
+- Languages: Nepali is the default (`LANGUAGE_CODE = 'ne'`); a browser that asks for English gets
+  English, and the switcher's choice (cookie) wins over both. The site name is `JOURNAL_NAME_NE`
+  ("अज्ना हेल्थ लेन्स") on Nepali pages and `JOURNAL_NAME` on English pages, the copyright line and
+  receipts. The test suite runs in English (`ajna_health_lens/test_runner.py`);
+  `ajna_health_lens/test_language.py` covers the Nepali default.
+- Promo codes and trials: `billing/promotions.py` (logic), `billing/promo_views.py` (`/redeem/`,
+  `/manage/billing/promos/`); checkouts go through `billing.views.checkout_promo` and
+  `_pay_with_quote`. A use is recorded when the payment completes (`payments.complete_payment`).
+- Topics: `articles/topics.py` (`/topics/`, hashtags, trending); keyword slugs keep Nepali letters
+  (`articles.models.keyword_slug`). Article slugs romanize Nepali headlines
+  (`articles/transliterate.py`, mirrored in `static/js/slug_quality.js`).
+- Editor helpers: `static/js/slug_quality.js` (slug checker — also the Chrome extension in
+  `tools/slug-checker-extension/`; `npm run build:extension` copies it, `npm run test:slug` tests it)
+  and `articles/summarize.py` (one/two-line summary suggestions, built in, no AI).
+- Uploaded images are resized, re-compressed and stripped of EXIF on save (`ajna_health_lens/images.py`;
+  `IMAGE_OPTIMIZE_UPLOADS`, `IMAGE_MAX_DIMENSION`, `IMAGE_JPEG_QUALITY`). For media uploaded earlier:
+  `manage.py compress_images [--dry-run]`.
+- Search uses MySQL FULLTEXT indexes on `Article.search_text` (word parser) and the title (ngram,
+  for Nepali and partial words) — `articles/search.py`. After bulk-importing articles, run
+  `manage.py rebuild_search_index`. The title index must be built with MySQL stopwords off, so
+  `DATABASES['default']['OPTIONS']['init_command']` turns them off on every connection — a migration
+  that rebuilds `articles_article` (adding a column does) then rebuilds the index correctly. Keep it.
 
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.

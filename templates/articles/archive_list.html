@@ -18,7 +18,7 @@
                 <a href="{% url 'articles:article_detail' article.slug %}" class="relative overflow-hidden bg-muted shrink-0 hidden sm:block" style="width: 160px; height: 110px;">
                     {% if article.card_image_url %}
                         <img src="{{ article.card_image_url }}" alt="{{ article.title }}"
-                             class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                             class="w-full h-full object-cover" style="filter: grayscale(10%); {{ article.card_image_style }}">
                         {% include 'articles/includes/play_badge.html' with article=article small=True %}
                     {% else %}
                         <div class="w-full h-full bg-secondary"></div>

@@ -18,7 +18,7 @@ from django.core.mail import send_mail
 logger = logging.getLogger(__name__)
 
 
-def send_notification_email(*, subject, message, recipient_list, from_email=None, html_message=None):
+def send_notification_email(*, subject, message, recipient_list, from_email=None, html_message=None, headers=None):
     """Same signature as django.core.mail.send_mail, minus fail_silently
     (this always "fails silently" to the caller — that's the point — but
     logs loudly, unlike Django's own fail_silently=True which discards the
@@ -26,10 +26,21 @@ def send_notification_email(*, subject, message, recipient_list, from_email=None
     react to a failure; none currently do.
     """
     try:
-        send_mail(
-            subject=subject, message=message, from_email=from_email,
-            recipient_list=recipient_list, html_message=html_message,
-        )
+        if headers:
+            # send_mail can't carry extra headers (e.g. List-Unsubscribe).
+            from django.core.mail import EmailMultiAlternatives
+
+            email = EmailMultiAlternatives(
+                subject=subject, body=message, from_email=from_email, to=recipient_list, headers=headers,
+            )
+            if html_message:
+                email.attach_alternative(html_message, 'text/html')
+            email.send()
+        else:
+            send_mail(
+                subject=subject, message=message, from_email=from_email,
+                recipient_list=recipient_list, html_message=html_message,
+            )
         return True
     except Exception:
         # Deliberately broad — every failure mode here (SMTPException,
@@ -41,7 +52,7 @@ def send_notification_email(*, subject, message, recipient_list, from_email=None
         return False
 
 
-def send_templated_email(*, subject, template, context, recipient_list, from_email=None):
+def send_templated_email(*, subject, template, context, recipient_list, from_email=None, headers=None):
     """Renders `<template>.txt` (plain-text part) and `<template>.html` (the
     branded HTML part, extending templates/email/base.html) and sends both
     via send_notification_email — so every transactional email has the same
@@ -62,4 +73,5 @@ def send_templated_email(*, subject, template, context, recipient_list, from_ema
         html_message=render_to_string(f'{template}.html', context),
         recipient_list=recipient_list,
         from_email=from_email,
+        headers=headers,
     )

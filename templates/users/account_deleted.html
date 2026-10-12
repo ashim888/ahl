@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Account deleted" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-16 text-center">
+    <p class="section-label text-accent">{% trans "ACCOUNT DELETED" %}</p>
+    <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">{% trans "Your account has been deleted" %}</h1>
+    <p class="mt-4 text-muted-foreground">{% trans "Your personal data has been removed and you’ve been signed out. We’ve sent a last confirmation to your email address." %}</p>
+    <a href="{% url 'articles:home' %}" class="inline-block mt-8 bg-foreground text-primary-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:bg-accent">{% trans "BACK TO THE HOMEPAGE" %}</a>
+</div>
+{% endblock %}

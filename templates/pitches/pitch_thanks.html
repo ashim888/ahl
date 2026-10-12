@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Pitch received" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-16">
+    <p class="section-label text-accent text-center">{% trans "PITCH RECEIVED" %}</p>
+    <h1 class="font-display text-3xl font-bold mt-2 text-center" style="letter-spacing: -0.02em;">{% trans "Thank you — we’ve got your story idea" %}</h1>
+    {% if pitch %}
+        <p class="mt-4 text-center text-muted-foreground">“{{ pitch.title }}”</p>
+    {% endif %}
+    <ol class="mt-10 space-y-4 text-sm">
+        <li class="flex gap-4"><span class="font-display text-2xl font-bold text-accent leading-none">1</span><span>{% trans "An editor reads every pitch, usually within a week." %}</span></li>
+        <li class="flex gap-4"><span class="font-display text-2xl font-bold text-accent leading-none">2</span><span>
+            {% if pitch and pitch.contact_email %}{% blocktrans with email=pitch.contact_email %}We’ll email <strong>{{ email }}</strong> when it’s accepted, needs more from you, or isn’t right for us.{% endblocktrans %}
+            {% else %}{% trans "We’ll email you when it’s accepted, needs more from you, or isn’t right for us." %}{% endif %}
+        </span></li>
+        <li class="flex gap-4"><span class="font-display text-2xl font-bold text-accent leading-none">3</span><span>{% trans "If it’s accepted, an editor works with you to turn it into an article." %}</span></li>
+    </ol>
+    <div class="mt-10 flex flex-wrap justify-center gap-3">
+        {% if user.is_authenticated %}
+            <a href="{% url 'pitches:my_pitches' %}" class="bg-foreground text-primary-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:bg-accent">{% trans "FOLLOW YOUR PITCHES" %}</a>
+        {% endif %}
+        <a href="{% url 'articles:home' %}" class="border border-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:border-accent hover:text-accent">{% trans "BACK TO THE HOMEPAGE" %}</a>
+    </div>
+</div>
+{% endblock %}

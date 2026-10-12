@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Link expired" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-16 text-center">
+    <p class="section-label text-accent">{% trans "EMAIL CONFIRMATION" %}</p>
+    <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">{% trans "This link doesn’t work any more" %}</h1>
+    <p class="mt-4 text-muted-foreground">{% trans "Confirmation links last 3 days and only work for the address they were sent to. Sign in and ask for a new one from your billing page." %}</p>
+    <a href="{% url 'billing:account' %}" class="inline-block mt-8 bg-foreground text-primary-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:bg-accent">{% trans "GO TO BILLING" %}</a>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'email/base.html' %}
+{% block title %}Your access through {{ org.name }} has ended{% endblock %}
+{% block preheader %}You no longer read {{ journal_name }} through {{ org.name }}.{% endblock %}
+{% block eyebrow %}Your access{% endblock %}
+{% block heading %}Your access through {{ org.name }} has ended{% endblock %}
+{% block content %}
+    <p>Hi {{ user.first_name }},</p>
+    <p>{{ org.name }} has taken you off its {{ journal_name }} subscription, so subscriber articles are locked for you again. Your account, saved articles and follows are unchanged.</p>
+    <p>Want to keep reading? You can subscribe on your own any time.</p>
+    {% include 'email/includes/button.html' with url=plans_url label='See plans' %}
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because your access to {{ journal_name }} changed.{% endblock %}

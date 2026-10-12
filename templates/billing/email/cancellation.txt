@@ -1,0 +1,7 @@
+Hi {{ payment.payer_name }},
+
+You've cancelled {{ payment.description }} (receipt {{ payment.receipt_number }}). Your access has ended, and we'll refund the full {{ total }} the way you paid — normally within 7 working days. You'll get a credit note by email when it's done.
+
+Changed your mind, or a question? Write to {{ contact_email }}.
+
+— {{ journal_name }}

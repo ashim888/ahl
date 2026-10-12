@@ -1,0 +1,5 @@
+{% if stage == 'ended' %}{{ org.name }}'s subscription to {{ journal_name }} ended on {{ org.end_date|date:"j M Y" }}, so your members no longer have access. Renew to restore it for everyone at once.{% else %}{{ org.name }}'s subscription to {{ journal_name }} ({{ org.plan.name }}) runs until {{ org.end_date|date:"j M Y" }}. Renew before then and your members keep reading without a break.{% endif %}
+
+To renew, add seats or get an invoice, write to {% if account_manager %}{{ account_manager.get_full_name }} at {{ account_manager.email }}{% else %}{{ contact_email }}{% endif %}.
+
+— {{ journal_name }}

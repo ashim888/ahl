@@ -15,13 +15,14 @@ import datetime
 import logging
 
 from django.conf import settings
-from django.core.mail import get_connection, send_mail
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 
 from articles.models import Article, KeywordFollow
 from users.models import User
+from users.privacy import list_unsubscribe_headers, unsubscribe_url
 
 from .models import SectionFollow
 
@@ -44,6 +45,7 @@ def _digest_body(user, articles):
         lines.append(f'  {url}')
         lines.append('')
     lines.append(f"Manage what you follow: {settings.SITE_BASE_URL}{reverse('users:profile')}")
+    lines.append(f'Stop this weekly digest: {unsubscribe_url(user, "digest")}')
     lines.append('')
     lines.append(f'— {settings.JOURNAL_NAME}')
     return '\n'.join(lines)
@@ -63,6 +65,7 @@ def send_topic_digests():
     cutoff_date = timezone.localdate() - datetime.timedelta(days=DIGEST_LOOKBACK_DAYS)
     followers = User.objects.filter(
         Q(section_follows__isnull=False) | Q(keyword_follows__isnull=False),
+        is_active=True, email_topic_digest=True,  # switched off on /account/privacy/ or the email's link
     ).distinct()
 
     connection = get_connection()
@@ -81,13 +84,14 @@ def send_topic_digests():
             if not articles:
                 continue
             try:
-                send_mail(
+                EmailMultiAlternatives(
                     subject=f'Your weekly digest — {settings.JOURNAL_NAME}',
-                    message=_digest_body(user, articles),
+                    body=_digest_body(user, articles),
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
+                    to=[user.email],
                     connection=connection,
-                )
+                    headers=list_unsubscribe_headers(unsubscribe_url(user, 'digest')),
+                ).send()
                 sent += 1
             except Exception:
                 # Same reasoning as send_newsletter_issue's per-recipient

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Please try again" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+{% comment %}Shown when a form's security token is missing or stale (CSRF_FAILURE_VIEW) — usually a page left open too long or cookies blocked.{% endcomment %}
+<div class="max-w-xl mx-auto px-6 py-20 text-center">
+    <p class="section-label text-accent mb-4">{% trans "FORM EXPIRED" %}</p>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Please try that again" %}</h1>
+    <p class="mt-4 text-muted-foreground leading-relaxed">{% trans "For your security, the form you sent had expired — this happens when a page is left open for a long time, or if your browser blocks cookies from this site. Go back, reload the page, and send it again." %}</p>
+    <a href="javascript:history.back()" class="inline-block mt-8 font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent">{% trans "GO BACK" %}</a>
+</div>
+{% endblock %}

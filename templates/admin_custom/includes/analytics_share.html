@@ -1,0 +1,17 @@
+{% comment %} A ranked list with each row's share of the total (analytics.py share_rows). {% endcomment %}
+<section class="bg-white rounded-2xl border border-gray-100 p-5">
+    <h2 class="text-sm font-semibold text-gray-900 mb-3">{{ title }}</h2>
+    {% if rows %}
+    <ul class="space-y-2.5 text-sm">
+        {% for r in rows %}
+        <li>
+            <div class="flex items-baseline justify-between gap-3">
+                <span class="truncate text-gray-800">{% if r.url %}<a href="{{ r.url }}" class="hover:underline">{{ r.label }}</a>{% else %}{{ r.label }}{% endif %}</span>
+                <span class="shrink-0 tabular-nums text-gray-900"><span class="font-semibold">{{ r.value }}</span> <span class="text-xs text-gray-500">{{ r.pct }}%</span></span>
+            </div>
+            <div class="mt-1 h-1.5 rounded-full bg-gray-100" aria-hidden="true"><div class="h-1.5 rounded-full bg-violet-500" style="width: {{ r.bar }}%;"></div></div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}<p class="text-sm text-gray-500">Nothing in this period.</p>{% endif %}
+</section>

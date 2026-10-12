@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time %}
+{% load news_time topic_tags %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -72,10 +72,10 @@
     <div class="mt-10 divide-y divide-border">
         {% for article in articles %}
             <article class="article-link py-6 flex gap-4 sm:gap-6">
-                <a href="{% url 'articles:article_detail' article.slug %}" class="relative overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
+                <a href="{% url 'articles:article_detail' article.slug %}" tabindex="-1" aria-hidden="true" class="relative overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
                     {% if article.card_image_url %}
                         <img src="{{ article.card_image_url }}" alt="{{ article.title }}"
-                             class="w-full h-full object-cover" style="filter: grayscale(10%);">
+                             class="w-full h-full object-cover" style="filter: grayscale(10%); {{ article.card_image_style }}">
                         {% include 'articles/includes/play_badge.html' with article=article small=True %}
                     {% else %}
                         <div class="w-full h-full bg-secondary"></div>
@@ -90,6 +90,7 @@
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h2>
                     {% with summary=article.summary %}{% if summary %}<p class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% article_hashtags article 3 'mt-2' %}
                     <div class="flex items-center gap-2 mt-3">
                         {% with a=article.articleauthor_set.all|first %}
                             {% if a %}

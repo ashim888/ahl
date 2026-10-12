@@ -1,0 +1,48 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Organizations — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}Organizations{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between gap-4">
+    <p class="text-sm text-gray-500">
+        Institutional subscriptions. Anyone who confirms an email address at one of an organization's domains reads
+        with its plan while the deal is current (up to its seats).
+    </p>
+    <a href="{% url 'billing:manage_organization_create' %}"
+       class="px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 whitespace-nowrap">+ Add organization</a>
+</div>
+
+<div class="mt-6 overflow-x-auto">
+    <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+                <th class="px-4 py-3">Organization</th>
+                <th class="px-4 py-3">Domains</th>
+                <th class="px-4 py-3">Plan</th>
+                <th class="px-4 py-3">Runs</th>
+                <th class="px-4 py-3">Members</th>
+                <th class="px-4 py-3">Status</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+            {% for org in organizations %}
+                <tr>
+                    <td class="px-4 py-3"><a href="{% url 'billing:manage_organization_update' org.pk %}" class="font-medium text-gray-900 underline">{{ org.name }}</a></td>
+                    <td class="px-4 py-3 text-gray-600">{{ org.domains|join:", " }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ org.plan.name }}</td>
+                    <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ org.start_date|date:"M j, Y" }} – {{ org.end_date|date:"M j, Y" }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ org.member_count }}{% if org.seats %} / {{ org.seats }}{% endif %}</td>
+                    <td class="px-4 py-3">
+                        {% if org.is_current %}<span class="rounded-full bg-green-50 text-green-700 px-2 py-0.5 text-xs font-medium">Current</span>
+                        {% elif not org.is_active %}<span class="rounded-full bg-gray-100 text-gray-500 px-2 py-0.5 text-xs font-medium">Switched off</span>
+                        {% else %}<span class="rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-medium">Outside dates</span>{% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No organizations yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

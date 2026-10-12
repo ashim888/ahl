@@ -1,9 +1,11 @@
 import datetime
+import re
 import secrets
 import string
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -24,7 +26,7 @@ from .validators import (
 # Shared with articles/views.py HomeView, which caches under this key —
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
-HOME_SECTIONS_CACHE_KEY = 'home:sections:v3'
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v5'
 # The current breaking-news article (or None) for the site-wide banner —
 # see ajna_health_lens/context_processors.py; cleared on every Article.save().
 BREAKING_CACHE_KEY = 'articles:breaking:v1'
@@ -41,6 +43,19 @@ def generate_short_code():
     return ''.join(secrets.choice(SHORT_CODE_ALPHABET) for _ in range(SHORT_CODE_LENGTH))
 
 
+def keyword_slug(name: str) -> str:
+    """URL slug for a keyword. English: Django's slugify ('Type 2
+    Diabetes' → 'type-2-diabetes'). Anything else keeps its letters —
+    Django's slugify(allow_unicode=True) would drop Devanagari vowel signs
+    and viramas and mangle the word — with spaces and punctuation turned
+    into hyphens ('मानसिक स्वास्थ्य' → 'मानसिक-स्वास्थ्य')."""
+    ascii_slug = slugify(name)
+    if ascii_slug and name.isascii():
+        return ascii_slug
+    cleaned = re.sub(r'[^\w\u0900-\u097F]+', '-', name.strip().lower())
+    return cleaned.strip('-_')[:100] or ascii_slug
+
+
 class Keyword(models.Model):
     """A normalized tag, replacing what used to be a raw comma-separated
     string on Article.keywords (August 2026) — the free-text version let
@@ -55,7 +70,7 @@ class Keyword(models.Model):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField(max_length=100, unique=True, blank=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True, allow_unicode=True)
 
     class Meta:
         ordering = ['name']
@@ -65,8 +80,12 @@ class Keyword(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = keyword_slug(self.name)
         super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        """The topic page (/topics/<slug>/, articles/topics.py)."""
+        return reverse('articles:topic_detail', args=[self.slug])
 
 
 class Article(models.Model):
@@ -103,8 +122,9 @@ class Article(models.Model):
         ARCHIVED = 'archived', 'Archived'
 
     class HomepageSection(models.TextChoices):
+        # No "Latest News" spot: that section fills itself with the newest
+        # news (articles.views.HomeView), so there's nothing to flag.
         HERO = 'hero', 'Hero (top story)'
-        LATEST_NEWS = 'latest_news', 'Latest News'
         OPINION = 'opinion', 'Opinion & Editorial'
         RESEARCH = 'research', 'Research Highlights'
         VIDEOS = 'videos', 'Videos'
@@ -112,7 +132,7 @@ class Article(models.Model):
     title = models.CharField(max_length=500)
     slug = models.SlugField(
         max_length=500, unique=True, blank=True,
-        help_text='Leave blank to generate from the title (plus a short unique code, e.g. "my-article-3f2a4").',
+        help_text='Leave blank to make it from the headline (e.g. "dengue-cases-rise-kathmandu").',
     )
     short_code = models.CharField(
         max_length=SHORT_CODE_LENGTH, unique=True, blank=True, editable=False,
@@ -179,20 +199,21 @@ class Article(models.Model):
     # save (pinning, homepage placement and counters don't count as an
     # update a reader should be told about).
     last_updated_at = models.DateTimeField(null=True, blank=True)
-    # Search & social overrides — optional; empty means use the headline,
-    # summary and featured image (see ArticleDetailView's meta tags).
+    # Search & social overrides — optional; empty means automatic: the
+    # headline, the summary (meta_description) and a share card made from the
+    # featured image (articles/share_card.py).
     seo_title = models.CharField(
         'Search headline', max_length=70, blank=True,
-        help_text='Shown in Google results and browser tabs. Up to ~60 characters reads best.',
+        help_text='Automatic: the headline. Type here only to show different words in Google results and browser tabs.',
     )
     seo_description = models.CharField(
         'Search description', max_length=160, blank=True,
-        help_text='The snippet under the headline in search results and share cards. ~150 characters.',
+        help_text='Automatic: the summary. Type here only to use different words under the headline in Google and share previews.',
     )
     social_image = models.ImageField(
         'Share image', upload_to='articles/social/', null=True, blank=True,
         validators=[article_image_extension_validator, validate_featured_image_size],
-        help_text='Image for Facebook/X/WhatsApp previews (1200×630 works best). Falls back to the featured image.',
+        help_text='Automatic: a 1200×630 card made from the featured image. Upload one only to share a different picture.',
     )
     # Breaking news: while now < breaking_until (and the article is live),
     # a site-wide banner links to it. Expires on its own.
@@ -214,11 +235,33 @@ class Article(models.Model):
         upload_to='articles/images/', null=True, blank=True,
         validators=[article_image_extension_validator, validate_featured_image_size],
         help_text='Hero/thumbnail image shown on the homepage, listing cards, and related-article links. '
-                   'JPG or PNG, up to 10 MB.',
+                   'JPG or PNG, up to 10 MB. Best: a wide photo, 1600×900 or larger.',
+    )
+    # Recorded by save() (_record_image_size) — not Django's width_field/
+    # height_field, which re-read the file whenever an article is loaded with
+    # no size yet and crash the page if the file is missing.
+    featured_image_width = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    featured_image_height = models.PositiveIntegerField(null=True, blank=True, editable=False)
+
+    class ImageFit(models.TextChoices):
+        AUTO = 'auto', 'Auto — whole image if it’s square or tall (diagrams), otherwise fill'
+        COVER = 'cover', 'Fill the space (crop the edges)'
+        CONTAIN = 'contain', 'Show the whole image'
+
+    featured_image_fit = models.CharField(
+        'How to show it', max_length=10, choices=ImageFit.choices, default=ImageFit.AUTO,
+        help_text='The banner and cards are wide. A photo can be cropped to fill them; a diagram, chart or poster '
+                  'should be shown whole.',
+    )
+    featured_image_focus_x = models.PositiveSmallIntegerField(
+        default=50, validators=[MaxValueValidator(100)], help_text='Focal point across, 0–100 (%).',
+    )
+    featured_image_focus_y = models.PositiveSmallIntegerField(
+        default=50, validators=[MaxValueValidator(100)], help_text='Focal point down, 0–100 (%).',
     )
     featured_image_alt = models.CharField(
         'Image description (alt text)', max_length=250, blank=True,
-        help_text='What the image shows, for screen readers and search engines. Falls back to the headline.',
+        help_text='What the image shows, for screen readers and search engines. Filled from the slug when left empty.',
     )
     featured_image_caption = models.CharField(
         'Caption', max_length=300, blank=True, help_text='Shown under the image on the article page.',
@@ -234,6 +277,9 @@ class Article(models.Model):
         'Video (YouTube link)', max_length=300, blank=True, validators=[validate_youtube_url],
         help_text='Paste the YouTube link. The player appears at the top of the story.',
     )
+    # Plain text of everything searchable, kept up to date by save() and
+    # articles/search_signals.py; FULLTEXT ngram index (migration 0046).
+    search_text = models.TextField(blank=True, editable=False)
     html_content = models.TextField(
         null=True, blank=True,
         help_text='Full-text body HTML, rendered as-is (trusted — admin/editor-authored only, '
@@ -278,6 +324,32 @@ class Article(models.Model):
             return Truncator(' '.join(strip_tags(self.html_content).split())).words(40)
         return ''
 
+    # Google shows about this much of a description before cutting it off.
+    META_DESCRIPTION_LENGTH = 155
+
+    @property
+    def meta_title(self) -> str:
+        """Search/share headline: the editor's override, else the headline."""
+        return (self.seo_title or '').strip() or self.title
+
+    @property
+    def meta_description(self) -> str:
+        """Search/share description: the editor's override, else the summary
+        (see `summary` — never paywalled text) cut at a word boundary."""
+        override = (self.seo_description or '').strip()
+        if override:
+            return override
+        text = ' '.join(self.summary.split())
+        limit = self.META_DESCRIPTION_LENGTH
+        if len(text) <= limit:
+            return text
+        cut = text[:limit - 1]
+        if ' ' in cut:
+            cut = cut.rsplit(' ', 1)[0]
+        cut = cut.rstrip(' ,;:–—-')
+        # Cut right after a full stop: end there, no "…" after it.
+        return cut if cut.endswith(('.', '!', '?', '।')) else f'{cut}…'
+
     @property
     def has_video(self) -> bool:
         return bool(self.video_url and youtube_id(self.video_url))
@@ -289,6 +361,67 @@ class Article(models.Model):
     @property
     def video_watch_url(self) -> str:
         return watch_url(self.video_url)
+
+    # Narrower than this (width/height) and Auto shows the image whole: the
+    # banner is ~2.5:1 and cards 16:9, so a square or tall image — usually a
+    # diagram, chart or poster — would lose its top and bottom.
+    WHOLE_IMAGE_BELOW_RATIO = 1.3
+
+    def _record_image_size(self):
+        """Width/height of the featured image, for featured_image_shows_whole:
+        read when a new picture was uploaded or the size isn't known yet. A
+        missing or unreadable file just leaves the size empty."""
+        image = self.featured_image
+        if not image:
+            self.featured_image_width = self.featured_image_height = None
+            return
+        if getattr(image, '_committed', True) is False or not (self.featured_image_width and self.featured_image_height):
+            try:
+                from django.core.files.images import get_image_dimensions
+
+                width, height = get_image_dimensions(image.file if not image._committed else image)
+            except (OSError, ValueError, TypeError):
+                width = height = None
+            self.featured_image_width, self.featured_image_height = width, height
+
+    @property
+    def featured_image_shows_whole(self) -> bool:
+        if not self.featured_image:
+            return False
+        if self.featured_image_fit == self.ImageFit.CONTAIN:
+            return True
+        if self.featured_image_fit == self.ImageFit.COVER:
+            return False
+        width, height = self.featured_image_width, self.featured_image_height
+        return bool(width and height and width / height < self.WHOLE_IMAGE_BELOW_RATIO)
+
+    # The homepage top-story frame is about 1.5:1 — a picture much wider
+    # than that (a banner, a wide chart) would lose its sides there too.
+    HERO_WHOLE_ABOVE_RATIO = 2.1
+
+    @property
+    def hero_shows_whole(self) -> bool:
+        """Show the whole picture in the homepage top-story frame?"""
+        if self.featured_image_shows_whole:
+            return True
+        if not self.featured_image or self.featured_image_fit == self.ImageFit.COVER:
+            return False
+        width, height = self.featured_image_width, self.featured_image_height
+        return bool(width and height and width / height > self.HERO_WHOLE_ABOVE_RATIO)
+
+    @property
+    def featured_image_position(self) -> str:
+        return f'{self.featured_image_focus_x}% {self.featured_image_focus_y}%'
+
+    @property
+    def card_image_style(self) -> str:
+        """Inline style for every thumbnail of card_image_url: the whole
+        image on a soft background, or a crop that keeps the focal point."""
+        if not self.featured_image:
+            return ''
+        if self.featured_image_shows_whole:
+            return 'object-fit: contain; background-color: #efebe4;'
+        return f'object-position: {self.featured_image_position};'
 
     @property
     def card_image_url(self) -> str:
@@ -333,19 +466,24 @@ class Article(models.Model):
         # already exist by the time that runs. Applies regardless of how the
         # article was created (the editorial form, the pitches accept flow,
         # seed_demo_data, Django admin, ...) since every path ends up here.
+        self._record_image_size()
         if not self.short_code:
             code = generate_short_code()
-            while Article.objects.filter(short_code=code).exists():
+            while Article.objects.filter(Q(short_code=code) | Q(slug=code)).exists():
                 code = generate_short_code()
             self.short_code = code
-        # Auto-slug from the title when an editor leaves it blank
-        # (ArticleForm makes it optional) — the short_code suffix means two
-        # articles with the same title can never collide, so there's no
-        # uniqueness retry loop needed here the way _unique_article_slug
-        # needs one elsewhere for slugs without a code suffix.
+        # Auto-slug from the headline when an editor leaves it blank — the
+        # same slug the editor's slug checker suggests (articles/slugs.py),
+        # with "-2", "-3"… only on a clash. No code suffix: short_code is
+        # the article's second address already (/articles/<code>/).
         if not self.slug:
-            base = slugify(self.title) or 'article'
-            self.slug = f'{base}-{self.short_code}'
+            from .slugs import suggest_slug, unique_article_slug
+
+            self.slug = unique_article_slug(suggest_slug(self.title) or f'article-{self.short_code}', exclude_pk=self.pk)
+        if self.featured_image and not (self.featured_image_alt or '').strip():
+            from .slugs import alt_from_slug
+
+            self.featured_image_alt = alt_from_slug(self.slug)
         # published_at/publication_date are automatic — stamped the moment
         # status becomes Published and never re-stamped by a later edit. A
         # time still in the future (left over from a schedule that was
@@ -363,6 +501,9 @@ class Article(models.Model):
                 self.published_at = now
             self.publication_date = timezone.localdate(self.published_at)
         super().save(*args, **kwargs)
+        from .search import refresh as refresh_search_text
+
+        refresh_search_text([self.pk])
         # Cheap and unconditional rather than trying to detect exactly which
         # field changes matter (status, homepage_section, is_pinned, or just
         # an edit to an already-featured article's title/image) — a save is

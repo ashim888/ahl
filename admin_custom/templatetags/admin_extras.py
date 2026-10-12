@@ -30,10 +30,14 @@ def pending_work_counts():
     from pitches.models import StoryPitch
     from users.models import User
 
+    from admin_custom.models import ContentReport
+
     return {
         # Comments publish immediately (no pre-moderation queue), so the
         # useful signal is "new since yesterday" — what an editor should
         # glance over — not a backlog count.
+        # Reader reports nobody has handled yet (admin_custom/reports.py).
+        'open_reports': ContentReport.objects.filter(status=ContentReport.Status.OPEN).count(),
         'new_comments': XtdComment.objects.filter(
             is_public=True, is_removed=False,
             submit_date__gte=timezone.now() - datetime.timedelta(hours=24),

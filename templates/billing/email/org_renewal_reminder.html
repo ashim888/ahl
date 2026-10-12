@@ -1,0 +1,15 @@
+{% extends 'email/base.html' %}
+{% block title %}Subscription renewal{% endblock %}
+{% block preheader %}{% if stage == 'ended' %}{{ org.name }}'s subscription has ended.{% else %}{{ org.name }}'s subscription ends on {{ org.end_date|date:"j M Y" }}.{% endif %}{% endblock %}
+{% block eyebrow %}{{ org.name }}{% endblock %}
+{% block heading %}{% if stage == 'ended' %}Your subscription has ended{% else %}Your subscription ends in {{ days_left }} days{% endif %}{% endblock %}
+{% block content %}
+    {% if stage == 'ended' %}
+        <p>{{ org.name }}'s subscription to {{ journal_name }} ended on {{ org.end_date|date:"j M Y" }}, so your members no longer have access. Renew to restore it for everyone at once.</p>
+    {% else %}
+        <p>{{ org.name }}'s subscription to {{ journal_name }} ({{ org.plan.name }}) runs until <strong>{{ org.end_date|date:"j M Y" }}</strong>. Renew before then and your members keep reading without a break.</p>
+    {% endif %}
+    <p>To renew, add seats or get an invoice, reply to {% if account_manager %}{{ account_manager.get_full_name }} at <a href="mailto:{{ account_manager.email }}">{{ account_manager.email }}</a>{% else %}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% endif %}.</p>
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you're a contact for {{ org.name }}'s subscription to {{ journal_name }}.{% endblock %}

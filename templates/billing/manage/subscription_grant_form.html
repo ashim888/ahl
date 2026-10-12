@@ -6,9 +6,10 @@
 {% block content %}
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
     <p class="text-sm text-gray-500 mb-6">
-        For comp accounts, institutional deals, or payment collected outside the self-serve checkout at
-        <a href="{% url 'billing:plan_browse' %}" class="underline">/subscribe/</a>. The subscription window
-        starts today and runs for the plan's duration.
+        For complimentary access, or a reader who paid outside the checkout at
+        <a href="{% url 'billing:plan_browse' %}" class="underline">/subscribe/</a> (e.g. bank transfer). The
+        subscription starts today — or the day after the reader's current one ends — and runs for the plan's
+        duration. Organizations are set up under <a href="{% url 'billing:manage_organization_list' %}" class="underline">Organizations</a>.
     </p>
     <form method="post">
         {% csrf_token %}
@@ -21,6 +22,7 @@
         <div class="space-y-5">
             {% include 'admin_dashboard/includes/form_field.html' with field=form.user %}
             {% include 'admin_dashboard/includes/form_field.html' with field=form.plan %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.amount_received %}
         </div>
 
         <div class="mt-8 pt-6 border-t border-gray-100 flex items-center gap-3">

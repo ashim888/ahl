@@ -140,7 +140,9 @@ class IssueDetailArticleThumbnailTests(TestCase):
     def test_featured_image_is_rendered(self):
         response = self.client.get(reverse('issues:issue_detail', args=[self.issue.slug]))
         self.assertContains(response, self.with_image.featured_image.url)
-        self.assertContains(response, 'alt="Has Image"')
+        # The description defaults to the slug's words (articles/slugs.py alt_from_slug).
+        self.assertContains(response, f'alt="{self.with_image.featured_image_alt}"')
+        self.assertTrue(self.with_image.featured_image_alt)
 
     def test_article_without_image_gets_placeholder_not_broken_img(self):
         response = self.client.get(reverse('issues:issue_detail', args=[self.issue.slug]))

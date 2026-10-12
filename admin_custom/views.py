@@ -6,16 +6,16 @@ from django.contrib import messages
 from django.db.models import Count, Q, Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, TemplateView
 from django_comments_xtd.models import XtdComment
 
-from ads.models import AdEvent, AdSlot
-from articles.models import Article, ArticleView, Keyword, KeywordEvent
-from billing.models import ArticlePurchase, SubscriptionPlan, UserSubscription
-from newsletter.models import NewsletterIssue, Subscriber
+from articles.models import Article, Keyword, KeywordEvent
+from billing.models import Payment, SubscriptionPlan, UserSubscription
+from newsletter.models import Subscriber
 from pitches.models import StoryPitch
 from training.models import Enrollment, TrainingCourse
 from users.decorators import role_required
@@ -76,26 +76,6 @@ def _trend_bars(day_labels, counts):
         {'label': label, 'count': count, 'pct': round(count / max_count * 100)}
         for label, count in zip(day_labels, counts)
     ]
-
-
-def _donut_breakdown(counts_by_value, choices):
-    """Same "sorted slices + conic-gradient stops" shape as DashboardHomeView's
-    Articles-by-Type donut, factored out here since AnalyticsView needs it twice
-    (subscription plan mix, newsletter subscriber status).
-    """
-    rows = [{'label': label, 'count': counts_by_value.get(value, 0)} for value, label in choices if counts_by_value.get(value)]
-    rows.sort(key=lambda d: -d['count'])
-    total = sum(d['count'] for d in rows)
-    gradient_stops = []
-    cursor = 0
-    for i, d in enumerate(rows):
-        d['color'] = TYPE_CHART_COLORS[i % len(TYPE_CHART_COLORS)]
-        d['pct'] = round(d['count'] / total * 100) if total else 0
-        start = cursor
-        cursor = 100 if i == len(rows) - 1 else cursor + d['pct']
-        gradient_stops.append(f"{d['color']} {start}% {cursor}%")
-    gradient = ', '.join(gradient_stops) if gradient_stops else '#e5e7eb 0% 100%'
-    return rows, gradient, total
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -250,32 +230,40 @@ class DashboardHomeView(TemplateView):
         return context
 
 
+# Revenue = money actually received: Paid payments in the billing ledger
+# (billing.models.Payment — Fonepay, staff-recorded transfers, the dev stub),
+# counted net of VAT (Payment.subtotal); VAT collected is shown separately.
+# Complimentary grants have no payment and so count as nothing.
+SUBSCRIPTION_KINDS = (Payment.Kind.SUBSCRIPTION, Payment.Kind.INSTITUTIONAL)
+
+
+def _paid(*kinds):
+    return Payment.objects.filter(status=Payment.Status.SUCCESS, kind__in=kinds)
+
+
+def _net(queryset):
+    return queryset.aggregate(total=Sum('subtotal'))['total'] or 0
+
+
+def _vat(queryset):
+    return queryset.aggregate(total=Sum('vat_amount'))['total'] or 0
+
+
 def _training_revenue_trend(days, day_labels):
-    """Daily 'collected' revenue (PAID enrollments, priced at course.price,
-    bucketed by enrolled_at) — used by both RevenueTrainingView and
-    RevenueOverviewView, which is why it's a standalone function rather than
-    inlined in one view's get_context_data.
-    """
-    paid_enrollments = Enrollment.objects.filter(payment_status=Enrollment.PaymentStatus.PAID)
-    sums = _daily_sums(paid_enrollments, 'enrolled_at', 'course__price', days)
+    """Daily training revenue (net of VAT, by payment date) — used by both
+    RevenueTrainingView and RevenueOverviewView."""
+    sums = _daily_sums(_paid(Payment.Kind.COURSE), 'completed_at', 'subtotal', days)
     return _trend_bars(day_labels, sums), sums
 
 
 def _subscription_purchase_revenue_trend(days, day_labels):
-    """Daily subscription + purchase revenue, used by both
-    RevenueSubscriptionsView and RevenueOverviewView. Subscription revenue
-    here is the plan price at the moment a subscription is *created*
-    (bucketed by created_at) — a proxy for the initial payment, not a full
-    ledger of recurring renewals, since UserSubscription only tracks the
-    current period rather than a payment history (see its docstring —
-    renewals will need a real gateway's webhook events to track properly).
-    Purchase revenue is exact: ArticlePurchase.amount is a real one-time
-    transaction, bucketed by purchased_at.
-    """
-    sub_sums = _daily_sums(UserSubscription.objects.all(), 'created_at', 'plan__price', days)
-    purchase_sums = _daily_sums(ArticlePurchase.objects.all(), 'purchased_at', 'amount', days)
-    combined = [s + p for s, p in zip(sub_sums, purchase_sums)]
-    return _trend_bars(day_labels, combined), combined
+    """Daily subscription (personal + institutional) and article-purchase
+    revenue, net of VAT, by payment date — used by RevenueSubscriptionsView
+    and RevenueOverviewView. Renewals count each time they're paid."""
+    sums = _daily_sums(
+        _paid(*SUBSCRIPTION_KINDS, Payment.Kind.ARTICLE), 'completed_at', 'subtotal', days,
+    )
+    return _trend_bars(day_labels, sums), sums
 
 
 def _mrr_estimate(active_subs):
@@ -306,14 +294,14 @@ class RevenueTrainingView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        def total_for(payment_status):
-            return Enrollment.objects.filter(
-                payment_status=payment_status,
-            ).aggregate(total=Sum('course__price'))['total'] or 0
-
-        context['collected_total'] = total_for(Enrollment.PaymentStatus.PAID)
-        context['pending_total'] = total_for(Enrollment.PaymentStatus.PENDING)
-        context['refunded_total'] = total_for(Enrollment.PaymentStatus.REFUNDED)
+        course_payments = _paid(Payment.Kind.COURSE)
+        context['collected_total'] = _net(course_payments)
+        context['vat_total'] = _vat(course_payments)
+        # Started at checkout but not paid yet (Fonepay QR still open).
+        context['pending_total'] = Payment.objects.filter(
+            kind=Payment.Kind.COURSE, status=Payment.Status.PENDING, expires_at__gt=timezone.now(),
+        ).aggregate(total=Sum('subtotal'))['total'] or 0
+        context['refunded_total'] = _net(Payment.objects.filter(kind=Payment.Kind.COURSE, status=Payment.Status.REFUNDED))
         context['enrollment_total'] = Enrollment.objects.count()
 
         today = timezone.localdate()
@@ -327,8 +315,11 @@ class RevenueTrainingView(TemplateView):
             refunded_count=Count('enrollments', filter=Q(enrollments__payment_status=Enrollment.PaymentStatus.REFUNDED)),
             total_enrollments=Count('enrollments'),
         ).order_by('-total_enrollments')
+        collected = dict(
+            course_payments.values('course').annotate(total=Sum('subtotal')).values_list('course', 'total'),
+        )
         for course in courses:
-            course.collected = course.paid_count * course.price
+            course.collected = collected.get(course.pk, 0)
         context['courses'] = courses
 
         return context
@@ -370,12 +361,17 @@ class RevenueSubscriptionsView(TemplateView):
             )),
             lifetime_count=Count('subscriptions'),
         ).order_by('-lifetime_count')
+        plan_revenue = dict(
+            _paid(*SUBSCRIPTION_KINDS).values('plan').annotate(total=Sum('subtotal')).values_list('plan', 'total'),
+        )
         for plan in plans:
-            plan.lifetime_revenue = plan.lifetime_count * plan.price
+            plan.lifetime_revenue = plan_revenue.get(plan.pk, 0)
         context['plans'] = plans
 
-        context['purchase_count'] = ArticlePurchase.objects.count()
-        context['purchase_revenue'] = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+        article_payments = _paid(Payment.Kind.ARTICLE)
+        context['purchase_count'] = article_payments.count()
+        context['purchase_revenue'] = _net(article_payments)
+        context['vat_total'] = _vat(_paid(*SUBSCRIPTION_KINDS, Payment.Kind.ARTICLE))
 
         days = [today - datetime.timedelta(days=i) for i in range(REVENUE_TREND_DAYS - 1, -1, -1)]
         day_labels = [d.strftime('%b %-d') for d in days]
@@ -402,14 +398,11 @@ class RevenueOverviewView(TemplateView):
         context = super().get_context_data(**kwargs)
         today = timezone.localdate()
 
-        training_total = Enrollment.objects.filter(
-            payment_status=Enrollment.PaymentStatus.PAID,
-        ).aggregate(total=Sum('course__price'))['total'] or 0
-        subscription_total = UserSubscription.objects.aggregate(
-            total=Sum('plan__price'),
-        )['total'] or 0
-        purchase_total = ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
-
+        training_total = _net(_paid(Payment.Kind.COURSE))
+        subscription_total = _net(_paid(*SUBSCRIPTION_KINDS))
+        purchase_total = _net(_paid(Payment.Kind.ARTICLE))
+        context['vat_total'] = _vat(Payment.objects.filter(status=Payment.Status.SUCCESS))
+        context['refunded_total'] = _net(Payment.objects.filter(status=Payment.Status.REFUNDED))
         context['training_total'] = training_total
         context['subscription_total'] = subscription_total
         context['purchase_total'] = purchase_total
@@ -432,223 +425,13 @@ class RevenueOverviewView(TemplateView):
         return context
 
 
-@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
-class AnalyticsView(TemplateView):
-    """Cross-domain BI overview: article readership, subscription/purchase
-    revenue, ad performance, and newsletter growth in one place — a level
-    above DashboardHomeView's day-to-day KPIs (today's counts) and
-    RevenueOverviewView's revenue-specific detail pages. Read-only in the browser; see
-    analytics_csv_export below for the downloadable version.
-    """
-
-    template_name = 'admin_custom/analytics.html'
-    TREND_DAYS = 14
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        today = timezone.localdate()
-        days = [today - datetime.timedelta(days=i) for i in range(self.TREND_DAYS - 1, -1, -1)]
-        day_labels = [d.strftime('%b %-d') for d in days]
-        window_start = timezone.make_aware(datetime.datetime.combine(days[0], datetime.time.min))
-
-        # -- Articles --------------------------------------------------------
-        views_counts = _daily_counts(ArticleView.objects.all(), 'viewed_at', days)
-        context['article_views_trend'] = _trend_bars(day_labels, views_counts)
-        context['article_views_window_total'] = sum(views_counts)
-
-        top_articles = list(
-            Article.objects.filter(status=Article.Status.PUBLISHED)
-            .annotate(recent_views=Count('page_views', filter=Q(page_views__viewed_at__gte=window_start)))
-            .order_by('-recent_views', '-download_count', '-citation_count')[:10],
-        )
-        context['top_articles'] = [
-            a for a in top_articles if a.recent_views or a.download_count or a.citation_count
-        ]
-        context['lifetime_downloads'] = Article.objects.aggregate(total=Sum('download_count'))['total'] or 0
-        context['lifetime_citations'] = Article.objects.aggregate(total=Sum('citation_count'))['total'] or 0
-
-        # -- Subscriptions / revenue ------------------------------------------
-        active_subs = list(
-            UserSubscription.objects.filter(
-                status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
-            ).select_related('plan'),
-        )
-        plan_type_counts = {}
-        for sub in active_subs:
-            plan_type_counts[sub.plan.plan_type] = plan_type_counts.get(sub.plan.plan_type, 0) + 1
-        subscription_breakdown, subscription_gradient, active_subscription_count = _donut_breakdown(
-            plan_type_counts, SubscriptionPlan.PlanType.choices,
-        )
-        context['subscription_breakdown'] = subscription_breakdown
-        context['subscription_gradient'] = subscription_gradient
-        context['active_subscription_count'] = active_subscription_count
-        # Money figures are for Editor-in-Chief/Admin only (the Revenue pages
-        # are too); editors still see the counts.
-        show_money = self.request.user.is_senior_staff
-        context['show_money'] = show_money
-        context['mrr_estimate'] = _mrr_estimate(active_subs) if show_money else None
-
-        new_subs_counts = _daily_counts(UserSubscription.objects.all(), 'created_at', days)
-        context['new_subscriptions_trend'] = _trend_bars(day_labels, new_subs_counts)
-        context['cancelled_subscription_count'] = UserSubscription.objects.filter(
-            status=UserSubscription.Status.CANCELLED,
-        ).count()
-        context['purchase_count'] = ArticlePurchase.objects.count()
-        context['purchase_revenue'] = (
-            ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0
-        ) if show_money else None
-
-        # -- Ads ---------------------------------------------------------------
-        ads_all_time_impressions = AdSlot.objects.aggregate(total=Sum('impression_count'))['total'] or 0
-        ads_all_time_clicks = AdSlot.objects.aggregate(total=Sum('click_count'))['total'] or 0
-        context['ads_all_time_impressions'] = ads_all_time_impressions
-        context['ads_all_time_clicks'] = ads_all_time_clicks
-        context['ads_all_time_ctr'] = (
-            round(ads_all_time_clicks / ads_all_time_impressions * 100, 2) if ads_all_time_impressions else None
-        )
-
-        recent_ad_events = AdEvent.objects.filter(occurred_at__gte=window_start)
-        context['ads_window_impressions'] = recent_ad_events.filter(event_type=AdEvent.EventType.IMPRESSION).count()
-        context['ads_window_clicks'] = recent_ad_events.filter(event_type=AdEvent.EventType.CLICK).count()
-        context['top_ads'] = list(AdSlot.objects.order_by('-click_count', '-impression_count')[:5])
-
-        # -- Newsletter / other --------------------------------------------
-        subscriber_counts = dict(Subscriber.objects.values_list('status').annotate(count=Count('id')).order_by())
-        newsletter_breakdown, newsletter_gradient, newsletter_total = _donut_breakdown(
-            subscriber_counts, Subscriber.Status.choices,
-        )
-        context['newsletter_breakdown'] = newsletter_breakdown
-        context['newsletter_gradient'] = newsletter_gradient
-        context['newsletter_total'] = newsletter_total
-        context['newsletter_confirmed_count'] = subscriber_counts.get(Subscriber.Status.CONFIRMED, 0)
-
-        new_confirmed_counts = _daily_counts(
-            Subscriber.objects.filter(status=Subscriber.Status.CONFIRMED), 'confirmed_at', days,
-        )
-        context['newsletter_confirmed_trend'] = _trend_bars(day_labels, new_confirmed_counts)
-        context['newsletter_issues_sent'] = NewsletterIssue.objects.filter(sent_at__isnull=False).count()
-        context['newsletter_total_recipients'] = (
-            NewsletterIssue.objects.aggregate(total=Sum('recipient_count'))['total'] or 0
-        )
-
-        context['open_pitches'] = StoryPitch.objects.filter(
-            status__in=[StoryPitch.Status.SUBMITTED, StoryPitch.Status.IN_REVIEW],
-        ).count()
-
-        return context
-
-
 @role_required(*EDITORIAL_ROLES)
 def analytics_csv_export(request):
-    """CSV export of the /editorial/analytics/ page's numbers — same
-    underlying queries as AnalyticsView, reshaped as plain rows instead of
-    chart-ready structures (trend bars, donut gradients). One combined file
-    with a section per table, matching how the page itself presents
-    everything as one dashboard rather than several separate ones.
-    """
-    today = timezone.localdate()
-    days = [today - datetime.timedelta(days=i) for i in range(AnalyticsView.TREND_DAYS - 1, -1, -1)]
-    window_start = timezone.make_aware(datetime.datetime.combine(days[0], datetime.time.min))
-
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="analytics-{today.isoformat()}.csv"'
-    writer = csv.writer(response)
-
-    # -- Articles ----------------------------------------------------------
-    writer.writerow([f'Article Views (last {AnalyticsView.TREND_DAYS} days)'])
-    writer.writerow(['Date', 'Views'])
-    views_counts = _daily_counts(ArticleView.objects.all(), 'viewed_at', days)
-    for day, count in zip(days, views_counts):
-        writer.writerow([day.isoformat(), count])
-    writer.writerow([])
-
-    writer.writerow([f'Top Articles (by views in the last {AnalyticsView.TREND_DAYS} days)'])
-    writer.writerow(['Title', 'Recent Views', 'Lifetime Downloads', 'Lifetime Citations'])
-    top_articles = (
-        Article.objects.filter(status=Article.Status.PUBLISHED)
-        .annotate(recent_views=Count('page_views', filter=Q(page_views__viewed_at__gte=window_start)))
-        .order_by('-recent_views', '-download_count', '-citation_count')[:10]
-    )
-    for article in top_articles:
-        writer.writerow([article.title, article.recent_views, article.download_count, article.citation_count])
-    writer.writerow([])
-    writer.writerow(['Lifetime downloads (all articles)', Article.objects.aggregate(total=Sum('download_count'))['total'] or 0])
-    writer.writerow(['Lifetime citations (all articles)', Article.objects.aggregate(total=Sum('citation_count'))['total'] or 0])
-    writer.writerow([])
-
-    # -- Subscriptions / revenue --------------------------------------------
-    active_subs = list(
-        UserSubscription.objects.filter(
-            status=UserSubscription.Status.ACTIVE, start_date__lte=today, end_date__gte=today,
-        ).select_related('plan'),
-    )
-    plan_type_counts = {}
-    for sub in active_subs:
-        plan_type_counts[sub.plan.plan_type] = plan_type_counts.get(sub.plan.plan_type, 0) + 1
-    writer.writerow(['Active Subscriptions by Plan Type'])
-    writer.writerow(['Plan Type', 'Active Count'])
-    for plan_type, label in SubscriptionPlan.PlanType.choices:
-        writer.writerow([label, plan_type_counts.get(plan_type, 0)])
-    writer.writerow([])
-
-    writer.writerow(['Total active subscriptions', len(active_subs)])
-    writer.writerow(['Approximate MRR', _mrr_estimate(active_subs)])
-    writer.writerow([
-        'Cancelled subscriptions (lifetime)',
-        UserSubscription.objects.filter(status=UserSubscription.Status.CANCELLED).count(),
-    ])
-    writer.writerow(['Article purchases (lifetime count)', ArticlePurchase.objects.count()])
-    writer.writerow([
-        'Article purchase revenue (lifetime)',
-        ArticlePurchase.objects.aggregate(total=Sum('amount'))['total'] or 0,
-    ])
-    writer.writerow([])
-
-    # -- Ads -----------------------------------------------------------------
-    ads_all_time_impressions = AdSlot.objects.aggregate(total=Sum('impression_count'))['total'] or 0
-    ads_all_time_clicks = AdSlot.objects.aggregate(total=Sum('click_count'))['total'] or 0
-    writer.writerow(['Ads — All-Time'])
-    writer.writerow(['Impressions', ads_all_time_impressions])
-    writer.writerow(['Clicks', ads_all_time_clicks])
-    writer.writerow([
-        'CTR (%)',
-        round(ads_all_time_clicks / ads_all_time_impressions * 100, 2) if ads_all_time_impressions else '',
-    ])
-    writer.writerow([])
-
-    recent_ad_events = AdEvent.objects.filter(occurred_at__gte=window_start)
-    writer.writerow([f'Ads — Last {AnalyticsView.TREND_DAYS} Days'])
-    writer.writerow(['Impressions', recent_ad_events.filter(event_type=AdEvent.EventType.IMPRESSION).count()])
-    writer.writerow(['Clicks', recent_ad_events.filter(event_type=AdEvent.EventType.CLICK).count()])
-    writer.writerow([])
-
-    writer.writerow(['Top Ads (by clicks)'])
-    writer.writerow(['Sponsor', 'Zone', 'Impressions', 'Clicks'])
-    for ad in AdSlot.objects.order_by('-click_count', '-impression_count')[:5]:
-        writer.writerow([ad.sponsor_name, ad.get_zone_display(), ad.impression_count, ad.click_count])
-    writer.writerow([])
-
-    # -- Newsletter ------------------------------------------------------------
-    subscriber_counts = dict(Subscriber.objects.values_list('status').annotate(count=Count('id')).order_by())
-    writer.writerow(['Newsletter Subscribers by Status'])
-    writer.writerow(['Status', 'Count'])
-    for status, label in Subscriber.Status.choices:
-        writer.writerow([label, subscriber_counts.get(status, 0)])
-    writer.writerow([])
-    writer.writerow(['Newsletter issues sent (lifetime)', NewsletterIssue.objects.filter(sent_at__isnull=False).count()])
-    writer.writerow([
-        'Newsletter total recipients (lifetime)',
-        NewsletterIssue.objects.aggregate(total=Sum('recipient_count'))['total'] or 0,
-    ])
-    writer.writerow([])
-
-    # -- Pitches -----------------------------------------------------------
-    writer.writerow([
-        'Open story pitches (submitted or in review)',
-        StoryPitch.objects.filter(status__in=[StoryPitch.Status.SUBMITTED, StoryPitch.Status.IN_REVIEW]).count(),
-    ])
-
-    return response
+    """Old single-file export link — now each analytics page exports its own
+    CSV (?export=csv); this one gives the Overview's for the same period."""
+    query = request.GET.copy()
+    query['export'] = 'csv'
+    return redirect(f"{reverse('admin_custom:analytics')}?{query.urlencode()}")
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')

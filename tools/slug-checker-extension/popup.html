@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Slug Quality Checker</title>
+<style>
+  :root { --fg: #111110; --muted: #6b6860; --line: #e7e5e0; --good: #047857; --ok: #b45309; --poor: #b91c1c; }
+  * { box-sizing: border-box; }
+  body { width: 380px; margin: 0; padding: 14px; font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: #fafaf8; }
+  h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 10px; color: var(--muted); }
+  label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  input { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: #fff; }
+  .score { display: flex; align-items: center; gap: 10px; margin: 12px 0 8px; }
+  .badge { font-weight: 700; font-size: 20px; padding: 2px 10px; border-radius: 999px; }
+  .good { color: var(--good); background: #ecfdf5; } .ok { color: var(--ok); background: #fffbeb; } .poor { color: var(--poor); background: #fef2f2; }
+  .slug { font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; gap: 8px; padding: 5px 0; border-top: 1px solid var(--line); }
+  li b { width: 12px; text-align: center; flex-shrink: 0; }
+  .error { color: var(--poor); } .warning { color: var(--ok); } .tip { color: var(--muted); }
+  .suggestion { margin-top: 10px; padding: 8px; border: 1px dashed var(--line); border-radius: 6px; background: #fff; }
+  button { margin-top: 6px; padding: 5px 10px; border: 1px solid var(--fg); background: var(--fg); color: #fff; border-radius: 6px; font: inherit; cursor: pointer; }
+  .muted { color: var(--muted); font-size: 11px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <h1>Slug quality</h1>
+  <label for="input">Slug or URL (this tab's address by default)</label>
+  <input id="input" spellcheck="false" autocomplete="off">
+  <div class="score"><span id="badge" class="badge"></span><span id="slug" class="slug"></span></div>
+  <ul id="issues"></ul>
+  <div id="suggestion-box" class="suggestion" hidden>
+    <div class="muted">Suggested, from the page's headline:</div>
+    <div id="suggestion" class="slug"></div>
+    <button id="copy" type="button">Copy suggestion</button>
+  </div>
+  <p id="context" class="muted"></p>
+  <script src="slug_quality.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

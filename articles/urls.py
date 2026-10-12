@@ -1,7 +1,7 @@
 from django.urls import path, register_converter
 from django.views.generic import RedirectView
 
-from . import author_views, views
+from . import author_views, topic_views, views
 from .converters import ShortCodeConverter
 from .feeds import LatestArticlesAtomFeed, LatestArticlesFeed
 
@@ -16,19 +16,24 @@ urlpatterns = [
     path('index/', RedirectView.as_view(pattern_name='articles:home', permanent=True)),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
     path('videos/', views.VideoListView.as_view(), name='video_list'),
+    path('corrections/', views.CorrectionListView.as_view(), name='correction_list'),
     path('archive/', views.ArchiveListView.as_view(), name='archive_list'),
     path('for-you/', views.ForYouView.as_view(), name='for_you'),
     path('reading-list/', views.ReadingListView.as_view(), name='reading_list'),
     path('search/', views.SearchView.as_view(), name='search'),
+    path('search/suggest/', views.search_suggest, name='search_suggest'),
+    path('topics/', topic_views.topic_list, name='topic_list'),
+    path('topics/<str:slug>/', topic_views.topic_detail, name='topic_detail'),
     path('keywords/autocomplete/', views.keyword_autocomplete, name='keyword_autocomplete'),
-    path('keywords/<slug:slug>/follow/', views.keyword_follow_toggle, name='keyword_follow_toggle'),
+    path('keywords/<str:slug>/follow/', views.keyword_follow_toggle, name='keyword_follow_toggle'),
     path('keywords/<int:pk>/click/', views.keyword_click, name='keyword_click'),
     path('feed/', LatestArticlesFeed(), name='latest_feed'),
     path('feed/atom/', LatestArticlesAtomFeed(), name='latest_feed_atom'),
     # Must come before <slug:slug> below — a bare short code (e.g. "3f2a4")
-    # would otherwise match the slug converter too (it's a valid slug shape)
-    # and 404 there, since a real slug is the full "title-slug-code" string,
-    # never just the code alone. Django tries patterns in list order.
+    # would otherwise match the slug converter too (it's a valid slug shape).
+    # Every article answers at both /articles/<slug>/ and /articles/<code>/
+    # (which redirects to the slug); a slug is never another article's code
+    # (articles/slugs.py, ArticleForm.clean_slug). Django tries patterns in order.
     path('articles/<shortcode:code>/', views.article_short_link, name='article_short_link'),
     path('articles/<slug:slug>/', views.ArticleDetailView.as_view(), name='article_detail'),
     # Numeric form first: the old user-id URLs keep redirecting. Author.save()
@@ -48,6 +53,7 @@ urlpatterns = [
     path('manage/articles/', views.ArticleManageListView.as_view(), name='manage_article_list'),
     path('manage/articles/new/', views.ArticleCreateView.as_view(), name='manage_article_create'),
     path('manage/articles/preview/', views.article_preview, name='manage_article_preview'),
+    path('manage/articles/summary-suggestions/', views.summary_suggestions, name='manage_article_summary_suggestions'),
     path('manage/articles/autosave/', views.article_autosave, name='manage_article_autosave'),
     path(
         'manage/articles/related-autocomplete/', views.related_article_autocomplete,

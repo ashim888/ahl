@@ -1,0 +1,20 @@
+{% load money_tags %}Hi {{ payment.payer_name }},
+
+We've received your payment for {{ payment.description }}.
+
+{% if seller.pan %}Tax invoice no.{% else %}Receipt no.{% endif %}: {{ payment.receipt_number }}{% if payment.buyer_pan %}
+Your PAN: {{ payment.buyer_pan }}{% endif %}
+Date: {{ payment.completed_at|invoice_date }}
+{% if discount %}Price: {{ list_price }}
+Discount{% if payment.promo_code %} ({{ payment.promo_code.code }}){% endif %}: − {{ discount }}
+Taxable amount: {{ subtotal }}
+{% else %}Price: {{ subtotal }}
+{% endif %}VAT ({{ vat_rate }}%): {{ vat }}
+Total paid: {{ total }}
+Paid via: {{ payment.get_gateway_display }}{% if payment.gateway_trace_id %} (ref. {{ payment.gateway_trace_id }}){% endif %}
+
+{{ seller.legal_name }}{% if seller.pan %} · PAN {{ seller.pan }}{% endif %}{% if seller.address %} · {{ seller.address }}{% endif %}
+{% if receipt_url %}
+View or print your receipt: {{ receipt_url }}
+{% endif %}
+— {{ journal_name }}

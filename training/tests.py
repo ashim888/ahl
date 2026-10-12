@@ -192,7 +192,10 @@ class CourseCheckoutTests(TestCase):
         enrollment = Enrollment.objects.get(user=self.reader, course=self.course)
         self.assertEqual(enrollment.status, Enrollment.Status.ACTIVE)
         self.assertEqual(enrollment.payment_status, Enrollment.PaymentStatus.PAID)
-        self.assertTrue(enrollment.payment_reference.startswith('stub-'))
+        from billing.models import Payment
+
+        payment = Payment.objects.get(reference=enrollment.payment_reference)
+        self.assertEqual((payment.kind, str(payment.amount)), (Payment.Kind.COURSE, '28.25'))  # 25 + 13% VAT
 
     def test_full_course_blocks_checkout(self):
         self.course.max_enrollments = 1

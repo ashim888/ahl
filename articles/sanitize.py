@@ -21,6 +21,8 @@ materially weaker guarantee than a normal sanitizer — script is exactly the
 tag XSS relies on — accepted here as the explicit tradeoff for keeping the
 chart-embed feature working, not a blind spot.
 """
+import re
+
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 
@@ -112,4 +114,19 @@ def sanitize_editorial_html(html):
     return bleach.clean(
         html, tags=_ALLOWED_TAGS, attributes=_ALLOWED_ATTRIBUTES,
         protocols=_ALLOWED_PROTOCOLS, strip=True, css_sanitizer=_CSS_SANITIZER,
+    )
+
+
+_SCRIPT_BLOCK_RE = re.compile(r'<script\b.*?</script\s*>', re.IGNORECASE | re.DOTALL)
+
+
+def sanitize_page_html(html):
+    """Stricter than sanitize_editorial_html, for text pages that never
+    need code (Terms, Privacy…): <script> blocks are removed outright,
+    contents included, on top of the usual allow-list."""
+    if not html:
+        return html
+    return bleach.clean(
+        _SCRIPT_BLOCK_RE.sub('', html), tags=[tag for tag in _ALLOWED_TAGS if tag != 'script'],
+        attributes=_ALLOWED_ATTRIBUTES, protocols=_ALLOWED_PROTOCOLS, strip=True, css_sanitizer=_CSS_SANITIZER,
     )

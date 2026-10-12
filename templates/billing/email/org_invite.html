@@ -1,0 +1,17 @@
+{% extends 'email/base.html' %}
+{% block title %}Free access through {{ org.name }}{% endblock %}
+{% block preheader %}{{ org.name }} subscribes to {{ journal_name }} — you can read it free.{% endblock %}
+{% block eyebrow %}Invitation{% endblock %}
+{% block heading %}Read {{ journal_name }} free through {{ org.name }}{% endblock %}
+{% block content %}
+    <p>{{ inviter.get_full_name }} has invited you: {{ org.name }} subscribes to {{ journal_name }}, so you can read every article at no cost.</p>
+    <p><strong>How to join</strong> (two minutes):</p>
+    <ol>
+        <li>Create an account with <strong>{{ email }}</strong> — or sign in, if you already have one with this address.</li>
+        <li>Click the confirmation link we email you. That's it.</li>
+    </ol>
+    {% include 'email/includes/button.html' with url=register_url label='Create my account' %}
+    <p style="font-size: 13px; color: #6b6860;">Already have an account? <a href="{{ login_url }}">Sign in</a> and confirm your email from your Billing page.</p>
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because a manager at {{ org.name }} invited {{ email }}.{% endblock %}

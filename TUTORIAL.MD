@@ -48,10 +48,23 @@ Jump to the section that matches what you're trying to do:
 
 No account needed for any of this.
 
-- **Browse articles** at `/articles/` — filter by type using the dropdown, or click a keyword
-  pill on any article to see everything tagged with it.
+- **Browse articles** at `/articles/` — filter by type using the dropdown.
+- **Topics (#hashtags):** every keyword is a topic with its own page — `/topics/dengue/` lists
+  every story tagged with it, related topics, and a **Follow** button (followed topics feed
+  *For you* and the weekly digest). Hashtags appear on the article page (under the headline and at
+  the end), on article cards and in search results; **Trending topics** on the homepage shows the
+  most-used ones of the last 30 days; `/topics/` (footer: *Topics*) lists them all A–Z. Nepali
+  tags work too (`#मानसिक_स्वास्थ्य`).
+- **Share** an article from the buttons beside it (Facebook, WhatsApp, X, LinkedIn, copy link);
+  on phones a **Share…** button opens the phone's own share sheet (Messenger, Viber…).
 - **Search** from the box in the header, or go to `/search/` directly. Search matches title,
-  abstract, keywords, and author names — short medical acronyms (e.g. "TB", "HIV") work too.
+  summary, article text, keywords, section and author names — short medical acronyms (e.g. "TB",
+  "HIV") and Nepali words work too. Typing in the header box suggests matching headlines and topics.
+  Results put title matches first, show the matching sentence with the words highlighted, and can
+  be narrowed by **section**, **story type** and **when** (past week/month/year), or sorted newest
+  first. A misspelt search offers "Did you mean …".
+- **Corrections** (`/corrections/`, linked in the footer) lists every correction, clarification and
+  update made to a published story, newest first.
 - **Browse issues** (curated story trails/coverage series) at `/issues/`.
 - **Browse by topic** using the primary nav (e.g. "Policy & Economy" → "Health Insurance (NHIP)")
   or directly at `/sections/<slug>/` — this is the editorial subject taxonomy, separate from an
@@ -138,16 +151,30 @@ Everything from here down requires an Editor (or higher) account. The dashboard 
 - **Dashboard home** (`/editorial/`) — KPI cards (published/draft articles, pending
   verifications, active enrollments, active subscriptions with an expiring-soon warning,
   newsletter subscribers, open pitches) and activity charts.
-- **Analytics** (`/editorial/analytics/`) — article readership, subscription/ad/newsletter
-  trends, cross-domain BI view. Money figures (monthly revenue, purchase totals) show only to an
-  Editor-in-Chief or Admin; editors see the counts.
+- **Analytics** (`/editorial/analytics/`) — one page per area, chosen with the tabs at the top:
+  - **Overview** — the headline figures of every area, each linking to its own page.
+  - **Readership** — page views, unique readers, stories published, saves and comments; the
+    most-read stories; views by section, story type and free/paid. Filter by section or type.
+  - **Topics** — keyword analytics (below).
+  - **Subscriptions** — started, free trials, cancelled, didn't renew; active today, net change,
+    trial conversions, subscriptions ending soon, figures per plan, special-article purchases and
+    codes used.
+  - **Ads** — impressions, clicks and click-through rate by zone and by ad. Filter by zone.
+  - **Newsletter** — new subscribers, unsubscribes, sign-ups still unconfirmed, issues sent.
+
+  One period applies to every tab: **7 days, 30 days, 90 days, 12 months**, or any dates in
+  the from–to boxes. Each figure is compared with the same number of days just before
+  (▲/▼ in green when it's good news, red when it isn't). Charts group by day, week or month
+  depending on the period length; **Show the numbers** under a chart lists the exact values.
+  **Download CSV** saves the current page for the same period and filters. Only things that
+  happened in the period are counted, so there are no lifetime totals mixed in. Money figures
+  show only to an Editor-in-Chief or Admin; editors see the counts. Cancellations are dated from
+  October 2026 on, so earlier ones don't appear in a period.
 - **Revenue** (`/editorial/revenue/`, Editor-in-Chief/Admin only) — combined training + subscriptions + purchases total, with
   MRR shown separately since it's a forward-looking projection, not money already collected.
   Cross-links to two focused pages: **Training** (`/editorial/revenue/training/`, collected-revenue
   trend) and **Subscriptions** (`/editorial/revenue/subscriptions/`, per-plan active count and
   lifetime revenue, MRR, purchase revenue).
-- **Keywords** (`/editorial/keywords/`) — how readers respond to article keywords. See
-  "Keyword analytics" below.
 - The sidebar shows a **badge count** next to Pitch Queue and Verification Queue whenever there's
   something waiting on you, and next to Comments when new comments were posted in the last 24
   hours — visible from anywhere in the workspace, not just the dashboard home.
@@ -184,9 +211,25 @@ filterable by type/status/homepage section.
 **Creating an article** (`+ New Article`) — everything is on one page. You write on the left;
 the right-hand panel has the buttons and the settings. Fields marked with a red <span>*</span> are
 required to publish.
-1. **Title** is the only thing needed to save a draft. Add a **Summary** if you want one: one or
-   two sentences under the headline and on article cards. Short news pieces can skip it; cards
-   then use the opening words of the text (for free articles only, so paid text never leaks).
+1. **Title** is the only thing needed to save a draft.
+   - **URL slug** sits right under it, with a live score out of 100. It checks the slug is short
+     (60 characters or less, 3–6 words), lowercase, joined by hyphens, has no filler words
+     ("the", "of", "ra", "ko"…), no repeated words or years, and includes the story's main word. It
+     suggests a better one; **Use "…"** fills it in. Leave the slug empty and the same suggestion is
+     used, made from the headline — Nepali headlines are romanized (`मानसिक स्वास्थ्य` →
+     `manasik-swasthya`); a clash gets "-2", "-3". There's no code on the end any more: every
+     article also answers at its short link, `/articles/<code>/` (the **Copy short link** button),
+     which redirects to the slug. Older slugs ending in a code ("-a24x8") can drop it while still a
+     draft — the checker suggests the clean version. Once a
+     story is published, don't change its slug: shared links and search results would break, and
+     the checker warns you.
+   - **Summary**: one or two sentences (about 120–220 characters) under the headline and on
+     article cards. A guide under the box says when it's too short or too long. **Suggest
+     one-liners from the text** offers three options taken from your own article — the lead
+     sentence, two lines together, and the key fact with a number — so nothing is invented;
+     **Use** puts one in the box to edit. It's built in: nothing leaves the site. Short news
+     pieces can skip the summary; cards then use the opening words of the text (free articles
+     only, so paid text never leaks).
 2. Write the **Article text** in the editor. The toolbar has:
    - **Headings** (Heading / Subheading / Minor heading — the headline itself is the top level),
      bold, italic, underline, strikethrough, sub/superscript, and **Remove format** (cleans up
@@ -196,9 +239,11 @@ required to publish.
      i, ii, iii), and **Increase/Decrease indent** for nested points.
    - **Link**, **Upload image**, **Insert media**, **Table**, **Block quote**, **Horizontal
      line**, **Special characters**, inline **Code** and **Code block**, **Find and replace**.
-   - **Images:** click Upload image (JPG, PNG, GIF or WebP, up to 5 MB) or use its arrow to
-     insert one by URL. Click an image for its toolbar: **alt text** (always add it: what the
-     picture shows), **caption**, **align** left/centre/right (text wraps around left/right
+   - **Images:** click Upload image (JPG, PNG, GIF or WebP, up to 5 MB — stored at most 2400 px on the long
+     side, compressed and with camera/location data removed; the same happens to every image uploaded anywhere) or use its arrow to
+     insert one by URL. Click an image for its toolbar: **alt text** (required: what the
+     picture shows — an article can't be published for the first time while an image in the text
+     has none), **caption**, **align** left/centre/right (text wraps around left/right
      images; on phones they go full width), **resize** (original, half, three quarters, full
      width) and **link**.
    - **Insert media** takes a YouTube, Vimeo, Dailymotion or Spotify link and embeds the player.
@@ -219,7 +264,7 @@ required to publish.
 6. In the right-hand panel: **Placement** (article type, menu section, homepage spot, coverage
    series, pin to top), **Access** (Free / Subscribers / Special with its own price),
    **Featured image**, and **Authors** (available once the draft is saved). **More details**
-   holds the URL slug, a PDF version, and journal fields (DOI, volume, pages).
+   holds a PDF version and journal fields (DOI, volume, pages).
 7. **Related articles** (the panel under the text): choose the articles to show under "Related
    reading" (the page shows three at most, newest first). A **suggestions** list shows the most
    similar published articles with a **+ Add** button; if you pick nothing, the top suggestions
@@ -273,9 +318,21 @@ running (see §18).
 it shows "Updated <time>" under the date — pinning or changing the homepage spot doesn't count as an
 update.
 
+**Framing the featured image:** the article banner is wide (about 2.5:1) and cards are 16:9, so a
+picture of a different shape has to be cropped or shown whole. Under the picture:
+- **Click the part that must stay visible** (a face, the main subject). The red dot marks it, and the
+  *Article banner* and *Card* previews show exactly what readers will see.
+- **How to show it:** *Auto* (the default) shows square and tall pictures — diagrams, charts,
+  posters, infographics — **whole**, centred on a soft blurred copy of themselves, and lets wide
+  photos fill the space, cropped around your dot. Choose *Fill the space* or *Show the whole image*
+  to decide yourself.
+- Best results: a **wide photo, 1600×900 or larger**. A diagram or chart reads best **inside the
+  article text** (Upload image in the editor), where it's always shown in full — use a photo as the
+  featured image when you have one.
+
 **Featured image details:** under the image upload, fill in the **Image description (alt
-text)** — what the picture shows, for screen readers and search engines (it falls back to the
-headline) — plus an optional **Caption** and **Credit** ("Ram Shrestha / Ajna Health Lens"). The
+text)** — what the picture shows, for screen readers and search engines. It's required before an
+article with a featured image is first published — plus an optional **Caption** and **Credit** ("Ram Shrestha / Ajna Health Lens"). The
 caption and "Photo: <credit>" appear under the image on the article page.
 
 **Corrections & updates:** on a saved article, the **Corrections & updates** panel (right-hand
@@ -284,13 +341,17 @@ side) adds a dated note for readers — pick **Correction** (a factual error was
 note**. It appears at the end of the article under "Corrections & updates", with a "Correction
 appended ↓" link under the date, and the article is marked "Updated". Fix the article text itself
 with **Update live article** as usual — the note is what tells readers it changed. **Remove**
-deletes a note added by mistake.
+deletes a note added by mistake. Every note also appears on the public **Corrections** page
+(`/corrections/`).
 
-**Search & social (optional):** the collapsed **Search & social** card lets you write a different
-**search headline** (~60 characters) and **search description** (~155) for Google results and
-share cards, with a live Google-style preview, and upload a separate **share image** (1200×630)
-for Facebook/X/WhatsApp. Leave them empty and the headline, summary and featured image are used.
-The headline on the article page itself never changes.
+**Search & social (automatic):** nothing to fill in. Google gets the headline and the summary
+(cut at a word, about 155 characters), and Facebook/WhatsApp/X get a 1200×630 share picture made
+from the featured image — cropped around your focal point, or shown whole on a blurred background
+for a poster or diagram, the same way the site frames it. The card shows a live Google preview
+and a share preview. Only if Google or a share should say something different, open **Use
+different words or picture** and type a search headline/description or upload a share image;
+clear the box (or tick *go back to automatic*) to undo. The headline on the article page itself
+never changes.
 
 **Breaking news:** in the *Placement* card, set **Breaking news** to 1–24 hours. Once the story is
 live, a red **BREAKING** banner appears under the site header on every page, linking to it (readers
@@ -348,10 +409,24 @@ the field to confirm the link was recognised.
   unpublish it (set to Draft or Archived) instead.
 
 **Issue assignment**, **Section** (subject-taxonomy placement — see §8, independent of the article
-type/format and of homepage curation below), **DOI**, **volume/page numbers**, and **homepage
-section** (Hero, Latest News, Opinion, Research Highlights) are all set on the same article form —
-homepage placement is editor-curated first, falling back to automatic recency-based fill for any
-slot you leave blank.
+type/format and of homepage curation below), **DOI** and **volume/page numbers** are set on the same
+article form, along with the **Homepage spot**:
+
+- **Latest News fills itself** — the six newest news stories, newest first. There's nothing to
+  pick: leave the spot on *Auto*.
+- **Hero (top stories):** every story set to Hero **and pinned** rotates in the top-story slider,
+  newest first, up to five (readers can use the arrows, dots or swipe, and pause it). With no pinned
+  Hero, the newest Hero is the single top story. An unpinned Hero, or a sixth pinned one, shows in
+  Latest News instead. The form tells you which story is the Hero now and what choosing Hero does.
+- **Pictures in the top-story frame** that are square, tall or very wide (banners, posters,
+  infographics) are shown whole on a blurred copy of themselves; normal photos fill the frame,
+  cropped around the focal point you set.
+- **Opinion & Editorial, Research Highlights, Videos:** your picks first, then the newest stories of
+  that kind fill the rest.
+- **A full spot isn't a dead end:** a story whose spot is already taken (a second Hero, a fourth
+  Opinion) shows in Latest News instead, newest first. Latest News has six places, so keep the
+  number of Hero stories small — the pinned ones you want in the slider, plus at most one more. No
+  story appears twice on the homepage.
 
 ---
 
@@ -467,15 +542,21 @@ and **More courses** (same topic first).
 
 `/manage/ads/` — house/direct-sold ad creatives, not an ad-network integration.
 
-1. **Create an ad**: pick a zone (each has required pixel dimensions — the cheat-sheet on the
-   form highlights the size for whichever zone is currently selected), upload a correctly-sized
-   image, sponsor name, link URL, and an optional date range.
+1. **Create an ad**: pick a zone — under the Zone box, **Where this ad appears** shows simplified
+   pictures of the homepage, an article page and a phone with every zone drawn in; click a box to
+   pick it. It says where the zone shows, on which screens, what size to upload, and how many
+   other ads already run there (they take turns at random). The chosen image is previewed in the
+   picked box. Then upload the image, sponsor
+   name, link URL, and an optional date range. The image can be the zone's size or a larger copy
+   of the same shape — a 2× or 3× export (e.g. 1456×180 or 2184×270 for a 728×90 leaderboard)
+   looks sharper on phones and high-resolution screens; anything over 2× is shrunk to 2×. A
+   smaller image (blurry) or a different shape (it would be cropped) is refused.
 2. Ads are **never shown to a subscriber** — ad-free reading is an enforced subscriber perk, not
    just a promise.
 3. **"Advertise Here" placeholders**: expand the panel at the top of the ad list to choose, per
    zone, whether an empty (unsold) slot shows a placeholder box instead of just disappearing.
-4. **Analytics** (`/manage/ads/analytics/`) — impressions/clicks/CTR, sitewide or filtered to one
-   zone, with an independent date-range selector for the chart.
+4. **Analytics** — *Analytics → Ads* (`/editorial/analytics/ads/`): impressions, clicks and CTR
+   by zone and by ad for any period. The chart icon on each ad in the list shows that ad day by day.
 5. **Delete** vs. **deactivate**: deactivating (the toggle button) just stops showing the ad;
    deleting is permanent and also removes its recorded impression/click history.
 
@@ -532,23 +613,203 @@ verification request (from filling out their profile and submitting for review, 
 
 ---
 
-## 16. Subscriptions & purchases
+## 16. Subscriptions, payments & organizations
 
 Editor-in-Chief and Admin only — this is the money-sensitive tier, one level above general
 editorial access.
 
-- **Plans** (`/manage/billing/plans/`) — an Editor-in-Chief or Admin can create/edit subscription plans
-  (individual monthly, individual annual, institutional) and toggle them active/inactive.
-- **Subscriptions** (`/manage/billing/subscriptions/`) — every grant, active or not, whether from
-  a reader's self-serve checkout or manually granted here. Filter by status or plan, or by
-  **"expiring within 7 days"** to catch renewals before they lapse. **Grant** a subscription
-  manually (e.g. a comp/press account) or **Cancel** an active one.
-- **Purchases** (`/manage/billing/purchases/`) — one-time pay-per-article unlocks. Filter by
-  article, or **Grant** one manually.
+**Prices and VAT.** Every price you set (plans, special articles, courses) is **VAT-exclusive**.
+Checkout adds 13% VAT on top and shows the reader *price + VAT = total*. Every receipt shows the
+split. The rate and the business name, PAN and address printed on receipts come from the server's
+`.env` (`VAT_RATE`, `BUSINESS_LEGAL_NAME`, `BUSINESS_PAN`, `BUSINESS_ADDRESS`).
 
-Readers can also self-serve at `/subscribe/` (plans) and from any pay-per-article article page —
-both use a stub payment gateway right now (always succeeds; no real charge is made until a real
-payment provider is integrated).
+**Invoices.** Once `BUSINESS_PAN` is set, receipts are headed **TAX INVOICE**.
+
+- Numbers restart every Nepali fiscal year (from 1 Shrawan): `AHL-2083-84-000001`, and credit notes
+  `AHL-CN-2083-84-000001`.
+- Readers can add their own **PAN** at checkout (optional, 9 digits) and it's printed on the
+  invoice. Organizations' PAN is set on the organization and used for their payments.
+- Dates show in both **BS and AD** ("20 Aswin 2083 (6 Oct 2026)"). `INVOICE_DATE_DISPLAY` in `.env`
+  switches to `bs` or `ad` only.
+
+- **Plans** (`/manage/billing/plans/`) — create/edit plans (individual monthly, individual
+  annual, institutional) and switch them on/off. Institutional plans have no checkout: readers
+  see "Ask about your organization" instead, and access comes from **Organizations** below.
+- **Payments** (`/manage/billing/payments/`) — every payment: Fonepay checkouts, money recorded
+  by staff, organization payments. Each paid one has a numbered **receipt** (click it to view or
+  print). Filter by **Failed** to find problems — an underpaid Fonepay payment lands there (the
+  reader is emailed to contact you) and never grants access. The Revenue pages add up only
+  these payments, **excluding VAT**. VAT collected is shown separately.
+- **Subscriptions** (`/manage/billing/subscriptions/`) — every subscription, active or not.
+  Filter by **"expiring within 7 days"**. **Grant** one by hand:
+  - leave *Amount received* at 0 for a complimentary/press account — no payment, no receipt;
+  - for a bank transfer, enter the amount received **including VAT**. It's recorded as a payment
+    and the reader is emailed a receipt.
+  - A grant to someone who's still subscribed starts the day after their current one ends.
+- **Purchases** (`/manage/billing/purchases/`) — special-article unlocks; **Record purchase**
+  works the same way (0 = complimentary).
+- **Refunds:**
+  1. Send the money back first: the Fonepay merchant portal, or a bank transfer.
+  2. Open the payment's receipt from **Payments** and use **Record full refund** with a reason.
+  - The site removes what the payment bought: the subscription is cancelled, the special article
+    locks again, the course enrollment is cancelled.
+  - It issues a numbered **credit note** (`AHL-CN-…`) and emails the reader.
+  - Refunds are always for the full amount. Revenue leaves refunded payments out and shows the
+    refunded total separately.
+- **Needs a look** (tick it on **Payments**) — paid, but the payment couldn't be granted
+  cleanly. For example, the reader paid twice for an article they already had, or a course
+  filled up while they were paying. They're enrolled anyway, since they paid. Refund the extra
+  payment or **Mark as handled**.
+- **Cancelled within 3 days** — a reader can cancel a subscription themselves from their Billing
+  page within 3 days of paying (`SUBSCRIPTION_CANCEL_DAYS`). Their access ends at once and you're
+  emailed **Refund to send**. The payment is flagged on **Payments → Needs a look**. Send the
+  money back, then **Record full refund** on its receipt as above.
+- **Course seats** — someone in the middle of paying holds a seat for up to 15 minutes, so the
+  last seat can't be sold twice. An abandoned checkout frees it again.
+- **Organizations** (`/manage/billing/organizations/`) — institutional deals. Add the
+  organization's **email domains** (e.g. `nhrc.gov.np`; staff at subdomains like
+  `dept.nhrc.gov.np` count too), the plan, start/end dates and, optionally, a seat limit.
+  - Anyone who **confirms** an email address at one of those domains reads with the
+    organization's plan until the end date. Typing the address at sign-up isn't enough. They
+    click a link we email them, prompted at sign-up, on the paywall and on their billing page.
+  - Public email providers (gmail.com and the like) are refused, since everyone could join.
+  - Untick *Active* to stop access straight away.
+  - Money received for a deal: enter it (incl. VAT) in *Record a payment received*. The receipt
+    goes to the contact email.
+  - **Account manager:** pick the staff member who looks after the organization. They're named on
+    its dashboard and copied on its usage reports and renewal reminders.
+  - The edit page shows this month's usage, the members (with **Make manager**, and anyone the
+    organization removed), payments, and **Send last month's report now**.
+
+**Promo codes** (`/manage/billing/promos/`, Editor-in-Chief/Admin) — launch offers, student
+pricing, partner deals and free trials.
+
+- **Discount codes** take a **percentage** or a **fixed amount** off the price before VAT; VAT is
+  charged on what's left, and the receipt shows the list price, the code and the discount. Tick
+  where it works (subscriptions, special articles, courses) and optionally limit it to some plans
+  or courses. A 100% code gives the item straight away with no payment and no receipt.
+- **Free trials** (trial days + a plan): free access for people who have **never subscribed**,
+  no payment details, and it simply ends. Readers start it from the code's link — there's no
+  public trial button.
+- **Conditions:** start/end dates, total uses, uses per person, new subscribers only, and
+  **email domains** — e.g. `edu.np` for **student pricing** or a partner's domain. Domain codes
+  need a confirmed email address at that domain.
+- **Partner deals:** set kind *Partner deal* and the partner's name. Use one shared code, or
+  **Also make single-use copies** (e.g. 50 codes like `NMA-7K2QX`, each usable once) to hand out.
+- **Sharing:** every code has a link (`/redeem/CODE/`, shown on its page) — opening it applies
+  the code at checkout or shows the trial offer. Readers can also type it at checkout ("Have a
+  promo, student or partner code?") or at `/redeem/`.
+- Each code's page shows uses, paid orders, revenue (before VAT) and discount given, every use,
+  and a **CSV** for partner reports. A use counts only when the payment completes, so abandoned
+  checkouts don't use codes up. Switch a code off with *Active*.
+
+**What organizations get** — they're the biggest buyers, so they get the most:
+
+- **Their own dashboard** (`/organization/`) for their **managers**. The contact email becomes a
+  manager automatically when that person joins; you or another manager can add more.
+  - Seats used and left, members who read this month, articles read per month for the last 12
+    months, the most-read articles and topics.
+  - Each member with how many articles they read and when they last read. **Never which
+    articles** — reading about health can reveal something personal.
+  - **Remove** someone who left (their seat is freed and they can't rejoin by themselves;
+    **Restore** undoes it), **invite colleagues** by work email, download a **CSV**, see
+    invoices, the renewal date and their account manager.
+- **A monthly usage report**, emailed on the 1st at 07:00 to the contact email and managers,
+  with the CSV attached.
+- **Renewal reminders** 30 and 7 days before the end date, and once after it ends, to the
+  organization and its account manager (or to the Editors-in-Chief and Admins when there's none).
+- A read counts once per member, article and day, and only for readers (not staff).
+
+**What readers get:**
+
+- **Billing page** (`/account/billing/`, linked from their profile): current plan and days left,
+  **Renew** / **Switch plan**, any renewal already bought, unfinished payments, every payment
+  with its receipt, and the articles they own.
+- **Renewing early never loses days.** The new period starts the day after the current one ends.
+  Subscriptions don't renew automatically (Fonepay payments are one-off). Instead readers get an
+  email **7 days** and **1 day** before the end, and one the day after it has ended — unless
+  they've already renewed. These go out every morning at 8:00 from the background worker.
+- **Receipt email** for every payment, and an email when a Fonepay payment is declined.
+- **Back to the story:** subscribing from an article's paywall returns the reader to that article
+  after paying.
+
+---
+
+**Terms, privacy, refunds and FAQ** (`/manage/pages/`, Editor-in-Chief/Admin): four pages at
+`/terms/`, `/privacy/`, `/refund-policy/` and `/faq/`. The first three cover the whole site, not just payments.
+
+- **FAQ:** readers' common questions about reading, subscriptions and payments, organizations, accounts and pitching.
+  Each question is a **Heading 3** with its answer below. Google can show them as expandable answers in search
+  results. Keep that layout when you add questions. Once published, it's linked as "FAQ" in the footer.
+
+- **Terms of use:** reading and the free-article allowance, accounts, author verification,
+  payments, training, organization access, gift links, how our content may be used, the
+  health-information disclaimer, editorial standards and corrections, what people send us
+  (comments, pitches), community rules, and account suspension.
+- **Privacy policy:** what each feature collects (reading, accounts, verification, comments,
+  pitches, newsletter, payments, sign-in security), cookies, who it's shared with, how long it's
+  kept, and readers' rights.
+- **Refunds & cancellations:** stopping free things (newsletter, comment emails, account),
+  subscriptions, special articles, training courses, organizations, and how refunds are paid.
+
+They started as **unpublished drafts** written to match how the site actually works.
+
+1. Read them and change anything that isn't your practice, ideally with a lawyer.
+2. Tick *Published*. Until then they're hidden: 404 to readers, though you can preview them.
+
+Once published they appear in the footer, and checkout says "By paying you agree to our Terms of
+use and Refunds & cancellations". A Nepali version is optional; until it's written, Nepali
+readers see the English page.
+
+**Privacy tools** (what readers can do themselves, and what you do on request):
+
+- **Cookie banner** — first-time visitors choose *Accept analytics* or *Only essential*. Google
+  Analytics loads only after *Accept*. *Cookie settings* in the footer reopens the choice;
+  choosing *Only essential* deletes the analytics cookies.
+- **Privacy & your data** (`/account/privacy/`, linked from the profile and footer) — readers
+  switch the newsletter, weekly digest and renewal reminders on/off, **download their data** (a
+  JSON file), and **delete their account** with their password.
+- **Every non-essential email has a one-click unsubscribe** (also the Unsubscribe button Gmail and
+  Yahoo show). Receipts and account emails are always sent.
+- **Deletion requests by email or letter:** open the account under **Accounts → Edit**, then
+  **Delete personal data** at the bottom. Type the account's email to confirm.
+  - Staff accounts must be changed to a reader role first.
+  - Either way, the profile, files, follows, saved articles, newsletter subscription and sign-in
+    history are deleted, and any active subscription ends.
+  - Receipts are kept (tax law) and still show who paid. Published comments and bylines stay, as
+    "Deleted user"; the reader can choose to remove their comments too.
+  - Requests to see or correct data: readers can do both themselves. Otherwise reply within 30
+    days, as the privacy policy promises.
+- **Consent at sign-up** — once Terms/Privacy are published, new accounts must tick "I agree", and
+  the date is recorded.
+- **Automatic clean-up** every night (03:30), as the privacy policy says:
+  - comment IP addresses after 90 days;
+  - sign-in attempt records after 90 days;
+  - newsletter sign-ups never confirmed after 30 days;
+  - expired sessions.
+
+**Cancelling within 3 days.** On their Billing page, a subscription paid in the last 3 days
+shows **Cancel & refund** with the deadline. Cancelling ends access straight away and emails them
+a confirmation. You're emailed to send the refund (see Refunds above).
+
+**Reader reports** (**Reports** in the sidebar, any editor; a red count shows open ones):
+
+- Every article has a "Report it" line above the comments, and every comment has **REPORT**.
+  Readers choose a reason: error, misleading health information, abuse, private information,
+  copyright, spam, or other.
+- Senior staff and the contact address are emailed for each report.
+- For each report, write what you did (it's kept as the record), then:
+  - **Remove the comment & close**;
+  - **Action taken** (for example after correcting the article or taking it down);
+  - **No action needed**.
+- Copyright and privacy reports are highlighted. Act on them promptly, and reply to the reader
+  if they left an email.
+- Closed reports stay under *Action taken* / *No action needed*, so you can always show what
+  was reported and what you did.
+
+**If personal data may have leaked**, follow `INCIDENT_RESPONSE.md` in the code repository: who
+to call, what to switch off, who must be told within 72 hours, and how to email the people
+affected (`python manage.py notify_users`).
 
 ---
 
@@ -580,6 +841,17 @@ Editor-in-Chief and Admin only, with one carve-out noted below.
   Admin; those rows say "Managed by Admins".
 - **Change role** (from a user's row) — move any account to any role. Same Admin-granting
   restriction applies: an EiC can promote up to EiC, never to Admin.
+- **Two-step sign-in** — every Editor, Editor-in-Chief and Admin signs in with their password
+  **and** a 6-digit code from an authenticator app (Google Authenticator, Microsoft
+  Authenticator, Authy).
+  - The first sign-in after this is switched on asks them to scan a QR code, then shows **10
+    backup codes** once. Print them or keep them in a password manager. Each works once.
+  - Lost phone: sign in with a backup code, or ask an Editor-in-Chief/Admin to **Reset two-step
+    sign-in** on the staff member's edit page (only Admins can reset an Admin). They set it up again
+    at their next sign-in. If nobody can sign in: `python manage.py reset_two_step <email>` on
+    the server.
+  - New backup codes: **Privacy & your data** → *New backup codes*.
+  - Every set-up, reset and backup-code sign-in is emailed to the account's owner.
 - **Permissions / Groups** (`/manage/permissions/`, `/manage/groups/`) — Django's underlying
   group/permission system, for future-proofing; nothing in the app currently checks group
   membership day-to-day (every screen gates on role, not group).
@@ -621,3 +893,62 @@ For whoever installs and deploys the site. The settings live in the server's `.e
 - **Analytics clean-up.** Page views, ad impressions/clicks and keyword impressions/clicks older
   than `ANALYTICS_RETENTION_DAYS` (default 400 days) are deleted once a day by the worker. To run
   it by hand: `python manage.py prune_analytics_events` (add `--days 180` to keep less).
+
+**Error pages.** A missing page shows a friendly "We can't find that page" with a search box
+already filled in from the address. A server error shows a simple bilingual page. A form left open
+too long shows "Please try that again" instead of a bare security error.
+
+**Alerts — know before readers tell you.** Set `ADMIN_EMAILS` (comma-separated) in `.env`.
+
+- Every server error is emailed to them, with the details.
+- **Broken links on our own site** (one of our pages linking to a page that doesn't exist) are
+  emailed too. Mistyped addresses and bots probing for WordPress files are ignored.
+- **Sentry** (optional): set `SENTRY_DSN` to group errors and see trends. Readers' personal data
+  isn't sent.
+- **`/healthz/`** answers 200 when the database, cache and background worker are fine, and 503
+  otherwise — point an uptime monitor (UptimeRobot, Better Stack) at it.
+- **Worker and failed-task alerts:** add this to the server's crontab so someone hears when the
+  worker stops (a stopped worker can't report itself):
+
+  ```
+  */15 * * * * cd /path/to/ahl && .venv/bin/python manage.py check_health
+  ```
+
+  It emails `ADMIN_EMAILS` if the worker hasn't checked in for 15 minutes (at most once an hour),
+  and once for each background task that failed.
+
+**Emailed backups.** Set `BACKUP_EMAIL` (an address *outside* this server, e.g. a Gmail kept for
+backups) and `BACKUP_ENCRYPTION_PASSWORD` (long; keep it somewhere safe — without it a backup
+can't be opened).
+
+- Every night at 02:00 the worker emails an encrypted, compressed database dump there.
+- Over `BACKUP_EMAIL_MAX_MB` (default 20) it isn't sent and `ADMIN_EMAILS` are told — move to
+  server-side backups (`backup.sh`) and off-site storage then.
+- Send one now: `python manage.py email_backup`.
+- **Restore:** `python manage.py decrypt_backup ajna_health_lens-….sql.gz.enc` (uses
+  `BACKUP_ENCRYPTION_PASSWORD` from `.env`, or asks for it, and writes the `.sql.gz` next to it), then
+  `gunzip -c ajna_health_lens-….sql.gz | mysql -u <user> -p ajna_health_lens`. Test a restore once, on a
+  spare database, before you need it.
+
+**Security headers.** Pages send a Content-Security-Policy listing the outside sites allowed to
+run code or show frames (Google Analytics, YouTube/Vimeo/Dailymotion/Spotify embeds, Fonepay,
+Cloudflare Turnstile, chart libraries). Adding a new kind of embed or script from another site
+means adding it to `CSP_DIRECTIVES` in `settings.py`. Anything blocked is logged as
+"CSP violation". Set `CSP_REPORT_ONLY=True` to only report, not block, while testing a change.
+
+**Search index.** Articles are indexed for search as they're saved. After importing articles
+straight into the database, run `python manage.py rebuild_search_index`.
+
+**Images.** Every uploaded image is web-sized automatically (`ajna_health_lens/images.py`).
+Phone photos are turned upright, the longest side is cut to `IMAGE_MAX_DIMENSION` (2400 px),
+it's re-compressed (`IMAGE_JPEG_QUALITY`, 82), and camera and GPS data are removed. Ads keep
+their exact size. To do the same to images uploaded before this, run
+`python manage.py compress_images --dry-run` to see the saving, then without `--dry-run`. Back up
+`media/` first: files are rewritten in place.
+
+**Slug checker for Chrome.** The same checks as the article editor, for any page on any site
+(ours, a competitor's, a draft URL): `tools/slug-checker-extension/`. Run `npm run build:extension`,
+then in Chrome open `chrome://extensions`, turn on *Developer mode*, **Load unpacked** and pick that
+folder. Click its icon on any page, or paste a slug. Details, and how to publish it on the Chrome Web
+Store, are in its README.
+

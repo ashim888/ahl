@@ -89,8 +89,8 @@ class AdSlot(models.Model):
     image = models.ImageField(
         upload_to='ads/%Y/%m/',
         validators=[ad_image_extension_validator, validate_ad_image_size],
-        help_text='JPG or PNG, up to 5 MB. Must exactly match the pixel dimensions '
-                   "required by the selected zone — see the size reference on this form.",
+        help_text='JPG or PNG, up to 5 MB. The size of the selected zone, or a larger copy of the same '
+                  'shape (e.g. 2× or 3×) — see the size reference on this form.',
     )
     link_url = models.URLField(help_text="Where a click sends the reader — the sponsor's page, not this site.")
     is_active = models.BooleanField(default=True)

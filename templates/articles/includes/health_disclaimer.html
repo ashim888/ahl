@@ -1,0 +1,6 @@
+{% load i18n %}{# Every article: health information is not personal medical advice (Terms of use). #}
+<aside class="mt-10 border border-border bg-secondary/50 px-5 py-4 text-xs text-muted-foreground leading-relaxed" aria-label="{% trans 'Health information notice' %}">
+    <strong class="text-foreground">{% trans "Not medical advice." %}</strong>
+    {% trans "Our reporting is for general information. It can’t replace advice from a doctor or health worker who knows your situation — talk to one before changing any treatment. In an emergency, call 102 or go to the nearest hospital." %}
+    {% if terms_page %}<a href="{{ terms_page.get_absolute_url }}" class="underline hover:text-accent">{% trans "Terms of use" %}</a>{% endif %}
+</aside>

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load i18n topic_tags %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-12 md:py-16">
+    <div class="rule-editorial mb-6"></div>
+    <h1 class="font-display text-4xl font-bold" style="letter-spacing: -0.025em;">{% trans "Topics" %}</h1>
+    <p class="mt-2 text-sm text-muted-foreground">{% blocktrans count n=topic_count %}{{ n }} topic we cover. Pick one to see every story about it, or follow it for your feed.{% plural %}{{ n }} topics we cover. Pick one to see every story about it, or follow it for your feed.{% endblocktrans %}</p>
+
+    {% if trending %}
+        <section class="mt-10" aria-labelledby="trending-heading">
+            <h2 id="trending-heading" class="font-mono-editorial text-xs tracking-widest text-accent mb-3">{% trans "TRENDING" %}</h2>
+            <ul class="flex flex-wrap gap-2.5">
+                {% for topic in trending %}
+                    <li>{% if forloop.counter <= 3 %}{% include 'articles/includes/topic_pill.html' with topic=topic size='lg' count=topic.story_count rank=forloop.counter hot=True %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=topic size='lg' count=topic.story_count rank=forloop.counter %}{% endif %}</li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <nav class="mt-10 flex flex-wrap gap-1 font-mono-editorial text-xs" aria-label="{% trans 'Jump to letter' %}">
+        {% for letter, topics in groups %}<a href="#letter-{{ forloop.counter }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-border px-2 hover:border-accent hover:bg-accent hover:text-white transition-colors">{{ letter }}</a>{% endfor %}
+    </nav>
+    <div class="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+        {% for letter, topics in groups %}
+            <section id="letter-{{ forloop.counter }}" aria-labelledby="letter-heading-{{ forloop.counter }}" class="scroll-mt-24 min-w-0">
+                <h2 id="letter-heading-{{ forloop.counter }}" class="font-display text-2xl font-bold border-b border-border pb-1 mb-2">{{ letter }}</h2>
+                <ul class="flex flex-wrap gap-2">
+                    {% for topic in topics %}
+                        <li class="max-w-full">{% include 'articles/includes/topic_pill.html' with topic=topic count=topic.article_count %}</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% empty %}
+            <p class="text-muted-foreground">{% trans "No topics yet." %}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

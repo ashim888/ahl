@@ -4,6 +4,7 @@
 
 {% block title %}{% trans "Checkout" %} — {{ article.title }} — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
 {% block content %}
 <div class="max-w-lg mx-auto px-6 py-14">
     <a href="{% url 'articles:article_detail' article.slug %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "← BACK TO ARTICLE" %}</a>
@@ -12,17 +13,15 @@
     <div class="mt-8 border border-border bg-card overflow-hidden">
         <div class="flex gap-4 p-5">
             {% if article.card_image_url %}
-                <img src="{{ article.card_image_url }}" alt="" class="w-28 aspect-video object-cover shrink-0">
+                <img src="{{ article.card_image_url }}" style="{{ article.card_image_style }}" alt="" class="w-28 aspect-video object-cover shrink-0">
             {% endif %}
             <div class="min-w-0">
                 <span class="section-label text-accent">{% trans "SPECIAL ARTICLE" %}</span>
                 <h2 class="font-display text-lg font-bold leading-snug mt-1">{{ article.title }}</h2>
             </div>
         </div>
-        <div class="border-t border-border px-5 py-4 flex items-baseline justify-between">
-            <span class="font-mono-editorial text-xs text-muted-foreground">{% trans "One-time purchase" %}</span>
-            <span class="font-display text-2xl font-bold">{{ article.price|money }}</span>
-        </div>
+        {% trans "One-time purchase" as purchase_label %}
+        {% include 'billing/includes/bill_summary.html' with quote=quote label=purchase_label %}
     </div>
 
     {% if PAYMENTS_LIVE %}
@@ -34,12 +33,16 @@
     </p>
     {% endif %}
 
+    {% include 'billing/includes/promo_field.html' %}
+
     <form method="post" class="mt-6">
         {% csrf_token %}
-        <button type="submit"
+        {% include 'billing/includes/buyer_pan_field.html' %}
+        <button type="submit" data-loading-text="{% if PAYMENTS_LIVE %}{% trans 'TAKING YOU TO FONEPAY…' %}{% else %}{% trans 'PLEASE WAIT…' %}{% endif %}"
                 class="w-full font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
-            {% if PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & UNLOCK ARTICLE" %}{% endif %}
+            {% if quote.is_free %}{% trans "CONFIRM — FREE WITH YOUR CODE" %}{% elif PAYMENTS_LIVE %}{% trans "CONTINUE TO FONEPAY" %}{% else %}{% trans "CONFIRM & UNLOCK ARTICLE" %}{% endif %}
         </button>
     </form>
+    {% include 'billing/includes/agree_terms.html' %}
 </div>
 {% endblock %}

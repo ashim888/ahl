@@ -3,11 +3,13 @@
 
 {% block title %}{% trans "Pay with Fonepay" %} — {{ JOURNAL_NAME }}{% endblock %}
 
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto px-6 py-12">
     <a href="{{ retry_url }}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">{% trans "← BACK" %}</a>
     <h1 class="font-display text-3xl font-bold mt-4" style="letter-spacing: -0.02em;">{% trans "Pay with Fonepay" %}</h1>
-    <p class="mt-2 text-muted-foreground">{{ payment.description }} · <strong class="text-foreground">{{ payment.amount|money }}</strong></p>
+    <p class="mt-2 text-muted-foreground">{{ payment.description }} · <strong class="text-foreground">{{ payment.amount|money }}</strong>
+        {% if payment.vat_amount %}<span class="text-xs">({% blocktrans with price=payment.subtotal|money vat=payment.vat_amount|money %}{{ price }} + {{ vat }} VAT{% endblocktrans %})</span>{% endif %}</p>
 
     {% if payment.status == 'pending' %}
         <div id="pay-panel" class="mt-8 grid md:grid-cols-2 gap-6"

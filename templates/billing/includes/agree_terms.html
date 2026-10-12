@@ -1,0 +1,9 @@
+{% load i18n %}{% comment %}
+"By paying you agree to…" under a checkout's pay button — links only the
+policy pages that are published (context processor: terms_page, refund_page).
+{% endcomment %}{% if terms_page or refund_page %}
+<p class="mt-3 text-xs text-muted-foreground leading-relaxed">
+    {% trans "By paying you agree to our" %}
+    {% if terms_page %}<a href="{{ terms_page.get_absolute_url }}" class="underline hover:text-accent">{{ terms_page.title }}</a>{% endif %}{% if terms_page and refund_page %} {% trans "and" %} {% endif %}{% if refund_page %}<a href="{{ refund_page.get_absolute_url }}" class="underline hover:text-accent">{{ refund_page.title }}</a>{% endif %}{% trans "." context "end of: By paying you agree to our Terms and Refund policy" %}
+</p>
+{% endif %}

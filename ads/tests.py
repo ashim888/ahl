@@ -220,115 +220,22 @@ class AdSlotAnalyticsTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
 
-class AdSlotAnalyticsOverviewTests(TestCase):
-    """The sitewide /manage/ads/analytics/ page — a top chart (every ad,
-    every zone) plus a filterable panel below it (all zones' totals by
-    default, or one zone's ads once picked). Split out from AdSlotListView
-    (AdSlotListFilterTests above), which used to compute the same zone
-    breakdown inline on the list page.
-    """
+class AdSlotAnalyticsOverviewRedirectTests(TestCase):
+    """The sitewide ad numbers moved to Analytics → Ads (admin_custom/analytics.py)."""
 
-    def setUp(self):
-        self.editor = User.objects.create_user(
-            email='ad-overview-editor@example.com', password='pw', first_name='E', last_name='D', role=User.Role.EDITOR,
-        )
-        self.reader = User.objects.create_user(
-            email='ad-overview-reader@example.com', password='pw', first_name='R', last_name='D',
-        )
+    def test_old_link_lands_on_analytics_ads_with_zone_and_period(self):
+        editor = User.objects.create_user(email='ads-redirect@example.com', password='pw', first_name='E',
+                                          last_name='D', role=User.Role.EDITOR)
+        self.client.force_login(editor)
+        response = self.client.get(reverse('ads:manage_ads_analytics'),
+                                   {'filter_zone': AdSlot.Zone.HEADER_LEADERBOARD, 'chart_days': 90})
+        self.assertRedirects(response, f"{reverse('admin_custom:analytics_ads')}?zone={AdSlot.Zone.HEADER_LEADERBOARD}&range=90",
+                             fetch_redirect_response=False)
 
-    def test_reader_cannot_view(self):
-        self.client.force_login(self.reader)
-        response = self.client.get(reverse('ads:manage_ads_analytics'))
-        self.assertEqual(response.status_code, 403)
-
-    def test_chart_defaults_to_7_days(self):
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'))
-        self.assertEqual(response.context['chart_days'], 7)
-        self.assertEqual(len(response.context['daily_stats']), 7)
-        self.assertEqual(response.context['filter_days'], 7)
-
-    def test_chart_days_param_changes_window(self):
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'), {'chart_days': 30})
-        self.assertEqual(response.context['chart_days'], 30)
-        self.assertEqual(len(response.context['daily_stats']), 30)
-
-    def test_invalid_chart_days_falls_back_to_default(self):
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'), {'chart_days': 'not-a-number'})
-        self.assertEqual(response.context['chart_days'], 7)
-
-    def test_window_totals(self):
-        ad = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
-        other = make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Sidebar Sponsor')
-        record_impression(ad)
-        record_impression(ad)
-        record_click(ad)
-        record_impression(other)
-
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['window_impressions'], 3)
-        self.assertEqual(response.context['window_clicks'], 1)
-        self.assertEqual(response.context['all_time_impressions'], 3)
-        self.assertEqual(response.context['all_time_clicks'], 1)
-
-    def test_default_view_shows_one_row_per_zone_no_chart(self):
-        ad = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
-        record_impression(ad)
-        record_impression(ad)
-        record_click(ad)
-
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'))
-        self.assertEqual(response.context['filter_zone'], '')
-        self.assertIsNone(response.context['filtered_daily_stats'])
-        rows_by_label = {r['label']: r for r in response.context['performance_rows']}
-        leaderboard_row = rows_by_label[AdSlot.Zone.HEADER_LEADERBOARD.label]
-        self.assertEqual(leaderboard_row['impressions'], 2)
-        self.assertEqual(leaderboard_row['clicks'], 1)
-        self.assertEqual(leaderboard_row['ctr'], 50.0)
-        # One row per zone in the choices list, not just zones with an ad.
-        self.assertEqual(len(response.context['performance_rows']), len(AdSlot.Zone.choices))
-
-    def test_filtering_by_zone_shows_ads_in_that_zone_and_a_chart(self):
-        low = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Low Clicks')
-        high = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='High Clicks')
-        make_ad(zone=AdSlot.Zone.ARTICLE_SIDEBAR, sponsor_name='Different Zone')
-        record_click(low)
-        for _ in range(3):
-            record_click(high)
-
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'), {'filter_zone': AdSlot.Zone.HEADER_LEADERBOARD})
-        self.assertEqual(response.context['filter_zone'], AdSlot.Zone.HEADER_LEADERBOARD)
-        self.assertEqual(response.context['filter_zone_label'], AdSlot.Zone.HEADER_LEADERBOARD.label)
-        self.assertIsNotNone(response.context['filtered_daily_stats'])
-
-        rows = list(response.context['performance_rows'])
-        self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0]['label'], 'High Clicks')
-        self.assertEqual(rows[0]['clicks'], 3)
-        self.assertNotContains(response, 'Different Zone')
-
-    def test_filter_days_independent_of_chart_days(self):
-        self.client.force_login(self.editor)
-        response = self.client.get(
-            reverse('ads:manage_ads_analytics'), {'chart_days': 30, 'filter_zone': AdSlot.Zone.HEADER_LEADERBOARD, 'filter_days': 14},
-        )
-        self.assertEqual(response.context['chart_days'], 30)
-        self.assertEqual(response.context['filter_days'], 14)
-        self.assertEqual(len(response.context['daily_stats']), 30)
-        self.assertEqual(len(response.context['filtered_daily_stats']), 14)
-
-    def test_no_ads_yet_renders_without_error(self):
-        self.client.force_login(self.editor)
-        response = self.client.get(reverse('ads:manage_ads_analytics'))
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.context['window_ctr'])
-        self.assertIsNone(response.context['all_time_ctr'])
+    def test_reader_cannot_use_it(self):
+        reader = User.objects.create_user(email='ads-redirect-r@example.com', password='pw', first_name='R', last_name='D')
+        self.client.force_login(reader)
+        self.assertEqual(self.client.get(reverse('ads:manage_ads_analytics')).status_code, 403)
 
 
 class AdSlotDimensionsTests(TestCase):
@@ -376,6 +283,45 @@ class AdSlotFormDimensionValidationTests(TestCase):
         self.assertIn('728×90', message)
         self.assertIn('300×250', message)
 
+
+    def _form(self, size, zone=AdSlot.Zone.HEADER_LEADERBOARD, fmt='JPEG'):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        buffer = io.BytesIO()
+        Image.new('RGB', size, (200, 40, 40)).save(buffer, format=fmt)
+        upload = SimpleUploadedFile(f'ad.{fmt.lower()}', buffer.getvalue(), content_type=f'image/{fmt.lower()}')
+        return AdSlotForm(data={
+            'sponsor_name': 'Sponsor', 'zone': zone, 'link_url': 'https://example.com',
+            'start_date': timezone.localdate(), 'is_active': True,
+        }, files={'image': upload})
+
+    def test_larger_copy_of_the_same_shape_is_accepted_and_kept_at_2x(self):
+        form = self._form((2184, 270))  # 3× a 728×90 leaderboard
+        self.assertTrue(form.is_valid(), form.errors)
+        image = Image.open(form.cleaned_data['image'])
+        self.assertEqual(image.size, (1456, 180))
+        ad = form.save()
+        self.assertEqual(Image.open(ad.image.path).size, (1456, 180))
+        self.assertEqual((ad.width, ad.height), (728, 90))  # still shown at the zone size
+
+    def test_2x_png_is_kept_as_it_is(self):
+        form = self._form((600, 500), zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, fmt='PNG')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(Image.open(form.cleaned_data['image']).size, (600, 500))
+
+    def test_off_by_a_pixel_shape_is_fine(self):
+        self.assertTrue(self._form((2185, 270)).is_valid())
+
+    def test_smaller_than_the_zone_is_refused_as_blurry(self):
+        form = self._form((364, 45))
+        self.assertFalse(form.is_valid())
+        self.assertIn('blurry', form.errors['image'][0])
+        self.assertIn('1456×180', form.errors['image'][0])
+
+    def test_different_shape_is_refused_as_cut_off(self):
+        form = self._form((1456, 400))
+        self.assertFalse(form.is_valid())
+        self.assertIn('cut off', form.errors['image'][0])
 
 class AdSlotTemplateTagTests(TestCase):
     """ads.templatetags.ads_tags.ad_slot — the one call site every ad

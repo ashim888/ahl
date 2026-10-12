@@ -1,0 +1,12 @@
+{% extends 'email/base.html' %}
+{% block title %}Subscription cancelled{% endblock %}
+{% block preheader %}Your refund of {{ total }} is on its way.{% endblock %}
+{% block eyebrow %}Your subscription{% endblock %}
+{% block heading %}Your subscription is cancelled{% endblock %}
+{% block content %}
+    <p>Hi {{ payment.payer_name }},</p>
+    <p>You've cancelled <strong>{{ payment.description }}</strong> (receipt {{ payment.receipt_number }}). Your access has ended, and we'll refund the full {{ total }} the way you paid — normally within 7 working days. You'll get a credit note by email when it's done.</p>
+    <p>Changed your mind, or a question? Write to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+    <p>— {{ journal_name }}</p>
+{% endblock %}
+{% block footer_reason %}You're receiving this because you cancelled a subscription on {{ journal_name }}.{% endblock %}

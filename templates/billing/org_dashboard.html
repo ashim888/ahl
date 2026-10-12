@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load i18n money_tags %}
+
+{% block title %}{{ organization.name }} — {% trans "Organization dashboard" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-12">
+    <div class="flex flex-wrap items-end justify-between gap-4 pb-6 border-b-2 border-foreground">
+        <div>
+            <p class="section-label text-accent">{% trans "ORGANIZATION DASHBOARD" %}</p>
+            <h1 class="font-display text-3xl font-bold mt-1" style="letter-spacing: -0.02em;">{{ organization.name }}</h1>
+            <p class="mt-1 text-sm text-muted-foreground">
+                {{ organization.plan.name }} ·
+                {% blocktrans with end=organization.end_date|date:"j M Y" %}until {{ end }}{% endblocktrans %}
+                {% if days_left <= 30 and days_left >= 0 %}<span class="text-accent font-medium">· {% blocktrans count days=days_left %}{{ days }} day left{% plural %}{{ days }} days left{% endblocktrans %}</span>{% endif %}
+            </p>
+        </div>
+        {% if other_orgs %}
+            <nav aria-label="{% trans 'Your other organizations' %}" class="text-sm">{% for other in other_orgs %}<a href="{% url 'billing:org_dashboard_for' other.pk %}" class="underline hover:text-accent">{{ other.name }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</nav>
+        {% endif %}
+    </div>
+
+    {# -- Headline figures ------------------------------------------------ #}
+    <form method="get" class="mt-6 flex flex-wrap items-center gap-3 text-sm">
+        <label for="month" class="text-muted-foreground">{% trans "Showing" %}</label>
+        <select id="month" name="month" onchange="this.form.submit()" class="border border-border bg-card px-2 py-1.5">
+            {% for month in months %}<option value="{{ month|date:'Y-m' }}"{% if month == start %} selected{% endif %}>{{ month|date:"F Y" }}</option>{% endfor %}
+        </select>
+        <a href="{% url 'billing:org_report_csv' organization.pk %}?month={{ start|date:'Y-m' }}" class="font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:border-accent hover:text-accent">{% trans "DOWNLOAD CSV" %}</a>
+    </form>
+    <dl class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "ARTICLES READ" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ reads }}</dd></div>
+        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "MEMBERS WHO READ" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ active_readers }}</dd></div>
+        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "MEMBERS" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ member_count }}</dd></div>
+        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "SEATS LEFT" %}</dt><dd class="font-display text-3xl font-bold mt-1">{% if seats %}{{ seats_left }} <span class="text-base text-muted-foreground">/ {{ seats }}</span>{% else %}{% trans "No limit" %}{% endif %}</dd></div>
+    </dl>
+
+    {# -- 12-month chart --------------------------------------------------- #}
+    <section class="mt-10" aria-labelledby="trend-heading">
+        <h2 id="trend-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "ARTICLES READ, LAST 12 MONTHS" %}</h2>
+        <div class="border border-border bg-card p-5">
+            <ol class="flex items-end gap-2 h-40" aria-label="{% trans 'Monthly reads' %}">
+                {% for point in series %}
+                    <li class="flex-1 flex flex-col items-center justify-end h-full gap-1">
+                        <span class="text-[0.65rem] text-muted-foreground">{{ point.reads }}</span>
+                        <span class="w-full bg-foreground" style="height: {{ point.pct }}%; min-height: 2px;" aria-hidden="true"></span>
+                        <span class="text-[0.6rem] text-muted-foreground whitespace-nowrap">{{ point.label|slice:":3" }}</span>
+                        <span class="sr-only">{{ point.label }}: {{ point.reads }}</span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </section>
+
+    <div class="mt-10 grid md:grid-cols-2 gap-8">
+        <section aria-labelledby="top-heading">
+            <h2 id="top-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "MOST-READ ARTICLES" %}</h2>
+            <ol class="divide-y divide-border border-y border-border text-sm">
+                {% for row in top_articles %}
+                    <li class="py-2.5 flex justify-between gap-4"><a href="{% url 'articles:article_detail' row.article__slug %}" class="hover:text-accent">{{ row.article__title }}</a><span class="text-muted-foreground whitespace-nowrap">{{ row.n }}</span></li>
+                {% empty %}<li class="py-3 text-muted-foreground">{% trans "No reading yet this month." %}</li>{% endfor %}
+            </ol>
+        </section>
+        <section aria-labelledby="sections-heading">
+            <h2 id="sections-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "TOPICS READ MOST" %}</h2>
+            <ol class="divide-y divide-border border-y border-border text-sm">
+                {% for row in top_sections %}
+                    <li class="py-2.5 flex justify-between gap-4"><span>{{ row.article__section__name }}</span><span class="text-muted-foreground">{{ row.n }}</span></li>
+                {% empty %}<li class="py-3 text-muted-foreground">—</li>{% endfor %}
+            </ol>
+        </section>
+    </div>
+
+    {# -- Members ---------------------------------------------------------- #}
+    <section class="mt-10" aria-labelledby="members-heading">
+        <h2 id="members-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1">{% trans "MEMBERS" %}</h2>
+        <p class="text-xs text-muted-foreground mb-3">{% trans "You see how many articles each member read — never which ones." %}</p>
+        <div class="overflow-x-auto border border-border bg-card">
+            <table class="w-full text-sm">
+                <thead class="text-left font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground border-b border-border">
+                    <tr><th class="p-3">{% trans "NAME" %}</th><th class="p-3">{% trans "JOINED" %}</th><th class="p-3 text-right">{% trans "READ THIS PERIOD" %}</th><th class="p-3">{% trans "LAST READ" %}</th><th class="p-3"><span class="sr-only">{% trans "Actions" %}</span></th></tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                    {% for member in members %}
+                        <tr>
+                            <td class="p-3"><span class="font-medium">{{ member.user.get_full_name }}</span>{% if member.is_manager %} <span class="font-mono-editorial text-[0.6rem] tracking-widest text-accent">{% trans "MANAGER" %}</span>{% endif %}<span class="block text-xs text-muted-foreground">{{ member.user.email }}</span></td>
+                            <td class="p-3 whitespace-nowrap text-muted-foreground">{{ member.joined_at|date:"j M Y" }}</td>
+                            <td class="p-3 text-right">{{ member.period_reads }}</td>
+                            <td class="p-3 whitespace-nowrap text-muted-foreground">{{ member.last_read|date:"j M Y"|default:"—" }}</td>
+                            <td class="p-3 whitespace-nowrap text-right">
+                                {% if member.user_id != user.pk %}
+                                    <form method="post" action="{% url 'billing:org_member_manager' organization.pk member.pk %}" class="inline">{% csrf_token %}<button type="submit" class="text-xs underline hover:text-accent">{% if member.is_manager %}{% trans "Remove manager" %}{% else %}{% trans "Make manager" %}{% endif %}</button></form>
+                                    <form method="post" action="{% url 'billing:org_member_remove' organization.pk member.pk %}" class="inline ml-3"
+                                          onsubmit="return confirm('{% trans "Remove this person from your subscription? Their access ends now." as confirm_remove %}{{ confirm_remove|escapejs }}');">{% csrf_token %}<button type="submit" class="text-xs text-accent underline">{% trans "Remove" %}</button></form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="p-4 text-muted-foreground">{% trans "Nobody has joined yet — invite your colleagues below." %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if removed_members %}
+            <details class="mt-3 text-sm">
+                <summary class="cursor-pointer text-muted-foreground">{% blocktrans count n=removed_members|length %}{{ n }} removed member{% plural %}{{ n }} removed members{% endblocktrans %}</summary>
+                <ul class="mt-2 divide-y divide-border border-y border-border">
+                    {% for member in removed_members %}
+                        <li class="py-2 flex justify-between gap-4">{{ member.user.get_full_name }} <span class="text-muted-foreground">{{ member.user.email }}</span>
+                            <form method="post" action="{% url 'billing:org_member_restore' organization.pk member.pk %}">{% csrf_token %}<button type="submit" class="text-xs underline hover:text-accent">{% trans "Restore" %}</button></form></li>
+                    {% endfor %}
+                </ul>
+            </details>
+        {% endif %}
+    </section>
+
+    {# -- Invite ----------------------------------------------------------- #}
+    <section class="mt-10" aria-labelledby="invite-heading">
+        <h2 id="invite-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "INVITE COLLEAGUES" %}</h2>
+        <form method="post" action="{% url 'billing:org_invite' organization.pk %}" class="border border-border bg-card p-5 space-y-3">
+            {% csrf_token %}
+            <label for="invite-emails" class="block text-sm">{% blocktrans with domains=organization.domains|join:", " %}Work email addresses (at {{ domains }}), one per line — up to 20 at a time. Each gets an email explaining how to join.{% endblocktrans %}</label>
+            <textarea id="invite-emails" name="emails" rows="3" class="w-full border border-border bg-background px-3 py-2 text-sm"></textarea>
+            <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 py-2.5 hover:bg-accent">{% trans "SEND INVITATIONS" %}</button>
+        </form>
+    </section>
+
+    {# -- Billing & contact ---------------------------------------------- #}
+    <div class="mt-10 grid md:grid-cols-2 gap-8">
+        <section aria-labelledby="invoices-heading">
+            <h2 id="invoices-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "INVOICES" %}</h2>
+            <ul class="divide-y divide-border border-y border-border text-sm">
+                {% for payment in payments %}
+                    <li class="py-2.5 flex justify-between gap-4"><span>{{ payment.completed_at|invoice_date }} · {{ payment.receipt_number }}{% if payment.status == 'refunded' %} <span class="text-accent">({% trans "refunded" %})</span>{% endif %}</span><span class="font-medium">{{ payment.amount|money }}</span></li>
+                {% empty %}<li class="py-3 text-muted-foreground">{% trans "No invoices on record yet." %}</li>{% endfor %}
+            </ul>
+            <p class="mt-2 text-xs text-muted-foreground">{% trans "Need a copy of an invoice? Ask your account manager." %}</p>
+        </section>
+        <section aria-labelledby="contact-heading">
+            <h2 id="contact-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "YOUR ACCOUNT MANAGER" %}</h2>
+            <div class="border border-border bg-card p-5 text-sm">
+                {% if organization.account_manager %}
+                    <p class="font-medium">{{ organization.account_manager.get_full_name }}</p>
+                    <a href="mailto:{{ organization.account_manager.email }}" class="underline hover:text-accent">{{ organization.account_manager.email }}</a>
+                {% else %}
+                    <a href="mailto:{{ contact_email }}" class="underline hover:text-accent">{{ contact_email }}</a>
+                {% endif %}
+                <p class="mt-3 text-muted-foreground">{% trans "For more seats, renewal, invoices or anything else about your subscription." %}</p>
+                <p class="mt-2 text-muted-foreground">{% trans "A usage report is emailed to your organization’s managers on the 1st of every month." %}</p>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

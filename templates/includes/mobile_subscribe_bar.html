@@ -1,0 +1,34 @@
+{% load i18n %}{# Phones only (inside base.html's anchor_ad dock). Hidden for 7 days once closed — localStorage, a convenience only. #}
+<aside id="mobile-subscribe-bar" hidden aria-label="{% trans 'Subscribe' %}" class="bg-foreground text-primary-foreground border-t border-white/10">
+    <div class="flex items-center gap-3 px-4 py-2.5">
+        <p class="flex-1 text-xs leading-snug"><span class="font-semibold">{% trans "Read every story." %}</span> <span class="opacity-75">{% trans "Health journalism you can trust." %}</span></p>
+        <a href="{% url 'billing:plan_browse' %}" class="shrink-0 bg-accent text-white font-mono-editorial text-[0.65rem] tracking-widest px-3.5 py-2 hover:opacity-90">{% trans "SUBSCRIBE" %}</a>
+        <button type="button" data-close class="shrink-0 -mr-1 p-1.5 opacity-70 hover:opacity-100" aria-label="{% trans 'Close' %}">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+    </div>
+</aside>
+<script>
+(function () {
+  var bar = document.getElementById('mobile-subscribe-bar');
+  var KEY = 'ahl:subscribe-bar-closed';
+  var WEEK = 7 * 24 * 3600 * 1000;
+  try {
+    var closed = Number(localStorage.getItem(KEY) || 0);
+    if (closed && Date.now() - closed < WEEK) return;
+  } catch (e) { /* storage blocked: just show it */ }
+  bar.hidden = false;
+  // Keep the footer reachable above the dock.
+  function pad() {
+    var dock = bar.closest('[data-mobile-dock]');
+    document.body.style.paddingBottom = window.matchMedia('(min-width: 768px)').matches ? '' : dock.offsetHeight + 'px';
+  }
+  pad();
+  window.addEventListener('resize', pad);
+  bar.querySelector('[data-close]').addEventListener('click', function () {
+    bar.hidden = true;
+    try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { /* ignore */ }
+    pad();
+  });
+})();
+</script>

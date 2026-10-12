@@ -1,0 +1,33 @@
+{% extends 'admin_custom/analytics/base.html' %}
+
+{% block analytics %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    {% for card in cards %}
+        <section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 flex flex-col">
+            <div class="flex items-center justify-between gap-3">
+                <h2 class="flex items-center gap-2 text-base font-semibold text-gray-900">
+                    <span class="h-2.5 w-2.5 rounded-full" style="background: {{ card.color }};" aria-hidden="true"></span>{{ card.title }}
+                </h2>
+                <a href="{{ card.url }}{% if card.title != 'Revenue' %}?{{ period.query }}{% endif %}" class="text-sm font-medium text-indigo-700 hover:text-indigo-900">Details →</a>
+            </div>
+            <dl class="mt-4 grid grid-cols-2 {% if card.kpis|length > 2 %}sm:grid-cols-3{% endif %} gap-4">
+                {% for k in card.kpis %}
+                    <div>
+                        <dt class="text-xs text-gray-600">{{ k.label }}</dt>
+                        <dd class="mt-1 text-2xl font-bold text-gray-900 tabular-nums">{{ k.display }}</dd>
+                        <dd class="text-xs">
+                            {% if k.new %}<span class="font-semibold text-emerald-700">New</span>
+                            {% elif k.direction == 'flat' %}<span class="text-gray-600">No change</span>
+                            {% else %}<span class="font-semibold {% if k.good %}text-emerald-700{% else %}text-red-700{% endif %}">{% if k.direction == 'up' %}▲{% else %}▼{% endif %}{% if k.pct_abs is not None %} {{ k.pct_abs }}%{% endif %}</span>
+                                <span class="text-gray-600">vs {{ k.previous_display }}</span>{% endif %}
+                        </dd>
+                    </div>
+                {% endfor %}
+            </dl>
+            {% if card.chart %}<div class="mt-4">{% include 'admin_custom/includes/analytics_chart.html' with c=card.chart compact=True %}</div>{% endif %}
+            {% if card.note %}<p class="mt-3 text-xs text-gray-600">{{ card.note }}</p>{% endif %}
+        </section>
+    {% endfor %}
+</div>
+<p class="mt-6 text-xs text-gray-600">Each figure counts only what happened in the period above and is compared with the same number of days just before it. Topics (keywords) have <a href="{% url 'admin_custom:keyword_analytics' %}" class="underline">their own page</a>.</p>
+{% endblock %}

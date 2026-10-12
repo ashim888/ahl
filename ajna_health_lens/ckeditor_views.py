@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ckeditor_5.views import upload_file
 
+from ajna_health_lens.images import optimize_file
 from users.decorators import role_required
 from users.models import User
 
@@ -17,13 +18,14 @@ class InlineImageStorage(FileSystemStorage):
     MEDIA_ROOT with a random name, instead of the package default (the media
     root, under the uploader's own filename) — no clashes, and no private
     filenames ("IMG_2231 patient.jpg") in public URLs. The package has
-    already checked the extension and that it's a real image by now.
+    already checked the extension and that it's a real image by now; the
+    image is web-sized and stripped of metadata (ajna_health_lens/images.py).
     """
 
     def save(self, name, content, max_length=None):
         extension = os.path.splitext(name)[1].lower()[:10]
         name = f"articles/inline/{timezone.localdate():%Y/%m}/{uuid.uuid4().hex[:16]}{extension}"
-        return super().save(name, content, max_length=max_length)
+        return super().save(name, optimize_file(content), max_length=max_length)
 
 
 def _upload_file(request):

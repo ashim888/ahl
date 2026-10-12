@@ -21,6 +21,17 @@ EMAIL_SUBJECTS = {
 
 
 @receiver(pre_save, sender=User)
+def clear_email_confirmation_on_change(sender, instance, **kwargs):
+    """A confirmed address stops counting as confirmed once it changes —
+    organization access by email domain relies on this."""
+    if instance._state.adding or not instance.email_confirmed_at:
+        return
+    previous = User.objects.filter(pk=instance.pk).values_list('email', flat=True).first()
+    if previous is not None and previous.lower() != (instance.email or '').lower():
+        instance.email_confirmed_at = None
+
+
+@receiver(pre_save, sender=User)
 def stamp_and_notify_verification_status_change(sender, instance, **kwargs):
     """Stamp verification_status_changed_at and email the user whenever
     verification_status changes — covers admin actions, the VerificationQueue

@@ -7,6 +7,7 @@ app_name = 'pitches'
 urlpatterns = [
     # Any authenticated account — see PitchCreateView in views.py
     path('pitches/new/', views.PitchCreateView.as_view(), name='pitch_create'),
+    path('pitches/thanks/', views.pitch_thanks, name='pitch_thanks'),
     path('pitches/mine/', views.MyPitchesListView.as_view(), name='my_pitches'),
 
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)

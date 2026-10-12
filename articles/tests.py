@@ -61,27 +61,86 @@ class HomeViewSectionCurationTests(TestCase):
         response = self.client.get(reverse('articles:home'))
         self.assertEqual(response.context['hero_article'], newest)
 
-    def test_latest_news_autofills_unfilled_slots(self):
-        # An unrelated explicit Hero pick, so Hero's own fallback (no type
-        # filter — see pick() in views.py) doesn't compete with Latest News
-        # for the same pool of unflagged articles.
+    def test_latest_news_is_the_newest_news_automatically(self):
         make_article('unrelated-hero', Article.ArticleType.EDITORIAL, homepage_section=Article.HomepageSection.HERO)
+        news = [make_article(f'news-{n}', Article.ArticleType.NEWS_COMMENTARY, publication_date=datetime.date(2026, 1, n))
+                for n in range(1, 9)]
+        latest = self.client.get(reverse('articles:home')).context['latest_news']
+        self.assertEqual(latest, list(reversed(news))[:6])  # newest first, six of them
 
-        # Only one explicit pick, but the section holds 3 — the other 2
-        # slots should still autofill from recent news_commentary articles.
-        picked = make_article(
-            'curated-news', Article.ArticleType.NEWS_COMMENTARY,
-            homepage_section=Article.HomepageSection.LATEST_NEWS, publication_date=datetime.date(2026, 1, 1),
-        )
-        auto1 = make_article('auto-news-1', Article.ArticleType.NEWS_COMMENTARY, publication_date=datetime.date(2026, 6, 1))
-        auto2 = make_article('auto-news-2', Article.ArticleType.NEWS_COMMENTARY, publication_date=datetime.date(2026, 5, 1))
+    def test_a_second_hero_is_not_lost_it_shows_in_latest_news(self):
+        # The bug: an unpinned Hero that lost to another Hero vanished from the homepage.
+        first = make_article('first-hero', Article.ArticleType.NEWS_COMMENTARY,
+                             homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 1, 1))
+        second = make_article('second-hero', Article.ArticleType.ORIGINAL_RESEARCH,
+                              homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 2, 1))
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(context['hero_article'], second)  # newest Hero wins
+        self.assertIn(first, context['latest_news'])       # the older one moves down, not away
 
+    def test_pinned_hero_beats_a_newer_one(self):
+        pinned = make_article('pinned-hero', Article.ArticleType.NEWS_COMMENTARY,
+                              homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 1, 1))
+        Article.objects.filter(pk=pinned.pk).update(is_pinned=True)
+        newer = make_article('newer-hero', Article.ArticleType.NEWS_COMMENTARY,
+                             homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 3, 1))
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(context['hero_article'], pinned)
+        self.assertIn(newer, context['latest_news'])
+
+    def test_overflowing_spot_picks_land_in_latest_news(self):
+        make_article('hero', Article.ArticleType.EDITORIAL, homepage_section=Article.HomepageSection.HERO)
+        opinions = [make_article(f'opinion-{n}', Article.ArticleType.EDITORIAL, homepage_section=Article.HomepageSection.OPINION,
+                                 publication_date=datetime.date(2026, 1, n)) for n in range(1, 5)]
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(len(context['opinion_pieces']), 3)
+        self.assertIn(opinions[0], context['latest_news'])  # the oldest of four picks
+
+    def test_pinned_heroes_rotate_in_the_slider(self):
+        dates = [datetime.date(2026, 1, n) for n in (1, 2, 3)]
+        pinned = [make_article(f'pinned-{n}', Article.ArticleType.NEWS_COMMENTARY, homepage_section=Article.HomepageSection.HERO,
+                               publication_date=d) for n, d in enumerate(dates)]
+        Article.objects.filter(pk__in=[a.pk for a in pinned]).update(is_pinned=True)
+        unpinned = make_article('unpinned-hero', Article.ArticleType.NEWS_COMMENTARY,
+                                homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 5, 1))
         response = self.client.get(reverse('articles:home'))
-        latest_news = response.context['latest_news']
-        self.assertEqual(len(latest_news), 3)
-        self.assertIn(picked, latest_news)
-        self.assertIn(auto1, latest_news)
-        self.assertIn(auto2, latest_news)
+        self.assertEqual([a.slug for a in response.context['hero_slides']], ['pinned-2', 'pinned-1', 'pinned-0'])
+        self.assertEqual(response.context['hero_article'].slug, 'pinned-2')
+        self.assertIn(unpinned, response.context['latest_news'])
+        self.assertContains(response, 'data-hero-slider')
+        self.assertContains(response, 'aria-label="3 of 3"')
+        self.assertContains(response, 'js/hero_slider.js')
+
+    def test_single_top_story_has_no_slider(self):
+        make_article('only-hero', Article.ArticleType.NEWS_COMMENTARY, homepage_section=Article.HomepageSection.HERO)
+        response = self.client.get(reverse('articles:home'))
+        self.assertEqual(len(response.context['hero_slides']), 1)
+        self.assertNotContains(response, 'data-hero-slider')
+
+    def test_slider_holds_at_most_five(self):
+        for n in range(7):
+            article = make_article(f'pin-{n}', Article.ArticleType.NEWS_COMMENTARY,
+                                   homepage_section=Article.HomepageSection.HERO, publication_date=datetime.date(2026, 1, n + 1))
+            Article.objects.filter(pk=article.pk).update(is_pinned=True)
+        context = self.client.get(reverse('articles:home')).context
+        self.assertEqual(len(context['hero_slides']), 5)
+        self.assertEqual({a.slug for a in context['latest_news']} & {'pin-0', 'pin-1'}, {'pin-0', 'pin-1'})
+
+    def test_latest_news_is_no_longer_a_spot(self):
+        self.assertNotIn('latest_news', Article.HomepageSection.values)
+
+    def test_editor_is_told_who_holds_the_hero(self):
+        from users.models import User
+
+        hero = make_article('current-hero', Article.ArticleType.NEWS_COMMENTARY, homepage_section=Article.HomepageSection.HERO)
+        editor = User.objects.create_user(email='spot-editor@example.com', password='pw', first_name='E', last_name='D',
+                                          role=User.Role.EDITOR)
+        self.client.force_login(editor)
+        response = self.client.get(reverse('articles:manage_article_create'))
+        self.assertEqual(response.context['current_hero'], hero)
+        self.assertContains(response, 'data-current="Current Hero"')
+        own = self.client.get(reverse('articles:manage_article_update', args=[hero.slug]))
+        self.assertIsNone(own.context['current_hero'])  # not compared with itself
 
     def test_article_never_appears_in_two_sections(self):
         # Explicitly featured as Hero — even though it's also a
@@ -402,14 +461,15 @@ class KeywordBrowsingTests(TestCase):
     not an icontains substring match against a joined string.
     """
 
-    def test_keyword_pill_links_to_filtered_list(self):
+    def test_keyword_pill_links_to_topic_page(self):
         article = Article.objects.create(
             title='Tagged Article', slug='tagged-article', abstract='Abstract',
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
         )
         article.keyword_tags.set([make_keyword('Tuberculosis'), make_keyword('Screening')])
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
-        self.assertContains(response, '?keyword=tuberculosis')
+        self.assertContains(response, reverse('articles:topic_detail', args=['tuberculosis']))
+        self.assertContains(response, 'topic-pill__name">Tuberculosis<')
 
     def test_article_list_filters_by_keyword(self):
         tb_keyword = make_keyword('Tuberculosis')
@@ -1048,13 +1108,15 @@ class SlugAndShortCodeTests(TestCase):
         article = make_article('has-a-slug', Article.ArticleType.NEWS_COMMENTARY)
         self.assertEqual(len(article.short_code), 5)
 
-    def test_blank_slug_is_generated_from_title_plus_short_code(self):
+    def test_blank_slug_is_generated_from_the_title_without_a_code(self):
+        # The short code is the article's second address (/articles/<code>/),
+        # not part of the slug (articles/slugs.py).
         article = Article.objects.create(
             title='Tuberculosis Screening Update', abstract='Abstract',
             article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.PUBLISHED,
         )
-        self.assertTrue(article.slug.startswith('tuberculosis-screening-update-'))
-        self.assertTrue(article.slug.endswith(article.short_code))
+        self.assertEqual(article.slug, 'tuberculosis-screening-update')
+        self.assertEqual(len(article.short_code), 5)
 
     def test_explicit_slug_is_not_overridden(self):
         article = make_article('my-custom-slug', Article.ArticleType.NEWS_COMMENTARY)
@@ -1122,7 +1184,7 @@ class SlugAndShortCodeTests(TestCase):
         })
         article = Article.objects.get(title='Freshly Typed Headline')
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(article.slug.startswith('freshly-typed-headline-'))
+        self.assertEqual(article.slug, 'freshly-typed-headline')
         self.assertEqual(len(article.short_code), 5)
 
 
@@ -1740,6 +1802,39 @@ class TableOfContentsTests(TestCase):
     def test_empty_content(self):
         self.assertEqual(extract_toc(''), ('', []))
         self.assertEqual(extract_toc(None), (None, []))
+
+    def test_bold_paragraphs_become_headings_when_there_are_none(self):
+        """Text pasted from Word/Google Docs has bold paragraphs, not headings."""
+        html, entries = extract_toc(
+            '<p style="text-align:justify;"><strong>&nbsp;एपेन्डिक्स के हो?</strong></p><p>Text.</p>'
+            '<p><strong>२.१ तथ्याङ्क स्रोत</strong></p><p>More <strong>bold words</strong> inside.</p>'
+            '<p><b>Treatment</b>&nbsp;</p><p><strong>Label:</strong> a sentence that goes on.</p>'
+            '<blockquote><p><strong>Quoted</strong></p></blockquote><ul><li><p><strong>In a list</strong></p></li></ul>'
+        )
+        self.assertEqual([(e['level'], e['text']) for e in entries],
+                         [(2, 'एपेन्डिक्स के हो?'), (3, '२.१ तथ्याङ्क स्रोत'), (2, 'Treatment')])
+        self.assertIn('<h2 id="एपेन्डिक्स-के-हो">एपेन्डिक्स के हो?</h2>', html)
+        self.assertIn('<p>More <strong>bold words</strong> inside.</p>', html)
+        self.assertIn('<blockquote><p><strong>Quoted</strong></p></blockquote>', html)
+        self.assertIn('<li><p><strong>In a list</strong></p></li>', html)
+
+    def test_bold_paragraphs_left_alone_when_real_headings_exist(self):
+        _html, entries = extract_toc('<h2>Real</h2><p><strong>Just emphasis</strong></p><h2>Also real</h2>')
+        self.assertEqual([e['text'] for e in entries], ['Real', 'Also real'])
+
+    def test_very_long_bold_paragraph_is_not_a_heading(self):
+        _html, entries = extract_toc(f'<p><strong>{"word " * 40}</strong></p>')
+        self.assertEqual(entries, [])
+
+    def test_article_page_shows_in_this_article_for_pasted_text(self):
+        article = Article.objects.create(
+            title='Pasted', slug='pasted-toc', status=Article.Status.PUBLISHED, access_type=Article.AccessType.OPEN_ACCESS,
+            html_content='<p><strong>What is it?</strong></p><p>One.</p><p><strong>Symptoms</strong></p><p>Two.</p>',
+        )
+        response = self.client.get(article.get_absolute_url())
+        self.assertContains(response, 'id="article-toc"')
+        self.assertContains(response, '<h2 id="what-is-it">What is it?</h2>')
+        self.assertContains(response, 'href="#symptoms"')
 
 
 class ArticleDetailTocRenderingTests(TestCase):

@@ -63,7 +63,7 @@
             <article class="group relative grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all mb-12">
                 <div class="relative aspect-video md:aspect-auto md:min-h-[300px] bg-secondary overflow-hidden [&>*]:absolute [&>*]:inset-0">
                     {% if article.card_image_url %}
-                        <img src="{{ article.card_image_url }}" alt="{{ article.title }}" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
+                        <img src="{{ article.card_image_url }}" style="{{ article.card_image_style }}" alt="{{ article.title }}" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
                         {% include 'articles/includes/play_badge.html' with article=article %}
                     {% else %}
                         <div class="w-full h-full" style="background: linear-gradient(135deg, #e8e4de 0%, #cfc9c0 100%);"></div>

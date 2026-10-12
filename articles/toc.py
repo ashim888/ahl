@@ -10,6 +10,34 @@ HEADING_RE = re.compile(r'<(h[23])\b([^>]*)>(.*?)</\1>', re.IGNORECASE | re.DOTA
 TAG_STRIP_RE = re.compile(r'<[^>]+>')
 EXISTING_ID_RE = re.compile(r'\bid=["\']([^"\']+)["\']', re.IGNORECASE)
 
+# A whole paragraph in bold — how a section title arrives when text is
+# pasted from Word or Google Docs, or typed with Bold instead of the
+# Heading menu: <p ...><strong>Title</strong></p> (also <b>, &nbsp;s, an
+# <em> inside). See promote_bold_headings.
+BOLD_PARAGRAPH_RE = re.compile(
+    r'<p\b[^>]*>(?:\s|&nbsp;)*<(strong|b)\b[^>]*>(?P<inner>(?:(?!</?(?:p|strong|b)\b).)*?)</\1>'
+    r'(?:\s|&nbsp;|<br\s*/?>)*</p>',
+    re.IGNORECASE | re.DOTALL,
+)
+# "२.१ …", "2.1 …" — a numbered sub-section.
+SUBSECTION_RE = re.compile(r'^[0-9०-९]+\.[0-9०-९]+')
+BOLD_HEADING_MAX_CHARS = 150
+CONTAINER_RE = re.compile(r'<(/?)(blockquote|table|li|figure)\b', re.IGNORECASE)
+
+DEVANAGARI_RE = re.compile(r'[\u0900-\u097F]')
+
+
+def heading_slug(text: str) -> str:
+    """Anchor id for a heading: Django's slugify for English (unchanged, so
+    existing links keep working); for Nepali, keyword_slug, which keeps the
+    vowel signs slugify would drop ('के हो?' → 'के-हो')."""
+    if DEVANAGARI_RE.search(text):
+        from .models import keyword_slug
+
+        return keyword_slug(text)
+    return slugify(text)
+
+
 # Below this many headings, a sidebar nav has nothing useful to jump
 # between — article_detail.html only renders the "In This Article" block
 # once extract_toc's second return value has more than this many entries.
@@ -31,6 +59,7 @@ def extract_toc(html_content):
     if not html_content:
         return html_content, []
 
+    html_content = promote_bold_headings(html_content)
     toc_entries = []
     used_ids = set()
 
@@ -44,7 +73,7 @@ def extract_toc(html_content):
         if existing:
             heading_id = existing.group(1)
         else:
-            base = slugify(text) or 'section'
+            base = heading_slug(text) or 'section'
             heading_id = base
             suffix = 2
             while heading_id in used_ids:
@@ -58,3 +87,30 @@ def extract_toc(html_content):
 
     html_with_ids = HEADING_RE.sub(add_id, html_content)
     return html_with_ids, toc_entries
+
+
+def promote_bold_headings(html_content: str) -> str:
+    """In an article with no real <h2>/<h3>, each paragraph that is all
+    bold and heading-length becomes an <h2> (an <h3> when it's numbered
+    like "2.1"), so it shows as a heading and fills "In This Article".
+    Paragraphs inside a quote, table, list or figure are left alone, as is
+    any article that already uses the Heading menu. Display only — the
+    stored text isn't changed.
+    """
+    if HEADING_RE.search(html_content):
+        return html_content
+
+    def promote(match):
+        depth = 0
+        for tag in CONTAINER_RE.finditer(html_content, 0, match.start()):
+            depth += -1 if tag.group(1) else 1
+        if depth > 0:
+            return match.group(0)
+        inner = match.group('inner')
+        text = unescape(TAG_STRIP_RE.sub('', inner)).replace('\xa0', ' ').strip()
+        if not text or len(text) > BOLD_HEADING_MAX_CHARS:
+            return match.group(0)
+        level = 'h3' if SUBSECTION_RE.match(text) else 'h2'
+        return f'<{level}>{inner.replace("&nbsp;", " ").strip()}</{level}>'
+
+    return BOLD_PARAGRAPH_RE.sub(promote, html_content)

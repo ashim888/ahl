@@ -2,22 +2,27 @@
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KDLXMLM9WD"></script>
+    {% if GOOGLE_ANALYTICS_ID and analytics_consent %}
+    {# Google Analytics — only after the reader accepted analytics cookies (includes/cookie_consent.html). #}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_ID }}"></script>
     <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
-    gtag('config', 'G-KDLXMLM9WD');
+    gtag('config', '{{ GOOGLE_ANALYTICS_ID }}');
     </script>
+    {% endif %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ JOURNAL_NAME }}{% endblock %}</title>
     <meta name="description" content="{{ meta_description|default:JOURNAL_TAGLINE }}">
     <meta name="robots" content="{{ meta_robots|default:'index, follow' }}">
     <link rel="canonical" href="{{ canonical_url|default:default_canonical_url }}">
-    <link rel="icon" href="{% static 'images/logo.png' %}">
+    <link rel="icon" href="{% static 'favicon.ico' %}" sizes="48x48">
+    <link rel="icon" href="{% static 'images/favicon-32.png' %}" type="image/png" sizes="32x32">
+    <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'site.webmanifest' %}">
+    <meta name="theme-color" content="#111110">
     <link rel="alternate" type="application/rss+xml" title="{{ JOURNAL_NAME }} — Latest Articles" href="{% url 'articles:latest_feed' %}">
 
     {# Open Graph / Twitter Card — sitewide defaults; ArticleDetailView overrides meta_title/meta_description/meta_image_url/og_type so shared article links render a real preview instead of a bare URL. #}
@@ -36,9 +41,10 @@
     {# Sitewide NewsMediaOrganization + WebSite/SearchAction — see ajna_health_lens/context_processors.py. #}
     <script type="application/ld+json">{{ sitewide_structured_data_json }}</script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600;1,700&family=Inter:wght@300;400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+    {# Fonts are served from this site (static/css/fonts.css), not Google — no visitor IP goes to Google. #}
+    <link rel="preload" href="{% static 'fonts/playfair-display-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'fonts/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <link rel="stylesheet" href="{% static 'css/rich-content.css' %}">
     <style>
@@ -266,7 +272,8 @@
 <body class="min-h-screen flex flex-col bg-background text-foreground">
 
     {% with path=request.path %}
-    <div class="bg-foreground text-primary-foreground py-2 px-6">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-foreground focus:text-primary-foreground focus:px-4 focus:py-2 font-mono-editorial text-xs tracking-widest">{% trans "SKIP TO CONTENT" %}</a>
+    <div class="bg-foreground text-primary-foreground py-2 px-6" role="region" aria-label="{% trans 'Latest issue' %}">
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <span class="font-mono-editorial text-xs tracking-widest opacity-80">
                 {% if latest_issue %}
@@ -293,8 +300,8 @@
                 </button>
 
                 <div class="hidden md:flex flex-1">
-                    <form method="get" action="{% url 'articles:search' %}" class="flex items-center border border-border max-w-[220px]">
-                        <input type="text" name="q" placeholder="{% trans 'Search…' %}"
+                    <form method="get" action="{% url 'articles:search' %}" role="search" aria-label="{% trans 'Site search' %}" data-search-suggest class="flex items-center border border-border max-w-[220px]">
+                        <input type="search" name="q" placeholder="{% trans 'Search…' %}" aria-label="{% trans 'Search articles' %}"
                                class="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0 !w-auto">
                     </form>
                 </div>
@@ -326,7 +333,7 @@
                     </a>
                     {% if user.is_authenticated %}
                         <div class="relative hidden md:block">
-                            <button type="button" id="profile-menu-button" class="flex items-center gap-2 text-foreground hover:text-accent">
+                            <button type="button" id="profile-menu-button" aria-label="{% trans 'Account menu' %}" class="flex items-center gap-2 text-foreground hover:text-accent">
                                 {% if user.photo %}
                                     <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0">
                                 {% else %}
@@ -389,7 +396,7 @@
             </div>
             </div>
 
-            <nav class="hidden md:flex flex-wrap items-center justify-center gap-x-1">
+            <nav class="hidden md:flex flex-wrap items-center justify-center gap-x-1" aria-label="{% trans 'Main' %}">
                 <a href="{% url 'articles:home' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     {% trans "HOME" %}
@@ -411,11 +418,11 @@
         </div>
 
         <div id="mobile-menu-dropdown" class="hidden md:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
-            <form method="get" action="{% url 'articles:search' %}" class="flex items-center border border-border mx-4 mt-4">
-                <input type="text" name="q" placeholder="{% trans 'Search…' %}"
+            <form method="get" action="{% url 'articles:search' %}" role="search" aria-label="{% trans 'Site search' %}" data-search-suggest class="flex items-center border border-border mx-4 mt-4">
+                <input type="search" name="q" placeholder="{% trans 'Search…' %}" aria-label="{% trans 'Search articles' %}"
                        class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
             </form>
-            <nav class="px-4 py-4 space-y-1">
+            <nav class="px-4 py-4 space-y-1" aria-label="{% trans 'Main menu' %}">
                 <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' %}text-accent{% endif %}">{% trans "HOME" %}</a>
                 {% include 'includes/main_nav.html' with mobile=True %}
                 <a href="{% url 'articles:article_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">{% trans "ARTICLES" %}</a>
@@ -455,7 +462,7 @@
 
     {% if breaking_news %}
         {# Breaking-news banner — articles/breaking.py. Dismissal is remembered per story on this device. #}
-        <div id="breaking-banner" data-breaking-id="{{ breaking_news.pk }}" class="bg-accent text-white">
+        <div id="breaking-banner" data-breaking-id="{{ breaking_news.pk }}" class="bg-accent text-white" role="region" aria-label="{% trans 'Breaking news' %}">
             <div class="max-w-7xl mx-auto px-6 py-2.5 flex items-center gap-3">
                 <span class="shrink-0 inline-flex items-center gap-1.5 font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-white text-accent px-2 py-0.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" aria-hidden="true"></span>{% trans "BREAKING" %}
@@ -479,9 +486,10 @@
     {% endif %}
     {% endwith %}
 
-    {% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}
+    {% comment %}Pages about money or terms (checkout, receipts, billing, policies) empty these blocks: no ads there.{% endcomment %}
+    {% block header_ad %}{% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}{% endblock %}
 
-    <main class="flex-1">
+    <main id="main" tabindex="-1" class="flex-1 focus:outline-none">
         {% if messages %}
             <div class="max-w-7xl mx-auto px-6 pt-6 space-y-2">
                 {% for message in messages %}
@@ -497,15 +505,25 @@
         {% block content %}{% endblock %}
     </main>
 
-    {% ad_slot 'mobile_anchor' wrapper_class='md:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border flex justify-center py-1' %}
+    {% include 'includes/cookie_consent.html' %}
+    <script src="{% static 'js/search_suggest.js' %}" defer></script>
+    <script src="{% static 'js/form_loading.js' %}" defer></script>
+    {# Phones only: the subscribe bar (non-subscribers) above the anchor ad, in one fixed stack. Pages that drop the anchor ad (checkout, billing, policies…) drop the bar too. #}
+    {% block anchor_ad %}
+        <div class="md:hidden fixed bottom-0 left-0 right-0 z-30" data-mobile-dock>
+            {% if show_subscribe_bar and request.resolver_match.url_name != 'plan_browse' %}{% include 'includes/mobile_subscribe_bar.html' %}{% endif %}
+            {% ad_slot 'mobile_anchor' wrapper_class='bg-background border-t border-border flex justify-center py-1' %}
+        </div>
+    {% endblock %}
 
     <footer class="bg-foreground text-primary-foreground">
         <div class="max-w-7xl mx-auto px-6 py-10">
             <div class="border-b border-white/10 pb-8 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-1">{% trans 'NEWSLETTER' %}</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-1">{% trans 'NEWSLETTER' %}</p>
                     <p class="text-sm opacity-70">{% trans "Free — the latest articles and news, straight to your inbox." %}</p>
                 </div>
+                <div class="w-full md:w-auto">
                 <form method="post" action="{% url 'newsletter:subscribe' %}" class="flex gap-2 w-full md:w-auto">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">
@@ -517,10 +535,12 @@
                         {% trans 'SUBSCRIBE' %}
                     </button>
                 </form>
+                {% include 'includes/privacy_notice.html' with kind='newsletter' class='mt-2 text-xs opacity-70 md:max-w-sm' %}
+                </div>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'SECTIONS' %}</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'SECTIONS' %}</p>
                     <a href="{% url 'articles:home' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Home" %}</a>
                     {% for section in nav_sections %}
                         <a href="{{ section.nav_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ section.name }}</a>
@@ -528,29 +548,38 @@
                     <a href="{% url 'billing:plan_browse' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Subscribe" %}</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'JOURNAL' %}</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'JOURNAL' %}</p>
                     <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Issue Archive" %}</a>
                     <a href="{% url 'articles:archive_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Article Archive" %}</a>
+                    <a href="{% url 'articles:topic_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Topics" %}</a>
                     <a href="{% url 'articles:article_list' %}?type=original_research" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Research" %}</a>
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Policy" %}</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{% trans 'ABOUT' %}</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'ABOUT' %}</p>
                     <a href="{% url 'editorial_board:public_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Board" %}</a>
+                    {% if faq_page %}<a href="{{ faq_page.get_absolute_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "FAQ" %}</a>{% endif %}
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Policies" %}</a>
                     <a href="{% url 'users:register' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Register" %}</a>
+                    {% for legal_page in legal_pages %}
+                        <a href="{{ legal_page.get_absolute_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ legal_page.title }}</a>
+                    {% endfor %}
+                    <a href="{% url 'articles:correction_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Corrections" %}</a>
+                    <a href="#" data-cookie-settings class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Cookie settings" %}</a>
+                    {% if user.is_authenticated %}<a href="{% url 'users:privacy' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Privacy & your data" %}</a>{% endif %}
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-40 mb-4">{{ JOURNAL_NAME|upper }}</p>
+                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{{ JOURNAL_NAME|upper }}</p>
                     <h2 class="font-display text-xl font-black mb-3" style="letter-spacing: -0.02em;">{{ JOURNAL_NAME|upper }}</h2>
-                    <p class="text-xs opacity-40 leading-relaxed">{{ JOURNAL_TAGLINE }}</p>
+                    <p class="text-xs opacity-70 leading-relaxed">{{ JOURNAL_TAGLINE }}</p>
                 </div>
             </div>
             <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-                <p class="font-mono-editorial text-xs opacity-30">
-                    &copy; {% now "Y" %} {{ JOURNAL_NAME }}. {% trans "All rights reserved." %}
+                <p class="font-mono-editorial text-xs opacity-65">
+                    &copy; {% now "Y" %} {{ BUSINESS_LEGAL_NAME|default:JOURNAL_NAME_EN }}. {% trans "All rights reserved." %}
+                    {% if BUSINESS_PAN %}· PAN {{ BUSINESS_PAN }}{% endif %}{% if BUSINESS_ADDRESS %} · {{ BUSINESS_ADDRESS }}{% endif %}
                 </p>
-                <p class="font-mono-editorial text-xs opacity-30">
+                <p class="font-mono-editorial text-xs opacity-65">
                     ISSN {{ JOURNAL_ISSN }}
                 </p>
             </div>

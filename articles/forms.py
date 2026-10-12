@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 
 from django import forms
 from django.utils import timezone
@@ -11,7 +12,7 @@ from sections.models import Section
 from users.models import User
 
 from . import bylines as byline_utils
-from .models import Article, ArticleCorrection, ArticleNote, Author, Keyword
+from .models import Article, ArticleCorrection, ArticleNote, Author, Keyword, keyword_slug
 from .sanitize import sanitize_editorial_html
 
 
@@ -43,7 +44,7 @@ class TagifyKeywordsField(forms.CharField):
         keywords = []
         for raw_name in raw_names:
             name = raw_name.strip()
-            slug = slugify(name)
+            slug = keyword_slug(name)
             if not slug or slug in seen_slugs:
                 continue
             seen_slugs.add(slug)
@@ -86,6 +87,18 @@ class TagifyRelatedArticlesField(forms.CharField):
 def edit_token_for(article) -> str:
     """The version marker the editor carries in its hidden edit_token field."""
     return f'{article.updated_at.timestamp():.6f}' if article.updated_at else ''
+
+
+class LowercaseSlugField(forms.SlugField):
+    """A typed slug, tidied before it's checked: lowercase, spaces and
+    underscores turned into hyphens, no hyphens at the ends — so
+    "Dengue Cases_Rise" is saved as "dengue-cases-rise" instead of
+    being rejected."""
+
+    def to_python(self, value):
+        value = super().to_python(value)
+        value = re.sub(r'[\s_]+', '-', value.strip().lower())
+        return re.sub(r'-{2,}', '-', value).strip('-')
 
 
 class ArticleForm(forms.ModelForm):
@@ -152,10 +165,15 @@ class ArticleForm(forms.ModelForm):
             'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned', 'homepage_section',
             'abstract', 'issue', 'section', 'volume', 'page_numbers', 'doi',
             'video_url', 'html_content', 'references', 'featured_image', 'featured_image_alt', 'featured_image_caption',
-            'featured_image_credit', 'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
+            'featured_image_credit', 'featured_image_fit', 'featured_image_focus_x', 'featured_image_focus_y',
+            'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
         ]
+        field_classes = {'slug': LowercaseSlugField}
         widgets = {
             'abstract': forms.Textarea(attrs={'rows': 5}),
+            'featured_image_fit': forms.RadioSelect,
+            'featured_image_focus_x': forms.HiddenInput,
+            'featured_image_focus_y': forms.HiddenInput,
             # 'articles' config adds sourceEditing so a technical editor can
             # still drop into raw HTML (e.g. an embedded chart) — see the
             # CKEDITOR_5_CONFIGS comment in settings.py. Citations are typed
@@ -178,13 +196,15 @@ class ArticleForm(forms.ModelForm):
         }
         help_texts = {
             'title': '',
-            'abstract': 'Optional. One or two sentences shown under the headline and on article cards.',
+            'abstract': 'One or two sentences (about 120–220 characters) shown under the headline and on article cards. '
+                        'Use “Suggest one-liners” to pick the strongest lines from your text, then edit.',
             'video_url': 'Optional. A YouTube link (watch, youtu.be, Shorts or live). The player appears at the top of '
                          'the story; on a free story its thumbnail is used when there is no featured image. For a '
                          'subscriber-only video, upload it to YouTube as Unlisted and add a featured image — '
                          'anyone with a public link can watch it on YouTube for free.',
             'section': 'Where the story appears in the site menu.',
-            'homepage_section': 'Put this story in a specific homepage spot, or leave on Auto.',
+            'homepage_section': 'Auto: news stories appear in Latest News by themselves, newest first. Pick a spot to '
+                                'feature it — if that spot is full, it shows in Latest News instead.',
             'is_pinned': 'Keep this story at the top of lists and the homepage.',
             'issue': 'Optional. Add the story to an ongoing coverage series.',
             'access_type': 'Who can read the full text.',
@@ -196,7 +216,7 @@ class ArticleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['homepage_section'].choices = [('', "Auto (don't feature)")] + list(Article.HomepageSection.choices)
+        self.fields['homepage_section'].choices = [('', 'Auto (Latest News if it’s news)')] + list(Article.HomepageSection.choices)
         self.fields['section'].required = False
         self.fields['issue'].empty_label = '— No issue —'
         self.fields['assigned_to'].queryset = User.objects.filter(
@@ -242,14 +262,47 @@ class ArticleForm(forms.ModelForm):
             self.fields['related_articles'].initial = json.dumps(
                 [{'value': a.title, 'id': a.pk} for a in self.instance.related_articles.all()],
             )
-        # Blank is valid — Article.save() auto-generates slug + short_code
-        # from the title when left empty (see articles/models.py). Django's
-        # own unique-value validation on the ModelForm already rejects an
-        # explicitly-typed slug that collides with another article's.
+        # Blank is valid — Article.save() makes the slug from the headline
+        # (articles/slugs.py). Django's own unique-value validation on the
+        # ModelForm already rejects a typed slug that another article has.
         self.fields['slug'].required = False
+        # Framing is optional: forms (and API-ish posts) that don't send it
+        # keep the stored value, or the defaults — Auto, focal point centred.
+        for name in ('featured_image_fit', 'featured_image_focus_x', 'featured_image_focus_y'):
+            self.fields[name].required = False
+
+    def _framing_value(self, name, default):
+        value = self.cleaned_data.get(name)
+        if value in (None, ''):
+            return getattr(self.instance, name, None) if self.instance.pk else default
+        return value
+
+    def clean_featured_image_fit(self):
+        return self._framing_value('featured_image_fit', Article.ImageFit.AUTO) or Article.ImageFit.AUTO
+
+    def clean_featured_image_focus_x(self):
+        return self._framing_value('featured_image_focus_x', 50)
+
+    def clean_featured_image_focus_y(self):
+        return self._framing_value('featured_image_focus_y', 50)
+
+    def clean_slug(self):
+        slug = self.cleaned_data.get('slug', '')
+        if slug and Article.objects.exclude(pk=self.instance.pk).filter(short_code=slug).exists():
+            # /articles/<that>/ is the other article's short link.
+            raise forms.ValidationError('That is another article’s short link — add a word to make it different.')
+        return slug
 
     def clean(self):
         cleaned_data = super().clean()
+        # An empty image description is filled from the slug (or the slug the
+        # headline will get) — articles/slugs.py alt_from_slug.
+        has_image = bool(cleaned_data.get('featured_image') or (self.instance.pk and self.instance.featured_image))
+        if has_image and not (cleaned_data.get('featured_image_alt') or '').strip() and 'featured_image_alt' in self.fields:
+            from .slugs import alt_from_slug, suggest_slug
+
+            slug = cleaned_data.get('slug') or self.instance.slug or suggest_slug(cleaned_data.get('title', ''))
+            cleaned_data['featured_image_alt'] = alt_from_slug(slug)
         if cleaned_data.get('access_type') == Article.AccessType.PAY_PER_ARTICLE and not cleaned_data.get('price'):
             self.add_error('price', 'Set a price for pay-per-article articles.')
         if cleaned_data.get('article_type') == Article.ArticleType.VIDEO and not cleaned_data.get('video_url'):
@@ -331,6 +384,20 @@ class DraftArticleForm(LenientArticleForm):
         self.fields['title'].required = True
 
 
+IMG_TAG_RE = re.compile(r'<img\b[^>]*>', re.IGNORECASE)
+ALT_RE = re.compile(r'\balt\s*=\s*("([^"]*)"|\'([^\']*)\')', re.IGNORECASE)
+
+
+def images_missing_alt(html: str) -> int:
+    """How many <img> in `html` have no (or an empty) alt text."""
+    missing = 0
+    for tag in IMG_TAG_RE.findall(html or ''):
+        match = ALT_RE.search(tag)
+        if not match or not (match.group(2) or match.group(3) or '').strip():
+            missing += 1
+    return missing
+
+
 class PublishArticleForm(ArticleForm):
     """Publish / Update: ArticleForm's own rules, plus — the first time an
     article goes live — there must be something to read (body text or a PDF).
@@ -348,6 +415,16 @@ class PublishArticleForm(ArticleForm):
         has_video = bool(cleaned_data.get('video_url'))
         if not strip_tags(body).strip() and '<img' not in body and not has_pdf and not has_video:
             self.add_error('html_content', 'Add the article text (or a video link, or attach a PDF) before publishing.')
+        # Accessibility: every image needs a description for screen-reader users.
+        missing = images_missing_alt(body)
+        if missing:
+            self.add_error('html_content', (
+                f'{missing} image{"s" if missing > 1 else ""} in the text {"have" if missing > 1 else "has"} no description. '
+                'Click the image, then the "Change image text alternative" button, and describe what it shows.'
+            ))
+        has_featured = bool(cleaned_data.get('featured_image') or (self.instance.pk and self.instance.featured_image))
+        if has_featured and not (cleaned_data.get('featured_image_alt') or '').strip() and 'featured_image_alt' in self.fields:
+            self.add_error('featured_image_alt', 'Describe the featured image for readers who can’t see it.')
         return cleaned_data
 
 

@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./templates/**/*.html'],
+  content: ['./templates/**/*.html', './static/js/**/*.js'],
   theme: {
     extend: {
       colors: {
@@ -15,6 +15,9 @@ module.exports = {
         muted: '#e8e5e0',
         'muted-foreground': '#6b6860',
         accent: '#c0392b',
+        // The red for text on dark (bg-foreground) sections — #c0392b is only
+        // 3.5:1 there; this is ~6:1 (WCAG AA). Applied automatically, see input.css.
+        'accent-on-dark': '#ef6b5c',
         'accent-foreground': '#ffffff',
         border: '#d4d0cb',
       },

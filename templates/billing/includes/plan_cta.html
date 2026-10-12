@@ -1,0 +1,25 @@
+{% load i18n %}{% load money_tags %}
+{% comment %}
+The buy button for one plan, on the pricing page and a plan's own page:
+Subscribe, or Renew (starts after the current one), or — for institutional
+plans — a contact link. Carries ?next= so the reader comes back to the
+article they were reading. Expects plan, paid_through, renewal_starts,
+organization, next_path, contact_email; `featured` styles it red.
+{% endcomment %}
+{% if plan.plan_type == 'institutional' %}
+    <a href="mailto:{{ contact_email }}?subject={{ plan.name|urlencode }}"
+       class="block text-center font-mono-editorial text-xs tracking-widest px-4 py-3.5 border border-foreground hover:border-accent hover:text-accent transition-colors">
+        {% trans "ASK ABOUT YOUR ORGANIZATION →" %}
+    </a>
+    <p class="mt-3 text-xs text-muted-foreground leading-relaxed">{% trans "Your whole organization reads under one subscription — staff just confirm their work email." %}</p>
+{% else %}
+    <a href="{% url 'billing:subscribe_checkout' plan.pk %}{% if next_path %}?next={{ next_path|urlencode }}{% endif %}"
+       class="block text-center font-mono-editorial text-xs tracking-widest px-4 py-3.5 transition-colors {% if featured %}bg-accent text-white hover:opacity-90{% else %}bg-foreground text-primary-foreground hover:bg-accent{% endif %}">
+        {% if paid_through %}{% trans "RENEW OR SWITCH" %}{% else %}{% trans "SUBSCRIBE" %}{% endif %}
+    </a>
+    {% if paid_through %}
+        <p class="mt-3 text-xs text-muted-foreground leading-relaxed">{% blocktrans with date=renewal_starts|date:"j M Y" %}Starts {{ date }}, when your current subscription ends — no days lost.{% endblocktrans %}</p>
+    {% elif organization %}
+        <p class="mt-3 text-xs text-muted-foreground leading-relaxed">{% blocktrans with org=organization.name %}You already read with {{ org }}’s subscription.{% endblocktrans %}</p>
+    {% endif %}
+{% endif %}

@@ -1,4 +1,5 @@
 {% extends 'admin_dashboard/base.html' %}
+{% load static %}
 
 {% block title %}{% if is_create %}New Article{% else %}Edit Article{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
 {% block page_title %}{% if is_create %}New Article{% else %}Edit Article{% endif %}{% endblock %}
@@ -79,7 +80,25 @@
         <div class="space-y-6 min-w-0">
             <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8 space-y-5">
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.title %}
+                {% comment %}Web address + live slug check (static/js/slug_quality.js — the same rules as the Chrome extension in tools/slug-checker-extension/).{% endcomment %}
+                <div id="slug-helper" data-published="{% if form.instance.status == 'published' %}1{% endif %}" data-original="{{ form.instance.slug|default:'' }}">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
+                    <div class="-mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span id="slug-grade" class="inline-flex items-center rounded-full px-2 py-0.5 font-semibold"></span>
+                        <span class="text-gray-500 truncate">{{ request.get_host }}/articles/<span id="slug-preview" class="text-gray-800"></span>/</span>
+                        <button type="button" id="slug-use-suggestion" class="hidden ml-auto px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-gray-700"></button>
+                    </div>
+                    <ul id="slug-issues" class="mt-2 space-y-1 text-xs"></ul>
+                </div>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.abstract %}
+                {% comment %}Summary helper (articles/summarize.py): live length guide + one/two-line options taken from the article's own sentences. Built in — nothing is sent outside the site.{% endcomment %}
+                <div id="summary-helper" class="-mt-3" data-url="{% url 'articles:manage_article_summary_suggestions' %}">
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <p id="summary-meter" class="text-gray-500" aria-live="polite"></p>
+                        <button type="button" id="summary-suggest-btn" class="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-gray-700">Suggest one-liners from the text</button>
+                    </div>
+                    <ul id="summary-options" class="mt-2 space-y-2 hidden" aria-label="Summary suggestions"></ul>
+                </div>
 
                 <div>
                     {% include 'admin_dashboard/includes/form_field.html' with field=form.video_url %}
@@ -287,6 +306,10 @@
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.article_type %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.section %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.homepage_section %}
+                {% comment %}What choosing Hero does (HomeView: newest Hero wins, a pinned one beats it; the one replaced moves to Latest News).{% endcomment %}
+                <p id="hero-note" class="-mt-2 hidden rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800"
+                   data-current="{{ current_hero.title|default:'' }}" data-current-pinned="{% if current_hero.is_pinned %}1{% endif %}"
+                   data-current-date="{{ current_hero.published_at|date:'c' }}" data-this-date="{% if form.instance.status == 'published' %}{{ form.instance.published_at|date:'c' }}{% endif %}"></p>
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.issue %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_pinned %}
                 {% if user.can_publish %}
@@ -313,9 +336,29 @@
             {# Featured image #}
             <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <label for="{{ form.featured_image.id_for_label }}" class="block text-sm font-semibold text-gray-900 mb-3">Featured image</label>
-                {% if form.instance.featured_image %}
-                    <img src="{{ form.instance.featured_image.url }}" alt="" class="mb-3 w-full aspect-video object-cover rounded-xl border border-gray-100">
-                {% endif %}
+                {% comment %}Focal point + fit (Article.featured_image_fit/_focus_x/_focus_y): click the picture to mark what must stay in view;
+                the two previews show the article banner and a card exactly as readers will see them. Works for a newly chosen file too.{% endcomment %}
+                <div id="image-framing" class="{% if not form.instance.featured_image %}hidden {% endif %}mb-3" data-ratio-threshold="1.3">
+                    <div id="focus-picker" class="relative cursor-crosshair overflow-hidden rounded-xl border border-gray-100 bg-gray-50" title="Click the part that must stay visible">
+                        <img id="focus-source" {% if form.instance.featured_image %}src="{{ form.instance.featured_image.url }}" {% endif %}alt="" class="block w-full h-auto select-none" draggable="false">
+                        <span id="focus-dot" class="pointer-events-none absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-red-600/80 shadow ring-2 ring-red-600/40"></span>
+                    </div>
+                    <p class="mt-1.5 text-xs text-gray-500">Click the part of the picture that must stay visible when it's cropped.</p>
+                    <div class="mt-3 grid grid-cols-5 gap-2 items-start">
+                        <div class="col-span-3"><p class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">Article banner</p>
+                            <div id="preview-banner" class="relative overflow-hidden rounded-lg bg-gray-900" style="aspect-ratio: 2.46 / 1;"></div></div>
+                        <div class="col-span-2"><p class="text-[11px] uppercase tracking-wide text-gray-400 mb-1">Card</p>
+                            <div id="preview-card" class="relative overflow-hidden rounded-lg" style="aspect-ratio: 16 / 9; background:#efebe4;"></div></div>
+                    </div>
+                    <fieldset class="mt-3">
+                        <legend class="text-xs font-medium text-gray-700">{{ form.featured_image_fit.label }}</legend>
+                        <div class="mt-1 space-y-1 text-xs text-gray-700">
+                            {% for choice in form.featured_image_fit %}<label class="flex items-start gap-2">{{ choice.tag }} <span>{{ choice.choice_label }}</span></label>{% endfor %}
+                        </div>
+                        <p id="fit-auto-note" class="mt-1 text-xs text-gray-500"></p>
+                    </fieldset>
+                    {{ form.featured_image_focus_x }}{{ form.featured_image_focus_y }}
+                </div>
                 {{ form.featured_image }}
                 {% if form.featured_image.help_text %}<p class="mt-1.5 text-xs text-gray-400">{{ form.featured_image.help_text }}</p>{% endif %}
                 {% for error in form.featured_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
@@ -326,38 +369,69 @@
                 </div>
             </section>
 
-            {# Search & social #}
-            <details class="group bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
-                     {% if form.seo_title.value or form.seo_description.value or form.seo_title.errors or form.seo_description.errors %}open{% endif %}>
-                <summary class="cursor-pointer select-none flex items-center justify-between text-sm font-semibold text-gray-900">
-                    Search &amp; social <span class="font-normal text-gray-400 text-xs">(optional)</span>
-                    <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
-                </summary>
-                <div class="mt-4 space-y-4">
-                    <p class="text-xs text-gray-500">Leave empty to use the headline, summary and featured image.</p>
-                    <div>
-                        {% include 'admin_dashboard/includes/form_field.html' with field=form.seo_title %}
-                        <p class="text-right text-[11px] text-gray-400"><span data-count-for="id_seo_title">0</span> / 60</p>
+            {% comment %} Search & social — automatic (Article.meta_title / meta_description,
+               articles/share_card.py). The previews show what Google and Facebook will get;
+               the fields below them are only overrides. {% endcomment %}
+            <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-gray-900">Search &amp; social</h2>
+                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Automatic</span>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">Filled in for you from the headline, summary and featured image — nothing to type.</p>
+
+                <div class="mt-3 rounded-xl border border-gray-100 p-3" aria-label="Search result preview">
+                    <p class="text-[11px] text-gray-500 mb-1">Google</p>
+                    <p id="serp-title" class="text-[#1a0dab] text-base leading-snug truncate"></p>
+                    <p class="text-[#006621] text-xs">{{ request.get_host }}/articles/…</p>
+                    <p id="serp-desc" class="text-xs text-gray-600 line-clamp-2"></p>
+                </div>
+
+                <div class="mt-3 overflow-hidden rounded-xl border border-gray-200" aria-label="Share preview">
+                    <p class="px-3 pt-2 text-[11px] text-gray-500">Facebook · WhatsApp · X</p>
+                    <div id="preview-share" class="relative mt-2 overflow-hidden bg-gray-100" style="aspect-ratio: 1200 / 630;"
+                         {% if form.instance.social_image %}data-uploaded="{{ form.instance.social_image.url }}"{% endif %}>
+                        <p id="preview-share-empty" class="absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-gray-500">Add a featured image and it becomes the share picture.</p>
                     </div>
-                    <div>
-                        {% include 'admin_dashboard/includes/form_field.html' with field=form.seo_description %}
-                        <p class="text-right text-[11px] text-gray-400"><span data-count-for="id_seo_description">0</span> / 155</p>
-                    </div>
-                    <div class="rounded-xl border border-gray-100 p-3" aria-label="Search result preview">
-                        <p class="text-[11px] text-gray-400 mb-1">Google preview</p>
-                        <p id="serp-title" class="text-[#1a0dab] text-base leading-snug truncate"></p>
-                        <p class="text-[#006621] text-xs">{{ request.get_host }}/articles/…</p>
-                        <p id="serp-desc" class="text-xs text-gray-600 line-clamp-2"></p>
-                    </div>
-                    <div>
-                        <label for="{{ form.social_image.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.social_image.label }}</label>
-                        {% if form.instance.social_image %}<img src="{{ form.instance.social_image.url }}" alt="" class="mb-2 w-full aspect-[1200/630] object-cover rounded-lg border border-gray-100">{% endif %}
-                        {{ form.social_image }}
-                        <p class="mt-1.5 text-xs text-gray-400">{{ form.social_image.help_text }}</p>
-                        {% for error in form.social_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                    <div class="bg-gray-50 px-3 py-2">
+                        <p class="text-[10px] uppercase tracking-wide text-gray-500">{{ request.get_host }}</p>
+                        <p id="share-title" class="text-sm font-semibold text-gray-900 truncate"></p>
+                        <p id="share-desc" class="text-xs text-gray-500 truncate"></p>
                     </div>
                 </div>
-            </details>
+
+                <details class="group mt-3"
+                         {% if form.seo_title.value or form.seo_description.value or form.instance.social_image or form.seo_title.errors or form.seo_description.errors or form.social_image.errors %}open{% endif %}>
+                    <summary class="cursor-pointer select-none flex items-center justify-between text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                        Use different words or picture
+                        <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="mt-3 space-y-4">
+                        <p class="text-xs text-gray-500">Only if Google or a share preview should say something other than the article. Clear a box to go back to automatic.</p>
+                        <div>
+                            {% include 'admin_dashboard/includes/form_field.html' with field=form.seo_title %}
+                            <p class="text-right text-[11px] text-gray-500"><span data-count-for="id_seo_title">0</span> / 60</p>
+                        </div>
+                        <div>
+                            {% include 'admin_dashboard/includes/form_field.html' with field=form.seo_description %}
+                            <p class="text-right text-[11px] text-gray-500"><span data-count-for="id_seo_description">0</span> / 155</p>
+                        </div>
+                        <div>
+                            <label for="{{ form.social_image.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.social_image.label }}</label>
+                            {% comment %}Rendered by hand instead of ClearableFileInput's "Currently: path / Clear / Change"; same field names, so the widget still reads them.{% endcomment %}
+                            {% if form.instance.social_image %}
+                                <label class="mb-2 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                    <input type="checkbox" name="{{ form.social_image.html_name }}-clear" id="{{ form.social_image.html_name }}-clear_id" class="mt-0.5">
+                                    <span>An uploaded picture is used instead of the automatic card. Tick to remove it and go back to automatic.</span>
+                                </label>
+                            {% endif %}
+                            <input type="file" name="{{ form.social_image.html_name }}" id="{{ form.social_image.id_for_label }}" accept="image/*"
+                                   class="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200">
+                            <p class="mt-1.5 text-xs text-gray-500">{{ form.social_image.help_text }}</p>
+                            {% for error in form.social_image.errors %}<p class="mt-1.5 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                        </div>
+                    </div>
+                </details>
+            </section>
 
             {% comment %} Authors — see articles/bylines.py. The list lives in the hidden
                `bylines` input as JSON; the search/new-author inputs have no
@@ -453,7 +527,6 @@
                     <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
                 </summary>
                 <div class="mt-4 space-y-4">
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.slug %}
                     <div>
                         <label for="{{ form.pdf_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.pdf_file.label }}</label>
                         {% if form.instance.pdf_file %}
@@ -482,6 +555,7 @@
 {% endwith %}
 
 {{ content_templates|json_script:"content-templates-data" }}
+<script src="{% static 'js/slug_quality.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.getElementById('article-form');
@@ -537,7 +611,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     previewSourcePkInput.value = data.article_pk;
                     editUrlInput.value = data.edit_url || '';
                     var slugField = document.getElementById('id_slug');
-                    if (slugField && !slugField.value) slugField.value = data.slug;
+                    if (slugField && !slugField.value) {
+                        slugField.value = data.slug;
+                        slugField.dispatchEvent(new Event('input', {bubbles: true}));  // refresh the slug check
+                    }
                     savedSnapshot = pending;
                     var tokenField = document.getElementById('id_edit_token');
                     if (tokenField && data.edit_token) tokenField.value = data.edit_token;
@@ -576,9 +653,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (editUrlInput.value) form.action = editUrlInput.value;
     });
 
-    // Search & social: character counters + a live Google-style preview that
-    // falls back to the headline/summary exactly like the real meta tags.
+    // Search & social: what Google and share previews get. Empty override
+    // boxes mean automatic — the same fallbacks as Article.meta_title /
+    // meta_description — and each box shows its automatic text as a placeholder.
     function textOf(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+    function clip(text, limit) {
+        text = text.replace(/\s+/g, ' ').trim();
+        if (text.length <= limit) return text;
+        var cut = text.slice(0, limit - 1);
+        if (cut.indexOf(' ') !== -1) cut = cut.slice(0, cut.lastIndexOf(' '));
+        cut = cut.replace(/[\s,;:–—-]+$/, '');
+        return /[.!?।]$/.test(cut) ? cut : cut + '…';
+    }
     function updateSerp() {
         document.querySelectorAll('[data-count-for]').forEach(function (counter) {
             var n = textOf(counter.dataset.countFor).length;
@@ -586,10 +672,19 @@ document.addEventListener('DOMContentLoaded', function () {
             var limit = counter.dataset.countFor === 'id_seo_title' ? 60 : 155;
             counter.classList.toggle('text-red-600', n > limit);
         });
-        var titleEl = document.getElementById('serp-title');
-        var descEl = document.getElementById('serp-desc');
-        if (titleEl) titleEl.textContent = (textOf('id_seo_title') || textOf('id_title') || 'Your headline') + ' — {{ JOURNAL_NAME|escapejs }}';
-        if (descEl) descEl.textContent = textOf('id_seo_description') || textOf('id_abstract') || 'The opening of the article text is used when there is no summary.';
+        var autoTitle = textOf('id_title');
+        var autoDesc = clip(textOf('id_abstract'), 155);
+        var seoTitle = document.getElementById('id_seo_title');
+        var seoDesc = document.getElementById('id_seo_description');
+        if (seoTitle) seoTitle.placeholder = autoTitle ? 'Automatic: ' + autoTitle : 'Automatic: the headline';
+        if (seoDesc) seoDesc.placeholder = autoDesc ? 'Automatic: ' + autoDesc : 'Automatic: the summary';
+        var title = textOf('id_seo_title') || autoTitle || 'Your headline';
+        var desc = textOf('id_seo_description') || autoDesc || 'The opening of the article text is used when there is no summary.';
+        var set = function (id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
+        set('serp-title', title + ' — {{ JOURNAL_NAME|escapejs }}');
+        set('serp-desc', desc);
+        set('share-title', title);
+        set('share-desc', desc);
     }
     ['id_seo_title', 'id_seo_description', 'id_title', 'id_abstract'].forEach(function (id) {
         var el = document.getElementById(id);
@@ -686,6 +781,330 @@ document.addEventListener('DOMContentLoaded', function () {
     // one; TagifyKeywordsField.to_python() creates it on save. Suggestions
     // come from articles:keyword_autocomplete, re-fetched on every
     // keystroke and debounced by Tagify's own built-in input event.
+    // ---- Homepage spot: say what choosing Hero will do ----------------------
+    (function () {
+        var spot = document.getElementById('id_homepage_section');
+        var note = document.getElementById('hero-note');
+        var pinned = document.getElementById('id_is_pinned');
+        if (!spot || !note) return;
+        function update() {
+            if (spot.value !== 'hero') { note.classList.add('hidden'); return; }
+            var current = note.dataset.current;
+            var text;
+            if (!current) {
+                text = 'Nothing is the Hero right now — this story becomes the top story once published.';
+            } else if (note.dataset.currentPinned && !(pinned && pinned.checked)) {
+                text = '“' + current + '” is the Hero and it’s pinned, so it stays on top; this story shows in Latest News. Tick “Pin” here (or unpin that one) to make this the top story.';
+            } else if (note.dataset.thisDate && note.dataset.currentDate && note.dataset.thisDate < note.dataset.currentDate
+                       && !(pinned && pinned.checked && !note.dataset.currentPinned)) {
+                text = '“' + current + '” is newer, so it stays the Hero; this story shows in Latest News. Tick “Pin” to make this the top story instead.';
+            } else {
+                text = 'Hero now: “' + current + '”. Publishing this replaces it — that story moves to Latest News.';
+            }
+            note.textContent = text;
+            note.classList.remove('hidden');
+        }
+        spot.addEventListener('change', update);
+        if (pinned) pinned.addEventListener('change', update);
+        update();
+    })();
+
+    // ---- Featured image framing: focal point, fit, live previews ----------
+    (function () {
+        var box = document.getElementById('image-framing');
+        var source = document.getElementById('focus-source');
+        var picker = document.getElementById('focus-picker');
+        var dot = document.getElementById('focus-dot');
+        var fx = document.getElementById('id_featured_image_focus_x');
+        var fy = document.getElementById('id_featured_image_focus_y');
+        var fileInput = document.getElementById('id_featured_image');
+        if (!box || !source || !fx || !fy) return;
+        var threshold = parseFloat(box.dataset.ratioThreshold);
+        var note = document.getElementById('fit-auto-note');
+
+        function fitChoice() {
+            var checked = document.querySelector('input[name="featured_image_fit"]:checked');
+            return checked ? checked.value : 'auto';
+        }
+        function showsWhole() {
+            var choice = fitChoice();
+            if (choice !== 'auto') return choice === 'contain';
+            var ratio = source.naturalWidth / (source.naturalHeight || 1);
+            return ratio < threshold;
+        }
+        function preview(container, banner, whole) {
+            container.innerHTML = '';
+            if (!source.getAttribute('src') || !source.naturalWidth) return;
+            var position = fx.value + '% ' + fy.value + '%';
+            if (whole === undefined ? showsWhole() : whole) {
+                if (banner) {
+                    var backdrop = document.createElement('img');
+                    backdrop.src = source.src;
+                backdrop.alt = '';
+                    backdrop.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(14px);opacity:.5;transform:scale(1.25);';
+                    container.appendChild(backdrop);
+                }
+                var whole = document.createElement('img');
+                whole.src = source.src;
+                whole.alt = '';
+                whole.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;' + (banner ? 'padding:6% 0;' : '');
+                container.appendChild(whole);
+            } else {
+                var crop = document.createElement('img');
+                crop.src = source.src;
+                crop.alt = '';
+                crop.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:' + position + ';';
+                container.appendChild(crop);
+            }
+        }
+        function render() {
+            if (!source.getAttribute('src') || !source.naturalWidth) return;
+            box.classList.remove('hidden');
+            dot.style.left = fx.value + '%';
+            dot.style.top = fy.value + '%';
+            preview(document.getElementById('preview-banner'), true);
+            preview(document.getElementById('preview-card'), false);
+            renderShare();
+            var ratio = (source.naturalWidth / source.naturalHeight).toFixed(2);
+            note.textContent = fitChoice() === 'auto'
+                ? (showsWhole() ? 'Auto: this picture is square or tall (' + source.naturalWidth + '×' + source.naturalHeight + '), so it is shown whole.'
+                                : 'Auto: this picture is wide (' + source.naturalWidth + '×' + source.naturalHeight + '), so it fills the space, cropped around your focal point.')
+                : '';
+        }
+        // The share card (articles/share_card.py): an uploaded Share image as it
+        // is, else the featured image framed like the homepage top story —
+        // whole when it's square/tall or very wide, otherwise cropped.
+        var share = document.getElementById('preview-share');
+        var shareEmpty = document.getElementById('preview-share-empty');
+        var shareInput = document.getElementById('id_social_image');
+        var shareClear = document.querySelector('input[name="social_image-clear"]');
+        var uploadedShare = share ? share.dataset.uploaded || '' : '';
+        function renderShare() {
+            if (!share) return;
+            var uploaded = shareClear && shareClear.checked ? '' : uploadedShare;
+            if (uploaded) {
+                share.innerHTML = '';
+                var img = document.createElement('img');
+                img.src = uploaded;
+                img.alt = '';
+                img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+                share.appendChild(img);
+                return;
+            }
+            if (!source.getAttribute('src') || !source.naturalWidth) {
+                share.innerHTML = '';
+                if (shareEmpty) share.appendChild(shareEmpty);
+                return;
+            }
+            var ratio = source.naturalWidth / source.naturalHeight;
+            preview(share, true, showsWhole() || (fitChoice() === 'auto' && ratio > 2.1));
+        }
+        if (shareInput) shareInput.addEventListener('change', function () {
+            var file = shareInput.files && shareInput.files[0];
+            if (file && /^image\//.test(file.type)) { uploadedShare = URL.createObjectURL(file); renderShare(); }
+        });
+        if (shareClear) shareClear.addEventListener('change', renderShare);
+        renderShare();
+        picker.addEventListener('click', function (event) {
+            var rect = source.getBoundingClientRect();
+            fx.value = Math.round(Math.min(100, Math.max(0, (event.clientX - rect.left) / rect.width * 100)));
+            fy.value = Math.round(Math.min(100, Math.max(0, (event.clientY - rect.top) / rect.height * 100)));
+            fx.dispatchEvent(new Event('change', {bubbles: true}));
+            render();
+        });
+        document.querySelectorAll('input[name="featured_image_fit"]').forEach(function (radio) { radio.addEventListener('change', render); });
+        if (fileInput) fileInput.addEventListener('change', function () {
+            var file = fileInput.files && fileInput.files[0];
+            if (!file || !/^image\//.test(file.type)) return;
+            fx.value = 50; fy.value = 50;
+            source.src = URL.createObjectURL(file);
+        });
+        source.addEventListener('load', render);
+        if (source.complete) render();
+    })();
+
+    // ---- Slug checker (static/js/slug_quality.js) ------------------------
+    (function () {
+        var helper = document.getElementById('slug-helper');
+        var slug = document.getElementById('id_slug');
+        var title = document.getElementById('id_title');
+        if (!helper || !slug || !window.SlugQuality) return;
+        var grade = document.getElementById('slug-grade');
+        var preview = document.getElementById('slug-preview');
+        var issuesList = document.getElementById('slug-issues');
+        var useButton = document.getElementById('slug-use-suggestion');
+        var COLOURS = {good: 'bg-emerald-50 text-emerald-700', ok: 'bg-amber-50 text-amber-700', poor: 'bg-red-50 text-red-700'};
+        var ICON = {error: '✕', warning: '!', tip: 'i'};
+        var LEVEL = {error: 'text-red-600', warning: 'text-amber-700', tip: 'text-gray-500'};
+        function keywordNames() {
+            var raw = (document.getElementById('id_keywords') || {}).value || '';
+            try { return JSON.parse(raw).map(function (t) { return t.value; }); } catch (e) { return raw.split(',').filter(Boolean); }
+        }
+        function render() {
+            var context = {title: title ? title.value : '', keywords: keywordNames(),
+                           published: helper.dataset.published === '1', original: helper.dataset.original};
+            var value = slug.value.trim();
+            // A blank slug becomes suggest(headline) on save (articles/slugs.py) — preview exactly that.
+            var shown = value || SlugQuality.suggest(context.title, []);
+            var result = SlugQuality.check(shown, context);
+            preview.textContent = shown || '…';
+            grade.className = 'inline-flex items-center rounded-full px-2 py-0.5 font-semibold ' + COLOURS[result.grade];
+            grade.textContent = (value ? 'Slug ' : 'Auto slug ') + result.score + '/100';
+            issuesList.innerHTML = '';
+            result.issues.forEach(function (issue) {
+                var li = document.createElement('li');
+                li.className = 'flex gap-2 ' + LEVEL[issue.level];
+                var icon = document.createElement('span');
+                icon.className = 'font-bold w-3 shrink-0 text-center';
+                icon.textContent = ICON[issue.level];
+                var text = document.createElement('span');
+                text.textContent = issue.message;
+                li.appendChild(icon); li.appendChild(text);
+                issuesList.appendChild(li);
+            });
+            // Offer the best slug (headline + topics) whenever the field doesn't already hold it —
+            // also when it's blank or was filled in automatically.
+            var best = SlugQuality.suggest(context.title, context.keywords);
+            var suggestion = best && best !== value ? best : '';
+            useButton.classList.toggle('hidden', !suggestion);
+            useButton.textContent = 'Use “' + suggestion + '”';
+            useButton.dataset.slug = suggestion;
+        }
+        // Tidy the slug as it's typed: lowercase, spaces/underscores → hyphens
+        // (the server does the same — LowercaseSlugField). Same length, so the
+        // cursor stays put. Registered first, so the checks below see the result.
+        slug.addEventListener('input', function () {
+            var tidy = slug.value.toLowerCase().replace(/[\s_]/g, '-');
+            if (tidy === slug.value) return;
+            var caret = slug.selectionStart;
+            slug.value = tidy;
+            slug.setSelectionRange(caret, caret);
+        });
+        useButton.addEventListener('click', function () {
+            slug.value = useButton.dataset.slug;
+            render();
+        });
+
+        // Image description follows the slug (articles/slugs.py alt_from_slug)
+        // until an editor writes their own: it's only replaced while it's
+        // empty or still the last value filled in from the slug.
+        var alt = document.getElementById('id_featured_image_alt');
+        function altFromSlug(value) {
+            var words = (value || '').split('-').filter(Boolean);
+            if (words.length > 1 && /^\d{1,2}$/.test(words[words.length - 1])) words.pop();
+            var text = words.join(' ');
+            return (text.charAt(0).toUpperCase() + text.slice(1)).slice(0, 250);
+        }
+        if (alt) {
+            var lastAuto = alt.value.trim() ? null : '';
+            if (alt.value.trim() && alt.value === altFromSlug(slug.value.trim())) lastAuto = alt.value;
+            var syncAlt = function () {
+                if (lastAuto === null || alt.value !== lastAuto) return;  // the editor wrote their own
+                var current = slug.value.trim() || SlugQuality.suggest(title ? title.value : '', []);
+                alt.value = lastAuto = altFromSlug(current);
+            };
+            alt.addEventListener('input', function () { lastAuto = alt.value.trim() ? null : ''; syncAlt(); });
+            [slug, title].forEach(function (el) { if (el) el.addEventListener('input', syncAlt); });
+            useButton.addEventListener('click', syncAlt);
+            syncAlt();
+            var hint = document.createElement('p');
+            hint.className = 'mt-1 text-xs text-gray-500';
+            hint.textContent = 'Filled from the slug. Type your own to describe the picture instead.';
+            alt.insertAdjacentElement('afterend', hint);
+        }
+        [slug, title].forEach(function (el) { if (el) { el.addEventListener('input', render); el.addEventListener('change', render); } });
+        var keywords = document.getElementById('id_keywords');
+        if (keywords) keywords.addEventListener('change', render);
+        render();
+        // Again once Tagify has filled the topics field.
+        window.addEventListener('load', render);
+    })();
+
+    // ---- Summary helper: length guide + suggestions ----------------------
+    (function () {
+        var helper = document.getElementById('summary-helper');
+        var field = document.getElementById('id_abstract');
+        if (!helper || !field) return;
+        var meter = document.getElementById('summary-meter');
+        var list = document.getElementById('summary-options');
+        var button = document.getElementById('summary-suggest-btn');
+        var KIND = {lead: 'Lead sentence', two_lines: 'Two lines', key_fact: 'Key fact', alternative: 'Alternative'};
+
+        function sentenceCount(text) {
+            return (text.match(/[.!?।](\s|$)/g) || []).length || (text.trim() ? 1 : 0);
+        }
+        function updateMeter() {
+            var text = field.value.trim();
+            var n = text.length, s = sentenceCount(text);
+            if (!n) { meter.textContent = 'Aim for 1–2 sentences, about 120–220 characters — shown under the headline and on cards.'; meter.className = 'text-gray-500'; return; }
+            var ok = n >= 80 && n <= 240 && s <= 2;
+            var tooLong = n > 280 || s > 2;
+            meter.textContent = n + ' characters · ' + s + ' sentence' + (s === 1 ? '' : 's') + ' — ' +
+                (ok ? 'good length for cards' : tooLong ? 'too long: cards cut it off; keep to 1–2 sentences' : n < 80 ? 'a little short — add the key fact' : 'fine, a bit long for cards');
+            meter.className = ok ? 'text-emerald-700' : tooLong ? 'text-red-600' : 'text-amber-700';
+        }
+        field.addEventListener('input', updateMeter);
+        updateMeter();
+
+        function bodyHtml() {
+            var content = document.getElementById('id_html_content');
+            var editor = content && window.editors && window.editors[content.id];
+            return editor ? editor.getData() : (content ? content.value : '');
+        }
+        function keywordNames() {
+            var raw = (document.getElementById('id_keywords') || {}).value || '';
+            try { return JSON.parse(raw).map(function (t) { return t.value; }).join(','); } catch (e) { return raw; }
+        }
+        button.addEventListener('click', function () {
+            var data = new FormData();
+            data.append('title', (document.getElementById('id_title') || {}).value || '');
+            data.append('html', bodyHtml());
+            data.append('keywords', keywordNames());
+            data.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            button.disabled = true;
+            button.textContent = 'Reading the article…';
+            fetch(helper.dataset.url, {method: 'POST', body: data, credentials: 'same-origin'})
+                .then(function (r) { return r.ok ? r.json() : {suggestions: []}; })
+                .catch(function () { return {suggestions: []}; })
+                .then(function (result) {
+                    button.disabled = false;
+                    button.textContent = 'Suggest again';
+                    list.innerHTML = '';
+                    list.classList.remove('hidden');
+                    if (!result.suggestions.length) {
+                        var empty = document.createElement('li');
+                        empty.className = 'text-xs text-gray-500';
+                        empty.textContent = 'Write a few full sentences in the article text first — suggestions come from it.';
+                        list.appendChild(empty);
+                        return;
+                    }
+                    result.suggestions.forEach(function (s) {
+                        var item = document.createElement('li');
+                        item.className = 'flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3';
+                        var text = document.createElement('p');
+                        text.className = 'flex-1 text-sm text-gray-800';
+                        text.textContent = s.text;
+                        var meta = document.createElement('span');
+                        meta.className = 'block mt-1 text-[11px] uppercase tracking-wide text-gray-400';
+                        meta.textContent = (KIND[s.kind] || s.kind) + ' · ' + s.chars + ' characters';
+                        text.appendChild(meta);
+                        var use = document.createElement('button');
+                        use.type = 'button';
+                        use.className = 'shrink-0 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800';
+                        use.textContent = 'Use';
+                        use.addEventListener('click', function () {
+                            field.value = s.text;
+                            field.dispatchEvent(new Event('input', {bubbles: true}));
+                            field.focus();
+                        });
+                        item.appendChild(text);
+                        item.appendChild(use);
+                        list.appendChild(item);
+                    });
+                });
+        });
+    })();
+
     var keywordsInput = document.getElementById('id_keywords');
     if (keywordsInput && window.Tagify) {
         var tagify = new Tagify(keywordsInput, {

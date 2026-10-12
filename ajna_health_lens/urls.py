@@ -1,6 +1,7 @@
 from django.views.static import serve
 from django.urls import re_path
 from django.conf import settings
+from django.views.generic import RedirectView
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
@@ -9,6 +10,9 @@ from django.urls import include, path
 from articles.sitemaps import NewsArticleSitemap, sitemaps
 from ajna_health_lens.ckeditor_views import ckeditor5_upload_file
 from ajna_health_lens.media_views import protected_media
+from admin_custom.reports import report_content
+from ajna_health_lens.error_views import csp_report
+from ajna_health_lens.health import healthz
 from ajna_health_lens.comments_views import confirm_comment, rate_limited_post_comment
 from ajna_health_lens.views import robots_txt
 
@@ -31,6 +35,10 @@ urlpatterns = [
     path('', include('newsletter.urls')),
     path('', include('ads.urls')),
     path('', include('pitches.urls')),
+    path('', include('pages.urls')),
+    path('report/', report_content, name='report_content'),
+    path('healthz/', healthz, name='healthz'),
+    path('csp-report/', csp_report, name='csp_report'),
     # Overrides django_comments' own 'comments-post-comment' URL with a
     # rate-limited wrapper, and django_comments_xtd's confirm link with one
     # that adds reader feedback (see comments_views.py) — must come before the
@@ -48,6 +56,8 @@ urlpatterns = [
         name='news_sitemap',
     ),
     path('robots.txt', robots_txt, name='robots_txt'),
+    # Browsers and crawlers ask for /favicon.ico regardless of <link rel=icon>.
+    path('favicon.ico', RedirectView.as_view(url=f'{settings.STATIC_URL if settings.STATIC_URL.startswith("/") else "/" + settings.STATIC_URL}favicon.ico', permanent=True)),
     # Article PDFs and CVs — access-checked on every request, never public
     # (ajna_health_lens/storage.py). Deliberately not under /media/.
     path('protected-media/<path:path>', protected_media, name='protected_media'),
@@ -76,3 +86,5 @@ if settings.DEBUG:
 
     import debug_toolbar
     urlpatterns += [path('__debug__/', include(debug_toolbar.urls))]
+
+handler404 = 'ajna_health_lens.error_views.page_not_found'

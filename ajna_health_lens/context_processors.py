@@ -5,6 +5,33 @@ from django.templatetags.static import static
 from django.urls import reverse
 
 
+def _legal_pages() -> dict:
+    from pages.models import SitePage, published_pages
+
+    pages = published_pages()
+    by_slug = {page.slug: page for page in pages}
+    return {
+        'legal_pages': [page for page in pages if page.slug != SitePage.Slug.FAQ],
+        'faq_page': by_slug.get(SitePage.Slug.FAQ),
+        'terms_page': by_slug.get(SitePage.Slug.TERMS),
+        'refund_page': by_slug.get(SitePage.Slug.REFUNDS),
+        'privacy_page': by_slug.get(SitePage.Slug.PRIVACY),
+    }
+
+
+def _wants_subscribe_bar(request) -> bool:
+    """The sticky "Subscribe" bar on phones: for readers without a
+    subscription (or organization access); never for staff."""
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated:
+        return True
+    if user.is_editorial_staff:
+        return False
+    from billing.access import user_has_active_subscription
+
+    return not user_has_active_subscription(user)
+
+
 def journal_settings(request):
     from issues.models import Issue  # local import: avoids a project->app import at module load time
 
@@ -12,14 +39,33 @@ def journal_settings(request):
     from articles.seo import sitewide_structured_data
     from sections.models import Section
 
-    default_og_image_url = request.build_absolute_uri(static('images/logo.png'))
+    default_og_image_url = request.build_absolute_uri(static('images/og-default.png'))
 
+    from django.utils.translation import get_language
+
+    nepali = (get_language() or '').startswith('ne')
     return {
-        'JOURNAL_NAME': settings.JOURNAL_NAME,
+        # The name in the reader's language; JOURNAL_NAME_EN wherever the
+        # registered English name must appear (copyright line, receipts).
+        'JOURNAL_NAME': settings.JOURNAL_NAME_NE if nepali and settings.JOURNAL_NAME_NE else settings.JOURNAL_NAME,
+        'JOURNAL_NAME_EN': settings.JOURNAL_NAME,
         'JOURNAL_TAGLINE': settings.JOURNAL_TAGLINE,
         'JOURNAL_ISSN': settings.JOURNAL_ISSN,
         'JOURNAL_PUBLISHER': settings.JOURNAL_PUBLISHER,
         'JOURNAL_CONTACT_EMAIL': settings.JOURNAL_CONTACT_EMAIL,
+        # Published Terms/Privacy/Refund pages, for the footer and checkout.
+        **_legal_pages(),
+        # Called by the template only where the phone subscribe bar can show.
+        'show_subscribe_bar': lambda: _wants_subscribe_bar(request),
+        # Cookie consent (templates/includes/cookie_consent.html): analytics
+        # only render once the reader has accepted them.
+        'GOOGLE_ANALYTICS_ID': settings.GOOGLE_ANALYTICS_ID,
+        # Who runs the site, in the footer (consumer-protection basics).
+        'BUSINESS_LEGAL_NAME': settings.BUSINESS_LEGAL_NAME,
+        'BUSINESS_PAN': settings.BUSINESS_PAN,
+        'BUSINESS_ADDRESS': settings.BUSINESS_ADDRESS,
+        'analytics_consent': request.COOKIES.get(settings.COOKIE_CONSENT_COOKIE, '').endswith(':analytics'),
+        'cookie_choice_made': bool(request.COOKIES.get(settings.COOKIE_CONSENT_COOKIE)),
         # -created_at, not -publication_date — an issue's publication_date
         # is optional (unlike Article.publication_date, nothing stamps it
         # automatically), so it's not a reliable "latest" ordering on its own.

@@ -1,0 +1,44 @@
+{% extends 'admin_custom/analytics/base.html' %}
+
+{% block analytics %}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    {% for k in kpis %}{% include 'admin_custom/includes/analytics_kpi.html' %}{% endfor %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
+    <section class="lg:col-span-8 bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Joined and left, by {{ period.granularity }}</h2>
+        {% include 'admin_custom/includes/analytics_chart.html' with c=trend %}
+    </section>
+    <section class="lg:col-span-4 bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Where things stand</h2>
+        <dl class="space-y-3 text-sm">
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Confirmed subscribers today</dt><dd class="font-semibold tabular-nums">{{ confirmed_now }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">Net change in the period</dt><dd class="font-semibold tabular-nums {% if net_change > 0 %}text-emerald-700{% elif net_change < 0 %}text-red-700{% endif %}">{% if net_change > 0 %}+{% endif %}{{ net_change }}</dd></div>
+            <div class="border-t border-gray-100 pt-3 flex justify-between gap-3"><dt class="text-gray-600">Signed up in the period</dt><dd class="font-semibold tabular-nums">{{ sign_ups }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">…confirmed their email</dt><dd class="font-semibold tabular-nums">{{ confirmed_of_sign_ups }}{% if confirm_rate is not None %} ({{ confirm_rate }}%){% endif %}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-gray-600">…still haven’t confirmed</dt><dd class="font-semibold tabular-nums">{{ waiting }}</dd></div>
+        </dl>
+        <p class="mt-4 text-xs text-gray-500">A sign-up only receives issues after clicking the link in the confirmation email.</p>
+    </section>
+</div>
+
+<section class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Issues sent in the period</h2>
+    {% if issues %}
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[480px] text-sm">
+            <thead><tr class="text-left text-xs text-gray-600 border-b border-gray-100"><th class="py-2 font-medium">Subject</th><th class="py-2 font-medium">Sent to</th><th class="py-2 font-medium">Sent</th><th class="py-2 font-medium text-right">Recipients</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for i in issues %}<tr>
+                    <td class="py-2.5 font-medium text-gray-900">{{ i.subject }}</td>
+                    <td class="py-2.5 text-gray-600">{{ i.get_audience_display }}</td>
+                    <td class="py-2.5 text-gray-600 whitespace-nowrap">{{ i.sent_at|date:"M j, Y g:i A" }}</td>
+                    <td class="py-2.5 text-right tabular-nums font-semibold">{{ i.recipient_count }}</td>
+                </tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<p class="text-sm text-gray-500">No issues were sent in this period.</p>{% endif %}
+</section>
+{% endblock %}

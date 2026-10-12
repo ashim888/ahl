@@ -1,0 +1,5 @@
+{{ payment.payer_name }} ({{ payment.payer_email }}) cancelled {{ payment.description }} within the cancellation window. Their access has already ended.
+
+Send {{ total }} back (Fonepay merchant portal{% if payment.gateway_trace_id %}, trace {{ payment.gateway_trace_id }}{% endif %}, or bank transfer), then open the receipt and use "Record full refund" — that issues the credit note and emails them.
+
+Receipt: {{ receipt_url }}

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Email preferences" %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-6 py-16 text-center">
+    <p class="section-label text-accent">{% trans "EMAIL PREFERENCES" %}</p>
+    {% if invalid %}
+        <h1 class="font-display text-3xl font-bold mt-2">{% trans "This link doesn’t work" %}</h1>
+        <p class="mt-4 text-muted-foreground">{% trans "Sign in and change which emails you get on your Privacy & data page." %}</p>
+    {% elif done %}
+        <h1 class="font-display text-3xl font-bold mt-2">{% trans "You’re unsubscribed" %}</h1>
+        <p class="mt-4 text-muted-foreground">{% blocktrans %}You won’t get {{ label }} any more. You can switch it back on from your Privacy & data page.{% endblocktrans %}</p>
+    {% else %}
+        <h1 class="font-display text-3xl font-bold mt-2">{% trans "Unsubscribe?" %}</h1>
+        <p class="mt-4 text-muted-foreground">{% blocktrans %}Stop getting {{ label }}.{% endblocktrans %}</p>
+        <form method="post" class="mt-8">
+            <button type="submit" class="bg-foreground text-primary-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:bg-accent">{% trans "UNSUBSCRIBE" %}</button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

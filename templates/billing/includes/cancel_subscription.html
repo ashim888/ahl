@@ -1,0 +1,8 @@
+{% load i18n money_tags %}
+{% comment %}Cancel-for-a-refund button, shown while subscription.cancel_payment is within the window (billing.views.account).{% endcomment %}
+<form method="post" action="{% url 'billing:subscription_cancel' subscription.cancel_payment.reference %}" class="mt-4 border-t border-border pt-4"
+      onsubmit="return confirm('{% trans "Cancel this subscription? Your access ends now and the full amount is refunded." as confirm_text %}{{ confirm_text|escapejs }}');">
+    {% csrf_token %}
+    <p class="text-sm">{% blocktrans with date=subscription.cancel_deadline|date:"j M Y, H:i" total=subscription.cancel_payment.amount|money %}Changed your mind? You can cancel until {{ date }} for a full refund of {{ total }}.{% endblocktrans %}</p>
+    <button type="submit" class="mt-2 font-mono-editorial text-xs tracking-widest border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-white">{% trans "CANCEL & REFUND" %}</button>
+</form>

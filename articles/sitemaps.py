@@ -72,10 +72,37 @@ class StaticViewSitemap(Sitemap):
     priority = 0.6
 
     def items(self):
-        return ['articles:home', 'articles:article_list', 'issues:issue_list', 'training:course_list', 'billing:plan_browse']
+        return ['articles:home', 'articles:article_list', 'articles:correction_list', 'articles:topic_list', 'issues:issue_list', 'training:course_list', 'billing:plan_browse']
 
     def location(self, item):
         return reverse(item)
+
+
+class TopicSitemap(Sitemap):
+    """Topic pages worth indexing (articles/topics.py INDEX_MIN_ARTICLES)."""
+
+    changefreq = 'daily'
+    priority = 0.5
+
+    def items(self):
+        from .topics import INDEX_MIN_ARTICLES, public_topics
+
+        return public_topics().filter(article_count__gte=INDEX_MIN_ARTICLES).order_by('slug')
+
+
+class SitePageSitemap(Sitemap):
+    """Published Terms, Privacy, Refund policy and FAQ (pages app)."""
+
+    changefreq = 'monthly'
+    priority = 0.4
+
+    def items(self):
+        from pages.models import SitePage
+
+        return SitePage.objects.filter(is_published=True).order_by('slug')
+
+    def lastmod(self, item):
+        return item.updated_at
 
 
 sitemaps = {
@@ -83,4 +110,6 @@ sitemaps = {
     'issues': IssueSitemap,
     'sections': SectionSitemap,
     'pages': StaticViewSitemap,
+    'site-pages': SitePageSitemap,
+    'topics': TopicSitemap,
 }
