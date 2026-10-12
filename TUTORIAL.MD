@@ -87,9 +87,10 @@ No account needed for any of this.
   posted"; guests are told to check their inbox and click the confirmation link, and the
   comment appears only after that click (no CAPTCHA, just email confirmation). You can tick
   "Notify me about follow-up comments" to get an email when someone replies.
-- **Subscribe to the newsletter** — the signup box in the footer or homepage works with just an
+- **Subscribe to the newsletter** — the signup box in the footer of every page works with just an
   email address; you'll get a confirmation link before you're actually subscribed (double
-  opt-in), then a short welcome email once you've confirmed. Unsubscribe links in every newsletter email are one-click, no login required.
+  opt-in), then a short welcome email once you've confirmed. A signed-in reader who's confirmed
+  sees "You're subscribed" there instead of the form. Unsubscribe links in every newsletter email are one-click, no login required.
 - **Browse training programs** at `/training/`. Enrolling requires an account (see §3) —
   checkout is currently a stub payment flow (always succeeds; a real gateway isn't wired up yet).
 - **Browse subscription plans** at `/subscribe/`.
@@ -543,10 +544,22 @@ and **More courses** (same topic first).
 `/manage/ads/` — house/direct-sold ad creatives, not an ad-network integration.
 
 1. **Create an ad**: pick a zone — under the Zone box, **Where this ad appears** shows simplified
-   pictures of the homepage, an article page and a phone with every zone drawn in; click a box to
-   pick it. It says where the zone shows, on which screens, what size to upload, and how many
-   other ads already run there (they take turns at random). The chosen image is previewed in the
-   picked box. Then upload the image, sponsor
+   pictures of the homepage, an article page, a phone, section/topic pages and story lists/search,
+   with every zone drawn in; click a box to pick it. Zones that already have a running ad show
+   that ad's picture and a green count; free ones are dashed. It says where the zone shows, on
+   which screens, what size to upload, and which ads already run there (they take turns at
+   random). The chosen image is previewed in the picked box. The zones:
+   - **Every page:** header strip (computers/tablets); bottom bar fixed on phones.
+   - **Homepage:** three boxes after trending; a mid banner between Latest News and Opinion; a
+     wide strip lower down (large screens); a banner under the top stories and one lower down
+     (phones).
+   - **Article pages:** a box at the start of the text and inside long articles; a strip inside
+     long articles; a box where readers finish, before the comments; two sidebar boxes.
+   - **Section & topic pages:** one shared banner after the lead story / sixth story.
+   - **Story lists, search, archive, videos:** one shared banner after the fifth story (under
+     the main video on the videos page).
+
+   Then upload the image, sponsor
    name, link URL, and an optional date range. The image can be the zone's size or a larger copy
    of the same shape — a 2× or 3× export (e.g. 1456×180 or 2184×270 for a 728×90 leaderboard)
    looks sharper on phones and high-resolution screens; anything over 2× is shrunk to 2×. A

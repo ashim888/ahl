@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time topic_tags %}
+{% load news_time topic_tags text_filters %}
 {% load i18n %}
 {% load ads_tags static %}
 
@@ -9,80 +9,117 @@
 
 {% if hero_article %}
 {% comment %}
-Top stories (articles.views.HomeView): every pinned Hero rotates here, newest first — a slider
-(static/js/hero_slider.js) when there's more than one, a single top story otherwise. Without
-JavaScript the slides simply stack. Pictures that don't suit the ~1.5:1 frame (square, tall or very
-wide — Article.hero_shows_whole) are shown whole on a blurred copy of themselves.
+Top stories (articles.views.HomeView) as a cover: a deep navy band tinted by the picture's own colours,
+the picture melting into it on the right (on top, on phones), and the text on the left — label, a
+two-tone headline (text_filters.headline_parts), summary, topics, a "Read the full story" button and the
+byline. Every pinned Hero rotates here, newest first — a slider (static/js/hero_slider.js) with its
+controls under the text when there's more than one; without JavaScript the slides simply stack. A
+picture that shouldn't be cropped (square, tall or very wide — Article.hero_shows_whole) is shown whole.
 {% endcomment %}
-<section class="max-w-7xl mx-auto px-6 pt-10 pb-8" {% if hero_slides|length > 1 %}data-hero-slider aria-roledescription="carousel" aria-label="{% trans 'Top stories' %}"{% endif %}>
-    <div class="rule-editorial mb-6"></div>
+<section class="relative bg-[#0b1322]" {% if hero_slides|length > 1 %}data-hero-slider aria-roledescription="carousel" aria-label="{% trans 'Top stories' %}"{% endif %}>
     <div class="relative" data-hero-track>
     {% for story in hero_slides %}
-        <article class="hero-slide grid grid-cols-1 lg:grid-cols-5 gap-0" data-hero-slide
+        {% with parts=story.title|headline_parts topics=story.keyword_tags.all|slice:":4" %}
+        <article class="hero-slide relative isolate overflow-hidden text-white" data-hero-slide
                  {% if hero_slides|length > 1 %}role="group" aria-roledescription="slide" aria-label="{% blocktrans with n=forloop.counter total=hero_slides|length %}{{ n }} of {{ total }}{% endblocktrans %}"{% endif %}>
-            <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
-               class="lg:col-span-3 relative overflow-hidden bg-foreground block aspect-[16/10] lg:aspect-auto lg:min-h-[460px]">
-                {% if story.card_image_url %}
-                    {% if story.hero_shows_whole %}
-                        <img src="{{ story.card_image_url }}" alt="" class="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50">
-                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
-                             class="absolute inset-0 w-full h-full object-contain p-3 sm:p-5 drop-shadow-2xl">
-                    {% else %}
-                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
-                             class="w-full h-full object-cover absolute inset-0" style="filter: grayscale(20%);{% if story.featured_image %} object-position: {{ story.featured_image_position }};{% endif %}">
-                    {% endif %}
-                    {% include 'articles/includes/play_badge.html' with article=story %}
-                {% else %}
-                    <div class="w-full h-full absolute inset-0 flex items-center justify-center bg-secondary">
-                        <span class="font-display text-2xl text-muted-foreground italic">{{ JOURNAL_NAME }}</span>
-                    </div>
-                {% endif %}
-            </a>
+            {% if story.card_image_url %}
+                {# The picture's own colours, blurred, tint the whole band. #}
+                <img src="{{ story.card_image_url }}" alt="" aria-hidden="true" class="absolute inset-0 -z-20 h-full w-full object-cover scale-110 blur-3xl opacity-60 saturate-150">
+            {% endif %}
+            <div class="absolute inset-0 -z-20 bg-gradient-to-b from-[#0b1322]/70 via-[#0b1322]/85 to-[#0b1322] lg:bg-gradient-to-r lg:from-[#0b1322] lg:from-35% lg:via-[#0b1322]/75 lg:to-[#0b1322]/20" aria-hidden="true"></div>
 
-            {# Dark panel, same height as the picture; text centred in it, byline on one line — no gaps however short the summary. #}
-            <div class="lg:col-span-2 bg-foreground text-primary-foreground flex flex-col justify-center gap-5 p-6 sm:p-8 lg:p-10">
-                <span class="section-label text-accent">{% trans "Cover Story" %} · {{ story.get_article_type_display }}</span>
-                <h2 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight" style="letter-spacing: -0.02em;">
-                    <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline decoration-2 underline-offset-4">{{ story.title }}</a>
-                </h2>
-                {% with summary=story.summary %}{% if summary %}<p class="text-base leading-relaxed text-white/75 line-clamp-4">{{ summary }}</p>{% endif %}{% endwith %}
-                <div class="flex items-center gap-3 border-t border-white/15 pt-4 text-xs">
-                    <span class="w-8 h-8 rounded-full shrink-0" style="background: linear-gradient(135deg, #ef6b5c 0%, #c0392b 100%);" aria-hidden="true"></span>
-                    <p class="min-w-0 leading-snug">
-                        <span class="font-semibold text-sm text-white">{% for aa in story.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:underline">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}</span>
-                        <span class="block font-mono-editorial text-white/60">{{ story.published_at|news_time }} · {{ story.estimated_read_minutes }} {% trans "min read" %}</span>
+            {% if story.card_image_url %}
+                {# The picture, melting into the band: right side on wide screens, on top on phones. #}
+                {% if story.hero_shows_whole %}
+                    {# Shown whole, its own edges fading into the band. #}
+                    <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
+                       class="relative -z-10 flex items-center justify-center h-[280px] sm:h-[340px] px-6 pt-6 lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[56%] lg:p-10">
+                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                             class="hero-feather max-h-full max-w-full object-contain">
+                        {% include 'articles/includes/play_badge.html' with article=story %}
+                    </a>
+                {% else %}
+                    {# A photo fills the right side, melting into the band on its left (at the bottom on phones). #}
+                    <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
+                       class="relative -z-10 block aspect-[16/10] sm:aspect-[2/1] hero-fade-bottom lg:absolute lg:inset-y-0 lg:right-0 lg:aspect-auto lg:w-[64%] lg:hero-fade-left">
+                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                             class="absolute inset-0 h-full w-full object-cover"
+                             {% if story.featured_image %}style="object-position: {{ story.featured_image_position }};"{% endif %}>
+                        {% include 'articles/includes/play_badge.html' with article=story %}
+                    </a>
+                {% endif %}
+            {% endif %}
+
+            <div class="max-w-7xl mx-auto px-6 lg:min-h-[560px] flex items-center pb-28 lg:py-16 lg:pb-28 {% if not story.card_image_url %}pt-14{% endif %}">
+                <div class="w-full max-w-2xl lg:max-w-[44%] flex flex-col gap-5">
+                    <p class="flex items-center gap-3 text-sm font-semibold text-[#f08a7c]">
+                        <span>{% trans "Cover Story" %} · {{ story.get_article_type_display }}</span>
+                        <span class="h-px w-10 bg-[#f08a7c]" aria-hidden="true"></span>
+                    </p>
+                    <h2 class="font-display font-bold leading-[1.08] text-white" style="letter-spacing: -0.02em; text-wrap: balance;">
+                        <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline decoration-2 underline-offset-4">
+                            <span class="text-4xl sm:text-5xl lg:text-6xl">{{ parts.main }}</span>{% if parts.accent %}
+                            <span class="ms-[0.25em] text-4xl sm:text-5xl lg:text-6xl bg-gradient-to-r from-[#fbd3bd] to-[#f08a7c] bg-clip-text text-transparent">{{ parts.accent }}</span>{% endif %}{% if parts.subtitle %}
+                            <span class="mt-2 block text-2xl sm:text-3xl lg:text-4xl font-semibold text-white/90">{{ parts.subtitle }}</span>{% endif %}
+                        </a>
+                    </h2>
+                    {% with summary=story.summary %}{% if summary %}<p class="text-base sm:text-lg leading-relaxed text-white/75 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% if topics %}
+                        <ul class="flex flex-wrap items-center gap-y-2 text-sm text-white/85" aria-label="{% trans 'Topics' %}">
+                            {% for topic in topics %}
+                                <li class="flex items-center {% if not forloop.last %}pr-4 mr-4 border-r border-white/20{% endif %}">
+                                    <a href="{{ topic.get_absolute_url }}" class="inline-flex items-center gap-2 hover:text-white">
+                                        <span class="flex h-7 w-7 items-center justify-center rounded-full border border-[#f08a7c]/60 text-[#f08a7c] text-xs font-bold" aria-hidden="true">#</span>{{ topic.name }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-4 pt-1">
+                        <a href="{% url 'articles:article_detail' story.slug %}"
+                           class="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#e8604f] to-[#b8352a] px-6 py-3 text-base font-semibold text-white shadow-lg shadow-black/30 hover:from-[#f06b5a] hover:to-[#c0392b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                            {% trans "Read the full story" %} <span aria-hidden="true">→</span>
+                        </a>
+                    </div>
+                    <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/5" aria-hidden="true">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+                        </span>
+                        <span class="font-semibold text-white">{% for aa in story.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:underline">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}</span>
+                        <span class="h-4 w-px bg-white/25" aria-hidden="true"></span>
+                        <span>{{ story.published_at|news_time }} · {{ story.estimated_read_minutes }} {% trans "min read" %}</span>
                     </p>
                 </div>
-                <a href="{% url 'articles:article_detail' story.slug %}"
-                   class="self-start font-mono-editorial text-[0.65rem] tracking-widest border-b-2 border-accent-on-dark pb-0.5 hover:text-accent-on-dark">
-                    {% trans "READ THE FULL STORY →" %}
-                </a>
             </div>
         </article>
+        {% endwith %}
     {% endfor %}
     </div>
     {% if hero_slides|length > 1 %}
-        <div class="mt-5 flex items-center gap-4" data-hero-controls hidden>
-            <button type="button" data-hero-prev class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Previous story' %}">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <div class="flex items-center gap-2" role="group" aria-label="{% trans 'Choose a story' %}">
-                {% for story in hero_slides %}
-                    <button type="button" data-hero-dot="{{ forloop.counter0 }}" class="hero-dot h-2.5 rounded-full bg-border transition-all hover:bg-muted-foreground"
-                            aria-label="{% blocktrans with n=forloop.counter title=story.title %}Story {{ n }}: {{ title }}{% endblocktrans %}"></button>
-                {% endfor %}
+        {# Under the text, inside the band. #}
+        <div class="absolute inset-x-0 bottom-6 lg:bottom-10 z-10 pointer-events-none">
+            <div class="max-w-7xl mx-auto px-6 flex items-center gap-4 pointer-events-auto" data-hero-controls hidden>
+                <button type="button" data-hero-prev class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-white hover:bg-white hover:text-[#0b1322] transition-colors" aria-label="{% trans 'Previous story' %}">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <div class="flex items-center gap-2" role="group" aria-label="{% trans 'Choose a story' %}">
+                    {% for story in hero_slides %}
+                        <button type="button" data-hero-dot="{{ forloop.counter0 }}" class="hero-dot h-2.5 rounded-full bg-border transition-all hover:bg-white"
+                                aria-label="{% blocktrans with n=forloop.counter title=story.title %}Story {{ n }}: {{ title }}{% endblocktrans %}"></button>
+                    {% endfor %}
+                </div>
+                <button type="button" data-hero-next class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-white hover:bg-white hover:text-[#0b1322] transition-colors" aria-label="{% trans 'Next story' %}">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+                <button type="button" data-hero-pause class="ml-4 font-mono-editorial text-[0.65rem] tracking-widest text-white/70 hover:text-white"
+                        data-label-pause="{% trans 'PAUSE' %}" data-label-play="{% trans 'PLAY' %}" aria-pressed="false">{% trans "PAUSE" %}</button>
             </div>
-            <button type="button" data-hero-next class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Next story' %}">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-            <button type="button" data-hero-pause class="ml-auto font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent"
-                    data-label-pause="{% trans 'PAUSE' %}" data-label-play="{% trans 'PLAY' %}" aria-pressed="false">{% trans "PAUSE" %}</button>
         </div>
         <p class="sr-only" aria-live="polite" data-hero-status></p>
         <script src="{% static 'js/hero_slider.js' %}" defer></script>
     {% endif %}
-    <div class="rule-thin mt-8"></div>
 </section>
+<div class="pb-8"></div>
 {% else %}
 <section class="max-w-7xl mx-auto px-6 py-24 text-center">
     <h1 class="font-display text-4xl font-bold">{{ JOURNAL_NAME }}</h1>
@@ -176,6 +213,8 @@ zone) fill the row, centered as a group.
 </section>
 {% endif %}
 
+{% ad_slot 'homepage_mid_banner' wrapper_class='max-w-7xl mx-auto px-6 py-6 flex justify-center' %}
+
 {% if opinion_pieces %}
 <section>
     <div class="max-w-7xl mx-auto px-6 py-12">
@@ -212,6 +251,7 @@ zone) fill the row, centered as a group.
 {% endif %}
 
 {% ad_slot 'homepage_leaderboard' wrapper_class='hidden lg:flex lg:justify-center max-w-7xl mx-auto px-6 py-10' %}
+{% ad_slot 'mobile_lower_banner' wrapper_class='md:hidden max-w-7xl mx-auto px-6 py-6 flex justify-center' %}
 
 {% if research_highlights %}
 <section class="bg-secondary border-t border-border">
@@ -251,35 +291,6 @@ zone) fill the row, centered as a group.
 </section>
 {% endif %}
 
-
-
-{% if not user.is_authenticated or not already_subscribed_to_newsletter %}
-<section class="border-t-2 border-foreground bg-foreground text-primary-foreground">
-    <div class="max-w-7xl mx-auto px-6 py-14 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="text-center md:text-left">
-            <p class="font-mono-editorial text-xs tracking-widest opacity-50 mb-2">{% trans "FREE NEWSLETTER" %}</p>
-            <h3 class="font-display text-2xl md:text-3xl font-bold" style="letter-spacing: -0.02em;">
-                {% trans "Get our best health journalism in your inbox." %}
-            </h3>
-            <p class="mt-2 text-sm opacity-70">{% trans "No spam. Unsubscribe anytime." %}</p>
-        </div>
-        <div class="w-full md:w-auto flex-shrink-0">
-        <form method="post" action="{% url 'newsletter:subscribe' %}" class="flex gap-2 w-full md:w-auto">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.path }}">
-            <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
-            <input type="email" name="email" required placeholder="{% trans 'you@example.com' %}"
-                   class="flex-1 md:w-72 px-4 py-3 text-sm bg-white/10 border border-white/20 text-primary-foreground placeholder-white/40 focus:outline-none focus:border-white/50">
-            <button type="submit"
-                    class="font-mono-editorial text-xs tracking-widest bg-primary-foreground text-foreground px-6 py-3 hover:opacity-80 transition-opacity whitespace-nowrap">
-                {% trans "SUBSCRIBE" %}
-            </button>
-        </form>
-        {% include 'includes/privacy_notice.html' with kind='newsletter' class='mt-2 text-xs opacity-70 md:max-w-sm' %}
-        </div>
-    </div>
-</section>
-{% endif %}
 
 {% if special_issues %}
 <section>

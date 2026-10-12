@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time topic_tags %}
+{% load news_time topic_tags ads_tags %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -71,6 +71,7 @@
                     {% if article.access_type != 'open_access' %}<span class="text-border text-xs" aria-hidden="true">·</span><span class="font-mono-editorial text-xs text-muted-foreground">{% if article.access_type == 'pay_per_article' %}{% trans "Special" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>{% endif %}
                 </div>
             </article>
+            {% if forloop.counter == 5 or forloop.last and forloop.counter < 5 %}{% ad_slot 'list_banner' wrapper_class='py-6 flex justify-center' %}{% endif %}
         {% empty %}
             {% if query %}
                 <div class="py-10">

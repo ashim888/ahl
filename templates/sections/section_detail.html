@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time %}
+{% load news_time ads_tags %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -83,9 +83,10 @@
                     </p>
                 </div>
             </article>
+            {% ad_slot 'section_banner' wrapper_class='mb-12 flex justify-center' %}
             {% if not forloop.last %}<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">{% endif %}
         {% else %}
-            {% if forloop.first %}<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">{% endif %}
+            {% if forloop.first %}{% ad_slot 'section_banner' wrapper_class='mb-12 flex justify-center' %}<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">{% endif %}
             {% include 'articles/includes/article_card.html' with show_summary=True %}
             {% if forloop.last %}</div>{% endif %}
         {% endif %}

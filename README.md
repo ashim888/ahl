@@ -12,7 +12,7 @@ NOTE.
 ## Stack
 
 - **Backend**: Django 5.2, Python 3.12
-- **Database**: MySQL 8.0
+- **Database**: MySQL 8.0 in development; the production server runs **MariaDB** (10.6+ works)
 - **Frontend**: Tailwind CSS, compiled via the Tailwind CLI (not the `cdn.tailwindcss.com` Play
   CDN) — no other JS build step; templates are server-rendered Django templates with small,
   targeted vanilla-JS enhancements (no SPA framework)
@@ -281,6 +281,10 @@ Operations and security (all in `.env.example`; walkthrough in TUTORIAL.MD §18)
   `manage.py rebuild_search_index`. The title index must be built with MySQL stopwords off, so
   `DATABASES['default']['OPTIONS']['init_command']` turns them off on every connection — a migration
   that rebuilds `articles_article` (adding a column does) then rebuilds the index correctly. Keep it.
+- **MariaDB (production)** has no ngram parser, so there the title index is word-based: titles match
+  word beginnings (3+ letters) and the substring fallback covers two-letter terms and mid-word
+  matches. The search migrations (`articles/fulltext.py`) check what exists before each step, because
+  MariaDB can't roll back a failed migration's table changes — a half-applied one can simply be rerun.
 
 See `deploy.sh` (run after every `git pull` on the server) and `ARCHITECTURE.md` §9 for the full
 environment-variable reference, production security settings, and hosting notes.

@@ -22,6 +22,10 @@ class IsolatedMediaTestRunner(DiscoverRunner):
         # The site defaults to Nepali; the suite checks English wording, so
         # it runs in English (ajna_health_lens/test_language.py covers Nepali).
         settings.LANGUAGE_CODE = 'en'
+        # Error alerts go to ADMIN_EMAILS from the developer's .env; in tests
+        # they'd land in mail.outbox (and in mocked senders) alongside the
+        # emails being checked. Tests of the alerts set ADMINS themselves.
+        settings.ADMINS = []
         super().setup_test_environment(**kwargs)
         self._media_tmp = Path(tempfile.mkdtemp(prefix='ahl-test-media-'))
         self._saved_media = {}

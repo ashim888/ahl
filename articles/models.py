@@ -26,7 +26,7 @@ from .validators import (
 # Shared with articles/views.py HomeView, which caches under this key —
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
-HOME_SECTIONS_CACHE_KEY = 'home:sections:v5'
+HOME_SECTIONS_CACHE_KEY = 'home:sections:v6'
 # The current breaking-news article (or None) for the site-wide banner —
 # see ajna_health_lens/context_processors.py; cleared on every Article.save().
 BREAKING_CACHE_KEY = 'articles:breaking:v1'

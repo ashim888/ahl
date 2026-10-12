@@ -32,7 +32,6 @@ from billing.access import (
 )
 from editorial_board.models import EditorialBoardMember
 from issues.models import Issue
-from newsletter.models import Subscriber
 from sections.models import SectionFollow
 from training.models import TrainingCourse
 from users.decorators import role_required
@@ -246,8 +245,7 @@ class HomeView(TemplateView):
     def _build_sections(self):
         """Every homepage section — identical for every visitor (no
         per-user data), so this whole dict is cache-safe and cached as one
-        unit. get_context_data adds the one visitor-specific bit
-        (already_subscribed_to_newsletter) after reading this from cache.
+        unit — nothing in it may depend on who's visiting.
         """
         # -created_at as a tiebreaker: articles that share a publication_date
         # (or have none) still sort newest-first instead of by arbitrary DB order.
@@ -296,7 +294,7 @@ class HomeView(TemplateView):
         videos += take(published.filter(homepage_section='').exclude(video_url=''), self.VIDEO_COUNT - len(videos))
 
         sections = {}
-        prefetch_related_objects(hero_slides, 'articleauthor_set__author__user')
+        prefetch_related_objects(hero_slides, 'articleauthor_set__author__user', 'keyword_tags')
         sections['hero_slides'] = hero_slides
         sections['hero_article'] = hero_article
         sections['hero_authors'] = (
@@ -336,17 +334,6 @@ class HomeView(TemplateView):
             sections = self._build_sections()
             cache.set(self.CACHE_KEY, sections, self.CACHE_TTL)
         context.update(sections)
-
-        # Hides the homepage newsletter CTA (templates/home.html) for a
-        # logged-in reader who's already confirmed — no point nagging them.
-        # Always shown to anonymous visitors, who might not have an account.
-        # Deliberately computed fresh every request, outside the cached
-        # dict above — this is the one piece of the homepage that varies
-        # by visitor and must never be cached.
-        if self.request.user.is_authenticated:
-            context['already_subscribed_to_newsletter'] = Subscriber.objects.filter(
-                user=self.request.user, status=Subscriber.Status.CONFIRMED,
-            ).exists()
 
         # Training row — outside the cached dict above, since HOME_SECTIONS_CACHE_KEY
         # is only invalidated by Article.save(), not by course edits.
