@@ -139,7 +139,7 @@ class FormNoticeTests(TestCase):
 
     def test_newsletter_forms_explain_and_link_privacy_policy(self):
         response = self.client.get(reverse('articles:home'))
-        self.assertContains(response, 'We use your email only to send the newsletter', count=2)
+        self.assertContains(response, 'We use your email only to send the newsletter', count=1)  # the footer form — the only one
         self.assertContains(response, reverse('pages:privacy'))
 
     def test_comment_pitch_and_report_forms_have_notices(self):

@@ -815,20 +815,26 @@ class HomepageCachingTests(TestCase):
         self.assertIsNone(cache.get(HOME_SECTIONS_CACHE_KEY))
 
 
-class HomepageNewsletterCTATests(TestCase):
-    def test_anonymous_visitor_sees_cta(self):
-        response = self.client.get(reverse('articles:home'))
-        self.assertContains(response, 'FREE NEWSLETTER')
+class NewsletterSignupFormTests(TestCase):
+    """One newsletter sign-up form, in the footer of every page — the
+    homepage used to show a second one just above it."""
 
-    def test_confirmed_subscriber_does_not_see_cta(self):
+    def test_homepage_has_exactly_one_signup_form(self):
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, f'action="{reverse("newsletter:subscribe")}"', count=1)
+        self.assertNotContains(response, 'FREE NEWSLETTER')
+
+    def test_confirmed_subscriber_sees_a_note_instead_of_the_form(self):
         from newsletter.models import Subscriber
         from users.models import User
 
         reader = User.objects.create_user(email='cta-reader@example.com', password='pw', first_name='C', last_name='R')
-        Subscriber.objects.create(user=reader, email=reader.email, status=Subscriber.Status.CONFIRMED)
         self.client.force_login(reader)
-        response = self.client.get(reverse('articles:home'))
-        self.assertNotContains(response, 'FREE NEWSLETTER')
+        self.assertContains(self.client.get(reverse('articles:article_list')), f'action="{reverse("newsletter:subscribe")}"')
+        Subscriber.objects.create(user=reader, email=reader.email, status=Subscriber.Status.CONFIRMED)
+        response = self.client.get(reverse('articles:article_list'))
+        self.assertNotContains(response, f'action="{reverse("newsletter:subscribe")}"')
+        self.assertContains(response, 'You’re subscribed')
 
 
 class HomepagePitchCTATests(TestCase):

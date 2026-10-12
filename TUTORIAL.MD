@@ -87,9 +87,10 @@ No account needed for any of this.
   posted"; guests are told to check their inbox and click the confirmation link, and the
   comment appears only after that click (no CAPTCHA, just email confirmation). You can tick
   "Notify me about follow-up comments" to get an email when someone replies.
-- **Subscribe to the newsletter** — the signup box in the footer or homepage works with just an
+- **Subscribe to the newsletter** — the signup box in the footer of every page works with just an
   email address; you'll get a confirmation link before you're actually subscribed (double
-  opt-in), then a short welcome email once you've confirmed. Unsubscribe links in every newsletter email are one-click, no login required.
+  opt-in), then a short welcome email once you've confirmed. A signed-in reader who's confirmed
+  sees "You're subscribed" there instead of the form. Unsubscribe links in every newsletter email are one-click, no login required.
 - **Browse training programs** at `/training/`. Enrolling requires an account (see §3) —
   checkout is currently a stub payment flow (always succeeds; a real gateway isn't wired up yet).
 - **Browse subscription plans** at `/subscribe/`.

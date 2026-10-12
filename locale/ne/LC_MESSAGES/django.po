@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-12 15:40+0545\n"
+"POT-Creation-Date: 2026-10-12 15:46+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -149,7 +149,7 @@ msgstr "संक्षिप्त सञ्चार"
 msgid "Methodology Paper"
 msgstr "विधि पत्र"
 
-#: articles/models.py:105 templates/home.html:381
+#: articles/models.py:105 templates/home.html:352
 msgid "Editorial"
 msgstr "सम्पादकीय"
 
@@ -238,28 +238,28 @@ msgid ""
 msgstr ""
 "%(site)s बाट %(name)s बारे %(count)s सामग्री — ताजा समाचार, अनुसन्धान र व्याख्या।"
 
-#: articles/views.py:863
+#: articles/views.py:850
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:865
+#: articles/views.py:852
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:882
+#: articles/views.py:869
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:884
+#: articles/views.py:871
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:1112 sections/views.py:87
+#: articles/views.py:1099 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:1117 sections/views.py:89
+#: articles/views.py:1104 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -667,7 +667,7 @@ msgid "BREAKING"
 msgstr "ताजा खबर"
 
 #: templates/articles/article_detail.html:155
-#: templates/articles/topic_list.html:9 templates/base.html:558
+#: templates/articles/topic_list.html:9 templates/base.html:562
 #: templates/home.html:68
 msgid "Topics"
 msgstr "विषयहरू"
@@ -858,9 +858,9 @@ msgid "BUY FOR %(price)s"
 msgstr "%(price)s मा किन्नुहोस्"
 
 #: templates/articles/article_detail.html:370
-#: templates/articles/article_detail.html:375 templates/base.html:539
+#: templates/articles/article_detail.html:375 templates/base.html:542
 #: templates/billing/includes/plan_cta.html:18
-#: templates/billing/plan_browse.html:8 templates/home.html:315
+#: templates/billing/plan_browse.html:8
 #: templates/includes/mobile_subscribe_bar.html:5
 #: templates/users/privacy.html:37
 msgid "SUBSCRIBE"
@@ -1083,7 +1083,7 @@ msgid "WEBSITE"
 msgstr "वेबसाइट"
 
 #: templates/articles/author_detail.html:48 templates/base.html:432
-#: templates/base.html:563 templates/training/course_detail.html:94
+#: templates/base.html:567 templates/training/course_detail.html:94
 msgid "ABOUT"
 msgstr "बारेमा"
 
@@ -1101,7 +1101,7 @@ msgid "No published articles yet."
 msgstr "अहिलेसम्म कुनै लेख प्रकाशित भएको छैन।"
 
 #: templates/articles/correction_list.html:4
-#: templates/articles/correction_list.html:7 templates/base.html:571
+#: templates/articles/correction_list.html:7 templates/base.html:575
 msgid "Corrections"
 msgstr "सच्याइहरू"
 
@@ -1452,7 +1452,7 @@ msgstr "कथा प्रस्ताव गर्नुहोस्"
 msgid "Login"
 msgstr "लग इन"
 
-#: templates/base.html:451 templates/base.html:567
+#: templates/base.html:451 templates/base.html:571
 msgid "Register"
 msgstr "दर्ता गर्नुहोस्"
 
@@ -1472,62 +1472,66 @@ msgstr "न्यूजलेटर"
 msgid "Free — the latest articles and news, straight to your inbox."
 msgstr "निःशुल्क — ताजा लेख र समाचार, सिधै तपाईंको इमेलमा।"
 
-#: templates/base.html:547
+#: templates/base.html:531
+msgid "You’re subscribed — thank you."
+msgstr "तपाईं न्यूजलेटरमा जोडिनुभएको छ — धन्यवाद।"
+
+#: templates/base.html:551
 msgid "SECTIONS"
 msgstr "विभागहरू"
 
-#: templates/base.html:548
+#: templates/base.html:552
 msgid "Home"
 msgstr "गृहपृष्ठ"
 
-#: templates/base.html:552 templates/billing/plan_browse.html:5
+#: templates/base.html:556 templates/billing/plan_browse.html:5
 #: templates/billing/plan_detail.html:5
 #: templates/includes/mobile_subscribe_bar.html:2
 msgid "Subscribe"
 msgstr "सदस्यता लिनुहोस्"
 
-#: templates/base.html:555
+#: templates/base.html:559
 msgid "JOURNAL"
 msgstr "जर्नल"
 
-#: templates/base.html:556
+#: templates/base.html:560
 msgid "Issue Archive"
 msgstr "अंक अभिलेख"
 
-#: templates/base.html:557
+#: templates/base.html:561
 msgid "Article Archive"
 msgstr "लेख अभिलेख"
 
-#: templates/base.html:559
+#: templates/base.html:563
 msgid "Research"
 msgstr "अनुसन्धान"
 
-#: templates/base.html:560
+#: templates/base.html:564
 msgid "Editorial Policy"
 msgstr "सम्पादकीय नीति"
 
-#: templates/base.html:564
+#: templates/base.html:568
 msgid "Editorial Board"
 msgstr "सम्पादकीय बोर्ड"
 
-#: templates/base.html:565 templates/training/course_detail.html:97
+#: templates/base.html:569 templates/training/course_detail.html:97
 msgid "FAQ"
 msgstr "बारम्बार सोधिने प्रश्न"
 
-#: templates/base.html:566
+#: templates/base.html:570
 msgid "Policies"
 msgstr "नीतिहरू"
 
-#: templates/base.html:572
+#: templates/base.html:576
 msgid "Cookie settings"
 msgstr "कुकी सेटिङ"
 
-#: templates/base.html:573 templates/users/privacy.html:4
+#: templates/base.html:577 templates/users/privacy.html:4
 #: templates/users/privacy.html:11
 msgid "Privacy & your data"
 msgstr "गोपनीयता र तपाईंको डाटा"
 
-#: templates/base.html:583
+#: templates/base.html:587
 msgid "All rights reserved."
 msgstr "सर्वाधिकार सुरक्षित।"
 
@@ -2587,67 +2591,51 @@ msgstr "DOI"
 msgid "Read more →"
 msgstr "थप पढ्नुहोस् →"
 
-#: templates/home.html:300
-msgid "FREE NEWSLETTER"
-msgstr "निःशुल्क न्युजलेटर"
-
-#: templates/home.html:302
-msgid "Get our best health journalism in your inbox."
-msgstr "हाम्रो उत्कृष्ट स्वास्थ्य पत्रकारिता तपाईंको इमेलमा।"
-
-#: templates/home.html:304
-msgid "No spam. Unsubscribe anytime."
-msgstr "स्प्याम हुँदैन। जुनसुकै बेला सदस्यता हटाउन सकिन्छ।"
-
-#: templates/home.html:311
-msgid "you@example.com"
-msgstr "you@example.com"
-
-#: templates/home.html:328 templates/issues/issue_list.html:7
+#: templates/home.html:299 templates/issues/issue_list.html:7
 msgid "STORY TRAILS"
 msgstr "कथा शृङ्खला"
 
-#: templates/home.html:328
+#: templates/home.html:299
 msgid "Special Issues"
 msgstr "विशेष अंकहरू"
 
-#: templates/home.html:328
+#: templates/home.html:299
 msgid "ALL ISSUES →"
 msgstr "सबै अंक →"
 
-#: templates/home.html:340
+#: templates/home.html:311
 msgid "Available Now"
 msgstr "अहिले उपलब्ध"
 
-#: templates/home.html:340
+#: templates/home.html:311
 msgid "READ →"
 msgstr "पढ्नुहोस् →"
 
-#: templates/home.html:347
+#: templates/home.html:318
 msgid "FORTHCOMING"
 msgstr "आगामी"
 
-#: templates/home.html:351
+#: templates/home.html:322
 msgid "In production"
 msgstr "तयारीमा"
 
-#: templates/home.html:365 templates/training/course_detail.html:22
+#: templates/home.html:336 templates/training/course_detail.html:22
 msgid "TRAINING"
 msgstr "तालिम"
 
-#: templates/home.html:365
+#: templates/home.html:336
 msgid "Learn with us"
 msgstr "हामीसँग सिक्नुहोस्"
 
-#: templates/home.html:365 templates/training/course_detail.html:252
+#: templates/home.html:336 templates/training/course_detail.html:252
 msgid "ALL COURSES →"
 msgstr "सबै कोर्सहरू →"
 
-#: templates/home.html:382
+#: templates/home.html:353
 msgid "Board &amp; Policies"
 msgstr "बोर्ड तथा नीतिहरू"
 
-#: templates/home.html:384
+#: templates/home.html:355
 #, python-format
 msgid ""
 "%(journal)s is governed by an independent editorial board. Peer review for "
@@ -2656,7 +2644,7 @@ msgstr ""
 "%(journal)s स्वतन्त्र सम्पादकीय बोर्डद्वारा सञ्चालित छ। मौलिक अनुसन्धानको समकक्षी "
 "समीक्षा OJS मार्फत बाहिरी रूपमा गरिन्छ।"
 
-#: templates/home.html:388
+#: templates/home.html:359
 msgid "EDITORIAL POLICY →"
 msgstr "सम्पादकीय नीति →"
 

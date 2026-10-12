@@ -32,6 +32,17 @@ def _wants_subscribe_bar(request) -> bool:
     return not user_has_active_subscription(user)
 
 
+def _newsletter_subscribed(request) -> bool:
+    """A signed-in reader whose newsletter subscription is confirmed — the
+    footer sign-up form is replaced by a short note for them."""
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated:
+        return False
+    from newsletter.models import Subscriber
+
+    return Subscriber.objects.filter(user=user, status=Subscriber.Status.CONFIRMED).exists()
+
+
 def journal_settings(request):
     from issues.models import Issue  # local import: avoids a project->app import at module load time
 
@@ -57,6 +68,9 @@ def journal_settings(request):
         **_legal_pages(),
         # Called by the template only where the phone subscribe bar can show.
         'show_subscribe_bar': lambda: _wants_subscribe_bar(request),
+        # The newsletter form in the footer (the site's only sign-up form):
+        # only queried when the footer asks.
+        'newsletter_subscribed': lambda: _newsletter_subscribed(request),
         # Cookie consent (templates/includes/cookie_consent.html): analytics
         # only render once the reader has accepted them.
         'GOOGLE_ANALYTICS_ID': settings.GOOGLE_ANALYTICS_ID,
