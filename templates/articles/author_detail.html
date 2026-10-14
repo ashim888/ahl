@@ -15,8 +15,7 @@
         {% if photo %}
             <img src="{{ photo.url }}" alt="{{ author.name }}" class="w-24 h-24 md:w-28 md:h-28 shrink-0 object-cover rounded-full border-2 border-primary-foreground/20">
         {% else %}
-            <span class="w-24 h-24 md:w-28 md:h-28 shrink-0 rounded-full flex items-center justify-center font-display text-4xl font-bold text-white"
-                  style="background: linear-gradient(135deg, #1f2a44 0%, #b3452c 100%);">{{ author.initial }}</span>
+            <span class="w-24 h-24 md:w-28 md:h-28 shrink-0 rounded-full flex items-center justify-center font-display text-4xl font-bold bg-primary-foreground text-foreground">{{ author.initial }}</span>
         {% endif %}
         <div class="min-w-0">
             <p class="section-label text-accent">{% trans "AUTHOR" %}</p>

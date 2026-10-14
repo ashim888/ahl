@@ -9,14 +9,14 @@
 
 {% if hero_article %}
 {% comment %}
-Top stories (articles.views.HomeView) as a cover: a deep navy band tinted by the picture's own colours,
+Top stories (articles.views.HomeView) as a cover: an ink band tinted by the picture's own colours,
 the picture melting into it on the right (on top, on phones), and the text on the left — label, a
 two-tone headline (text_filters.headline_parts), summary, topics, a "Read the full story" button and the
 byline. Every pinned Hero rotates here, newest first — a slider (static/js/hero_slider.js) with its
 controls under the text when there's more than one; without JavaScript the slides simply stack. A
 picture that shouldn't be cropped (square, tall or very wide — Article.hero_shows_whole) is shown whole.
 {% endcomment %}
-<section class="relative bg-[#0b1322]" {% if hero_slides|length > 1 %}data-hero-slider aria-roledescription="carousel" aria-label="{% trans 'Top stories' %}"{% endif %}>
+<section class="relative bg-foreground" {% if hero_slides|length > 1 %}data-hero-slider aria-roledescription="carousel" aria-label="{% trans 'Top stories' %}"{% endif %}>
     <div class="relative" data-hero-track>
     {% for story in hero_slides %}
         {% with parts=story.title|headline_parts topics=story.keyword_tags.all|slice:":4" %}
@@ -26,7 +26,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                 {# The picture's own colours, blurred, tint the whole band. #}
                 <img src="{{ story.card_image_url }}" alt="" aria-hidden="true" class="absolute inset-0 -z-20 h-full w-full object-cover scale-110 blur-3xl opacity-60 saturate-150">
             {% endif %}
-            <div class="absolute inset-0 -z-20 bg-gradient-to-b from-[#0b1322]/70 via-[#0b1322]/85 to-[#0b1322] lg:bg-gradient-to-r lg:from-[#0b1322] lg:from-35% lg:via-[#0b1322]/75 lg:to-[#0b1322]/20" aria-hidden="true"></div>
+            <div class="absolute inset-0 -z-20 bg-gradient-to-b from-foreground/70 via-foreground/85 to-foreground lg:bg-gradient-to-r lg:from-foreground lg:from-35% lg:via-foreground/75 lg:to-foreground/20" aria-hidden="true"></div>
 
             {% if story.card_image_url %}
                 {# The picture, melting into the band: right side on wide screens, on top on phones. #}
@@ -52,14 +52,10 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
 
             <div class="max-w-7xl mx-auto px-6 lg:min-h-[560px] flex items-center pb-28 lg:py-16 lg:pb-28 {% if not story.card_image_url %}pt-14{% endif %}">
                 <div class="w-full max-w-2xl lg:max-w-[44%] flex flex-col gap-5">
-                    <p class="flex items-center gap-3 text-sm font-semibold text-[#f08a7c]">
-                        <span>{% trans "Cover Story" %} · {{ story.get_article_type_display }}</span>
-                        <span class="h-px w-10 bg-[#f08a7c]" aria-hidden="true"></span>
-                    </p>
                     <h2 class="font-display font-bold leading-[1.08] text-white" style="letter-spacing: -0.02em; text-wrap: balance;">
-                        <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline decoration-2 underline-offset-4">
+                        <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline decoration-2 underline-offset-[6px]">
                             <span class="text-4xl sm:text-5xl lg:text-6xl">{{ parts.main }}</span>{% if parts.accent %}
-                            <span class="ms-[0.25em] text-4xl sm:text-5xl lg:text-6xl bg-gradient-to-r from-[#fbd3bd] to-[#f08a7c] bg-clip-text text-transparent">{{ parts.accent }}</span>{% endif %}{% if parts.subtitle %}
+                            <span class="ms-[0.25em] text-4xl sm:text-5xl lg:text-6xl text-[#f4a08f]">{{ parts.accent }}</span>{% endif %}{% if parts.subtitle %}
                             <span class="mt-2 block text-2xl sm:text-3xl lg:text-4xl font-semibold text-white/90">{{ parts.subtitle }}</span>{% endif %}
                         </a>
                     </h2>
@@ -77,8 +73,9 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                     {% endif %}
                     <div class="flex flex-wrap items-center gap-x-6 gap-y-4 pt-1">
                         <a href="{% url 'articles:article_detail' story.slug %}"
-                           class="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#e8604f] to-[#b8352a] px-6 py-3 text-base font-semibold text-white shadow-lg shadow-black/30 hover:from-[#f06b5a] hover:to-[#c0392b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-                            {% trans "Read the full story" %} <span aria-hidden="true">→</span>
+                           class="group/cta inline-flex items-center gap-3 bg-accent px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#a93226] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                            {% trans "Read the full story" %}
+                            <svg class="h-4 w-4 transition-transform duration-200 ease-out group-hover/cta:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                         </a>
                     </div>
                     <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75">
@@ -86,8 +83,8 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
                         </span>
                         <span class="font-semibold text-white">{% for aa in story.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:underline">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}</span>
-                        <span class="h-4 w-px bg-white/25" aria-hidden="true"></span>
-                        <span>{{ story.published_at|news_time }} · {{ story.estimated_read_minutes }} {% trans "min read" %}</span>
+                        <span class="hidden sm:block h-4 w-px bg-white/25" aria-hidden="true"></span>
+                        <span>{{ story.get_article_type_display }} · {{ story.published_at|news_time }} · {{ story.estimated_read_minutes }} {% trans "min read" %}</span>
                     </p>
                 </div>
             </div>
@@ -99,7 +96,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
         {# Under the text, inside the band. #}
         <div class="absolute inset-x-0 bottom-6 lg:bottom-10 z-10 pointer-events-none">
             <div class="max-w-7xl mx-auto px-6 flex items-center gap-4 pointer-events-auto" data-hero-controls hidden>
-                <button type="button" data-hero-prev class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-white hover:bg-white hover:text-[#0b1322] transition-colors" aria-label="{% trans 'Previous story' %}">
+                <button type="button" data-hero-prev class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-white hover:bg-white hover:text-foreground transition-colors" aria-label="{% trans 'Previous story' %}">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
                 <div class="flex items-center gap-2" role="group" aria-label="{% trans 'Choose a story' %}">
@@ -108,7 +105,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                                 aria-label="{% blocktrans with n=forloop.counter title=story.title %}Story {{ n }}: {{ title }}{% endblocktrans %}"></button>
                     {% endfor %}
                 </div>
-                <button type="button" data-hero-next class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-white hover:bg-white hover:text-[#0b1322] transition-colors" aria-label="{% trans 'Next story' %}">
+                <button type="button" data-hero-next class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-white hover:bg-white hover:text-foreground transition-colors" aria-label="{% trans 'Next story' %}">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
                 <button type="button" data-hero-pause class="ml-4 font-mono-editorial text-[0.65rem] tracking-widest text-white/70 hover:text-white"
@@ -119,7 +116,6 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
         <script src="{% static 'js/hero_slider.js' %}" defer></script>
     {% endif %}
 </section>
-<div class="pb-8"></div>
 {% else %}
 <section class="max-w-7xl mx-auto px-6 py-24 text-center">
     <h1 class="font-display text-4xl font-bold">{{ JOURNAL_NAME }}</h1>
@@ -131,37 +127,37 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
 {% ad_slot 'mobile_large_banner' wrapper_class='md:hidden max-w-7xl mx-auto px-6 pb-6 flex justify-center' %}
 
 {% if trending_articles %}
-<section class="max-w-7xl mx-auto px-6 py-8">
-    <div class="flex items-center gap-4 mb-5">
-        <div class="w-1 bg-accent" style="height: 24px;"></div>
-        <h3 class="font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "TRENDING THIS WEEK" %}</h3>
-    </div>
-    <div class="flex flex-wrap gap-x-8 gap-y-3">
+{% comment %}
+Most read this week, as a ranked strip under the cover: big red numerals,
+hairlines between the entries, the heavy rule on top that every homepage
+section heading uses.
+{% endcomment %}
+<section class="max-w-7xl mx-auto px-6 pt-10 pb-8" aria-labelledby="trending-heading">
+    <h2 id="trending-heading" class="section-label text-foreground mb-3">{% trans "TRENDING THIS WEEK" %}</h2>
+    <ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 border-t-2 border-foreground">
         {% for article in trending_articles %}
-            <a href="{% url 'articles:article_detail' article.slug %}" class="group flex items-baseline gap-2">
-                <span class="font-display text-lg font-bold text-border group-hover:text-accent">{{ forloop.counter }}</span>
-                <span class="text-sm font-medium group-hover:text-accent group-hover:underline">{{ article.title }}</span>
-            </a>
+            <li class="border-b border-border lg:border-b-0 {% if not forloop.first %}lg:border-l{% endif %} {% if forloop.counter|divisibleby:2 %}sm:border-l lg:border-l{% endif %}">
+                <a href="{% url 'articles:article_detail' article.slug %}" class="group flex items-start gap-4 h-full py-4 sm:pr-4 {% if forloop.counter|divisibleby:2 %}sm:pl-4{% endif %} {% if not forloop.first %}lg:pl-4{% endif %}">
+                    <span class="font-display text-3xl font-bold leading-none text-accent tabular-nums" aria-hidden="true">{{ forloop.counter }}</span>
+                    <span class="font-display text-lg font-semibold leading-snug line-clamp-3 group-hover:underline decoration-1 underline-offset-[3px]" style="text-wrap: pretty;">{{ article.title }}</span>
+                </a>
+            </li>
         {% endfor %}
-    </div>
+    </ol>
 </section>
 {% endif %}
 {% if trending_topics %}
-<section class="max-w-7xl mx-auto px-6 pb-10" aria-labelledby="trending-topics-heading">
-    <div class="flex items-end justify-between gap-4 mb-4">
-        <div class="flex items-center gap-3">
-            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-accent" aria-hidden="true">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
-            </span>
-            <div>
-                <h3 id="trending-topics-heading" class="font-mono-editorial text-xs tracking-widest text-foreground">{% trans "TRENDING TOPICS" %}</h3>
-                <p class="text-xs text-muted-foreground">{% trans "What readers are following this month" %}</p>
-            </div>
+<section class="max-w-7xl mx-auto px-6 pb-12" aria-labelledby="trending-topics-heading">
+    <div class="flex items-baseline justify-between gap-4 mb-4">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 id="trending-topics-heading" class="section-label text-foreground">{% trans "TRENDING TOPICS" %}</h2>
+            <p class="text-xs text-muted-foreground">{% trans "What readers are following this month" %}</p>
         </div>
-        <a href="{% url 'articles:topic_list' %}" class="hidden sm:inline-block font-mono-editorial text-[0.7rem] tracking-widest text-muted-foreground hover:text-accent">{% trans "ALL TOPICS →" %}</a>
+        <a href="{% url 'articles:topic_list' %}" class="hidden sm:inline-block shrink-0 font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL TOPICS →" %}</a>
     </div>
     <div class="relative">
-        <ul class="flex gap-2.5 overflow-x-auto snap-x pb-2 [scrollbar-width:none] md:flex-wrap md:overflow-visible">
+        {# `relative` keeps each pill's absolutely-positioned sr-only text inside this scroller; without it they escaped the clip and widened the whole page on phones. #}
+        <ul class="relative flex gap-2.5 overflow-x-auto snap-x pb-2 [scrollbar-width:none] md:flex-wrap md:overflow-visible">
             {% for topic in trending_topics %}
                 <li class="snap-start shrink-0">{% if forloop.counter <= 3 %}{% include 'articles/includes/topic_pill.html' with topic=topic size='lg' count=topic.story_count rank=forloop.counter hot=True %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=topic size='lg' count=topic.story_count rank=forloop.counter %}{% endif %}</li>
             {% endfor %}
@@ -171,22 +167,6 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
     </div>
 </section>
 {% endif %}
-<section class="border-t-2 border-foreground bg-secondary">
-    <div class="max-w-7xl mx-auto px-6 py-14 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="text-center md:text-left">
-            <p class="font-mono-editorial text-xs tracking-widest text-accent mb-2">{% trans "GOT A STORY?" %}</p>
-            <h3 class="font-display text-2xl md:text-3xl font-bold" style="letter-spacing: -0.02em;">
-                {% trans "Pitch a health story to our editors." %}
-            </h3>
-            <p class="mt-2 text-sm text-muted-foreground">{% trans "No account, no manuscript — just the idea." %}</p>
-        </div>
-        <a href="{% url 'pitches:pitch_create' %}"
-           class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors whitespace-nowrap flex-shrink-0">
-            {% trans "PITCH A STORY →" %}
-        </a>
-    </div>
-</section>
-<br />
 {% comment %}
 Three same-size slots side by side (see ads/models.py Zone.HOMEPAGE_RECTANGLE_1/2/3)
 instead of one centered box, so the ~1232px container doesn't sit mostly
@@ -201,14 +181,71 @@ zone) fill the row, centered as a group.
 </div>
 
 {% if latest_news %}
+{% comment %}
+Latest news as a front page, not a grid of equals: the newest story leads
+(big picture, big headline, summary) and the rest run down a ranked column
+beside it with small thumbnails. Stacks on phones.
+{% endcomment %}
 <section class="max-w-7xl mx-auto px-6 py-12">
     {% url 'articles:article_list' as all_url %}
-    {% trans "NEWS" as eyebrow %}{% trans "Latest News" as title %}{% trans "ALL NEWS →" as link_label %}
-    {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=news_commentary" %}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {% for article in latest_news %}
-            {% include 'articles/includes/article_card.html' with show_summary=True %}
-        {% endfor %}
+    {% trans "Latest News" as title %}{% trans "ALL NEWS →" as link_label %}
+    {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=news_commentary" dek='' %}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-x-10 gap-y-8">
+        {% with lead=latest_news.0 %}
+        <article class="group relative lg:col-span-7">
+            <div class="relative aspect-[3/2] bg-secondary overflow-hidden">
+                {% if lead.card_image_url %}
+                    <img src="{{ lead.card_image_url }}" style="{{ lead.card_image_style }}" alt="{{ lead.featured_image_alt|default:lead.title }}" loading="lazy"
+                         class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]">
+                    {% include 'articles/includes/play_badge.html' with article=lead %}
+                {% else %}
+                    {% include 'articles/includes/press_plate.html' with article=lead %}
+                {% endif %}
+            </div>
+            <div class="mt-5 flex items-center gap-2 flex-wrap">
+                <span class="section-label text-accent">{{ lead.get_article_type_display }}</span>
+                {% if lead.access_type != 'open_access' %}
+                    <span class="font-mono-editorial text-[0.65rem] tracking-wider uppercase border border-border px-1.5 py-0.5 text-muted-foreground">{% if lead.access_type == 'pay_per_article' %}{% trans "Special" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>
+                {% endif %}
+            </div>
+            <h3 class="mt-2 font-display text-2xl sm:text-3xl font-bold leading-[1.15]" style="letter-spacing: -0.015em; text-wrap: balance;">
+                <a href="{% url 'articles:article_detail' lead.slug %}" class="after:absolute after:inset-0 group-hover:underline decoration-2 underline-offset-[5px]">{{ lead.title }}</a>
+            </h3>
+            {% with summary=lead.summary %}{% if summary %}<p class="mt-3 max-w-[62ch] text-base leading-relaxed text-muted-foreground line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+            <p class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                {% with a=lead.articleauthor_set.all|first %}<span class="font-semibold text-foreground">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>{% endwith %}
+                <span aria-hidden="true">·</span><span>{{ lead.estimated_read_minutes }} {% trans "min read" %}</span>
+                {% if lead.published_at %}<span aria-hidden="true">·</span><span>{{ lead.published_at|news_time }}</span>{% endif %}
+            </p>
+        </article>
+        {% endwith %}
+
+        {% if latest_news|length > 1 %}
+        <ol class="lg:col-span-5 border-t-2 border-foreground lg:border-t-0 divide-y divide-border">
+            {% for article in latest_news|slice:"1:" %}
+                <li class="group relative flex gap-4 py-4 {% if forloop.first %}lg:pt-0{% endif %}">
+                    <div class="min-w-0 flex-1">
+                        <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
+                        <h3 class="mt-1 font-display text-lg font-bold leading-snug line-clamp-3" style="letter-spacing: -0.005em; text-wrap: pretty;">
+                            <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</a>
+                        </h3>
+                        <p class="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                            {% with a=article.articleauthor_set.all|first %}<span class="font-medium text-foreground truncate max-w-[14rem]">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>{% endwith %}
+                            {% if article.published_at %}<span aria-hidden="true">·</span><span>{{ article.published_at|news_time }}</span>{% endif %}
+                            {% if article.access_type != 'open_access' %}<span aria-hidden="true">·</span><span>{% if article.access_type == 'pay_per_article' %}{% trans "Special" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>{% endif %}
+                        </p>
+                    </div>
+                    <div class="relative shrink-0 w-24 sm:w-32 aspect-[4/3] bg-secondary overflow-hidden">
+                        {% if article.card_image_url %}
+                            <img src="{{ article.card_image_url }}" style="{{ article.card_image_style }}" alt="" loading="lazy" class="h-full w-full object-cover">
+                        {% else %}
+                            {% include 'articles/includes/press_plate.html' with article=article %}
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ol>
+        {% endif %}
     </div>
 </section>
 {% endif %}
@@ -219,8 +256,8 @@ zone) fill the row, centered as a group.
 <section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'articles:article_list' as all_url %}
-        {% trans "OPINION" as eyebrow %}{% trans "Opinion &amp; Commentary" as title %}{% trans "ALL OPINION →" as link_label %}
-        {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=editorial" %}
+        {% trans "Opinion &amp; Commentary" as title %}{% trans "ALL OPINION →" as link_label %}
+        {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=editorial" dek='' %}
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-border">
             {% for article in opinion_pieces %}
@@ -257,8 +294,8 @@ zone) fill the row, centered as a group.
 <section class="bg-secondary border-t border-border">
     <div class="max-w-7xl mx-auto px-6 py-10">
         {% url 'issues:issue_list' as all_url %}
-        {% trans "PEER-REVIEWED RESEARCH" as eyebrow %}{% trans "From the Journal" as title %}{% trans "BROWSE ARCHIVE →" as link_label %}
-        {% include 'includes/section_heading.html' with link_url=all_url %}
+        {% trans "From the Journal" as title %}{% trans "BROWSE ARCHIVE →" as link_label %}{% trans "PEER-REVIEWED RESEARCH" as journal_dek %}
+        {% include 'includes/section_heading.html' with link_url=all_url dek=journal_dek|lower|capfirst %}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {% for article in research_highlights %}
@@ -268,7 +305,7 @@ zone) fill the row, centered as a group.
                             <span class="font-mono-editorial text-xs text-accent">
                                 {% if article.issue %}{{ article.issue.title }}{% else %}{% trans "Online first" %}{% endif %}
                             </span>
-                            <span class="font-mono-editorial text-xs text-muted-foreground">{{ JOURNAL_NAME }}</span>
+                            <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.get_article_type_display }}</span>
                         </div>
                         <h3 class="font-display text-lg font-bold leading-snug mb-3 article-title" style="letter-spacing: -0.01em;">
                             {{ article.title }}
@@ -296,8 +333,8 @@ zone) fill the row, centered as a group.
 <section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'issues:issue_list' as all_url %}
-        {% trans "STORY TRAILS" as eyebrow %}{% trans "Special Issues" as title %}{% trans "ALL ISSUES →" as link_label %}
-        {% include 'includes/section_heading.html' with link_url=all_url %}
+        {% trans "Special Issues" as title %}{% trans "ALL ISSUES →" as link_label %}
+        {% include 'includes/section_heading.html' with link_url=all_url dek='' %}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {% for issue in special_issues %}
                 {% if issue.is_published %}
@@ -333,8 +370,8 @@ zone) fill the row, centered as a group.
 <section class="bg-secondary border-y border-border">
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'training:course_list' as all_url %}
-        {% trans "TRAINING" as eyebrow %}{% trans "Learn with us" as title %}{% trans "ALL COURSES →" as link_label %}
-        {% include 'includes/section_heading.html' with link_url=all_url %}
+        {% trans "Learn with us" as title %}{% trans "ALL COURSES →" as link_label %}
+        {% include 'includes/section_heading.html' with link_url=all_url dek='' %}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {% for course in home_courses %}
                 {% include 'training/includes/course_card.html' %}
@@ -349,8 +386,7 @@ zone) fill the row, centered as a group.
     <div class="max-w-7xl mx-auto px-6 py-10">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
             <div class="lg:col-span-1">
-                <span class="section-label text-accent">{% trans "Editorial" %}</span>
-                <h3 class="font-display text-2xl font-bold mt-2 mb-4">{% trans "Board &amp; Policies" %}</h3>
+                <h2 class="font-display text-2xl md:text-3xl font-bold mb-4" style="letter-spacing: -0.02em;">{% trans "Board &amp; Policies" %}</h2>
                 <p class="text-sm text-muted-foreground leading-relaxed">
                     {% blocktrans with journal=JOURNAL_NAME %}{{ journal }} is governed by an independent editorial board. Peer review for original research is conducted externally via OJS.{% endblocktrans %}
                 </p>
@@ -363,14 +399,13 @@ zone) fill the row, centered as a group.
                 {% for member in board_preview %}
                     <a href="{% url 'editorial_board:public_list' %}?tab=board" class="group">
                         {% if member.photo %}
-                            <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="w-12 h-12 mb-3 object-cover">
+                            <img src="{{ member.photo.url }}" alt="" class="w-14 h-14 mb-3 object-cover grayscale group-hover:grayscale-0 transition">
                         {% else %}
-                            <div class="w-12 h-12 mb-3 bg-muted border border-border flex items-center justify-center"
-                                 style="background: linear-gradient(135deg, #d4d0cb 0%, #6b6860 100%);">
-                                <span class="font-display text-base font-bold text-white">{{ member.last_name_initial }}</span>
+                            <div class="w-14 h-14 mb-3 bg-foreground flex items-center justify-center" aria-hidden="true">
+                                <span class="font-display text-xl font-bold text-primary-foreground">{{ member.last_name_initial }}</span>
                             </div>
                         {% endif %}
-                        <p class="font-semibold text-sm group-hover:text-accent">{{ member.name }}</p>
+                        <p class="font-semibold text-sm group-hover:text-accent group-hover:underline underline-offset-2">{{ member.name }}</p>
                         <p class="text-xs text-accent font-mono-editorial">{{ member.role_title }}</p>
                         <p class="text-xs text-muted-foreground mt-0.5">{{ member.affiliation|default:"" }}</p>
                     </a>
@@ -380,5 +415,24 @@ zone) fill the row, centered as a group.
     </div>
 </section>
 {% endif %}
+
+{% comment %}
+The reader-contribution ask closes the page, after the reporting, the journal
+and the board have made the case for who's asking.
+{% endcomment %}
+<section class="border-t-2 border-foreground">
+    <div class="max-w-7xl mx-auto px-6 py-12 md:py-14 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+            <h2 class="font-display text-2xl md:text-4xl font-bold" style="letter-spacing: -0.02em; text-wrap: balance;">
+                {% trans "Pitch a health story to our editors." %}
+            </h2>
+            <p class="mt-2 text-sm md:text-base text-muted-foreground">{% trans "No account, no manuscript — just the idea." %}</p>
+        </div>
+        <a href="{% url 'pitches:pitch_create' %}"
+           class="self-start md:self-auto font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3.5 hover:bg-accent transition-colors whitespace-nowrap flex-shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground">
+            {% trans "PITCH A STORY →" %}
+        </a>
+    </div>
+</section>
 
 {% endblock %}

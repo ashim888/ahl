@@ -551,7 +551,7 @@ class PitchDiscoverabilityTests(TestCase):
     def test_nav_pitch_link_shown_to_anonymous_visitors(self):
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, reverse('pitches:pitch_create'))
-        self.assertContains(response, 'GOT A STORY')
+        self.assertContains(response, 'Pitch a health story to our editors.')
 
     def test_nav_pitch_link_shown_to_logged_in_users_too(self):
         author = make_verified_author()

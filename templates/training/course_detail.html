@@ -188,7 +188,7 @@
                     {% if course.instructor_photo %}
                         <img src="{{ course.instructor_photo.url }}" alt="{{ course.instructor }}" class="w-20 h-20 rounded-full object-cover shrink-0">
                     {% else %}
-                        <span class="w-20 h-20 rounded-full shrink-0 flex items-center justify-center font-display text-2xl font-bold text-white" style="background: linear-gradient(135deg, #1f2a44 0%, #b3452c 100%);">{{ course.instructor_initial }}</span>
+                        <span class="w-20 h-20 rounded-full shrink-0 flex items-center justify-center font-display text-2xl font-bold bg-foreground text-primary-foreground">{{ course.instructor_initial }}</span>
                     {% endif %}
                     <div class="min-w-0">
                         <p class="font-semibold text-lg">{{ course.instructor }}</p>

@@ -1,7 +1,8 @@
 {% if issue.cover_image %}
     <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
 {% else %}
-    <div class="w-full h-full relative overflow-hidden" style="background: linear-gradient(135deg, #1f2a44 0%, #3b3f58 45%, #b3452c 100%);">
-        <span aria-hidden="true" class="absolute -right-4 -top-8 font-display font-bold text-white/10 leading-none select-none" style="font-size: 9rem;">{{ issue.title|first|upper }}</span>
+    {# No cover uploaded: a press plate stamped with the issue's month. #}
+    <div class="w-full h-full relative">
+        {% if issue.publication_date %}{% include 'articles/includes/press_plate.html' with article=issue stamp=issue.publication_date|date:"F Y"|upper %}{% else %}{% include 'articles/includes/press_plate.html' with article=issue %}{% endif %}
     </div>
 {% endif %}

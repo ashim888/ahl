@@ -1,0 +1,14 @@
+{% load text_filters %}{% comment %}
+Cover for anything with no picture (stories, issues, courses): a printed
+plate instead of an empty box.
+A halftone screen, the headline's first letter set huge in the display serif
+and cropped by the frame, and a press-red rule with the masthead as a stamp.
+Three plates (paper / ink / outline on newsprint), picked from the article's
+id so neighbouring cards differ but a story always gets the same one.
+Fills its parent; scales with it (styles: .press-plate in static/src/input.css).
+  article  anything with .title and .pk (an Article, Issue or TrainingCourse)
+  stamp    optional text under the red rule; defaults to the masthead
+{% endcomment %}<div class="press-plate {% if article.pk|divisibleby:3 %}press-plate--ink{% elif article.pk|add:1|divisibleby:3 %}press-plate--outline{% endif %}" aria-hidden="true">
+    {% with initial=article.title|first|upper %}<span class="press-plate__initial" lang="{{ initial|content_lang }}">{{ initial }}</span>{% endwith %}
+    <span class="press-plate__stamp"><span class="press-plate__rule"></span>{% if stamp %}{{ stamp }}{% else %}{{ JOURNAL_NAME|upper }}{% endif %}</span>
+</div>
