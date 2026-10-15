@@ -3719,3 +3719,18 @@ msgstr "तपाईंले यो घण्टा धेरै पटक ड�
 msgid ""
 "Your account was not deleted: confirm with your password and tick the box."
 msgstr "खाता मेटाइएन: पासवर्डले पुष्टि गरी बाकसमा चिन्ह लगाउनुहोस्।"
+
+msgid "Peer-reviewed"
+msgstr "समकक्षी-समीक्षित"
+
+msgid "Single purchase"
+msgstr "एकल खरिद"
+
+msgid "SIGN UP FREE"
+msgstr "निःशुल्क पाउनुहोस्"
+
+msgid "Every abstract is free to read. Marked stories need a subscription or a single purchase."
+msgstr "हरेक सारांश निःशुल्क पढ्न सकिन्छ। चिन्ह लगाइएका लेखका लागि सदस्यता वा एकल खरिद चाहिन्छ।"
+
+msgid "Most-covered topics this month"
+msgstr "यस महिना सबैभन्दा बढी समेटिएका विषयहरू"

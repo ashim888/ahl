@@ -19,9 +19,7 @@ keyword_tags (the #topics line).
     <div class="flex flex-col flex-1 p-5">
         <div class="flex items-center gap-2 flex-wrap">
             <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
-            {% if article.access_type != 'open_access' %}
-                <span class="font-mono-editorial text-[0.65rem] tracking-wider uppercase border border-border px-1.5 py-0.5 text-muted-foreground">{% if article.access_type == 'pay_per_article' %}{% trans "Special" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>
-            {% endif %}
+            {% include 'articles/includes/story_flags.html' with article=article %}
         </div>
         <h3 class="font-display text-lg font-bold leading-snug mt-2 group-hover:text-accent transition-colors" style="letter-spacing: -0.01em;">
             <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0">{{ article.title }}</a>

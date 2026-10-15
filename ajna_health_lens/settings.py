@@ -162,6 +162,7 @@ MIDDLEWARE = [
     # by the set_language view (see urls.py) and activates it for the
     # request. Cookie/session-based, not URL-prefixed, since public and
     # /manage/ routes are interleaved in one urls.py per app.
+    'ajna_health_lens.middleware.ignore_browser_language',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -295,9 +296,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-# Nepali first: most stories are in Nepali. A browser that asks for English
-# still gets English (LocaleMiddleware reads Accept-Language before falling
-# back to this), and the language switcher's choice is remembered.
+# Nepali first: most stories are in Nepali. Every reader gets Nepali unless
+# they pick English with the language switcher (remembered by cookie); the
+# browser's Accept-Language is ignored (middleware.ignore_browser_language).
 LANGUAGE_CODE = 'ne'
 
 # Nav/UI-chrome translation only for now (see ROADMAP.md) — article content
@@ -669,7 +670,10 @@ JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Health Lens')
 # pages, receipts and legal text keep JOURNAL_NAME.
 JOURNAL_NAME_NE = os.environ.get('JOURNAL_NAME_NE', 'अज्ना हेल्थ लेन्स')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
-JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
+# '0000-0000' was the old .env.example placeholder: never show a made-up ISSN.
+JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '').strip()
+if JOURNAL_ISSN == '0000-0000':
+    JOURNAL_ISSN = ''
 JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing')
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.com')
 

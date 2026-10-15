@@ -274,16 +274,18 @@
     {% with path=request.path %}
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-foreground focus:text-primary-foreground focus:px-4 focus:py-2 font-mono-editorial text-xs tracking-widest">{% trans "SKIP TO CONTENT" %}</a>
     <div class="bg-foreground text-primary-foreground py-2 px-6" role="region" aria-label="{% trans 'Latest issue' %}">
-        <div class="max-w-7xl mx-auto flex items-center justify-between">
-            <span class="font-mono-editorial text-xs tracking-widest opacity-80">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <span class="font-mono-editorial text-xs tracking-widest opacity-80 min-w-0 truncate">
                 {% if latest_issue %}
-                    {% trans "LATEST ISSUE" %}: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}
+                    <a href="{% url 'issues:issue_detail' latest_issue.slug %}" class="hover:underline underline-offset-2">{% trans "LATEST ISSUE" %}: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}</a>
                 {% else %}
                     {% trans JOURNAL_TAGLINE as tagline %}{{ tagline|upper }}
                 {% endif %}
             </span>
-            <span class="font-mono-editorial text-xs tracking-widest opacity-60">
-                ISSN {{ JOURNAL_ISSN }}
+            {# Journal credentials: the ISSN once there is a real one, and the board that stands behind the journal. #}
+            <span class="hidden sm:flex shrink-0 items-center gap-4 font-mono-editorial text-xs tracking-widest">
+                {% if JOURNAL_ISSN %}<span class="opacity-60">ISSN {{ JOURNAL_ISSN }}</span>{% endif %}
+                {% trans "Editorial Board" as board_label %}<a href="{% url 'editorial_board:public_list' %}" class="opacity-80 hover:opacity-100 hover:underline underline-offset-2">{{ board_label|upper }} →</a>
             </span>
         </div>
     </div>
@@ -331,6 +333,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
                         </svg>
                     </a>
+                    {% if show_subscribe_bar %}
+                        <a href="{% url 'billing:plan_browse' %}" class="hidden md:inline font-mono-editorial text-xs tracking-widest bg-accent text-white px-3 py-1.5 hover:bg-[#a93226] transition-colors">{% trans "SUBSCRIBE" %}</a>
+                    {% endif %}
                     {% if user.is_authenticated %}
                         <div class="relative hidden md:block">
                             <button type="button" id="profile-menu-button" aria-label="{% trans 'Account menu' %}" class="flex items-center gap-2 text-foreground hover:text-accent">
@@ -465,7 +470,7 @@
         <div id="breaking-banner" data-breaking-id="{{ breaking_news.pk }}" class="bg-accent text-white" role="region" aria-label="{% trans 'Breaking news' %}">
             <div class="max-w-7xl mx-auto px-6 py-2.5 flex items-center gap-3">
                 <span class="shrink-0 inline-flex items-center gap-1.5 font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-white text-accent px-2 py-0.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" aria-hidden="true"></span>{% trans "BREAKING" %}
+                    <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse motion-reduce:animate-none" aria-hidden="true"></span>{% trans "BREAKING" %}
                 </span>
                 <a href="{{ breaking_news.url }}" class="flex-1 min-w-0 truncate text-sm font-semibold hover:underline underline-offset-2">{{ breaking_news.title }}</a>
                 <button type="button" id="breaking-dismiss" class="shrink-0 text-white/80 hover:text-white text-lg leading-none" aria-label="{% trans 'Dismiss' %}">&times;</button>
@@ -535,7 +540,7 @@
                            class="flex-1 md:w-64 px-3 py-2 text-sm bg-white/10 border border-white/20 text-primary-foreground placeholder-white/40 focus:outline-none focus:border-white/50">
                     <button type="submit"
                             class="font-mono-editorial text-xs tracking-widest bg-primary-foreground text-foreground px-4 py-2 hover:opacity-80 transition-opacity whitespace-nowrap">
-                        {% trans 'SUBSCRIBE' %}
+                        {% trans 'SIGN UP FREE' %}
                     </button>
                 </form>
                 {% include 'includes/privacy_notice.html' with kind='newsletter' class='mt-2 text-xs opacity-70 md:max-w-sm' %}
@@ -583,9 +588,7 @@
                     &copy; {% now "Y" %} {{ BUSINESS_LEGAL_NAME|default:JOURNAL_NAME_EN }}. {% trans "All rights reserved." %}
                     {% if BUSINESS_PAN %}· PAN {{ BUSINESS_PAN }}{% endif %}{% if BUSINESS_ADDRESS %} · {{ BUSINESS_ADDRESS }}{% endif %}
                 </p>
-                <p class="font-mono-editorial text-xs opacity-65">
-                    ISSN {{ JOURNAL_ISSN }}
-                </p>
+                {% if JOURNAL_ISSN %}<p class="font-mono-editorial text-xs opacity-65">ISSN {{ JOURNAL_ISSN }}</p>{% endif %}
             </div>
         </div>
     </footer>

@@ -47,7 +47,7 @@ from .forms import (
     PublishArticleForm, ScheduleArticleForm, edit_token_for,
 )
 from .models import (
-    HOME_SECTIONS_CACHE_KEY, Article, ArticleCorrection, ArticleNote, ArticleRevision, ArticleView, Author, Bookmark,
+    HOME_SECTIONS_CACHE_KEY, RESEARCH_TYPES, Article, ArticleCorrection, ArticleNote, ArticleRevision, ArticleView, Author, Bookmark,
     Keyword, KeywordEvent, KeywordFollow,
 )
 from .revisions import compare, record_revision, restore_revision
@@ -64,13 +64,6 @@ KEYWORD_FOLLOW_MIN_ARTICLES = 1
 from .seo import breadcrumb_list_structured_data, news_article_structured_data, person_structured_data
 from .similarity import similar_articles
 
-# Article types treated as "peer-reviewed research" for the homepage's
-# "From the Journal" section — everything except news/editorial/letters.
-RESEARCH_TYPES = [
-    Article.ArticleType.ORIGINAL_RESEARCH, Article.ArticleType.REVIEW_ARTICLE,
-    Article.ArticleType.CASE_REPORT, Article.ArticleType.METHODOLOGY_PAPER,
-    Article.ArticleType.SHORT_COMMUNICATION,
-]
 OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_EDITOR]
 
 # Article CRUD (manage/ views below) is an editorial capability — ARCHITECTURE.md
@@ -191,7 +184,7 @@ def related_articles_for(article, limit: int = RELATED_ARTICLES_LIMIT) -> list:
     return [related for related, _score in similar_articles(article, limit=limit)]
 
 
-def _trending_articles(limit=5):
+def _trending_articles(limit=5, exclude=()):
     """Published articles ranked by page views in the last 7 days (not an
     all-time count), so this reflects what's hot *now*, not what was hot
     once. Shared by HomeView's Trending section and ArticleDetailView's
@@ -201,6 +194,7 @@ def _trending_articles(limit=5):
     trending_cutoff = timezone.now() - datetime.timedelta(days=7)
     trending_counts = (
         ArticleView.objects.filter(viewed_at__gte=trending_cutoff, article__status=Article.Status.PUBLISHED)
+        .exclude(article__in=exclude)
         .values('article').annotate(view_count=Count('id')).order_by('-view_count')[:limit]
     )
     view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
@@ -283,6 +277,12 @@ class HomeView(TemplateView):
             published.filter(Q(article_type=Article.ArticleType.NEWS_COMMENTARY) | ~Q(homepage_section='')),
             self.LATEST_NEWS_COUNT,
         )
+        # The first story leads with a big 3:2 picture; at that size a press
+        # plate reads as a missing photo, so the newest story with a picture leads.
+        with_picture = next((a for a in latest_news if a.card_image_url), None)
+        if with_picture:
+            latest_news.remove(with_picture)
+            latest_news.insert(0, with_picture)
 
         # 4. Fill the rest of each spot with the newest of its kind.
         opinion_pieces += take(published.filter(homepage_section='', article_type__in=OPINION_TYPES),
@@ -318,13 +318,18 @@ class HomeView(TemplateView):
         sections['board_preview'] = list(EditorialBoardMember.objects.filter(is_active=True)[:6])
 
         # Trending — the one section that's purely algorithm-driven, not
-        # editor-curated (no HomepageSection value for it) and not subject
-        # to the used_pks dedup above; it's fine for a trending piece to
-        # also appear in a curated section.
-        sections['trending_articles'] = _trending_articles(limit=5)
+        # editor-curated (no HomepageSection value for it). It sits between
+        # the hero and Latest News, so it skips what those two already show;
+        # further down (opinion, research…) a repeat is fine.
+        sections['trending_articles'] = _trending_articles(
+            limit=5, exclude=[a.pk for a in hero_slides + latest_news],
+        )
         from .topics import trending_topics
 
-        sections['trending_topics'] = trending_topics(10)
+        # A topic on a single story isn't a trend: keep the ones covered more
+        # than once, at most five, and drop the band rather than show one or two.
+        covered = [topic for topic in trending_topics(10) if topic.story_count > 1][:5]
+        sections['trending_topics'] = covered if len(covered) >= 3 else []
         return sections
 
     def get_context_data(self, **kwargs):

@@ -52,7 +52,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
 
             <div class="max-w-7xl mx-auto px-6 lg:min-h-[560px] flex items-center pb-28 lg:py-16 lg:pb-28 {% if not story.card_image_url %}pt-14{% endif %}">
                 <div class="w-full max-w-2xl lg:max-w-[44%] flex flex-col gap-5">
-                    <h2 class="font-display font-bold leading-[1.08] text-white" style="letter-spacing: -0.02em; text-wrap: balance;">
+                    <h2 lang="{{ story.title|content_lang }}" class="font-display font-bold leading-[1.08] text-white" style="letter-spacing: -0.02em; text-wrap: balance;">
                         <a href="{% url 'articles:article_detail' story.slug %}" class="hover:underline decoration-2 underline-offset-[6px]">
                             <span class="text-4xl sm:text-5xl lg:text-6xl">{{ parts.main }}</span>{% if parts.accent %}
                             <span class="ms-[0.25em] text-4xl sm:text-5xl lg:text-6xl text-[#f4a08f]">{{ parts.accent }}</span>{% endif %}{% if parts.subtitle %}
@@ -60,6 +60,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                         </a>
                     </h2>
                     {% with summary=story.summary %}{% if summary %}<p class="text-base sm:text-lg leading-relaxed text-white/75 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% include 'articles/includes/story_flags.html' with article=story on_ink=True extra='self-start' %}
                     {% if topics %}
                         <ul class="flex flex-wrap items-center gap-y-2 text-sm text-white/85" aria-label="{% trans 'Topics' %}">
                             {% for topic in topics %}
@@ -101,7 +102,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                 </button>
                 <div class="flex items-center gap-2" role="group" aria-label="{% trans 'Choose a story' %}">
                     {% for story in hero_slides %}
-                        <button type="button" data-hero-dot="{{ forloop.counter0 }}" class="hero-dot h-2.5 rounded-full bg-border transition-all hover:bg-white"
+                        <button type="button" data-hero-dot="{{ forloop.counter0 }}" class="hero-dot relative h-2.5 rounded-full bg-border transition-all hover:bg-white after:absolute after:-inset-3 after:content-['']"
                                 aria-label="{% blocktrans with n=forloop.counter title=story.title %}Story {{ n }}: {{ title }}{% endblocktrans %}"></button>
                     {% endfor %}
                 </div>
@@ -139,7 +140,7 @@ section heading uses.
             <li class="border-b border-border lg:border-b-0 {% if not forloop.first %}lg:border-l{% endif %} {% if forloop.counter|divisibleby:2 %}sm:border-l lg:border-l{% endif %}">
                 <a href="{% url 'articles:article_detail' article.slug %}" class="group flex items-start gap-4 h-full py-4 sm:pr-4 {% if forloop.counter|divisibleby:2 %}sm:pl-4{% endif %} {% if not forloop.first %}lg:pl-4{% endif %}">
                     <span class="font-display text-3xl font-bold leading-none text-accent tabular-nums" aria-hidden="true">{{ forloop.counter }}</span>
-                    <span class="font-display text-lg font-semibold leading-snug line-clamp-3 group-hover:underline decoration-1 underline-offset-[3px]" style="text-wrap: pretty;">{{ article.title }}</span>
+                    <span class="font-display text-lg font-semibold leading-snug line-clamp-3 group-hover:underline decoration-1 underline-offset-[3px]" style="text-wrap: pretty;" lang="{{ article.title|content_lang }}">{{ article.title }}</span>
                 </a>
             </li>
         {% endfor %}
@@ -151,7 +152,7 @@ section heading uses.
     <div class="flex items-baseline justify-between gap-4 mb-4">
         <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 id="trending-topics-heading" class="section-label text-foreground">{% trans "TRENDING TOPICS" %}</h2>
-            <p class="text-xs text-muted-foreground">{% trans "What readers are following this month" %}</p>
+            <p class="text-xs text-muted-foreground">{% trans "Most-covered topics this month" %}</p>
         </div>
         <a href="{% url 'articles:topic_list' %}" class="hidden sm:inline-block shrink-0 font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL TOPICS →" %}</a>
     </div>
@@ -188,8 +189,8 @@ beside it with small thumbnails. Stacks on phones.
 {% endcomment %}
 <section class="max-w-7xl mx-auto px-6 py-12">
     {% url 'articles:article_list' as all_url %}
-    {% trans "Latest News" as title %}{% trans "ALL NEWS →" as link_label %}
-    {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=news_commentary" dek='' %}
+    {% trans "Latest News" as title %}{% trans "ALL NEWS →" as link_label %}{% trans "Every abstract is free to read. Marked stories need a subscription or a single purchase." as news_dek %}
+    {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=news_commentary" dek=news_dek %}
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-x-10 gap-y-8">
         {% with lead=latest_news.0 %}
         <article class="group relative lg:col-span-7">
@@ -204,11 +205,9 @@ beside it with small thumbnails. Stacks on phones.
             </div>
             <div class="mt-5 flex items-center gap-2 flex-wrap">
                 <span class="section-label text-accent">{{ lead.get_article_type_display }}</span>
-                {% if lead.access_type != 'open_access' %}
-                    <span class="font-mono-editorial text-[0.65rem] tracking-wider uppercase border border-border px-1.5 py-0.5 text-muted-foreground">{% if lead.access_type == 'pay_per_article' %}{% trans "Special" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>
-                {% endif %}
+                {% include 'articles/includes/story_flags.html' with article=lead %}
             </div>
-            <h3 class="mt-2 font-display text-2xl sm:text-3xl font-bold leading-[1.15]" style="letter-spacing: -0.015em; text-wrap: balance;">
+            <h3 lang="{{ lead.title|content_lang }}" class="mt-2 font-display text-2xl sm:text-3xl font-bold leading-[1.15]" style="letter-spacing: -0.015em; text-wrap: balance;">
                 <a href="{% url 'articles:article_detail' lead.slug %}" class="after:absolute after:inset-0 group-hover:underline decoration-2 underline-offset-[5px]">{{ lead.title }}</a>
             </h3>
             {% with summary=lead.summary %}{% if summary %}<p class="mt-3 max-w-[62ch] text-base leading-relaxed text-muted-foreground line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
@@ -225,14 +224,16 @@ beside it with small thumbnails. Stacks on phones.
             {% for article in latest_news|slice:"1:" %}
                 <li class="group relative flex gap-4 py-4 {% if forloop.first %}lg:pt-0{% endif %}">
                     <div class="min-w-0 flex-1">
-                        <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
-                        <h3 class="mt-1 font-display text-lg font-bold leading-snug line-clamp-3" style="letter-spacing: -0.005em; text-wrap: pretty;">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
+                            {% include 'articles/includes/story_flags.html' with article=article %}
+                        </div>
+                        <h3 lang="{{ article.title|content_lang }}" class="mt-1 font-display text-lg font-bold leading-snug line-clamp-3" style="letter-spacing: -0.005em; text-wrap: pretty;">
                             <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</a>
                         </h3>
                         <p class="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                             {% with a=article.articleauthor_set.all|first %}<span class="font-medium text-foreground truncate max-w-[14rem]">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>{% endwith %}
                             {% if article.published_at %}<span aria-hidden="true">·</span><span>{{ article.published_at|news_time }}</span>{% endif %}
-                            {% if article.access_type != 'open_access' %}<span aria-hidden="true">·</span><span>{% if article.access_type == 'pay_per_article' %}{% trans "Special" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>{% endif %}
                         </p>
                     </div>
                     <div class="relative shrink-0 w-24 sm:w-32 aspect-[4/3] bg-secondary overflow-hidden">
@@ -252,18 +253,95 @@ beside it with small thumbnails. Stacks on phones.
 
 {% ad_slot 'homepage_mid_banner' wrapper_class='max-w-7xl mx-auto px-6 py-6 flex justify-center' %}
 
+{% comment %}
+The journal and the board behind it sit straight after the news: journal-backed
+rigor is what sets this site apart, so it comes before opinion and video.
+{% endcomment %}
+{% if research_highlights %}
+<section class="bg-secondary border-t border-border">
+    <div class="max-w-7xl mx-auto px-6 py-10">
+        {% url 'issues:issue_list' as all_url %}
+        {% trans "From the Journal" as title %}{% trans "BROWSE ARCHIVE →" as link_label %}{% trans "PEER-REVIEWED RESEARCH" as journal_dek %}
+        {% include 'includes/section_heading.html' with link_url=all_url dek=journal_dek|lower|capfirst %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {% for article in research_highlights %}
+                <div class="article-link block bg-card border border-border p-6 hover:border-foreground hover:shadow-lg transition-all">
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="block">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono-editorial text-xs text-accent">
+                                {% if article.issue %}{{ article.issue.title }}{% else %}{% trans "Online first" %}{% endif %}
+                            </span>
+                            <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.get_article_type_display }}</span>
+                        </div>
+                        <h3 lang="{{ article.title|content_lang }}" class="font-display text-lg font-bold leading-snug mb-3 article-title" style="letter-spacing: -0.01em;">
+                            {{ article.title }}
+                        </h3>
+                    </a>
+                    {% include 'articles/includes/story_flags.html' with article=article extra='mb-3' %}
+                    <p class="text-sm text-muted-foreground italic mb-3">
+                        {% for aa in article.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}<span>{{ aa.display_name }}</span>{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
+                    </p>
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="block">
+                        {% with summary=article.summary %}{% if summary %}<p class="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+                        <div class="rule-thin mb-3"></div>
+                        <span class="font-mono-editorial text-xs text-foreground">
+                            {% if article.doi %}{% trans "DOI" %}: {{ article.doi }} →{% else %}{% trans "Read more →" %}{% endif %}
+                        </span>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+{% if board_preview %}
+<section class="border-t border-border bg-secondary">
+    <div class="max-w-7xl mx-auto px-6 py-10">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
+            <div class="lg:col-span-1">
+                <h2 class="font-display text-2xl md:text-3xl font-bold mb-4" style="letter-spacing: -0.02em;">{% trans "Board &amp; Policies" %}</h2>
+                <p class="text-sm text-muted-foreground leading-relaxed">
+                    {% blocktrans with journal=JOURNAL_NAME %}{{ journal }} is governed by an independent editorial board. Peer review for original research is conducted externally via OJS.{% endblocktrans %}
+                </p>
+                <a href="{% url 'editorial_board:public_list' %}?tab=policies"
+                   class="inline-block mt-5 font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">
+                    {% trans "EDITORIAL POLICY →" %}
+                </a>
+            </div>
+            <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-6">
+                {% for member in board_preview %}
+                    <a href="{% url 'editorial_board:public_list' %}?tab=board" class="group">
+                        {% if member.photo %}
+                            <img src="{{ member.photo.url }}" alt="" class="w-14 h-14 mb-3 object-cover grayscale group-hover:grayscale-0 transition">
+                        {% else %}
+                            <div class="w-14 h-14 mb-3 bg-foreground flex items-center justify-center" aria-hidden="true">
+                                <span class="font-display text-xl font-bold text-primary-foreground">{{ member.last_name_initial }}</span>
+                            </div>
+                        {% endif %}
+                        <p class="font-semibold text-sm group-hover:text-accent group-hover:underline underline-offset-2">{{ member.name }}</p>
+                        <p class="text-xs text-accent font-mono-editorial">{{ member.role_title }}</p>
+                        <p class="text-xs text-muted-foreground mt-0.5">{{ member.affiliation|default:"" }}</p>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
 {% if opinion_pieces %}
 <section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'articles:article_list' as all_url %}
         {% trans "Opinion &amp; Commentary" as title %}{% trans "ALL OPINION →" as link_label %}
-        {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=editorial" dek='' %}
+        {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=editorial" %}
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-border">
             {% for article in opinion_pieces %}
                 <article class="article-link px-0 md:px-8 first:pl-0 last:pr-0 pb-8 md:pb-0">
-                    <div class="font-mono-editorial text-xs text-muted-foreground mb-3 pt-6 md:pt-0">{{ article.published_at|news_time }}</div>
-                    <h3 class="font-display text-xl font-bold leading-snug article-title mb-3" style="letter-spacing: -0.01em;">
+                    <div class="flex flex-wrap items-center gap-2 mb-3 pt-6 md:pt-0"><span class="font-mono-editorial text-xs text-muted-foreground">{{ article.published_at|news_time }}</span>{% include 'articles/includes/story_flags.html' with article=article %}</div>
+                    <h3 lang="{{ article.title|content_lang }}" class="font-display text-xl font-bold leading-snug article-title mb-3" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h3>
                     {% with summary=article.summary %}{% if summary %}<p class="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
@@ -290,51 +368,13 @@ beside it with small thumbnails. Stacks on phones.
 {% ad_slot 'homepage_leaderboard' wrapper_class='hidden lg:flex lg:justify-center max-w-7xl mx-auto px-6 py-10' %}
 {% ad_slot 'mobile_lower_banner' wrapper_class='md:hidden max-w-7xl mx-auto px-6 py-6 flex justify-center' %}
 
-{% if research_highlights %}
-<section class="bg-secondary border-t border-border">
-    <div class="max-w-7xl mx-auto px-6 py-10">
-        {% url 'issues:issue_list' as all_url %}
-        {% trans "From the Journal" as title %}{% trans "BROWSE ARCHIVE →" as link_label %}{% trans "PEER-REVIEWED RESEARCH" as journal_dek %}
-        {% include 'includes/section_heading.html' with link_url=all_url dek=journal_dek|lower|capfirst %}
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {% for article in research_highlights %}
-                <div class="article-link block bg-card border border-border p-6 hover:border-foreground hover:shadow-lg transition-all">
-                    <a href="{% url 'articles:article_detail' article.slug %}" class="block">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="font-mono-editorial text-xs text-accent">
-                                {% if article.issue %}{{ article.issue.title }}{% else %}{% trans "Online first" %}{% endif %}
-                            </span>
-                            <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.get_article_type_display }}</span>
-                        </div>
-                        <h3 class="font-display text-lg font-bold leading-snug mb-3 article-title" style="letter-spacing: -0.01em;">
-                            {{ article.title }}
-                        </h3>
-                    </a>
-                    <p class="text-sm text-muted-foreground italic mb-3">
-                        {% for aa in article.articleauthor_set.all %}{% if aa.author.is_active %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}<span>{{ aa.display_name }}</span>{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
-                    </p>
-                    <a href="{% url 'articles:article_detail' article.slug %}" class="block">
-                        {% with summary=article.summary %}{% if summary %}<p class="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
-                        <div class="rule-thin mb-3"></div>
-                        <span class="font-mono-editorial text-xs text-foreground">
-                            {% if article.doi %}{% trans "DOI" %}: {{ article.doi }} →{% else %}{% trans "Read more →" %}{% endif %}
-                        </span>
-                    </a>
-                </div>
-            {% endfor %}
-        </div>
-    </div>
-</section>
-{% endif %}
-
 
 {% if special_issues %}
 <section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'issues:issue_list' as all_url %}
         {% trans "Special Issues" as title %}{% trans "ALL ISSUES →" as link_label %}
-        {% include 'includes/section_heading.html' with link_url=all_url dek='' %}
+        {% include 'includes/section_heading.html' with link_url=all_url %}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {% for issue in special_issues %}
                 {% if issue.is_published %}
@@ -371,46 +411,11 @@ beside it with small thumbnails. Stacks on phones.
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'training:course_list' as all_url %}
         {% trans "Learn with us" as title %}{% trans "ALL COURSES →" as link_label %}
-        {% include 'includes/section_heading.html' with link_url=all_url dek='' %}
+        {% include 'includes/section_heading.html' with link_url=all_url %}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {% for course in home_courses %}
                 {% include 'training/includes/course_card.html' %}
             {% endfor %}
-        </div>
-    </div>
-</section>
-{% endif %}
-
-{% if board_preview %}
-<section class="border-t border-border bg-secondary">
-    <div class="max-w-7xl mx-auto px-6 py-10">
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
-            <div class="lg:col-span-1">
-                <h2 class="font-display text-2xl md:text-3xl font-bold mb-4" style="letter-spacing: -0.02em;">{% trans "Board &amp; Policies" %}</h2>
-                <p class="text-sm text-muted-foreground leading-relaxed">
-                    {% blocktrans with journal=JOURNAL_NAME %}{{ journal }} is governed by an independent editorial board. Peer review for original research is conducted externally via OJS.{% endblocktrans %}
-                </p>
-                <a href="{% url 'editorial_board:public_list' %}?tab=policies"
-                   class="inline-block mt-5 font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">
-                    {% trans "EDITORIAL POLICY →" %}
-                </a>
-            </div>
-            <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-6">
-                {% for member in board_preview %}
-                    <a href="{% url 'editorial_board:public_list' %}?tab=board" class="group">
-                        {% if member.photo %}
-                            <img src="{{ member.photo.url }}" alt="" class="w-14 h-14 mb-3 object-cover grayscale group-hover:grayscale-0 transition">
-                        {% else %}
-                            <div class="w-14 h-14 mb-3 bg-foreground flex items-center justify-center" aria-hidden="true">
-                                <span class="font-display text-xl font-bold text-primary-foreground">{{ member.last_name_initial }}</span>
-                            </div>
-                        {% endif %}
-                        <p class="font-semibold text-sm group-hover:text-accent group-hover:underline underline-offset-2">{{ member.name }}</p>
-                        <p class="text-xs text-accent font-mono-editorial">{{ member.role_title }}</p>
-                        <p class="text-xs text-muted-foreground mt-0.5">{{ member.affiliation|default:"" }}</p>
-                    </a>
-                {% endfor %}
-            </div>
         </div>
     </div>
 </section>

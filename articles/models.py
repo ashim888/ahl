@@ -517,6 +517,13 @@ class Article(models.Model):
         return self.title
 
     @property
+    def is_research(self) -> bool:
+        """The journal's own peer-reviewed work (reviewed on OJS) — not news,
+        opinion, letters or video. Drives the homepage "From the Journal"
+        section and the "Peer-reviewed" marker on cards."""
+        return self.article_type in RESEARCH_TYPES
+
+    @property
     def is_breaking(self) -> bool:
         return bool(
             self.status == self.Status.PUBLISHED and self.breaking_until and self.breaking_until > timezone.now()
@@ -647,6 +654,13 @@ class Author(models.Model):
             return cls.objects.create(
                 user=user, name=user.get_full_name() or user.email, email=user.email,
             )
+
+
+# The journal's peer-reviewed research — everything except news, editorials, letters and video.
+RESEARCH_TYPES = (
+    Article.ArticleType.ORIGINAL_RESEARCH, Article.ArticleType.REVIEW_ARTICLE, Article.ArticleType.CASE_REPORT,
+    Article.ArticleType.METHODOLOGY_PAPER, Article.ArticleType.SHORT_COMMUNICATION,
+)
 
 
 class ArticleAuthor(models.Model):

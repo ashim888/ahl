@@ -1,5 +1,5 @@
-"""Nepali is the default language; a browser asking for English gets
-English; the reader's choice (language switcher cookie) always wins; the
+"""Nepali is the default language, even for a browser asking for English
+(most phones in Nepal do); the reader's choice (language switcher cookie) always wins; the
 site name is Nepali on Nepali pages and English on English ones (the
 copyright line always uses the registered English name).
 
@@ -24,11 +24,16 @@ class DefaultLanguageTests(TestCase):
         self.assertContains(response, 'अज्ना हेल्थ लेन्स')
         self.assertContains(response, 'सदस्यता लिनुहोस्')
 
-    def test_browser_asking_for_english_gets_english(self):
+    def test_browser_asking_for_english_still_gets_nepali(self):
         response = self.client.get(reverse('articles:home'), HTTP_ACCEPT_LANGUAGE='en-US,en;q=0.9')
+        self.assertContains(response, '<html lang="ne">')
+        self.assertContains(response, 'अज्ना हेल्थ लेन्स')
+
+    def test_switcher_choice_of_english_is_kept(self):
+        self.client.post(reverse('set_language'), {'language': 'en', 'next': '/'})
+        response = self.client.get(reverse('articles:home'))
         self.assertContains(response, '<html lang="en">')
         self.assertContains(response, 'AJNA HEALTH LENS')
-        self.assertNotContains(response, 'अज्ना हेल्थ लेन्स')
 
     def test_switcher_choice_beats_the_browser(self):
         self.client.post(reverse('set_language'), {'language': 'ne', 'next': '/'})

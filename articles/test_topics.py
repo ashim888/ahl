@@ -82,11 +82,19 @@ class TopicPageTests(TestCase):
         self.assertContains(listing, 'topic-pill__name">Monsoon<')
 
     def test_homepage_trending_topics(self):
+        # Three topics on two or more stories each make a trend.
+        make_article('Monsoon floods', ['Monsoon', 'Cholera'])
+        make_article('Cholera in Terai', ['Cholera'])
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, 'TRENDING TOPICS')
         self.assertContains(response, 'topic-pill--hot')  # the top three
         self.assertContains(response, 'topic-pill__rank">01<')
         self.assertContains(response, reverse('articles:topic_detail', args=['dengue']))
+
+    def test_homepage_hides_sparse_trending_topics(self):
+        # Only Dengue is on more than one story: not enough for a band.
+        response = self.client.get(reverse('articles:home'))
+        self.assertNotContains(response, 'TRENDING TOPICS')
 
     def test_trending_prefers_recent_and_related_counts(self):
         make_article('Old cholera story', ['Cholera'], days_ago=200)

@@ -976,6 +976,20 @@ class KeywordEventTrackingTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
 
+class LatestNewsLeadTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_newest_story_with_a_picture_leads(self):
+        pictured = make_article('pictured-news', Article.ArticleType.NEWS_COMMENTARY)
+        Article.objects.filter(pk=pictured.pk).update(video_url='https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        make_article('newer-news-without-picture', Article.ArticleType.NEWS_COMMENTARY)
+        make_article('newest-news-without-picture', Article.ArticleType.NEWS_COMMENTARY)
+        latest = self.client.get(reverse('articles:home')).context['latest_news']
+        self.assertEqual(latest[0].slug, 'pictured-news')
+
+
 class TrendingSectionTests(TestCase):
     def setUp(self):
         from django.core.cache import cache
@@ -984,8 +998,10 @@ class TrendingSectionTests(TestCase):
     def test_articles_ranked_by_recent_view_count(self):
         from articles.models import ArticleView
 
-        popular = make_article('popular-article', Article.ArticleType.NEWS_COMMENTARY)
-        unpopular = make_article('unpopular-article', Article.ArticleType.NEWS_COMMENTARY)
+        # Not news (that's Latest News) and older than the hero, so neither is already on the page.
+        popular = make_article('popular-article', Article.ArticleType.REVIEW_ARTICLE)
+        unpopular = make_article('unpopular-article', Article.ArticleType.CASE_REPORT)
+        make_article('newest-hero-article', Article.ArticleType.EDITORIAL)
         for i in range(5):
             ArticleView.objects.create(article=popular, session_key=f's{i}')
         ArticleView.objects.create(article=unpopular, session_key='s0')
@@ -1007,6 +1023,16 @@ class TrendingSectionTests(TestCase):
         )
         response = self.client.get(reverse('articles:home'))
         self.assertNotIn(article, response.context['trending_articles'])
+
+    def test_stories_already_in_hero_or_latest_news_are_skipped(self):
+        from articles.models import ArticleView
+
+        news = make_article('trending-news-article', Article.ArticleType.NEWS_COMMENTARY)
+        ArticleView.objects.create(article=news, session_key='s0')
+        response = self.client.get(reverse('articles:home'))
+        shown = response.context['hero_slides'] + response.context['latest_news']
+        self.assertIn(news, shown)
+        self.assertNotIn(news, response.context['trending_articles'])
 
     def test_unpublished_articles_never_trend(self):
         from articles.models import ArticleView
