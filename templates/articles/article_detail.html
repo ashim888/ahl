@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load money_tags %}
 {% load topic_tags %}
-{% load i18n %}
+{% load i18n news_time %}
 {% load text_filters ads_tags comments comments_xtd %}
 
 {% block title %}{{ article.meta_title }} — {{ JOURNAL_NAME }}{% endblock %}
@@ -202,7 +202,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             </a>
                         {% endwith %}
                     {% endif %}
-                    <p class="font-mono-editorial text-xs text-muted-foreground mt-0.5">{{ article.estimated_read_minutes }} {% trans "min read" %}</p>
+                    <p class="font-mono-editorial text-xs text-muted-foreground mt-0.5">{{ article.estimated_read_minutes|local_digits }} {% trans "min read" %}</p>
                 </div>
             </div>
 

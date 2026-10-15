@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* A long URL or compound word in a headline or summary breaks inside itself
+   instead of widening the page on phones. */
+@layer base {
+  h1, h2, h3, h4, p, li, dd { overflow-wrap: break-word; }
+}
+
 /* Accessibility: red text inside dark sections (page heroes, the video
    showcase, footer) uses the lighter red so it meets WCAG AA contrast. */
 @layer utilities {
@@ -94,6 +100,9 @@
      and the letter sits higher in its line box than a Latin capital. */
   .press-plate__initial:lang(ne) { right: 6cqw; bottom: -0.12em; font-size: min(128cqh, 78cqw); letter-spacing: normal; }
   .group:hover .press-plate__initial { transform: translate(-2.5cqw, -3cqh); }
+  /* Quiet: the plate supports a headline instead of leading the band. */
+  .press-plate--quiet .press-plate__initial { font-size: min(70cqh, 38cqw); }
+  .press-plate--quiet .press-plate__initial:lang(ne) { font-size: min(88cqh, 42cqw); }
   .press-plate__stamp {
     position: absolute; left: 7cqw; top: 9cqh; display: flex; flex-direction: column; gap: 0.5rem;
     font-family: theme('fontFamily.mono-editorial'); font-size: 0.6rem; letter-spacing: 0.2em;
@@ -114,15 +123,56 @@
   @media (prefers-reduced-motion: reduce) { .press-plate__initial { transition: none; } .group:hover .press-plate__initial { transform: none; } }
 }
 
-/* Homepage top-story slider (static/js/hero_slider.js): a short fade as a
-   slide comes in — none for readers who prefer reduced motion. */
+/* Homepage top-story slider (static/js/hero_slider.js). When the story
+   changes (never on first load) the band fades in and the headline is
+   inked left to right, like a roller passing over the plate. Reduced
+   motion keeps only the fade. While autoplay runs, the current cover line's rule fills
+   over the interval, so the reader can see that and when it will move on. */
 @layer components {
-  @keyframes hero-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .hero-slide--in { animation: hero-fade-in 0.45s ease-out; }
-  @media (prefers-reduced-motion: reduce) { .hero-slide--in { animation: none; } }
-  .hero-dot { width: 0.625rem; }
+  @keyframes hero-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  /* The negative insets keep descenders and the hover underline uncut. */
+  @keyframes hero-ink-roll { from { clip-path: inset(-20% 100% -30% -5%); } to { clip-path: inset(-20% -5% -30% -5%); } }
+  .hero-slide--in { animation: hero-fade-in 0.3s ease-out; }
+  .hero-slide--in h2 { animation: hero-ink-roll 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+  @media (prefers-reduced-motion: reduce) { .hero-slide--in h2 { animation: none; } }
+  /* Cover lines: the slide control, set like the "also inside" lines on a
+     magazine cover. Phones scroll them sideways; wide screens give each an
+     equal column. The current line is white with a press-red rule. */
+  .hero-lines { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .hero-lines::-webkit-scrollbar { display: none; }
+  @media (min-width: 640px) { .hero-line { flex-basis: 42%; } }
+  @media (min-width: 1024px) {
+    .hero-lines { display: grid; grid-template-columns: repeat(var(--hero-lines), minmax(0, 1fr)); overflow: visible; }
+  }
+  .hero-line {
+    flex: 0 0 72%; scroll-snap-align: start; display: flex; flex-direction: column; gap: 0.5rem;
+    min-height: 2.75rem; text-align: start; color: rgb(250 250 248 / 0.6); transition: color 0.2s ease-out;
+  }
+  .hero-line:hover, .hero-line[aria-current="true"] { color: theme('colors.primary-foreground'); }
+  /* Phones: the current story is the one on screen, so the rail starts at the next. */
+  @media (max-width: 639px) { .hero-line[aria-current="true"] { display: none; } }
+  .hero-line:focus-visible { outline: 2px solid theme('colors.primary-foreground'); outline-offset: 4px; }
+  .hero-line__bar { position: relative; display: block; height: 2px; overflow: hidden; background: rgb(250 250 248 / 0.2); }
+  .hero-line__bar::before {
+    content: ''; position: absolute; inset: 0; transform: scaleX(0); transform-origin: left;
+    background: theme('colors.accent'); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  :dir(rtl) .hero-line__bar::before { transform-origin: right; }
+  .hero-line[aria-current="true"] .hero-line__bar::before { transform: scaleX(1); }
+  @keyframes hero-line-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .hero-line.hero-line--run .hero-line__bar::before { animation: hero-line-fill var(--hero-interval, 7s) linear forwards; }
+  .hero-line__num { font-family: theme('fontFamily.mono-editorial'); font-size: 0.7rem; letter-spacing: 0.15em; }
+  .hero-line__num:lang(ne) { letter-spacing: normal; font-size: 0.8rem; }
+  .hero-line__title {
+    font-family: theme('fontFamily.display'); font-size: 0.95rem; font-weight: 600; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    text-decoration-thickness: 1px; text-underline-offset: 3px;
+  }
+  .hero-line:hover .hero-line__title { text-decoration-line: underline; }
+  .hero-line__title:lang(ne) { line-height: 1.45; }
+  @media (prefers-reduced-motion: reduce) { .hero-line, .hero-line__bar::before { transition: none; } }
   /* `hidden` must win over the slide's own display:grid / the controls' flex. */
-  .hero-slide[hidden], [data-hero-controls][hidden] { display: none !important; }
+  .hero-slide[hidden], [data-hero-controls][hidden], [data-hero-pause][hidden] { display: none !important; }
   /* A whole (uncropped) picture fades out at its edges into the blurred copy
      of itself behind it, instead of sitting on it like a pasted-on card. */
   .hero-feather {

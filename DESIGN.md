@@ -147,7 +147,7 @@ The **editorial workspace** (`/manage/`, `templates/admin_dashboard/`) is a seco
 
 **Key Characteristics:**
 - Ink, paper and one red, with almost no other hues on the public site.
-- Square corners. The only round shapes are topic pills, byline avatars and carousel dots.
+- Square corners. The only round shapes are topic pills and byline avatars.
 - Horizontal rules as structure: a 2px ink rule under every section heading, 1px stone hairlines inside.
 - Three voices: a serif for headlines, a typewriter face for labels, a sans for reading.
 - Devanagari is a first-class script, not a fallback.
@@ -157,7 +157,7 @@ The **editorial workspace** (`/manage/`, `templates/admin_dashboard/`) is a seco
 The public palette is a newspaper's: warm off-white paper, near-black ink, stone greys for structure, and a single press red.
 
 ### Primary
-- **Press Red** (`press-red`): the only accent. Section and article-type labels, the active nav item, trending rank numbers, link hover, error messages, the cover-story button. Its darker hover state is **Deep Press Red** (`press-red-deep`).
+- **Press Red** (`press-red`): the only accent. Section labels, article-type labels when a story isn't plain news (plain news carries no type label), the active nav item, trending rank numbers, link hover, error messages, the cover-story button. Its darker hover state is **Deep Press Red** (`press-red-deep`).
 - **Press Red on Ink** (`press-red-on-ink`): the same red, lightened for text on ink sections (standard red is only 3.5:1 there; this is about 6:1). `input.css` applies it automatically to `.text-accent` inside `.bg-foreground`.
 - **Coral on Ink** (`coral-on-ink`): the second part of the cover headline's two-tone split. Use it only on ink, as solid colour.
 
@@ -225,12 +225,12 @@ The public site is flat. Depth comes from tonal bands (paper, newsprint, ink), b
 
 ## Shapes
 
-Square corners are the public site's signature: cards, buttons, inputs, images, ad slots, banners and dialogs all have 0px corners. Three shapes are round on purpose: topic pills (fully rounded chips with a red "#" disc), byline avatars, and carousel dots and controls. Rules do the structural work: 2px ink under headings and on top of ranked lists, 1px rule grey for card borders, dividers and hairlines inside lists.
+Square corners are the public site's signature: cards, buttons, inputs, images, ad slots, banners and dialogs all have 0px corners. Two shapes are round on purpose: topic pills (fully rounded chips with a red "#" disc) and byline avatars. Rules do the structural work: 2px ink under headings and on top of ranked lists, 1px rule grey for card borders, dividers and hairlines inside lists.
 
 The workspace is the opposite: gently rounded everywhere. Controls are 8px (`rounded-lg`), inputs 14px, cards 16px (`rounded-2xl`), and status badges fully rounded.
 
 ### Named Rules
-**The Square Press Rule.** If a reader-facing element has a rounded corner and it isn't a topic pill, avatar or carousel control, it's a bug.
+**The Square Press Rule.** If a reader-facing element has a rounded corner and it isn't a topic pill or avatar, it's a bug.
 
 ## Components
 
@@ -263,7 +263,7 @@ The one soft object in a square world (`.topic-pill`, `articles/includes/topic_p
 ### Navigation
 - **Masthead:** the centred serif wordmark "AJNA HEALTH LENS" with the tagline in spaced mono capitals underneath. Search on the left, language switch and account on the right. Above it, an ink strip shows the latest issue and the ISSN.
 - **Section nav:** centred row of mono labels (0.65rem, wide tracking) with 2px bottom borders. The active item gets a press red border and text; hover is red text.
-- **Mobile:** hamburger, centred wordmark and search icon; the menu drops down as a full-width paper panel of mono labels.
+- **Below 1024px (phones and tablets):** hamburger, wordmark and search icon; the menu drops down as a full-width paper panel of mono labels. The nine-item Devanagari nav only fits on one row from 1024px, so the full header starts there. From 768px the square SUBSCRIBE button stays in the header too (the phone dock carries it below that). Small controls get a 44px hit area through an invisible `::after`, never by growing the visible control.
 
 ### Section Heading (signature)
 `includes/section_heading.html`: a headline-size serif title, an optional one-line dek in graphite body text, a right-aligned mono "see all" link, and a 2px ink rule underneath with 32px below. It's the backbone of every homepage band and catalog page.
@@ -275,14 +275,15 @@ Used for "Trending this week" and the Latest News column: entries separated by 1
 The cover for anything without a picture: stories, issues and training courses (`articles/includes/press_plate.html`, used by `issue_cover.html` and `course_cover.html`). A missing image reads as typesetting rather than an empty box.
 - **Composition:** a halftone dot screen (7px pitch, about 22% opacity) fading in from the bottom right. The headline's first letter is set huge in the display serif and cropped by the right and bottom edges. A 2.5rem press-red rule with a stamp in spaced mono capitals sits top left: the masthead for stories, the publication month for issues, "TRAINING" for courses.
 - **Plates:** paper with an ink letter, ink with a paper letter (red-on-ink rule), or newsprint with a 1.5px outlined letter. The article id picks the plate, so a story always gets the same one and neighbours differ.
-- **Scale:** sized with container units, so one plate works from the 3:2 homepage lead down to a 96px thumbnail. The stamp drops out below 220px wide.
+- **Scale:** sized with container units, so one plate works from a 21:9 strip down to a 96px thumbnail. A **quiet** plate (smaller letter, about 70% of the height) is used wherever the plate sits beside a headline that must lead: the picture-less lead strip and course covers. When the newest Latest News story has no picture, the lead becomes a text lead: the plate shrinks to a 21:9 strip and the headline steps up a size. Recency wins over pictures. The stamp drops out below 220px wide.
 - **Script:** the initial carries its own `lang`. Devanagari gets a larger size, a lift and a wider right inset so the headline bar stays inside the frame.
 - **Motion:** inside a hovered card the letter drifts up and left over 600ms (ease-out-expo), like a plate seating in the press. No motion under reduced motion.
 
 **The No Empty Frame Rule.** Anything without a picture gets a Press Plate, never a flat grey box, a decorative gradient or a stock photo.
 
 ### Cover Slider (signature)
-The homepage hero: an ink band tinted by a blurred copy of the story's own picture, with the photo masked so it melts into the band (right side on wide screens, top on phones). Display headline with an optional coral second half, a cover button, and a byline with article type, date and read time. A carousel with square-cornered controls, pill dots and a pause button; without JavaScript the slides simply stack.
+The homepage hero: an ink band tinted by a blurred copy of the story's own picture, with the photo masked so it melts into the band (right side on wide screens, top on phones). Display headline with an optional coral second half, a cover button, and a byline with article type, date and read time. When there is more than one top story, an ink rail along the foot of the band carries **cover lines**: every top story as a mono number over a two-line serif headline, with a 2px rule above each. They are the slide control (the current line is white with a press-red rule; the rest are paper at 60%), plus a square pause button on pointer screens. Wide screens give each line an equal column; phones scroll them sideways with a peek. Without JavaScript the rail stays hidden and the slides simply stack.
+- **Motion:** when the story changes (never on first load) the band fades in over 300ms and the headline is inked left to right with a clip-path over 600ms (ease-out-expo), like a roller passing over the plate. While autoplay runs, the current cover line's rule fills over the 7s interval; it clears while paused, hovered or focused. Reduced motion keeps the fade and drops the roll. Autoplay is off for reduced-motion readers and on touch screens, where the reader swipes or taps a line instead.
 
 ### Workspace Components
 - **Shell:** white rounded-16px frame on the grey canvas; sidebar groups under small uppercase grey headings.
@@ -295,7 +296,7 @@ The homepage hero: an ink band tinted by a blurred copy of the story's own pictu
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep every reader-facing corner square (0px), apart from topic pills, avatars and carousel controls.
+- **Do** keep every reader-facing corner square (0px), apart from topic pills and avatars.
 - **Do** put a 2px ink rule under each section heading, and use 1px rule-grey hairlines inside sections.
 - **Do** use press red as the only accent, and switch to press-red-on-ink for red text on ink surfaces.
 - **Do** give each front-page band one lead item and rank the rest; vary the scale between lead and supporting items.

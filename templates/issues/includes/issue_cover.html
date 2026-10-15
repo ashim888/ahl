@@ -1,8 +1,8 @@
-{% if issue.cover_image %}
+{% load news_time %}{% if issue.cover_image %}
     <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
 {% else %}
     {# No cover uploaded: a press plate stamped with the issue's month. #}
     <div class="w-full h-full relative">
-        {% if issue.publication_date %}{% include 'articles/includes/press_plate.html' with article=issue stamp=issue.publication_date|date:"F Y"|upper %}{% else %}{% include 'articles/includes/press_plate.html' with article=issue %}{% endif %}
+        {% if issue.publication_date %}{% include 'articles/includes/press_plate.html' with article=issue stamp=issue.publication_date|date:"M Y"|upper|local_digits %}{% else %}{% include 'articles/includes/press_plate.html' with article=issue %}{% endif %}
     </div>
 {% endif %}

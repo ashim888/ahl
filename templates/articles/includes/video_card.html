@@ -13,7 +13,7 @@ section, headline and time. `dark=True` on the homepage's dark Videos band;
         {% endif %}
         {% include 'articles/includes/play_badge.html' with article=article %}
         {% if article.access_type != 'open_access' %}
-            <span class="absolute top-2 left-2 font-mono-editorial text-[0.6rem] tracking-wider uppercase bg-black/70 text-white px-1.5 py-0.5">{% if article.access_type == 'pay_per_article' %}{% trans "Single purchase" %}{% else %}{% trans "Subscribers" %}{% endif %}</span>
+            <span class="absolute top-2 left-2 font-mono-editorial text-[0.6rem] tracking-wider uppercase bg-black/70 text-white px-1.5 py-0.5">{% if article.access_type == 'pay_per_article' %}{% trans "Single purchase" %}{% else %}{% trans "Subscribers only" %}{% endif %}</span>
         {% endif %}
     </div>
     <p class="section-label mt-3 text-accent">{% if article.section %}{{ article.section.name }}{% else %}{% trans "Video" %}{% endif %}</p>

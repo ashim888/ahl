@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n news_time %}
 {% comment %}
 Catalog card — used by the course list grid and the "More courses" row on a
 course page. Expects `course` annotated with active_enrollment_count (see
@@ -16,7 +16,7 @@ training/views.py _with_seat_counts).
                 <span class="font-mono-editorial text-[0.6rem] tracking-wider uppercase border border-border px-1.5 py-0.5 text-muted-foreground">{% trans "Certificate" %}</span>
             {% endif %}
         </div>
-        <h3 class="font-display text-lg font-bold leading-snug mt-2 group-hover:text-accent transition-colors" style="letter-spacing: -0.01em;">{{ course.title }}</h3>
+        <h3 class="font-display text-lg font-bold leading-snug mt-2 group-hover:underline decoration-1 underline-offset-[3px]" style="letter-spacing: -0.01em;">{{ course.title }}</h3>
         {% if course.subtitle %}<p class="mt-1.5 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ course.subtitle }}</p>{% endif %}
         <p class="mt-3 text-sm font-medium">{{ course.instructor }}</p>
 
@@ -28,7 +28,7 @@ training/views.py _with_seat_counts).
             <div class="flex items-center justify-between gap-3">
                 <span class="font-display text-xl font-bold">{% include 'training/includes/course_price.html' %}</span>
                 <span class="font-mono-editorial text-[0.65rem] text-muted-foreground text-right">
-                    {% if course.start_date %}{% blocktrans with date=course.start_date|date:"M j" %}STARTS {{ date }}{% endblocktrans %}{% else %}{% trans "ENROLL ANYTIME" %}{% endif %}
+                    {% if course.start_date %}{% blocktrans with date=course.start_date|date:"M j"|local_digits %}STARTS {{ date }}{% endblocktrans %}{% else %}{% trans "ENROLL ANYTIME" %}{% endif %}
                 </span>
             </div>
         </div>

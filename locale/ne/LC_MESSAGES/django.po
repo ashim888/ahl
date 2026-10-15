@@ -2496,7 +2496,7 @@ msgstr "अघिल्लो सामग्री"
 
 #: templates/home.html:105
 msgid "Choose a story"
-msgstr "सामग्री छान्नुहोस्"
+msgstr "शीर्ष समाचार छान्नुहोस्"
 
 #: templates/home.html:108
 #, python-format
@@ -3734,3 +3734,48 @@ msgstr "हरेक सारांश निःशुल्क पढ्न �
 
 msgid "Most-covered topics this month"
 msgstr "यस महिना सबैभन्दा बढी समेटिएका विषयहरू"
+
+msgid "stories"
+msgstr "लेखहरू"
+
+#: templates/home.html
+msgid "MEET THE BOARD →"
+msgstr "सम्पादकीय बोर्ड हेर्नुहोस् →"
+
+#: templates/home.html
+msgid "Trending This Week"
+msgstr "यो हप्ता चर्चामा"
+
+#: templates/home.html
+msgid "Trending Topics"
+msgstr "चर्चित विषयहरू"
+
+#: templates/articles/includes/story_flags.html
+msgid "Reviewed by independent experts through the journal before publication"
+msgstr "प्रकाशनअघि जर्नलमार्फत स्वतन्त्र विज्ञहरूले समीक्षा गरेको"
+
+#: templates/articles/includes/topic_pill.html
+msgid "story"
+msgid_plural "stories"
+msgstr[0] "लेख"
+msgstr[1] "लेखहरू"
+
+#: templates/home.html
+msgid "Every summary is free to read. A lock marks stories that need a subscription or a single purchase."
+msgstr "हरेक लेखको सारांश निःशुल्क पढ्न सकिन्छ। ताल्चा चिन्ह भएका लेखका लागि सदस्यता वा एकल खरिद चाहिन्छ।"
+
+#: templates/home.html
+msgid "Peer-reviewed papers from our journal, alongside the news."
+msgstr "समाचारसँगै हाम्रो जर्नलका समकक्षी-समीक्षित अनुसन्धानपत्रहरू।"
+
+#: templates/home.html
+msgid "RESUME"
+msgstr "फेरि चलाउनुहोस्"
+
+#: templates/home.html
+msgid "READ THE ISSUE →"
+msgstr "अंक पढ्नुहोस् →"
+
+#: templates/articles/includes/story_flags.html
+msgid "Subscribers only"
+msgstr "सदस्यहरूका लागि मात्र"

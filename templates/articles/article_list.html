@@ -104,7 +104,7 @@
                             {% if article.published_at %}{{ article.published_at|news_time }}{% endif %}
                         </span>
                         <span class="text-border text-xs">·</span>
-                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.estimated_read_minutes }} {% trans "min" %}</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{{ article.estimated_read_minutes|local_digits }} {% trans "min" %}</span>
                     </div>
                 </div>
             </article>

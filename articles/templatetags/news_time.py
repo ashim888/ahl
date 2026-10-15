@@ -6,13 +6,27 @@ of the interface.
 from django import template
 from django.utils import timezone
 from django.utils.formats import date_format
-from django.utils.translation import gettext, ngettext
+from django.utils.translation import get_language, gettext, ngettext
 
 register = template.Library()
+
+DEVANAGARI_DIGITS = str.maketrans('0123456789', '०१२३४५६७८९')
+
+
+@register.filter
+def local_digits(value):
+    """{{ n|local_digits }} — Devanagari digits on Nepali pages, as Nepali
+    print uses; unchanged in English."""
+    text = str(value)
+    return text.translate(DEVANAGARI_DIGITS) if get_language() == 'ne' else text
 
 
 @register.filter
 def news_time(value):
+    return local_digits(_news_time(value)) if value else ''
+
+
+def _news_time(value):
     if not value:
         return ''
     now = timezone.now()

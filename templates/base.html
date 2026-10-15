@@ -1,4 +1,4 @@
-{% load static ads_tags i18n %}
+{% load static ads_tags i18n news_time %}
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
@@ -277,7 +277,7 @@
         <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <span class="font-mono-editorial text-xs tracking-widest opacity-80 min-w-0 truncate">
                 {% if latest_issue %}
-                    <a href="{% url 'issues:issue_detail' latest_issue.slug %}" class="hover:underline underline-offset-2">{% trans "LATEST ISSUE" %}: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"F Y"|upper }}{% endif %}</a>
+                    <a href="{% url 'issues:issue_detail' latest_issue.slug %}" class="hover:underline underline-offset-2">{% trans "LATEST ISSUE" %}: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"M Y"|upper|local_digits }}{% endif %}</a>
                 {% else %}
                     {% trans JOURNAL_TAGLINE as tagline %}{{ tagline|upper }}
                 {% endif %}
@@ -295,20 +295,20 @@
             <div class="header-top-collapse">
             <div class="header-top-collapse-inner flex items-center justify-between py-4 sm:py-5 border-b border-border">
                 <button type="button" id="mobile-menu-button" aria-label="{% trans 'Menu' %}" aria-expanded="false"
-                        class="md:hidden -ml-2 p-2 text-foreground">
+                        class="lg:hidden -ml-2 p-2 text-foreground relative after:absolute after:-inset-1 after:content-['']">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
 
-                <div class="hidden md:flex flex-1">
+                <div class="hidden lg:flex flex-1">
                     <form method="get" action="{% url 'articles:search' %}" role="search" aria-label="{% trans 'Site search' %}" data-search-suggest class="flex items-center border border-border max-w-[220px]">
                         <input type="search" name="q" placeholder="{% trans 'Search…' %}" aria-label="{% trans 'Search articles' %}"
                                class="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0 !w-auto">
                     </form>
                 </div>
 
-                <a href="{% url 'articles:home' %}" class="flex flex-col items-center text-center mx-auto md:mx-0">
+                <a href="{% url 'articles:home' %}" class="flex flex-col items-center text-center mx-auto lg:mx-0">
                     {% comment %} <img src="{% static 'images/logo.png' %}" alt="" class="h-7 sm:h-10 w-auto mb-1"> {% endcomment %}
                     <h1 class="font-display text-lg sm:text-2xl md:text-3xl font-black tracking-tight leading-none" style="letter-spacing: -0.02em;">
                         {{ JOURNAL_NAME|upper }}
@@ -319,7 +319,7 @@
                 </a>
 
                 <div class="flex-1 flex justify-end items-center gap-4">
-                    <form action="{% url 'set_language' %}" method="post" class="hidden md:block">
+                    <form action="{% url 'set_language' %}" method="post" class="hidden lg:block">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.path }}">
                         <select name="language" onchange="this.form.submit()" aria-label="{% trans 'Language' %}"
@@ -328,16 +328,16 @@
                             <option value="ne" {% if request.LANGUAGE_CODE == 'ne' %}selected{% endif %}>नेपाली</option>
                         </select>
                     </form>
-                    <a href="{% url 'articles:search' %}" aria-label="{% trans 'Search' %}" class="md:hidden p-2 -mr-2 text-foreground">
+                    <a href="{% url 'articles:search' %}" aria-label="{% trans 'Search' %}" class="lg:hidden p-2 -mr-2 text-foreground relative after:absolute after:-inset-1 after:content-['']">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
                         </svg>
                     </a>
                     {% if show_subscribe_bar %}
-                        <a href="{% url 'billing:plan_browse' %}" class="hidden md:inline font-mono-editorial text-xs tracking-widest bg-accent text-white px-3 py-1.5 hover:bg-[#a93226] transition-colors">{% trans "SUBSCRIBE" %}</a>
+                        <a href="{% url 'billing:plan_browse' %}" class="hidden md:inline whitespace-nowrap font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-3 py-1.5 hover:bg-accent transition-colors">{% trans "SUBSCRIBE" %}</a>
                     {% endif %}
                     {% if user.is_authenticated %}
-                        <div class="relative hidden md:block">
+                        <div class="relative hidden lg:block">
                             <button type="button" id="profile-menu-button" aria-label="{% trans 'Account menu' %}" class="flex items-center gap-2 text-foreground hover:text-accent">
                                 {% if user.photo %}
                                     <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover shrink-0">
@@ -379,7 +379,7 @@
                                 </form>
                             </div>
                         </div>
-                        <a href="{% url 'users:profile' %}" class="md:hidden shrink-0" aria-label="{% trans 'Profile' %}">
+                        <a href="{% url 'users:profile' %}" class="lg:hidden shrink-0" aria-label="{% trans 'Profile' %}">
                             {% if user.photo %}
                                 <img src="{{ user.photo.url }}" alt="" class="w-8 h-8 rounded-full object-cover">
                             {% else %}
@@ -389,11 +389,11 @@
                             {% endif %}
                         </a>
                     {% else %}
-                        <a href="{% url 'users:login' %}" class="hidden md:inline font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-foreground">
+                        <a href="{% url 'users:login' %}" class="hidden lg:inline whitespace-nowrap font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-foreground">
                             {% trans "LOGIN" %}
                         </a>
                         <a href="{% url 'users:register' %}"
-                           class="hidden md:inline font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:bg-foreground hover:text-primary-foreground transition-colors">
+                           class="hidden lg:inline whitespace-nowrap font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:bg-foreground hover:text-primary-foreground transition-colors">
                             {% trans "REGISTER" %}
                         </a>
                     {% endif %}
@@ -401,7 +401,7 @@
             </div>
             </div>
 
-            <nav class="hidden md:flex flex-wrap items-center justify-center gap-x-1" aria-label="{% trans 'Main' %}">
+            <nav class="hidden lg:flex flex-wrap items-center justify-center gap-x-1" aria-label="{% trans 'Main' %}">
                 <a href="{% url 'articles:home' %}"
                    class="font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if path == '/' %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}">
                     {% trans "HOME" %}
@@ -422,7 +422,7 @@
             </nav>
         </div>
 
-        <div id="mobile-menu-dropdown" class="hidden md:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <div id="mobile-menu-dropdown" class="hidden lg:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
             <form method="get" action="{% url 'articles:search' %}" role="search" aria-label="{% trans 'Site search' %}" data-search-suggest class="flex items-center border border-border mx-4 mt-4">
                 <input type="search" name="q" placeholder="{% trans 'Search…' %}" aria-label="{% trans 'Search articles' %}"
                        class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
@@ -519,6 +519,14 @@
             {% if show_subscribe_bar and request.resolver_match.url_name != 'plan_browse' %}{% include 'includes/mobile_subscribe_bar.html' %}{% endif %}
             {% ad_slot 'mobile_anchor' wrapper_class='bg-background border-t border-border flex justify-center py-1' %}
         </div>
+        <script>
+        // The dock is fixed, so reserve its height under the page (it changes as the ad loads or the bar closes).
+        (function () {
+            var dock = document.querySelector('[data-mobile-dock]');
+            if (!dock || !window.ResizeObserver) return;
+            new ResizeObserver(function () { document.body.style.paddingBottom = dock.offsetHeight ? dock.offsetHeight + 'px' : ''; }).observe(dock);
+        })();
+        </script>
     {% endblock %}
 
     <footer class="bg-foreground text-primary-foreground">
@@ -578,9 +586,8 @@
                     {% if user.is_authenticated %}<a href="{% url 'users:privacy' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Privacy & your data" %}</a>{% endif %}
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{{ JOURNAL_NAME|upper }}</p>
                     <h2 class="font-display text-xl font-black mb-3" style="letter-spacing: -0.02em;">{{ JOURNAL_NAME|upper }}</h2>
-                    <p class="text-xs opacity-70 leading-relaxed">{{ JOURNAL_TAGLINE }}</p>
+                    <p class="text-xs opacity-70 leading-relaxed">{% trans JOURNAL_TAGLINE as tagline %}{{ tagline }}</p>
                 </div>
             </div>
             <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
@@ -672,7 +679,7 @@
             // a tablet, or a devtools resize) so it can't get stuck open
             // behind the desktop layout.
             window.addEventListener('resize', function () {
-                if (window.innerWidth >= 768 && !mobileMenu.classList.contains('hidden')) {
+                if (window.innerWidth >= 1024 && !mobileMenu.classList.contains('hidden')) {
                     mobileMenu.classList.add('hidden');
                     mobileBtn.setAttribute('aria-expanded', 'false');
                 }

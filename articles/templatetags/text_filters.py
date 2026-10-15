@@ -14,6 +14,17 @@ def split_comma(value):
 
 
 @register.filter
+def subject_initial(title):
+    """Capital initial of a course title's second word — "Research Writing
+    Fundamentals" → "W" — for its press plate. Course titles tend to open
+    with the same field word ("Research …"), so first letters would repeat
+    across the catalog; the second word is usually the subject.
+    """
+    words = str(title or '').split()
+    return (words[1] if len(words) > 1 else ''.join(words))[:1].upper()
+
+
+@register.filter
 def content_lang(value, default='en'):
     """'ne' when `value` is mostly Devanagari script, else `default` — used
     as a lang="" attribute on an article so Nepali-script content gets the

@@ -19,6 +19,9 @@ module.exports = {
         // 3.5:1 there; this is ~6:1 (WCAG AA). Applied automatically, see input.css.
         'accent-on-dark': '#ef6b5c',
         'accent-foreground': '#ffffff',
+        // Pressed/hovered press red, and the coral for display type on ink (9.2:1).
+        'accent-hover': '#a93226',
+        coral: '#f4a08f',
         border: '#d4d0cb',
       },
       fontFamily: {

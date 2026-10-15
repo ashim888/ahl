@@ -17,8 +17,8 @@ data-cookie-settings (footer link, Privacy & data page) reopens this.
             {% for legal_page in legal_pages %}{% if legal_page.slug == 'privacy' %}<a href="{{ legal_page.get_absolute_url }}" class="underline hover:text-accent">{% trans "Privacy policy" %}</a>{% endif %}{% endfor %}
         </p>
         <div class="mt-4 flex flex-wrap gap-3">
-            <button type="button" data-cookie-choice="analytics" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-3 hover:bg-accent">{% trans "ACCEPT ANALYTICS" %}</button>
-            <button type="button" data-cookie-choice="essential" class="font-mono-editorial text-xs tracking-widest border border-foreground px-5 py-3 hover:border-accent hover:text-accent">{% trans "ONLY ESSENTIAL" %}</button>
+            <button type="button" data-cookie-choice="analytics" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-3.5 hover:bg-accent">{% trans "ACCEPT ANALYTICS" %}</button>
+            <button type="button" data-cookie-choice="essential" class="font-mono-editorial text-xs tracking-widest border border-foreground px-5 py-3.5 hover:border-accent hover:text-accent">{% trans "ONLY ESSENTIAL" %}</button>
         </div>
     </div>
 </div>

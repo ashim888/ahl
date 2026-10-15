@@ -1,4 +1,4 @@
-{% load i18n %}{% comment %}
+{% load i18n text_filters %}{% comment %}
 Course cover image, or a press plate (articles/includes/press_plate.html)
 stamped TRAINING when an editor hasn't uploaded one. Usage:
     {% include 'training/includes/course_cover.html' with course=course classes="aspect-video" %}
@@ -8,6 +8,6 @@ stamped TRAINING when an editor hasn't uploaded one. Usage:
 {% else %}
     {% trans "TRAINING" as training_stamp %}
     <div class="w-full h-full {{ classes }} relative overflow-hidden">
-        {% include 'articles/includes/press_plate.html' with article=course stamp=training_stamp %}
+        {% include 'articles/includes/press_plate.html' with article=course stamp=training_stamp initial=course.title|subject_initial quiet=True %}
     </div>
 {% endif %}

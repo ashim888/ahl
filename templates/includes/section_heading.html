@@ -13,6 +13,6 @@ the section needs explaining.
         {% if dek %}<p class="mt-1.5 text-sm text-muted-foreground">{{ dek }}</p>{% endif %}
     </div>
     {% if link_url %}
-        <a href="{{ link_url }}" class="shrink-0 font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{{ link_label }}</a>
+        <a href="{{ link_url }}" class="relative shrink-0 font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent after:absolute after:-inset-x-2 after:-inset-y-3 after:content-['']">{{ link_label }}</a>
     {% endif %}
 </div>

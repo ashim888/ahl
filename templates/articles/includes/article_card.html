@@ -31,7 +31,7 @@ keyword_tags (the #topics line).
                 <span class="font-medium text-foreground truncate">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>
             {% endwith %}
             <span class="text-border">·</span>
-            <span class="shrink-0">{{ article.estimated_read_minutes }} {% trans "min read" %}</span>
+            <span class="shrink-0">{{ article.estimated_read_minutes|local_digits }} {% trans "min read" %}</span>
             {% if article.published_at %}<span class="text-border">·</span><span class="shrink-0">{{ article.published_at|news_time }}</span>{% endif %}
         </div>
     </div>

@@ -86,15 +86,22 @@ class TopicPageTests(TestCase):
         make_article('Monsoon floods', ['Monsoon', 'Cholera'])
         make_article('Cholera in Terai', ['Cholera'])
         response = self.client.get(reverse('articles:home'))
-        self.assertContains(response, 'TRENDING TOPICS')
+        self.assertContains(response, 'Trending Topics')
         self.assertContains(response, 'topic-pill--hot')  # the top three
         self.assertContains(response, 'topic-pill__rank">01<')
         self.assertContains(response, reverse('articles:topic_detail', args=['dengue']))
 
+    def test_topic_pill_count_is_pluralised(self):
+        from django.template.loader import render_to_string
+        topic = Keyword.objects.get(slug='dengue')
+        pill = lambda n: render_to_string('articles/includes/topic_pill.html', {'topic': topic, 'count': n})
+        self.assertIn('1<span class="sr-only"> story</span>', pill(1))
+        self.assertIn('3<span class="sr-only"> stories</span>', pill(3))
+
     def test_homepage_hides_sparse_trending_topics(self):
         # Only Dengue is on more than one story: not enough for a band.
         response = self.client.get(reverse('articles:home'))
-        self.assertNotContains(response, 'TRENDING TOPICS')
+        self.assertNotContains(response, 'Trending Topics')
 
     def test_trending_prefers_recent_and_related_counts(self):
         make_article('Old cholera story', ['Cholera'], days_ago=200)

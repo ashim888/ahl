@@ -981,13 +981,15 @@ class LatestNewsLeadTests(TestCase):
         from django.core.cache import cache
         cache.clear()
 
-    def test_newest_story_with_a_picture_leads(self):
+    def test_newest_story_leads_even_without_a_picture(self):
+        # Recency is the promise of "Latest"; a picture-less lead gets a press plate.
         pictured = make_article('pictured-news', Article.ArticleType.NEWS_COMMENTARY)
         Article.objects.filter(pk=pictured.pk).update(video_url='https://www.youtube.com/watch?v=dQw4w9WgXcQ')
-        make_article('newer-news-without-picture', Article.ArticleType.NEWS_COMMENTARY)
         make_article('newest-news-without-picture', Article.ArticleType.NEWS_COMMENTARY)
-        latest = self.client.get(reverse('articles:home')).context['latest_news']
-        self.assertEqual(latest[0].slug, 'pictured-news')
+        make_article('newest-hero-article', Article.ArticleType.EDITORIAL)  # the hero takes the very newest
+        response = self.client.get(reverse('articles:home'))
+        self.assertEqual(response.context['latest_news'][0].slug, 'newest-news-without-picture')
+        self.assertContains(response, 'press-plate')
 
 
 class TrendingSectionTests(TestCase):
@@ -2619,6 +2621,12 @@ class ReaderTextSizeAndNepaliTypographyTests(TestCase):
         self.assertEqual(content_lang('स्वास्थ्य सजगता'), 'ne')
         self.assertEqual(content_lang('Health news with one word स्वास्थ्य'), 'en')
         self.assertEqual(content_lang('', 'ne'), 'ne')
+
+    def test_subject_initial_filter(self):
+        from .templatetags.text_filters import subject_initial
+        self.assertEqual(subject_initial('Research Writing Fundamentals'), 'W')
+        self.assertEqual(subject_initial('epidemiology'), 'E')
+        self.assertEqual(subject_initial(''), '')
 
 
 class CommentEmailTemplateTests(TestCase):

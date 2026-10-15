@@ -14,12 +14,10 @@ story. Expects `videos` (list of Articles with `section` loaded).
 {% endcomment %}
 {% with lead=videos.0 %}
 <section class="relative bg-foreground text-primary-foreground overflow-hidden" data-video-showcase aria-labelledby="home-videos-heading">
-    <div aria-hidden="true" class="pointer-events-none absolute -top-40 -right-40 w-[36rem] h-[36rem] rounded-full bg-accent/20 blur-3xl"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
         <div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-primary-foreground/20">
             <div>
-                <p class="section-label text-accent flex items-center gap-2"><span aria-hidden="true" class="inline-block w-2 h-2 rounded-full bg-accent animate-pulse motion-reduce:animate-none"></span>{% trans "VIDEOS" %}</p>
-                <h2 id="home-videos-heading" class="font-display text-3xl md:text-4xl font-bold mt-1.5" style="letter-spacing: -0.02em;">{% trans "Watch" %}</h2>
+                <h2 id="home-videos-heading" class="font-display text-3xl md:text-4xl font-bold" style="letter-spacing: -0.02em;">{% trans "Videos" %}</h2>
             </div>
             <a href="{% url 'articles:video_list' %}" class="shrink-0 font-mono-editorial text-xs tracking-widest border-b border-primary-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL VIDEOS →" %}</a>
         </div>
@@ -27,31 +25,30 @@ story. Expects `videos` (list of Articles with `section` loaded).
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
             {# The screen #}
             <div class="lg:col-span-8">
-                <div class="relative aspect-video bg-black overflow-hidden shadow-2xl ring-1 ring-white/10 group" data-stage-screen>
+                <div class="relative aspect-video bg-black overflow-hidden ring-1 ring-white/10 group" data-stage-screen>
                     <div data-stage-poster class="absolute inset-0">
                         <img data-stage-img src="{{ lead.card_image_url }}" alt="{{ lead.featured_image_alt|default:lead.title }}"
                              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]{% if not lead.card_image_url %} hidden{% endif %}">
                         <div data-stage-fallback aria-hidden="true" class="absolute inset-0 bg-foreground{% if lead.card_image_url %} hidden{% endif %}"></div>
                         <div aria-hidden="true" class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30"></div>
-                        <span data-stage-access class="absolute top-3 left-3 font-mono-editorial text-[0.65rem] tracking-wider uppercase bg-black/70 text-white px-2 py-1{% if lead.access_type == 'open_access' %} hidden{% endif %}">{% if lead.access_type == 'pay_per_article' %}{% trans "Single purchase" %}{% elif lead.access_type != 'open_access' %}{% trans "Subscribers" %}{% endif %}</span>
+                        <span data-stage-access class="absolute top-3 left-3 font-mono-editorial text-[0.65rem] tracking-wider uppercase bg-black/70 text-white px-2 py-1{% if lead.access_type == 'open_access' %} hidden{% endif %}">{% if lead.access_type == 'pay_per_article' %}{% trans "Single purchase" %}{% elif lead.access_type != 'open_access' %}{% trans "Subscribers only" %}{% endif %}</span>
                         <a data-stage-play href="{% url 'articles:article_detail' lead.slug %}{% if lead.access_type != 'open_access' %}#paywall{% endif %}"
                            class="absolute inset-0 flex items-center justify-center focus:outline-none group/play" data-label="{% trans 'Play video' %}" aria-label="{% trans 'Play video' %}: {{ lead.title }}">
-                            <span class="relative flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-accent text-white shadow-xl transition-transform duration-200 group-hover/play:scale-110 group-focus-visible/play:ring-4 group-focus-visible/play:ring-white">
-                                <span aria-hidden="true" class="absolute inset-0 rounded-full bg-accent/60 animate-ping motion-reduce:hidden opacity-40"></span>
+                            <span class="relative flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-accent text-white transition-transform duration-200 group-hover/play:scale-110 group-focus-visible/play:ring-4 group-focus-visible/play:ring-white">
                                 <svg class="relative w-7 h-7 md:w-8 md:h-8 ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
                             </span>
                         </a>
-                        <span data-stage-counter aria-hidden="true" class="absolute bottom-3 right-3 font-mono-editorial text-xs tracking-widest text-white/80">01 / {{ videos|length|stringformat:"02d" }}</span>
+                        {% if videos|length > 1 %}<span data-stage-counter aria-hidden="true" class="absolute bottom-3 right-3 font-mono-editorial text-xs tracking-widest text-white/80">01 / {{ videos|length|stringformat:"02d" }}</span>{% endif %}
                     </div>
                 </div>
             </div>
 
             {# What's on the screen #}
             <div class="lg:col-span-4 flex flex-col">
-                <p class="font-mono-editorial text-[0.65rem] tracking-widest uppercase text-primary-foreground/50">{% trans "Now showing" %}</p>
+                {% if videos|length > 1 %}<p class="font-mono-editorial text-[0.65rem] tracking-widest uppercase text-primary-foreground/50">{% trans "Now showing" %}</p>{% endif %}
                 <p data-stage-section class="section-label text-accent mt-3">{% if lead.section %}{{ lead.section.name }}{% else %}{% trans "Video" %}{% endif %}</p>
                 <h3 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-2" style="letter-spacing: -0.02em;" aria-live="polite">
-                    <a data-stage-title href="{% url 'articles:article_detail' lead.slug %}" class="hover:text-accent transition-colors">{{ lead.title }}</a>
+                    <a data-stage-title href="{% url 'articles:article_detail' lead.slug %}" class="hover:underline decoration-2 underline-offset-[5px]">{{ lead.title }}</a>
                 </h3>
                 {% with summary=lead.summary %}<p data-stage-summary class="mt-3 text-sm md:text-base text-primary-foreground/70 leading-relaxed line-clamp-4{% if not summary %} hidden{% endif %}">{{ summary }}</p>{% endwith %}
                 <p data-stage-time class="mt-3 text-xs text-primary-foreground/50">{% if lead.published_at %}{{ lead.published_at|news_time }}{% endif %}</p>
@@ -93,7 +90,7 @@ story. Expects `videos` (list of Articles with `section` loaded).
                        data-time="{% if article.published_at %}{{ article.published_at|news_time }}{% endif %}"
                        data-thumb="{{ article.card_image_url }}"
                        data-alt="{{ article.featured_image_alt|default:article.title }}"
-                       data-access="{% if article.access_type == 'pay_per_article' %}{% trans 'Single purchase' %}{% elif article.access_type != 'open_access' %}{% trans 'Subscribers' %}{% endif %}"
+                       data-access="{% if article.access_type == 'pay_per_article' %}{% trans 'Single purchase' %}{% elif article.access_type != 'open_access' %}{% trans 'Subscribers only' %}{% endif %}"
                        data-play-label="{% if article.access_type == 'open_access' %}{% trans 'PLAY' %}{% elif article.access_type == 'pay_per_article' %}{% trans 'BUY OR SUBSCRIBE TO WATCH' %}{% else %}{% trans 'SUBSCRIBE TO WATCH' %}{% endif %}"
                        {% if article.access_type == 'open_access' %}data-embed="{{ article.video_embed_url }}"{% endif %}
                        class="group block opacity-70 hover:opacity-100 aria-[current=true]:opacity-100 transition-opacity focus:outline-none focus-visible:opacity-100">
@@ -104,10 +101,10 @@ story. Expects `videos` (list of Articles with `section` loaded).
                                 {% include 'articles/includes/press_plate.html' with article=article %}
                             {% endif %}
                             {% include 'articles/includes/play_badge.html' with article=article small=True %}
-                            <span aria-hidden="true" class="absolute top-2 left-2 font-mono-editorial text-[0.6rem] tracking-widest text-white/90 bg-black/60 px-1.5 py-0.5">{{ forloop.counter|stringformat:"02d" }}</span>
+                            <span aria-hidden="true" class="absolute top-2 left-2 font-mono-editorial text-[0.65rem] tracking-widest text-white/90 bg-black/60 px-1.5 py-0.5">{{ forloop.counter|stringformat:"02d" }}</span>
                             <span aria-hidden="true" class="absolute bottom-0 inset-x-0 h-1 bg-accent scale-x-0 origin-left transition-transform duration-300 group-aria-[current=true]:scale-x-100"></span>
                         </div>
-                        <p class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 group-hover:text-accent transition-colors">{{ article.title }}</p>
+                        <p class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</p>
                         {% if article.published_at %}<p class="mt-1 text-xs text-primary-foreground/50">{{ article.published_at|news_time }}</p>{% endif %}
                     </a>
                 </li>

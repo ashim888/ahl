@@ -277,12 +277,6 @@ class HomeView(TemplateView):
             published.filter(Q(article_type=Article.ArticleType.NEWS_COMMENTARY) | ~Q(homepage_section='')),
             self.LATEST_NEWS_COUNT,
         )
-        # The first story leads with a big 3:2 picture; at that size a press
-        # plate reads as a missing photo, so the newest story with a picture leads.
-        with_picture = next((a for a in latest_news if a.card_image_url), None)
-        if with_picture:
-            latest_news.remove(with_picture)
-            latest_news.insert(0, with_picture)
 
         # 4. Fill the rest of each spot with the newest of its kind.
         opinion_pieces += take(published.filter(homepage_section='', article_type__in=OPINION_TYPES),
@@ -314,7 +308,7 @@ class HomeView(TemplateView):
         prefetch_related_objects(videos, 'section')
         sections['home_videos'] = videos
 
-        sections['special_issues'] = list(Issue.objects.all()[:3])
+        sections['special_issues'] = list(Issue.objects.filter(is_special=True)[:3])
         sections['board_preview'] = list(EditorialBoardMember.objects.filter(is_active=True)[:6])
 
         # Trending — the one section that's purely algorithm-driven, not
