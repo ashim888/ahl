@@ -485,6 +485,23 @@ class MeteredPaywallViewTests(TestCase):
         self.assertContains(response, 'of your')
         self.assertContains(response, str(FREE_SAMPLE_LIMIT_PER_MONTH))
 
+    def test_article_with_nothing_behind_the_paywall_does_not_use_a_free_read(self):
+        from billing.models import MeteredArticleRead
+        article = self._subscription_article(0)
+        article.html_content = ''
+        article.save()
+        self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertFalse(MeteredArticleRead.objects.filter(article=article).exists())
+
+    @patch('billing.access.FREE_SAMPLE_LIMIT_PER_MONTH', 0)
+    def test_paywall_states_the_cheapest_monthly_price(self):
+        SubscriptionPlan.objects.create(name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+                                        price=499, duration_days=30)
+        article = self._subscription_article(0)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'Subscriptions from')
+        self.assertContains(response, '499')
+
     def test_revisiting_the_same_article_does_not_use_a_second_slot(self):
         article = self._subscription_article(0)
         url = reverse('articles:article_detail', args=[article.slug])

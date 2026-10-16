@@ -199,7 +199,7 @@ The public palette is a newspaper's: warm off-white paper, near-black ink, stone
 - **Section Label** (Space Mono 700, 0.65rem, 0.15em tracking, uppercase): article-type tags on cards and small band headings ("TRENDING THIS WEEK").
 
 ### Named Rules
-**The Devanagari Parity Rule.** Every font stack names a Noto Devanagari face matching the Latin face's style. Under `:lang(ne)`, drop letter-spacing (it breaks the shirorekha, the headline bar), make italics upright, set Space Mono labels in Noto Sans Devanagari at about 20% larger, loosen tight line-heights to 1.45, and turn off drop caps.
+**The Devanagari Parity Rule.** Every font stack names a Noto Devanagari face matching the Latin face's style. Under `:lang(ne)`, drop letter-spacing (it breaks the shirorekha, the headline bar), make italics upright, set Space Mono labels in Noto Sans Devanagari at about 20% larger, loosen tight line-heights to 1.45, and turn off drop caps. Every piece of editor- or reader-supplied text (titles, summaries, issue names, course fields, video titles) carries `lang="{{ text|content_lang }}"`, so an English summary on a Nepali page is voiced in English and keeps its Latin styling. Plate initials take the whole first letter, vowel signs and conjuncts included (`plate_initial`).
 
 **The Heading Speaks Alone Rule.** A section heading carries itself. Don't stack a small label above it that repeats it ("NEWS" over "Latest News"). When a section needs context, add a one-line dek in body text under the heading.
 
@@ -217,7 +217,7 @@ The public site is flat. Depth comes from tonal bands (paper, newsprint, ink), b
 
 ### Shadow Vocabulary
 - **Hover lift** (Tailwind `shadow-lg`, `0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)`): cards on hover, together with an ink border.
-- **Topic glow** (`0 8px 18px -8px rgba(192,57,43,0.6)`): topic pills on hover only.
+- No coloured glows: topic pills answer hover by filling red, without lifting or casting a shadow (retired October 2026).
 - **Workspace rest** (`shadow-sm`): the workspace shell frame.
 
 ### Named Rules
@@ -280,6 +280,9 @@ The cover for anything without a picture: stories, issues and training courses (
 - **Motion:** inside a hovered card the letter drifts up and left over 600ms (ease-out-expo), like a plate seating in the press. No motion under reduced motion.
 
 **The No Empty Frame Rule.** Anything without a picture gets a Press Plate, never a flat grey box, a decorative gradient or a stock photo.
+
+### Paywall Notice
+Set as a notice in the paper, never a floating card: a 2px ink rule, a lock and a typewriter label ("Subscription Required", "Single purchase", "Archive Access Required"), one sentence on what is locked, and the price — this article's own price when it is sold singly, and "Subscriptions from Rs. X a month" from the cheapest active monthly plan. One red primary button (SUBSCRIBE, or BUY FOR Rs. X with SUBSCRIBE as the outline secondary), the same for logged-in and logged-out readers; a logged-out reader also gets "Already a subscriber? Log in". No shadow. Metering never spends a free read on an article with nothing behind the paywall.
 
 ### Cover Slider (signature)
 The homepage hero: an ink band tinted by a blurred copy of the story's own picture, with the photo masked so it melts into the band (right side on wide screens, top on phones). Display headline with an optional coral second half, a cover button, and a byline with article type, date and read time. When there is more than one top story, an ink rail along the foot of the band carries **cover lines**: every top story as a mono number over a two-line serif headline, with a 2px rule above each. They are the slide control (the current line is white with a press-red rule; the rest are paper at 60%), plus a square pause button on pointer screens. Wide screens give each line an equal column; phones scroll them sideways with a peek. Without JavaScript the rail stays hidden and the slides simply stack.

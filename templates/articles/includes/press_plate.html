@@ -11,6 +11,6 @@ Fills its parent; scales with it (styles: .press-plate in static/src/input.css).
   initial  optional letter; defaults to the title's first
   quiet    smaller letter, for a plate beside a headline that must lead
 {% endcomment %}<div class="press-plate {% if article.pk|divisibleby:3 %}press-plate--ink{% elif article.pk|add:1|divisibleby:3 %}press-plate--outline{% endif %}{% if quiet %} press-plate--quiet{% endif %}" aria-hidden="true">
-    {% with initial=initial|default:article.title|first|upper %}<span class="press-plate__initial" lang="{{ initial|content_lang }}">{{ initial }}</span>{% endwith %}
+    {% with initial=initial|default:article.title|plate_initial %}<span class="press-plate__initial" lang="{{ initial|content_lang }}">{{ initial }}</span>{% endwith %}
     <span class="press-plate__stamp"><span class="press-plate__rule"></span>{% if stamp %}{{ stamp }}{% else %}{{ JOURNAL_NAME|upper }}{% endif %}</span>
 </div>

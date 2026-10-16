@@ -21,7 +21,7 @@
     {% endif %}
 
     <nav class="mt-10 flex flex-wrap gap-1 font-mono-editorial text-xs" aria-label="{% trans 'Jump to letter' %}">
-        {% for letter, topics in groups %}<a href="#letter-{{ forloop.counter }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-border px-2 hover:border-accent hover:bg-accent hover:text-white transition-colors">{{ letter }}</a>{% endfor %}
+        {% for letter, topics in groups %}<a href="#letter-{{ forloop.counter }}" class="inline-flex h-8 min-w-8 items-center justify-center border border-border px-2 hover:border-accent hover:bg-accent hover:text-white transition-colors">{{ letter }}</a>{% endfor %}
     </nav>
     <div class="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
         {% for letter, topics in groups %}

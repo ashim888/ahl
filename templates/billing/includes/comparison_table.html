@@ -1,4 +1,4 @@
-{% load money_tags %}{% comment %}
+{% load i18n money_tags text_filters %}{% comment %}
 Shared plan-comparison table. Usage:
     {% include 'billing/includes/comparison_table.html' with plans=plans comparison_matrix=comparison_matrix %}
 Built by billing.views.build_comparison_matrix — plans and comparison_matrix
@@ -9,14 +9,14 @@ must come from the same call so columns/rows line up.
         <thead>
             <tr>
                 <th class="text-left pb-4 pr-4 font-mono-editorial text-xs text-muted-foreground tracking-widest align-bottom">
-                    WHAT'S INCLUDED
+                    {% trans "WHAT'S INCLUDED" %}
                 </th>
                 {% for plan in plans %}
                     <th class="pb-4 px-4 text-center align-bottom min-w-[140px]">
                         {% if plan.is_featured %}
-                            <p class="font-mono-editorial text-[0.65rem] text-accent tracking-widest mb-1">MOST POPULAR</p>
+                            <p class="font-mono-editorial text-[0.65rem] text-accent tracking-widest mb-1">{% trans "MOST POPULAR" %}</p>
                         {% endif %}
-                        <a href="{% url 'billing:plan_detail' plan.pk %}" class="font-display text-base font-bold hover:text-accent">{{ plan.name }}</a>
+                        <a href="{% url 'billing:plan_detail' plan.pk %}" lang="{{ plan.name|content_lang }}" class="font-display text-base font-bold hover:underline underline-offset-4">{{ plan.name }}</a>
                         <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{{ plan.price|money }}</p>
                     </th>
                 {% endfor %}
@@ -29,11 +29,11 @@ must come from the same call so columns/rows line up.
                     {% for included in row.included %}
                         <td class="py-3 px-4 text-center">
                             {% if included %}
-                                <svg class="w-4 h-4 mx-auto text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <svg class="w-4 h-4 mx-auto text-foreground" role="img" aria-label="{% trans 'Included' %}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/>
                                 </svg>
                             {% else %}
-                                <span class="text-border">—</span>
+                                <span class="text-border" role="img" aria-label="{% trans 'Not included' %}">—</span>
                             {% endif %}
                         </td>
                     {% endfor %}

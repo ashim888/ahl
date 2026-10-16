@@ -2622,6 +2622,12 @@ class ReaderTextSizeAndNepaliTypographyTests(TestCase):
         self.assertEqual(content_lang('Health news with one word स्वास्थ्य'), 'en')
         self.assertEqual(content_lang('', 'ne'), 'ne')
 
+    def test_plate_initial_keeps_the_whole_devanagari_letter(self):
+        from .templatetags.text_filters import plate_initial
+        self.assertEqual(plate_initial('विश्व मानसिक स्वास्थ्य दिवस'), 'वि')  # vowel sign stays
+        self.assertEqual(plate_initial('क्षयरोग'), 'क्ष')  # conjunct stays whole
+        self.assertEqual(plate_initial('dengue'), 'D')
+
     def test_subject_initial_filter(self):
         from .templatetags.text_filters import subject_initial
         self.assertEqual(subject_initial('Research Writing Fundamentals'), 'W')

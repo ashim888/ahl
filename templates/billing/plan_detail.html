@@ -6,7 +6,7 @@
 
 {% block content %}
 {% url 'billing:plan_browse' as back_url %}{% trans "← ALL PLANS" as back_label %}
-{% include 'includes/page_hero.html' with eyebrow=plan.get_plan_type_display|upper title=plan.name lead=plan.description %}
+{% include 'includes/page_hero.html' with title=plan.name lead=plan.description meta=plan.get_plan_type_display %}
 
 <div class="max-w-6xl mx-auto px-6 pb-16">
     <div class="flex flex-col lg:grid lg:grid-cols-[1fr_360px] lg:gap-10">
@@ -16,7 +16,7 @@
                 <ul class="mt-5 grid md:grid-cols-2 gap-x-8 gap-y-3">
                     {% for feature in plan_features %}
                         <li class="flex gap-3 text-sm leading-relaxed">
-                            <svg class="w-4 h-4 mt-0.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+                            <svg class="w-4 h-4 mt-0.5 shrink-0 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
                             <span>{{ feature.label }}</span>
                         </li>
                     {% empty %}
@@ -36,7 +36,7 @@
 
         {# Price card — first on phones, sticky sidebar on wide screens #}
         <aside class="mt-8 lg:mt-10 order-first lg:order-none">
-            <div class="lg:sticky lg:top-28 border {% if plan.is_featured %}border-2 border-accent{% else %}border-border{% endif %} bg-card shadow-xl overflow-hidden">
+            <div class="lg:sticky lg:top-28 border {% if plan.is_featured %}border-2 border-accent{% else %}border-border{% endif %} bg-card overflow-hidden">
                 {% if plan.is_featured %}
                     <p class="bg-accent text-white text-center font-mono-editorial text-[0.65rem] tracking-widest py-1.5">{% trans "MOST POPULAR" %}</p>
                 {% endif %}

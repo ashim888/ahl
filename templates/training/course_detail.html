@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n text_filters news_time %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
@@ -22,13 +22,13 @@
             <a href="{% url 'training:course_list' %}" class="hover:text-accent">{% trans "TRAINING" %}</a>
             {% if course.category %}
                 <span class="mx-1.5">›</span>
-                <a href="{% url 'training:course_list' %}?category={{ course.category|urlencode }}" class="hover:text-accent">{{ course.category|upper }}</a>
+                <a href="{% url 'training:course_list' %}?category={{ course.category|urlencode }}" lang="{{ course.category|content_lang }}" class="hover:text-accent">{{ course.category|upper }}</a>
             {% endif %}
         </nav>
         <div class="max-w-3xl">
-            <h1 class="font-display text-3xl md:text-5xl font-bold leading-tight mt-5" style="letter-spacing: -0.025em;">{{ course.title }}</h1>
+            <h1 lang="{{ course.title|content_lang }}" class="font-display text-3xl md:text-5xl font-bold leading-tight mt-5" style="letter-spacing: -0.025em;">{{ course.title }}</h1>
             {% if course.subtitle %}
-                <p class="mt-4 text-lg opacity-80 leading-relaxed">{{ course.subtitle }}</p>
+                <p lang="{{ course.subtitle|content_lang }}" class="mt-4 text-lg opacity-80 leading-relaxed">{{ course.subtitle }}</p>
             {% endif %}
             <div class="mt-6 flex items-center gap-3">
                 {% if course.instructor_photo %}
@@ -38,14 +38,14 @@
                 {% endif %}
                 <div class="text-sm">
                     <p><span class="opacity-70">{% trans "Taught by" %}</span> <a href="#instructor" class="font-semibold underline underline-offset-2 decoration-primary-foreground/40 hover:decoration-accent">{{ course.instructor }}</a></p>
-                    {% if course.instructor_title %}<p class="opacity-60 text-xs mt-0.5">{{ course.instructor_title }}</p>{% endif %}
+                    {% if course.instructor_title %}<p lang="{{ course.instructor_title|content_lang }}" class="opacity-60 text-xs mt-0.5">{{ course.instructor_title }}</p>{% endif %}
                 </div>
             </div>
             <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm opacity-90">
                 {% if enrolled_count %}
                     <span>{% blocktrans count counter=enrolled_count %}<strong>{{ counter }}</strong> learner enrolled{% plural %}<strong>{{ counter }}</strong> learners enrolled{% endblocktrans %}</span>
                 {% endif %}
-                {% if course.start_date %}<span>{% blocktrans with date=course.start_date|date:"F j, Y" %}Starts {{ date }}{% endblocktrans %}</span>{% endif %}
+                {% if course.start_date %}<span>{% blocktrans with date=course.start_date|date:"F j, Y"|local_digits %}Starts {{ date }}{% endblocktrans %}</span>{% endif %}
                 {% if spots_left is not None and spots_left > 0 and spots_left <= 10 %}
                     <span class="text-accent font-semibold">{% blocktrans count counter=spots_left %}Only {{ counter }} seat left{% plural %}Only {{ counter }} seats left{% endblocktrans %}</span>
                 {% endif %}
@@ -63,7 +63,7 @@
         </div>
         <div class="py-5 pr-4">
             <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "DURATION" %}</dt>
-            <dd class="mt-1 font-semibold text-sm">{{ course.duration }}</dd>
+            <dd lang="{{ course.duration|content_lang }}" class="mt-1 font-semibold text-sm">{{ course.duration }}</dd>
         </div>
         <div class="py-5 pr-4">
             <dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "EFFORT" %}</dt>
@@ -103,8 +103,8 @@
                     <ul class="mt-5 grid md:grid-cols-2 gap-x-8 gap-y-3">
                         {% for item in outcomes %}
                             <li class="flex gap-3 text-sm leading-relaxed">
-                                <svg class="w-4 h-4 mt-0.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
-                                <span>{{ item }}</span>
+                                <svg class="w-4 h-4 mt-0.5 shrink-0 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+                                <span lang="{{ item|content_lang }}">{{ item }}</span>
                             </li>
                         {% endfor %}
                     </ul>
@@ -113,7 +113,7 @@
 
             <section id="about" class="mt-10">
                 <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "About this course" %}</h2>
-                <div class="mt-4 text-foreground leading-relaxed space-y-4" style="font-family: Georgia, 'Noto Serif Devanagari', serif; line-height: 1.8;">
+                <div lang="{{ course.description|content_lang }}" class="mt-4 text-foreground leading-relaxed space-y-4" style="font-family: Georgia, 'Noto Serif Devanagari', serif; line-height: 1.8;">
                     {{ course.description|linebreaks }}
                 </div>
             </section>
@@ -125,7 +125,7 @@
                             <h3 class="section-label text-muted-foreground">{% trans "WHO THIS COURSE IS FOR" %}</h3>
                             <ul class="mt-4 space-y-2.5">
                                 {% for item in audience %}
-                                    <li class="flex gap-2.5 text-sm leading-relaxed"><span class="text-accent" aria-hidden="true">→</span><span>{{ item }}</span></li>
+                                    <li class="flex gap-2.5 text-sm leading-relaxed"><span class="text-muted-foreground" aria-hidden="true">→</span><span lang="{{ item|content_lang }}">{{ item }}</span></li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -135,7 +135,7 @@
                         {% if prerequisites %}
                             <ul class="mt-4 space-y-2.5">
                                 {% for item in prerequisites %}
-                                    <li class="flex gap-2.5 text-sm leading-relaxed"><span class="text-accent" aria-hidden="true">•</span><span>{{ item }}</span></li>
+                                    <li class="flex gap-2.5 text-sm leading-relaxed"><span class="text-muted-foreground" aria-hidden="true">•</span><span lang="{{ item|content_lang }}">{{ item }}</span></li>
                                 {% endfor %}
                             </ul>
                         {% else %}
@@ -160,7 +160,7 @@
                                     <summary class="flex items-start gap-4 py-5 cursor-pointer list-none select-none">
                                         <span class="font-display text-2xl font-bold text-muted-foreground w-8 shrink-0 leading-none">{{ forloop.counter }}</span>
                                         <span class="flex-1 min-w-0">
-                                            <span class="block font-semibold group-hover:text-accent transition-colors">{{ module.title }}</span>
+                                            <span class="block font-semibold group-hover:underline decoration-1 underline-offset-[3px]" lang="{{ module.title|content_lang }}">{{ module.title }}</span>
                                             {% if module.duration %}<span class="block font-mono-editorial text-xs text-muted-foreground mt-1">{{ module.duration }}</span>{% endif %}
                                         </span>
                                         {% if module.summary %}
@@ -168,7 +168,7 @@
                                         {% endif %}
                                     </summary>
                                     {% if module.summary %}
-                                        <p class="pb-5 pl-12 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{{ module.summary }}</p>
+                                        <p class="pb-5 pl-12 text-sm text-muted-foreground leading-relaxed whitespace-pre-line" lang="{{ module.summary|content_lang }}">{{ module.summary }}</p>
                                     {% endif %}
                                 </details>
                             </li>
@@ -178,7 +178,7 @@
             {% elif course.syllabus %}
                 <section id="syllabus" class="mt-12">
                     <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Syllabus" %}</h2>
-                    <p class="mt-4 text-foreground leading-relaxed whitespace-pre-line">{{ course.syllabus }}</p>
+                    <p lang="{{ course.syllabus|content_lang }}" class="mt-4 text-foreground leading-relaxed whitespace-pre-line">{{ course.syllabus }}</p>
                 </section>
             {% endif %}
 
@@ -192,8 +192,8 @@
                     {% endif %}
                     <div class="min-w-0">
                         <p class="font-semibold text-lg">{{ course.instructor }}</p>
-                        {% if course.instructor_title %}<p class="text-sm text-muted-foreground mt-0.5">{{ course.instructor_title }}</p>{% endif %}
-                        {% if course.instructor_bio %}<div class="mt-3 text-sm leading-relaxed">{{ course.instructor_bio|linebreaks }}</div>{% endif %}
+                        {% if course.instructor_title %}<p lang="{{ course.instructor_title|content_lang }}" class="text-sm text-muted-foreground mt-0.5">{{ course.instructor_title }}</p>{% endif %}
+                        {% if course.instructor_bio %}<div lang="{{ course.instructor_bio|content_lang }}" class="mt-3 text-sm leading-relaxed">{{ course.instructor_bio|linebreaks }}</div>{% endif %}
                     </div>
                 </div>
             </section>
@@ -205,10 +205,10 @@
                         {% for faq in faqs %}
                             <details class="group border-b border-border">
                                 <summary class="flex items-center justify-between gap-4 py-4 cursor-pointer list-none select-none font-medium hover:text-accent">
-                                    {{ faq.question }}
+                                    <span lang="{{ faq.question|content_lang }}">{{ faq.question }}</span>
                                     <span class="text-xl leading-none text-muted-foreground transition-transform group-open:rotate-45" aria-hidden="true">+</span>
                                 </summary>
-                                <p class="pb-5 text-sm text-muted-foreground leading-relaxed">{{ faq.answer }}</p>
+                                <p lang="{{ faq.answer|content_lang }}" class="pb-5 text-sm text-muted-foreground leading-relaxed">{{ faq.answer }}</p>
                             </details>
                         {% endfor %}
                     </div>
@@ -218,7 +218,7 @@
 
         {# Enrollment card — first thing after the key facts on phones, a sticky sidebar on wide screens #}
         <aside class="mt-8 lg:mt-10 order-first lg:order-none">
-            <div class="lg:sticky lg:top-28 border border-border bg-card shadow-xl">
+            <div class="lg:sticky lg:top-28 border border-border bg-card">
                 <div class="aspect-video bg-secondary overflow-hidden">
                     {% include 'training/includes/course_cover.html' with course=course %}
                 </div>
@@ -234,11 +234,11 @@
 
                     <p class="section-label text-muted-foreground mt-7">{% trans "THIS COURSE INCLUDES" %}</p>
                     <ul class="mt-3 space-y-2.5 text-sm">
-                        {% if modules %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{% blocktrans count counter=modules|length %}{{ counter }} module{% plural %}{{ counter }} modules{% endblocktrans %}</li>{% endif %}
-                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{{ course.duration }}{% if course.effort %} · {{ course.effort }}{% endif %}</li>
-                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{{ course.get_mode_display }} · {{ course.language }}</li>
-                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{% if course.start_date %}{% blocktrans with date=course.start_date|date:"F j, Y" %}Starts {{ date }}{% endblocktrans %}{% else %}{% trans "Start any time" %}{% endif %}</li>
-                        {% if course.offers_certificate %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-accent">▸</span>{% trans "Certificate of completion" %}</li>{% endif %}
+                        {% if modules %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{% blocktrans count counter=modules|length %}{{ counter }} module{% plural %}{{ counter }} modules{% endblocktrans %}</li>{% endif %}
+                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{{ course.duration }}{% if course.effort %} · {{ course.effort }}{% endif %}</li>
+                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{{ course.get_mode_display }} · {{ course.language }}</li>
+                        <li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{% if course.start_date %}{% blocktrans with date=course.start_date|date:"F j, Y"|local_digits %}Starts {{ date }}{% endblocktrans %}{% else %}{% trans "Start any time" %}{% endif %}</li>
+                        {% if course.offers_certificate %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{% trans "Certificate of completion" %}</li>{% endif %}
                     </ul>
                 </div>
             </div>

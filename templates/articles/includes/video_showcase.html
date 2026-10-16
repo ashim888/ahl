@@ -1,4 +1,4 @@
-{% load news_time %}
+{% load news_time text_filters %}
 {% load i18n %}
 {% comment %}
 Homepage video showcase: a large "screen" for the selected video with its
@@ -14,12 +14,12 @@ story. Expects `videos` (list of Articles with `section` loaded).
 {% endcomment %}
 {% with lead=videos.0 %}
 <section class="relative bg-foreground text-primary-foreground overflow-hidden" data-video-showcase aria-labelledby="home-videos-heading">
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
-        <div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-primary-foreground/20">
+    <div class="relative max-w-7xl mx-auto px-6 py-12 md:py-16">
+        <div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-primary-foreground">
             <div>
-                <h2 id="home-videos-heading" class="font-display text-3xl md:text-4xl font-bold" style="letter-spacing: -0.02em;">{% trans "Videos" %}</h2>
+                <h2 id="home-videos-heading" class="font-display text-2xl md:text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Videos" %}</h2>
             </div>
-            <a href="{% url 'articles:video_list' %}" class="shrink-0 font-mono-editorial text-xs tracking-widest border-b border-primary-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL VIDEOS →" %}</a>
+            <a href="{% url 'articles:video_list' %}" class="relative after:absolute after:-inset-x-2 after:-inset-y-3.5 after:content-[''] shrink-0 font-mono-editorial text-xs tracking-widest border-b border-primary-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "ALL VIDEOS →" %}</a>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
@@ -48,9 +48,9 @@ story. Expects `videos` (list of Articles with `section` loaded).
                 {% if videos|length > 1 %}<p class="font-mono-editorial text-[0.65rem] tracking-widest uppercase text-primary-foreground/50">{% trans "Now showing" %}</p>{% endif %}
                 <p data-stage-section class="section-label text-accent mt-3">{% if lead.section %}{{ lead.section.name }}{% else %}{% trans "Video" %}{% endif %}</p>
                 <h3 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-2" style="letter-spacing: -0.02em;" aria-live="polite">
-                    <a data-stage-title href="{% url 'articles:article_detail' lead.slug %}" class="hover:underline decoration-2 underline-offset-[5px]">{{ lead.title }}</a>
+                    <a data-stage-title lang="{{ lead.title|content_lang }}" href="{% url 'articles:article_detail' lead.slug %}" class="hover:underline decoration-2 underline-offset-[5px]">{{ lead.title }}</a>
                 </h3>
-                {% with summary=lead.summary %}<p data-stage-summary class="mt-3 text-sm md:text-base text-primary-foreground/70 leading-relaxed line-clamp-4{% if not summary %} hidden{% endif %}">{{ summary }}</p>{% endwith %}
+                {% with summary=lead.summary %}<p data-stage-summary lang="{{ summary|content_lang }}" class="mt-3 text-sm md:text-base text-primary-foreground/70 leading-relaxed line-clamp-4{% if not summary %} hidden{% endif %}">{{ summary }}</p>{% endwith %}
                 <p data-stage-time class="mt-3 text-xs text-primary-foreground/50">{% if lead.published_at %}{{ lead.published_at|news_time }}{% endif %}</p>
                 <div class="mt-6 flex flex-wrap items-center gap-3">
                     <a data-stage-play-button href="{% url 'articles:article_detail' lead.slug %}{% if lead.access_type != 'open_access' %}#paywall{% endif %}"
@@ -70,22 +70,22 @@ story. Expects `videos` (list of Articles with `section` loaded).
                 <p class="font-mono-editorial text-[0.65rem] tracking-widest uppercase text-primary-foreground/50">{% trans "Up next" %}</p>
                 <div class="hidden md:flex items-center gap-2">
                     <button type="button" data-reel-prev aria-label="{% trans 'Previous videos' %}"
-                            class="w-10 h-10 flex items-center justify-center border border-primary-foreground/30 hover:border-accent hover:text-accent disabled:opacity-30 disabled:pointer-events-none transition-colors">
+                            class="relative after:absolute after:-inset-0.5 after:content-[''] w-10 h-10 flex items-center justify-center border border-primary-foreground/30 hover:border-accent hover:text-accent disabled:opacity-30 disabled:pointer-events-none transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                     </button>
                     <button type="button" data-reel-next aria-label="{% trans 'More videos' %}"
-                            class="w-10 h-10 flex items-center justify-center border border-primary-foreground/30 hover:border-accent hover:text-accent disabled:opacity-30 disabled:pointer-events-none transition-colors">
+                            class="relative after:absolute after:-inset-0.5 after:content-[''] w-10 h-10 flex items-center justify-center border border-primary-foreground/30 hover:border-accent hover:text-accent disabled:opacity-30 disabled:pointer-events-none transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     </button>
                 </div>
             </div>
-            <ol data-reel class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <ol data-reel class="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {% for article in videos %}
                 <li class="shrink-0 snap-start w-[72%] sm:w-[42%] md:w-[30%] lg:w-[calc((100%-3rem)/4)]">
                     <a href="{% url 'articles:article_detail' article.slug %}" data-reel-item {% if forloop.first %}aria-current="true"{% endif %}
                        data-url="{% url 'articles:article_detail' article.slug %}"
-                       data-title="{{ article.title }}"
-                       data-summary="{{ article.summary }}"
+                       data-title="{{ article.title }}" data-title-lang="{{ article.title|content_lang }}"
+                       data-summary="{{ article.summary }}" data-summary-lang="{{ article.summary|content_lang }}"
                        data-section="{% if article.section %}{{ article.section.name }}{% else %}{% trans 'Video' %}{% endif %}"
                        data-time="{% if article.published_at %}{{ article.published_at|news_time }}{% endif %}"
                        data-thumb="{{ article.card_image_url }}"
@@ -104,7 +104,7 @@ story. Expects `videos` (list of Articles with `section` loaded).
                             <span aria-hidden="true" class="absolute top-2 left-2 font-mono-editorial text-[0.65rem] tracking-widest text-white/90 bg-black/60 px-1.5 py-0.5">{{ forloop.counter|stringformat:"02d" }}</span>
                             <span aria-hidden="true" class="absolute bottom-0 inset-x-0 h-1 bg-accent scale-x-0 origin-left transition-transform duration-300 group-aria-[current=true]:scale-x-100"></span>
                         </div>
-                        <p class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</p>
+                        <p lang="{{ article.title|content_lang }}" class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</p>
                         {% if article.published_at %}<p class="mt-1 text-xs text-primary-foreground/50">{{ article.published_at|news_time }}</p>{% endif %}
                     </a>
                 </li>
@@ -176,9 +176,11 @@ story. Expects `videos` (list of Articles with `section` loaded).
             $('stage-section').textContent = d.section;
             var title = $('stage-title');
             title.textContent = d.title;
+            title.lang = d.titleLang;
             title.href = d.url;
             var summary = $('stage-summary');
             summary.textContent = d.summary;
+            summary.lang = d.summaryLang;
             summary.classList.toggle('hidden', !d.summary);
             $('stage-time').textContent = d.time;
             $('stage-read').href = d.url;

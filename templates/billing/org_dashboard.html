@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n money_tags %}
+{% load i18n money_tags news_time %}
 
 {% block title %}{{ organization.name }} — {% trans "Organization dashboard" %} — {{ JOURNAL_NAME }}{% endblock %}
 {% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
@@ -13,7 +13,7 @@
             <h1 class="font-display text-3xl font-bold mt-1" style="letter-spacing: -0.02em;">{{ organization.name }}</h1>
             <p class="mt-1 text-sm text-muted-foreground">
                 {{ organization.plan.name }} ·
-                {% blocktrans with end=organization.end_date|date:"j M Y" %}until {{ end }}{% endblocktrans %}
+                {% blocktrans with end=organization.end_date|date:"j M Y"|local_digits %}until {{ end }}{% endblocktrans %}
                 {% if days_left <= 30 and days_left >= 0 %}<span class="text-accent font-medium">· {% blocktrans count days=days_left %}{{ days }} day left{% plural %}{{ days }} days left{% endblocktrans %}</span>{% endif %}
             </p>
         </div>
@@ -26,7 +26,7 @@
     <form method="get" class="mt-6 flex flex-wrap items-center gap-3 text-sm">
         <label for="month" class="text-muted-foreground">{% trans "Showing" %}</label>
         <select id="month" name="month" onchange="this.form.submit()" class="border border-border bg-card px-2 py-1.5">
-            {% for month in months %}<option value="{{ month|date:'Y-m' }}"{% if month == start %} selected{% endif %}>{{ month|date:"F Y" }}</option>{% endfor %}
+            {% for month in months %}<option value="{{ month|date:'Y-m' }}"{% if month == start %} selected{% endif %}>{{ month|date:"F Y"|local_digits }}</option>{% endfor %}
         </select>
         <a href="{% url 'billing:org_report_csv' organization.pk %}?month={{ start|date:'Y-m' }}" class="font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:border-accent hover:text-accent">{% trans "DOWNLOAD CSV" %}</a>
     </form>
@@ -46,7 +46,7 @@
                     <li class="flex-1 flex flex-col items-center justify-end h-full gap-1">
                         <span class="text-[0.65rem] text-muted-foreground">{{ point.reads }}</span>
                         <span class="w-full bg-foreground" style="height: {{ point.pct }}%; min-height: 2px;" aria-hidden="true"></span>
-                        <span class="text-[0.6rem] text-muted-foreground whitespace-nowrap">{{ point.label|slice:":3" }}</span>
+                        <span class="text-[0.65rem] text-muted-foreground whitespace-nowrap">{{ point.label|slice:":3" }}</span>
                         <span class="sr-only">{{ point.label }}: {{ point.reads }}</span>
                     </li>
                 {% endfor %}
@@ -86,9 +86,9 @@
                     {% for member in members %}
                         <tr>
                             <td class="p-3"><span class="font-medium">{{ member.user.get_full_name }}</span>{% if member.is_manager %} <span class="font-mono-editorial text-[0.6rem] tracking-widest text-accent">{% trans "MANAGER" %}</span>{% endif %}<span class="block text-xs text-muted-foreground">{{ member.user.email }}</span></td>
-                            <td class="p-3 whitespace-nowrap text-muted-foreground">{{ member.joined_at|date:"j M Y" }}</td>
+                            <td class="p-3 whitespace-nowrap text-muted-foreground">{{ member.joined_at|date:"j M Y"|local_digits }}</td>
                             <td class="p-3 text-right">{{ member.period_reads }}</td>
-                            <td class="p-3 whitespace-nowrap text-muted-foreground">{{ member.last_read|date:"j M Y"|default:"—" }}</td>
+                            <td class="p-3 whitespace-nowrap text-muted-foreground">{{ member.last_read|date:"j M Y"|local_digits|default:"—" }}</td>
                             <td class="p-3 whitespace-nowrap text-right">
                                 {% if member.user_id != user.pk %}
                                     <form method="post" action="{% url 'billing:org_member_manager' organization.pk member.pk %}" class="inline">{% csrf_token %}<button type="submit" class="text-xs underline hover:text-accent">{% if member.is_manager %}{% trans "Remove manager" %}{% else %}{% trans "Make manager" %}{% endif %}</button></form>

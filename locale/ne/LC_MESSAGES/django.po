@@ -3779,3 +3779,96 @@ msgstr "अंक पढ्नुहोस् →"
 #: templates/articles/includes/story_flags.html
 msgid "Subscribers only"
 msgstr "सदस्यहरूका लागि मात्र"
+
+#: templates/home.html
+msgid "Papers from our journal. Peer-reviewed means independent experts checked each one before publication."
+msgstr "हाम्रो जर्नलका अनुसन्धानपत्रहरू। समकक्षी-समीक्षित भन्नाले प्रकाशनअघि स्वतन्त्र विज्ञहरूले जाँच गरेको भन्ने बुझिन्छ।"
+
+#: templates/includes/pagination_editorial.html
+msgid "← PREVIOUS"
+msgstr "← अघिल्लो"
+
+#: templates/includes/pagination_editorial.html
+#, python-format
+msgid "PAGE %(n)s OF %(total)s"
+msgstr "पृष्ठ %(n)s / %(total)s"
+
+#: templates/includes/pagination_editorial.html
+msgid "NEXT →"
+msgstr "अर्को →"
+
+#: templates/users/login.html
+msgid "Forgot password?"
+msgstr "पासवर्ड बिर्सनुभयो?"
+
+#: templates/users/login.html
+msgid "Log in to carry on where you left off."
+msgstr "जहाँ छाड्नुभएको थियो, त्यहीँबाट जारी राख्न लग इन गर्नुहोस्।"
+
+#: templates/users/login.html
+msgid "New here? An account is free and keeps your saved stories and subscriptions in one place."
+msgstr "नयाँ हुनुहुन्छ? खाता निःशुल्क छ, र यसले तपाईंका सुरक्षित लेख र सदस्यता एकै ठाउँमा राख्छ।"
+
+#: templates/users/login.html
+msgid "CREATE AN ACCOUNT"
+msgstr "खाता बनाउनुहोस्"
+
+#: templates/articles/article_detail.html
+#, python-format
+msgid "Subscriptions from %(price)s a month"
+msgstr "सदस्यता मासिक %(price)s देखि"
+
+#: templates/articles/article_detail.html
+msgid "Already a subscriber?"
+msgstr "पहिल्यै सदस्य हुनुहुन्छ?"
+
+msgid "AM"
+msgstr "पूर्वाह्न"
+
+msgid "PM"
+msgstr "अपराह्न"
+
+msgid "WHAT'S INCLUDED"
+msgstr "के-के समावेश छ"
+
+msgid "Included"
+msgstr "समावेश छ"
+
+msgid "Reset password"
+msgstr "पासवर्ड रिसेट"
+
+msgid "Reset your password"
+msgstr "पासवर्ड रिसेट गर्नुहोस्"
+
+msgid "Enter your email and we'll send you a reset link."
+msgstr "आफ्नो इमेल लेख्नुहोस्, हामी पासवर्ड रिसेट गर्ने लिंक पठाउँछौँ।"
+
+msgid "SEND RESET LINK"
+msgstr "रिसेट लिंक पठाउनुहोस्"
+
+msgid "← Back to log in"
+msgstr "← लगइनमा फर्कनुहोस्"
+
+msgid "Set a new password"
+msgstr "नयाँ पासवर्ड राख्नुहोस्"
+
+msgid "SET PASSWORD"
+msgstr "पासवर्ड राख्नुहोस्"
+
+msgid "This reset link no longer works, usually because it has already been used. Ask for a new one."
+msgstr "यो रिसेट लिंकले अब काम गर्दैन, प्रायः यो पहिल्यै प्रयोग भइसकेकाले। नयाँ लिंक माग्नुहोस्।"
+
+msgid "SEND A NEW LINK"
+msgstr "नयाँ लिंक पठाउनुहोस्"
+
+msgid "Check your email"
+msgstr "आफ्नो इमेल हेर्नुहोस्"
+
+msgid "If an account exists for that address, we've sent a link to reset your password. It can take a few minutes; check your spam folder too."
+msgstr "यो ठेगानामा खाता छ भने, हामीले पासवर्ड रिसेट गर्ने लिंक पठाएका छौँ। आइपुग्न केही मिनेट लाग्न सक्छ; स्प्याम फोल्डर पनि हेर्नुहोस्।"
+
+msgid "Password updated"
+msgstr "पासवर्ड परिवर्तन भयो"
+
+msgid "Your new password is set. Use it the next time you log in."
+msgstr "तपाईंको नयाँ पासवर्ड राखियो। अर्को पटक लगइन गर्दा यही प्रयोग गर्नुहोस्।"

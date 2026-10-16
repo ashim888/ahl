@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n news_time %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
@@ -47,13 +47,13 @@
     {% if featured_course %}
         {% with course=featured_course %}
         <a href="{% url 'training:course_detail' course.pk %}"
-           class="group grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all mb-14">
+           class="group grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow] mb-14">
             <div class="relative aspect-video md:aspect-auto md:min-h-[300px] bg-secondary overflow-hidden [&>*]:absolute [&>*]:inset-0">
                 {% include 'training/includes/course_cover.html' with course=course classes="group-hover:scale-[1.03] transition-transform duration-300" %}
             </div>
             <div class="p-7 md:p-10 flex flex-col">
                 <span class="section-label text-accent">{% trans "FEATURED COURSE" %}{% if course.category %} · {{ course.category|upper }}{% endif %}</span>
-                <h2 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-3 group-hover:text-accent transition-colors" style="letter-spacing: -0.02em;">{{ course.title }}</h2>
+                <h2 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-3 group-hover:underline decoration-1 underline-offset-[3px]" style="letter-spacing: -0.02em;">{{ course.title }}</h2>
                 {% if course.subtitle %}<p class="mt-3 text-muted-foreground leading-relaxed">{{ course.subtitle }}</p>{% endif %}
                 <p class="mt-4 text-sm"><span class="text-muted-foreground">{% trans "Taught by" %}</span> <span class="font-medium">{{ course.instructor }}</span></p>
                 <p class="mt-1 text-sm text-muted-foreground">
@@ -65,7 +65,7 @@
                         {% trans "VIEW COURSE →" %}
                     </span>
                     {% if course.start_date %}
-                        <span class="font-mono-editorial text-xs text-muted-foreground">{% blocktrans with date=course.start_date|date:"F j" %}Starts {{ date }}{% endblocktrans %}</span>
+                        <span class="font-mono-editorial text-xs text-muted-foreground">{% blocktrans with date=course.start_date|date:"F j"|local_digits %}Starts {{ date }}{% endblocktrans %}</span>
                     {% endif %}
                 </div>
             </div>
@@ -113,10 +113,10 @@
     {% if categories|length > 1 %}
         <div class="flex flex-wrap gap-2 mt-5">
             <a href="{% url 'training:course_list' %}"
-               class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 rounded-full border {% if not filters.category %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{% trans "All" %}</a>
+               class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 border {% if not filters.category %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{% trans "All" %}</a>
             {% for category in categories %}
                 <a href="?category={{ category|urlencode }}"
-                   class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 rounded-full border {% if filters.category|lower == category|lower %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{{ category }}</a>
+                   class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 border {% if filters.category|lower == category|lower %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{{ category }}</a>
             {% endfor %}
         </div>
     {% endif %}

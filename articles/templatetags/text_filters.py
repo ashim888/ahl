@@ -13,6 +13,29 @@ def split_comma(value):
     return [part.strip() for part in value.split(',') if part.strip()]
 
 
+def _first_glyph(text):
+    """The first letter as a reader sees it: a base letter plus its vowel
+    signs and marks, and in Devanagari any conjunct joined by a virama
+    ("वि", "क्ष", "श्रु"), not just the first code point ("व")."""
+    import unicodedata
+    text = str(text or '').strip()
+    if not text:
+        return ''
+    glyph = text[0]
+    for ch in text[1:]:
+        if unicodedata.category(ch).startswith('M') or glyph.endswith('\u094d'):
+            glyph += ch
+        else:
+            break
+    return glyph.upper()
+
+
+@register.filter
+def plate_initial(title):
+    """{{ title|plate_initial }} — the press plate's big letter (see _first_glyph)."""
+    return _first_glyph(title)
+
+
 @register.filter
 def subject_initial(title):
     """Capital initial of a course title's second word — "Research Writing
@@ -21,7 +44,7 @@ def subject_initial(title):
     across the catalog; the second word is usually the subject.
     """
     words = str(title or '').split()
-    return (words[1] if len(words) > 1 else ''.join(words))[:1].upper()
+    return _first_glyph(words[1] if len(words) > 1 else ''.join(words))
 
 
 @register.filter

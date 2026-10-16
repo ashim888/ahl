@@ -71,7 +71,14 @@
       progress(true);
     }
 
-    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { show(i, true); start(); }); });
+    // Keep keyboard and screen-reader focus on the page: on the current cover
+    // line, or, on phones where that line hides itself, the story's headline.
+    function keepFocus() {
+      var line = dots[current];
+      var target = line && line.offsetParent ? line : slides[current].querySelector('h2 a');
+      if (target) target.focus({preventScroll: true});
+    }
+    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { show(i, true); start(); if (document.activeElement === dot) keepFocus(); }); });
     if (pauseButton) pauseButton.addEventListener('click', function () {
       userPaused = !userPaused;
       setPauseLabel(userPaused);
@@ -86,8 +93,8 @@
     });
     root.addEventListener('keydown', function (event) {
       if (!event.target.closest('[data-hero-dot]')) return; // links inside the hero keep their keys
-      if (event.key === 'ArrowLeft') { show(current - 1, true); event.preventDefault(); }
-      if (event.key === 'ArrowRight') { show(current + 1, true); event.preventDefault(); }
+      if (event.key === 'ArrowLeft') { show(current - 1, true); keepFocus(); event.preventDefault(); }
+      if (event.key === 'ArrowRight') { show(current + 1, true); keepFocus(); event.preventDefault(); }
     });
 
     // Swipe on touch screens.
@@ -105,6 +112,7 @@
 
     show(0, false);
     ready = true;
+    root.setAttribute('data-hero-ready', '');
     start();
   });
 })();

@@ -6,6 +6,11 @@
    instead of widening the page on phones. */
 @layer base {
   h1, h2, h3, h4, p, li, dd { overflow-wrap: break-word; }
+  /* Keyboard focus in the house colours: an ink ring on paper, a paper ring
+     on ink bands. Components with their own focus-visible style keep it. */
+  :focus-visible { outline: 2px solid theme('colors.foreground'); outline-offset: 3px; }
+  .bg-foreground :focus-visible { outline-color: theme('colors.primary-foreground'); }
+  ::selection { background: theme('colors.foreground'); color: theme('colors.primary-foreground'); }
 }
 
 /* Accessibility: red text inside dark sections (page heroes, the video
@@ -18,14 +23,13 @@
 /* Topic hashtags (#Dengue) — one component everywhere: article page, cards,
    homepage "Trending", topic pages, search (articles/includes/topic_pill.html).
    A flat paper chip with a hairline border and the "#" in a red disc; it
-   fills red and lifts on hover. --hot is the ink variant for the top
+   fills red on hover. --hot is the ink variant for the top
    trending topics. */
 @layer components {
   .topic-pill {
     @apply inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-card
            font-medium text-foreground whitespace-nowrap transition duration-200 ease-out
-           hover:-translate-y-px hover:border-accent hover:bg-accent hover:text-white
-           hover:shadow-[0_8px_18px_-8px_rgba(192,57,43,0.6)]
+           hover:border-accent hover:bg-accent hover:text-white
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2;
   }
   .topic-pill__hash {
@@ -35,12 +39,12 @@
   .topic-pill:hover .topic-pill__hash { @apply bg-white text-accent; }
   .topic-pill__name { @apply min-w-0 truncate; }
   .topic-pill__count {
-    @apply rounded-full bg-foreground/[0.06] px-1.5 py-px text-[0.85em] font-normal tabular-nums text-muted-foreground transition-colors;
+    @apply rounded-full bg-foreground/[0.06] px-1.5 py-px text-[0.9em] font-normal tabular-nums text-muted-foreground transition-colors;
   }
   .topic-pill:hover .topic-pill__count { @apply bg-white/20 text-white; }
 
-  .topic-pill--sm { @apply py-0.5 pl-0.5 pr-2.5 text-[11px]; }
-  .topic-pill--sm .topic-pill__hash { @apply h-4 w-4 text-[10px]; }
+  .topic-pill--sm { @apply py-0.5 pl-0.5 pr-2.5 text-xs; }
+  .topic-pill--sm .topic-pill__hash { @apply h-4 w-4 text-[11px]; }
   .topic-pill--md { @apply py-1 pl-1 pr-3 text-xs; }
   .topic-pill--md .topic-pill__hash { @apply h-5 w-5 text-[12px]; }
   .topic-pill--lg { @apply py-1.5 pl-1.5 pr-4 text-sm; }
@@ -103,6 +107,8 @@
   /* Quiet: the plate supports a headline instead of leading the band. */
   .press-plate--quiet .press-plate__initial { font-size: min(70cqh, 38cqw); }
   .press-plate--quiet .press-plate__initial:lang(ne) { font-size: min(88cqh, 42cqw); }
+  /* A quiet plate sits beside a headline and label that already say what it is. */
+  .press-plate--quiet .press-plate__stamp { display: none; }
   .press-plate__stamp {
     position: absolute; left: 7cqw; top: 9cqh; display: flex; flex-direction: column; gap: 0.5rem;
     font-family: theme('fontFamily.mono-editorial'); font-size: 0.6rem; letter-spacing: 0.2em;
@@ -141,6 +147,10 @@
   .hero-lines { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .hero-lines::-webkit-scrollbar { display: none; }
   @media (min-width: 640px) { .hero-line { flex-basis: 42%; } }
+  /* Below 1024px the rail scrolls: fade its right edge so a cut-off line reads as "more". */
+  @media (max-width: 1023px) {
+    .hero-lines { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent); }
+  }
   @media (min-width: 1024px) {
     .hero-lines { display: grid; grid-template-columns: repeat(var(--hero-lines), minmax(0, 1fr)); overflow: visible; }
   }
@@ -173,6 +183,10 @@
   @media (prefers-reduced-motion: reduce) { .hero-line, .hero-line__bar::before { transition: none; } }
   /* `hidden` must win over the slide's own display:grid / the controls' flex. */
   .hero-slide[hidden], [data-hero-controls][hidden], [data-hero-pause][hidden] { display: none !important; }
+  /* With JavaScript on, only the first slide shows from first paint (the slider
+     takes over once ready), so the page doesn't collapse by three slides on load.
+     Without JavaScript every slide still stacks. */
+  .js [data-hero-slider]:not([data-hero-ready]) [data-hero-slide]:not(:first-child) { display: none; }
   /* A whole (uncropped) picture fades out at its edges into the blurred copy
      of itself behind it, instead of sitting on it like a pasted-on card. */
   .hero-feather {

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load money_tags %}
-{% load i18n %}
+{% load i18n news_time %}
 
 {% block title %}{% trans "Checkout" %} — {{ plan.name }} — {{ JOURNAL_NAME }}{% endblock %}
 
@@ -17,8 +17,8 @@
             {% if plan.description %}<p class="mt-1 text-sm text-muted-foreground leading-relaxed">{{ plan.description }}</p>{% endif %}
         </div>
         <div class="border-t border-border px-5 py-3 font-mono-editorial text-xs text-muted-foreground">
-            {% if is_renewal %}{% blocktrans with start=starts|date:"j M Y" end=ends|date:"j M Y" %}Renewal · {{ start }} – {{ end }} (starts when your current subscription ends){% endblocktrans %}
-            {% else %}{% blocktrans with start=starts|date:"j M Y" end=ends|date:"j M Y" %}Access {{ start }} – {{ end }}{% endblocktrans %}{% endif %}
+            {% if is_renewal %}{% blocktrans with start=starts|date:"j M Y"|local_digits end=ends|date:"j M Y"|local_digits %}Renewal · {{ start }} – {{ end }} (starts when your current subscription ends){% endblocktrans %}
+            {% else %}{% blocktrans with start=starts|date:"j M Y"|local_digits end=ends|date:"j M Y"|local_digits %}Access {{ start }} – {{ end }}{% endblocktrans %}{% endif %}
         </div>
         {% blocktrans asvar days_label with days=plan.duration_days %}{{ days }} days access{% endblocktrans %}
         {% include 'billing/includes/bill_summary.html' with quote=quote label=days_label %}

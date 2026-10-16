@@ -24,7 +24,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                  {% if hero_slides|length > 1 %}role="group" aria-roledescription="slide" aria-label="{% blocktrans with n=forloop.counter total=hero_slides|length %}{{ n }} of {{ total }}{% endblocktrans %}"{% endif %}>
             {% if story.card_image_url %}
                 {# The picture's own colours, blurred, tint the whole band. #}
-                <img src="{{ story.card_image_url }}" alt="" aria-hidden="true" class="absolute inset-0 -z-20 h-full w-full object-cover scale-110 blur-3xl opacity-60 saturate-150">
+                <img src="{{ story.card_image_url }}" alt="" aria-hidden="true" class="absolute inset-0 -z-20 h-full w-full object-cover scale-110 blur-3xl opacity-35">
             {% endif %}
             <div class="absolute inset-0 -z-20 bg-gradient-to-b from-foreground/70 via-foreground/85 to-foreground lg:bg-gradient-to-r lg:from-foreground lg:from-35% lg:via-foreground/75 lg:to-foreground/20" aria-hidden="true"></div>
 
@@ -33,7 +33,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                 {% if story.hero_shows_whole %}
                     {# Shown whole, its own edges fading into the band. #}
                     <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
-                       class="relative -z-10 flex items-center justify-center h-[280px] sm:h-[340px] px-6 pt-6 lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[56%] lg:p-10">
+                       class="relative -z-10 flex items-center justify-center h-[220px] sm:h-[340px] px-6 pt-6 lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[56%] lg:p-10">
                         <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
                              class="hero-feather max-h-full max-w-full object-contain">
                         {% include 'articles/includes/play_badge.html' with article=story %}
@@ -41,7 +41,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                 {% else %}
                     {# A photo fills the right side, melting into the band on its left (at the bottom on phones). #}
                     <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
-                       class="relative -z-10 block aspect-[16/10] sm:aspect-[2/1] hero-fade-bottom lg:absolute lg:inset-y-0 lg:right-0 lg:aspect-auto lg:w-[64%] lg:hero-fade-left">
+                       class="relative -z-10 block aspect-[2/1] hero-fade-bottom lg:absolute lg:inset-y-0 lg:right-0 lg:aspect-auto lg:w-[64%] lg:hero-fade-left">
                         <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
                              class="absolute inset-0 h-full w-full object-cover"
                              {% if story.featured_image %}style="object-position: {{ story.featured_image_position }};"{% endif %}>
@@ -59,7 +59,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                             <span class="mt-2 block text-2xl sm:text-3xl lg:text-4xl font-semibold text-white/90">{{ parts.subtitle }}</span>{% endif %}
                         </a>
                     </h2>
-                    {% with summary=story.summary %}{% if summary %}<p class="text-base sm:text-lg leading-relaxed text-white/75 line-clamp-2 sm:line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% with summary=story.summary %}{% if summary %}<p lang="{{ summary|content_lang }}" class="text-base sm:text-lg leading-relaxed text-white/75 line-clamp-2 sm:line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
                     {% include 'articles/includes/story_flags.html' with article=story on_ink=True extra='self-start' %}
                     {% if topics %}
                         <ul class="flex flex-wrap items-center gap-y-2 text-sm text-white/85" aria-label="{% trans 'Topics' %}">
@@ -80,9 +80,6 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                         </a>
                     </div>
                     <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75">
-                        <span class="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/5" aria-hidden="true">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
-                        </span>
                         <span class="font-semibold text-white">{% for aa in story.articleauthor_set.all %}{{ aa.display_name }}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}</span>
                         <span class="hidden sm:block h-4 w-px bg-white/25" aria-hidden="true"></span>
                         <span>{% if story.article_type != 'news_commentary' %}{{ story.get_article_type_display }} · {% endif %}{{ story.published_at|news_time }} · {{ story.estimated_read_minutes|local_digits }} {% trans "min read" %}</span>
@@ -194,7 +191,7 @@ beside it with small thumbnails. Stacks on phones.
             {# No picture: the plate shrinks to a 21:9 strip and the headline carries the lead. #}
             <div class="relative {% if lead.card_image_url %}aspect-[3/2]{% else %}aspect-[21/9]{% endif %} bg-secondary overflow-hidden">
                 {% if lead.card_image_url %}
-                    <img src="{{ lead.card_image_url }}" style="{{ lead.card_image_style }}" alt="{{ lead.featured_image_alt|default:lead.title }}" loading="lazy"
+                    <img src="{{ lead.card_image_url }}" style="{{ lead.card_image_style }}" alt="{{ lead.featured_image_alt }}" loading="lazy"
                          class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]">
                     {% include 'articles/includes/play_badge.html' with article=lead %}
                 {% else %}
@@ -208,7 +205,7 @@ beside it with small thumbnails. Stacks on phones.
             <h3 lang="{{ lead.title|content_lang }}" class="mt-2 font-display {% if lead.card_image_url %}text-2xl sm:text-3xl{% else %}text-3xl sm:text-4xl{% endif %} font-bold leading-[1.15]" style="letter-spacing: -0.015em; text-wrap: balance;">
                 <a href="{% url 'articles:article_detail' lead.slug %}" class="after:absolute after:inset-0 group-hover:underline decoration-2 underline-offset-[5px]">{{ lead.title }}</a>
             </h3>
-            {% with summary=lead.summary %}{% if summary %}<p class="mt-3 max-w-[62ch] text-base leading-relaxed text-muted-foreground {% if lead.card_image_url %}line-clamp-3{% else %}line-clamp-5{% endif %}">{{ summary }}</p>{% endif %}{% endwith %}
+            {% with summary=lead.summary %}{% if summary %}<p lang="{{ summary|content_lang }}" class="mt-3 max-w-[62ch] text-base leading-relaxed text-muted-foreground {% if lead.card_image_url %}line-clamp-3{% else %}line-clamp-5{% endif %}">{{ summary }}</p>{% endif %}{% endwith %}
             <p class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                 {% with a=lead.articleauthor_set.all|first %}<span class="font-semibold text-foreground">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>{% endwith %}
                 <span aria-hidden="true">·</span><span>{{ lead.estimated_read_minutes|local_digits }} {% trans "min read" %}</span>
@@ -259,7 +256,7 @@ rigor is what sets this site apart, so it comes before opinion and video.
 <section class="bg-secondary border-t border-border">
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'issues:issue_list' as all_url %}
-        {% trans "From the Journal" as title %}{% trans "ALL ISSUES →" as link_label %}{% trans "Peer-reviewed papers from our journal, alongside the news." as journal_dek %}
+        {% trans "From the Journal" as title %}{% trans "ALL ISSUES →" as link_label %}{% trans "Papers from our journal. Peer-reviewed means independent experts checked each one before publication." as journal_dek %}
         {% include 'includes/section_heading.html' with link_url=all_url dek=journal_dek %}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -267,7 +264,7 @@ rigor is what sets this site apart, so it comes before opinion and video.
                 {% comment %} One link for the whole card (the title's overlay); only the DOI sits above it. {% endcomment %}
                 <article class="group relative flex flex-col bg-card border border-border p-6 hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow]">
                     <p class="flex flex-wrap items-center gap-x-2 font-mono-editorial text-xs text-muted-foreground">
-                        <span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% if article.issue %}{{ article.issue.title }}{% else %}{% trans "Online first" %}{% endif %}{% if article.published_at %} · {{ article.published_at|news_time }}{% endif %}
+                        <span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% if article.issue %}<span lang="{{ article.issue.title|content_lang }}">{{ article.issue.title }}</span>{% else %}{% trans "Online first" %}{% endif %}{% if article.published_at %} · {{ article.published_at|news_time }}{% endif %}
                     </p>
                     <h3 lang="{{ article.title|content_lang }}" class="mt-3 font-display text-lg font-bold leading-snug" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</a>
@@ -276,7 +273,7 @@ rigor is what sets this site apart, so it comes before opinion and video.
                     <p class="mt-3 text-sm text-muted-foreground">
                         {% for aa in article.articleauthor_set.all %}{{ aa.display_name }}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
                     </p>
-                    {% with summary=article.summary %}{% if summary %}<p class="mt-3 text-sm text-muted-foreground leading-relaxed line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% with summary=article.summary %}{% if summary %}<p lang="{{ summary|content_lang }}" class="mt-3 max-w-[65ch] text-sm text-muted-foreground leading-relaxed line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
                     {% if article.doi %}<p class="mt-auto pt-4"><a href="https://doi.org/{{ article.doi }}" class="relative z-10 font-mono-editorial text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground" rel="noopener">{% trans "DOI" %}: {{ article.doi }}</a></p>{% endif %}
                 </article>
             {% endfor %}
@@ -286,22 +283,22 @@ rigor is what sets this site apart, so it comes before opinion and video.
 {% endif %}
 {% if board_preview %}
 {% comment %} Paper, not newsprint, so it reads as its own band after the journal. One
-   link to the board page instead of one per member (they all went to the
-   same place); columns follow the head count so nobody sits alone. {% endcomment %}
+   link to the board page (members and policies live there). Four people
+   get four columns; any other count gets three, so nobody sits alone. {% endcomment %}
 <section class="bg-background">
     <div class="max-w-7xl mx-auto px-6 py-12">
-        {% trans "Board &amp; Policies" as title %}{% trans "EDITORIAL POLICY →" as link_label %}
+        {% trans "Board &amp; Policies" as title %}{% trans "MEET THE BOARD →" as link_label %}
         {% blocktrans asvar board_dek with journal=JOURNAL_NAME %}{{ journal }} is governed by an independent editorial board. Peer review for original research is conducted externally via OJS.{% endblocktrans %}
         {% url 'editorial_board:public_list' as board_url %}
-        {% include 'includes/section_heading.html' with link_url=board_url|add:"?tab=policies" dek=board_dek %}
-        <ul class="grid grid-cols-1 sm:grid-cols-2 {% if board_preview|length|divisibleby:3 %}md:grid-cols-3{% else %}md:grid-cols-4{% endif %} gap-x-6 gap-y-8">
+        {% include 'includes/section_heading.html' with link_url=board_url dek=board_dek %}
+        <ul class="grid grid-cols-1 sm:grid-cols-2 {% if board_preview|length == 4 %}lg:grid-cols-4{% else %}lg:grid-cols-3{% endif %} gap-x-6 gap-y-8">
             {% for member in board_preview %}
                 <li class="flex items-start gap-4">
                     {% if member.photo %}
                         <img src="{{ member.photo.url }}" alt="" class="w-14 h-14 shrink-0 object-cover grayscale">
                     {% else %}
-                        <div class="w-14 h-14 shrink-0 bg-foreground flex items-center justify-center" aria-hidden="true">
-                            <span class="font-display text-xl font-bold text-primary-foreground">{{ member.last_name_initial }}</span>
+                        <div class="w-14 h-14 shrink-0 border border-foreground flex items-center justify-center" aria-hidden="true">
+                            <span class="font-display text-xl font-bold">{{ member.last_name_initial }}</span>
                         </div>
                     {% endif %}
                     <div class="min-w-0">
@@ -312,7 +309,6 @@ rigor is what sets this site apart, so it comes before opinion and video.
                 </li>
             {% endfor %}
         </ul>
-        <a href="{{ board_url }}?tab=board" class="inline-block mt-8 font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "MEET THE BOARD →" %}</a>
     </div>
 </section>
 {% endif %}
@@ -324,14 +320,14 @@ rigor is what sets this site apart, so it comes before opinion and video.
         {% trans "Opinion &amp; Commentary" as title %}{% trans "ALL OPINION →" as link_label %}
         {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=editorial" %}
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-border">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
             {% for article in opinion_pieces %}
-                <article class="article-link px-0 md:px-8 first:pl-0 last:pr-0 pb-8 md:pb-0">
-                    <div class="flex flex-wrap items-center gap-2 mb-3 pt-6 md:pt-0">{% if article.article_type != 'news_commentary' %}<span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% endif %}<span class="font-mono-editorial text-xs text-muted-foreground">{{ article.published_at|news_time }}</span>{% include 'articles/includes/story_flags.html' with article=article %}</div>
+                <article class="article-link px-0 lg:px-8 first:pl-0 last:pr-0 pb-8 lg:pb-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-3 pt-6 lg:pt-0">{% if article.article_type != 'news_commentary' %}<span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% endif %}<span class="font-mono-editorial text-xs text-muted-foreground">{{ article.published_at|news_time }}</span>{% include 'articles/includes/story_flags.html' with article=article %}</div>
                     <h3 lang="{{ article.title|content_lang }}" class="font-display text-xl font-bold leading-snug article-title mb-3" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h3>
-                    {% with summary=article.summary %}{% if summary %}<p class="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% with summary=article.summary %}{% if summary %}<p lang="{{ summary|content_lang }}" class="max-w-[65ch] text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
                     <div class="rule-thin mb-3"></div>
                     <div>
                         {% with a=article.articleauthor_set.all|first %}
@@ -362,11 +358,11 @@ rigor is what sets this site apart, so it comes before opinion and video.
         {% url 'issues:issue_list' as all_url %}
         {% trans "Special Issues" as title %}{% trans "ALL ISSUES →" as link_label %}
         {% include 'includes/section_heading.html' with link_url=all_url %}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for issue in special_issues %}
                 {% if issue.is_published %}
                     <a href="{% url 'issues:issue_detail' issue.slug %}"
-                       class="group flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all">
+                       class="group flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow]">
                         <div class="aspect-video bg-secondary overflow-hidden">{% include 'issues/includes/issue_cover.html' %}</div>
                         <div class="flex flex-col flex-1 p-5">
                             <h3 class="font-display text-xl font-bold leading-tight group-hover:underline decoration-1 underline-offset-[3px]" style="letter-spacing: -0.01em;">{{ issue.title }}</h3>
@@ -400,9 +396,9 @@ rigor is what sets this site apart, so it comes before opinion and video.
         {% trans "Learn with us" as title %}{% trans "ALL COURSES →" as link_label %}
         {% include 'includes/section_heading.html' with link_url=all_url %}
         {% comment %} Phones: a sideways rail, one card and a peek of the next, instead of three tall cards stacked. {% endcomment %}
-        <div class="-mx-6 px-6 scroll-px-6 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] md:mx-0 md:px-0 md:pb-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible">
+        <div class="-mx-6 px-6 scroll-px-6 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] lg:mx-0 lg:px-0 lg:pb-0 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible">
             {% for course in home_courses %}
-                <div class="grid shrink-0 basis-[82%] snap-start sm:basis-[46%] md:basis-auto">{% include 'training/includes/course_card.html' %}</div>
+                <div class="grid shrink-0 basis-[82%] snap-start sm:basis-[46%] lg:basis-auto">{% include 'training/includes/course_card.html' %}</div>
             {% endfor %}
         </div>
     </div>

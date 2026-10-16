@@ -25,6 +25,7 @@ from django_ratelimit.decorators import ratelimit
 
 from ajna_health_lens.comments_views import pop_comment_flash
 from ajna_health_lens.mail import send_templated_email
+from billing.models import SubscriptionPlan
 from billing.access import (
     FREE_SAMPLE_LIMIT_PER_MONTH, GIFTABLE_ACCESS_TYPES, METERED_ACCESS_TYPES, article_is_accessible,
     consume_free_sample, create_or_get_article_gift, free_sample_reads_used, get_existing_article_gift,
@@ -581,7 +582,9 @@ class ArticleDetailView(DetailView):
         if gift:
             show_full_text = True
             context['gift_banner'] = gift.gifter
-        elif not show_full_text and self.object.access_type in METERED_ACCESS_TYPES:
+        # Nothing behind the paywall yet (no text, video or PDF): don't spend one of the reader's free reads on it.
+        elif not show_full_text and self.object.access_type in METERED_ACCESS_TYPES \
+                and (self.object.html_content or self.object.has_video or self.object.pdf_file):
             # Metering is a separate, stateful concern from the real
             # entitlement check above — see billing.access.consume_free_sample's
             # own docstring for why the two aren't merged into one function.
@@ -592,6 +595,11 @@ class ArticleDetailView(DetailView):
                     'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
                 }
         context['show_full_text'] = show_full_text
+        if not show_full_text:
+            # The paywall says what reading costs: the cheapest monthly plan.
+            context['cheapest_monthly_plan'] = SubscriptionPlan.objects.filter(
+                is_active=True, plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            ).order_by('price').first()
         user = self.request.user
         if show_full_text and user.is_authenticated and not user.is_editorial_staff \
                 and self.object.status == Article.Status.PUBLISHED and not self.kwargs.get('preview'):
