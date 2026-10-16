@@ -1,5 +1,5 @@
-{% load news_time %}{% if issue.cover_image %}
-    <img src="{{ issue.cover_image.url }}" alt="{{ issue }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
+{% load news_time image_tags %}{% if issue.cover_image %}
+    <img src="{{ issue.cover_image.url }}" srcset="{{ issue.cover_image.url|srcset }}" sizes="(min-width: 768px) 30vw, 100vw" alt="{{ issue }}" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
 {% else %}
     {# No cover uploaded: a press plate stamped with the issue's month. #}
     <div class="w-full h-full relative">

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time topic_tags text_filters %}
+{% load news_time topic_tags text_filters image_tags %}
 {% load i18n %}
 {% load ads_tags static %}
 
@@ -24,7 +24,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                  {% if hero_slides|length > 1 %}role="group" aria-roledescription="slide" aria-label="{% blocktrans with n=forloop.counter total=hero_slides|length %}{{ n }} of {{ total }}{% endblocktrans %}"{% endif %}>
             {% if story.card_image_url %}
                 {# The picture's own colours, blurred, tint the whole band. #}
-                <img src="{{ story.card_image_url }}" alt="" aria-hidden="true" class="absolute inset-0 -z-20 h-full w-full object-cover scale-110 blur-3xl opacity-35">
+                {% with wash=story.card_image_url|backdrop %}<img src="{{ wash|default:story.card_image_url }}" alt="" aria-hidden="true" class="absolute inset-0 -z-20 h-full w-full object-cover scale-110 opacity-35{% if not wash %} blur-3xl{% endif %}">{% endwith %}
             {% endif %}
             <div class="absolute inset-0 -z-20 bg-gradient-to-b from-foreground/70 via-foreground/85 to-foreground lg:bg-gradient-to-r lg:from-foreground lg:from-35% lg:via-foreground/75 lg:to-foreground/20" aria-hidden="true"></div>
 
@@ -34,7 +34,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                     {# Shown whole, its own edges fading into the band. #}
                     <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
                        class="relative -z-10 flex items-center justify-center h-[220px] sm:h-[340px] px-6 pt-6 lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[56%] lg:p-10">
-                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                        <img src="{{ story.card_image_url }}" srcset="{{ story.card_image_url|srcset }}" sizes="(min-width: 1024px) 56vw, 100vw" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
                              class="hero-feather max-h-full max-w-full object-contain">
                         {% include 'articles/includes/play_badge.html' with article=story %}
                     </a>
@@ -42,7 +42,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                     {# A photo fills the right side, melting into the band on its left (at the bottom on phones). #}
                     <a href="{% url 'articles:article_detail' story.slug %}" tabindex="-1" aria-hidden="true"
                        class="relative -z-10 block aspect-[2/1] hero-fade-bottom lg:absolute lg:inset-y-0 lg:right-0 lg:aspect-auto lg:w-[64%] lg:hero-fade-left">
-                        <img src="{{ story.card_image_url }}" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                        <img src="{{ story.card_image_url }}" srcset="{{ story.card_image_url|srcset }}" sizes="(min-width: 1024px) 64vw, 100vw" alt="" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
                              class="absolute inset-0 h-full w-full object-cover"
                              {% if story.featured_image %}style="object-position: {{ story.featured_image_position }};"{% endif %}>
                         {% include 'articles/includes/play_badge.html' with article=story %}
@@ -191,7 +191,7 @@ beside it with small thumbnails. Stacks on phones.
             {# No picture: the plate shrinks to a 21:9 strip and the headline carries the lead. #}
             <div class="relative {% if lead.card_image_url %}aspect-[3/2]{% else %}aspect-[21/9]{% endif %} bg-secondary overflow-hidden">
                 {% if lead.card_image_url %}
-                    <img src="{{ lead.card_image_url }}" style="{{ lead.card_image_style }}" alt="{{ lead.featured_image_alt }}" loading="lazy"
+                    <img src="{{ lead.card_image_url }}" srcset="{{ lead.card_image_url|srcset }}" sizes="(min-width: 1024px) 58vw, 100vw" style="{{ lead.card_image_style }}" alt="{{ lead.featured_image_alt }}" loading="lazy"
                          class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]">
                     {% include 'articles/includes/play_badge.html' with article=lead %}
                 {% else %}
@@ -233,7 +233,7 @@ beside it with small thumbnails. Stacks on phones.
                     </div>
                     <div class="relative shrink-0 w-24 sm:w-32 aspect-[4/3] bg-secondary overflow-hidden">
                         {% if article.card_image_url %}
-                            <img src="{{ article.card_image_url }}" style="{{ article.card_image_style }}" alt="" loading="lazy" class="h-full w-full object-cover">
+                            <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="8rem" style="{{ article.card_image_style }}" alt="" loading="lazy" class="h-full w-full object-cover">
                         {% else %}
                             {% include 'articles/includes/press_plate.html' with article=article %}
                         {% endif %}

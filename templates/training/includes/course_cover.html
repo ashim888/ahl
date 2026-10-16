@@ -1,10 +1,10 @@
-{% load i18n text_filters %}{% comment %}
+{% load i18n text_filters image_tags %}{% comment %}
 Course cover image, or a quiet press plate (articles/includes/press_plate.html)
 when an editor hasn't uploaded one. Usage:
     {% include 'training/includes/course_cover.html' with course=course classes="aspect-video" %}
 {% endcomment %}
 {% if course.cover_image %}
-    <img src="{{ course.cover_image.url }}" alt="" loading="lazy" class="w-full h-full object-cover {{ classes }}">
+    <img src="{{ course.cover_image.url }}" srcset="{{ course.cover_image.url|srcset }}" sizes="(min-width: 1024px) 40vw, 100vw" alt="" loading="lazy" class="w-full h-full object-cover {{ classes }}">
 {% else %}
     <div class="w-full h-full {{ classes }} relative overflow-hidden">
         {% include 'articles/includes/press_plate.html' with article=course initial=course.title|subject_initial quiet=True %}

@@ -1,4 +1,4 @@
-{% load news_time text_filters %}
+{% load news_time text_filters image_tags %}
 {% load i18n %}
 {% comment %}
 Homepage video showcase: a large "screen" for the selected video with its
@@ -96,7 +96,7 @@ story. Expects `videos` (list of Articles with `section` loaded).
                        class="group block opacity-70 hover:opacity-100 aria-[current=true]:opacity-100 transition-opacity focus:outline-none focus-visible:opacity-100">
                         <div class="relative aspect-video bg-black overflow-hidden ring-1 ring-white/10 group-aria-[current=true]:ring-2 group-aria-[current=true]:ring-accent group-focus-visible:ring-2 group-focus-visible:ring-white">
                             {% if article.card_image_url %}
-                                <img src="{{ article.card_image_url }}" alt="" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300">
+                                <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="16rem" alt="" loading="lazy" class="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300">
                             {% else %}
                                 {% include 'articles/includes/press_plate.html' with article=article %}
                             {% endif %}

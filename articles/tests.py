@@ -3704,3 +3704,47 @@ class VideoStoryTests(TestCase):
         entry = Section.objects.get(slug='videos')
         self.assertEqual(entry.nav_url, reverse('articles:video_list'))
         self.assertContains(self.client.get(reverse('articles:home')), f'href="{reverse("articles:video_list")}"')
+
+
+class ImageTagsTests(TestCase):
+    """articles/templatetags/image_tags.py — smaller WebP copies of uploads."""
+
+    def setUp(self):
+        from io import BytesIO
+
+        from django.core.cache import cache
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+        from PIL import Image
+
+        cache.clear()
+        buf = BytesIO()
+        Image.new('RGB', (1200, 800), 'red').save(buf, 'PNG')
+        self.name = default_storage.save('articles/images/wide.png', ContentFile(buf.getvalue()))
+        self.url = default_storage.url(self.name)
+
+    def test_srcset_lists_copies_narrower_than_the_original_then_the_original(self):
+        from django.core.files.storage import default_storage
+        from PIL import Image
+
+        from .templatetags.image_tags import srcset
+
+        result = srcset(self.url)
+        self.assertIn('-480w.webp 480w', result)
+        self.assertIn('-960w.webp 960w', result)
+        self.assertNotIn('1600w', result)
+        self.assertTrue(result.endswith(f'{self.url} 1200w'))
+        with default_storage.open(f'resized/{self.name[:-4]}-480w.webp') as f, Image.open(f) as img:
+            self.assertEqual((img.format, img.width), ('WEBP', 480))
+
+    def test_backdrop_is_a_tiny_copy(self):
+        from .templatetags.image_tags import backdrop
+
+        self.assertTrue(backdrop(self.url).endswith('-64w-blur.webp'))
+
+    def test_non_uploads_and_missing_files_pass_through_empty(self):
+        from .templatetags.image_tags import backdrop, srcset
+
+        self.assertEqual(srcset('https://i.ytimg.com/vi/x/hqdefault.jpg'), '')
+        self.assertEqual(backdrop(''), '')
+        self.assertEqual(srcset('/media/articles/images/missing.png'), '')

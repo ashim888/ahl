@@ -78,7 +78,7 @@ class RenderingTests(TestCase):
     def test_article_banner_shows_a_diagram_whole_on_a_blurred_backdrop(self):
         article = make((1312, 1199))
         response = self.client.get(article.get_absolute_url())
-        self.assertContains(response, 'blur-2xl')
+        self.assertContains(response, '-64w-blur.webp')  # pre-blurred backdrop (image_tags.backdrop)
         self.assertContains(response, 'width="1312" height="1199"')
 
     def test_wide_photo_banner_uses_the_focal_point(self):

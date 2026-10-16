@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time topic_tags ads_tags %}
+{% load news_time topic_tags ads_tags image_tags %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -74,7 +74,7 @@
             <article class="article-link py-6 flex gap-4 sm:gap-6">
                 <a href="{% url 'articles:article_detail' article.slug %}" tabindex="-1" aria-hidden="true" class="relative overflow-hidden bg-muted shrink-0 block w-24 h-[72px] sm:w-40 sm:h-[110px]">
                     {% if article.card_image_url %}
-                        <img src="{{ article.card_image_url }}" alt="{{ article.title }}"
+                        <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="10rem" alt="{{ article.title }}"{% if not forloop.first %} loading="lazy"{% endif %}
                              class="w-full h-full object-cover" style="filter: grayscale(10%); {{ article.card_image_style }}">
                         {% include 'articles/includes/play_badge.html' with article=article small=True %}
                     {% else %}

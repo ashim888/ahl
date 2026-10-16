@@ -1,4 +1,4 @@
-{% load news_time %}
+{% load news_time image_tags %}
 {% load i18n %}
 {% comment %}
 A video story card: thumbnail (featured image, else YouTube's) with ▶, then
@@ -8,7 +8,7 @@ section, headline and time. `dark=True` on the homepage's dark Videos band;
 <article class="group relative flex flex-col">
     <div class="relative aspect-video bg-black overflow-hidden">
         {% if article.card_image_url %}
-            <img src="{{ article.card_image_url }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
+            <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
                  class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
         {% endif %}
         {% include 'articles/includes/play_badge.html' with article=article %}
