@@ -14,7 +14,7 @@ must come from the same call so columns/rows line up.
                 {% for plan in plans %}
                     <th class="pb-4 px-4 text-center align-bottom min-w-[140px]">
                         {% if plan.is_featured %}
-                            <p class="font-mono-editorial text-[0.65rem] text-accent tracking-widest mb-1">{% trans "MOST POPULAR" %}</p>
+                            <p class="font-mono-editorial text-[0.65rem] text-accent tracking-widest mb-1">{% trans "OUR PICK" %}</p>
                         {% endif %}
                         <a href="{% url 'billing:plan_detail' plan.pk %}" lang="{{ plan.name|content_lang }}" class="font-display text-base font-bold hover:underline underline-offset-4">{{ plan.name }}</a>
                         <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{{ plan.price|money }}</p>

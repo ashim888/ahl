@@ -79,6 +79,13 @@ class ImpressionAndClickTrackingTests(TestCase):
         ad.refresh_from_db()
         self.assertEqual(ad.click_count, 1)
 
+    def test_crawlers_are_sent_on_but_not_counted(self):
+        ad = make_ad()
+        response = self.client.get(reverse('ads:click', args=[ad.pk]), HTTP_USER_AGENT='Googlebot/2.1')
+        self.assertEqual(response.url, ad.link_url)
+        ad.refresh_from_db()
+        self.assertEqual(ad.click_count, 0)
+
     def test_record_impression_writes_event_log_row(self):
         ad = make_ad()
         record_impression(ad)

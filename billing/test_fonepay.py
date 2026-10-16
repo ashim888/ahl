@@ -236,9 +236,15 @@ class PaymentSettlementTests(TestCase):
         self.assertEqual(payment.status, Payment.Status.PENDING)
         self.assertFalse(UserSubscription.objects.exists())
 
-    def test_fonepay_unreachable_long_after_expiry_closes_it(self):
+    def test_fonepay_unreachable_long_after_expiry_leaves_it_open(self):
+        # The reader may have paid during the outage: keep asking until Fonepay answers.
         payment = self._payment(expires_at=timezone.now() - datetime.timedelta(minutes=30))
         with patch('billing.fonepay.payment_status', side_effect=fonepay.FonepayError('down')):
+            self.assertEqual(payments.verify_payment(payment).status, Payment.Status.PENDING)
+
+    def test_unpaid_answer_long_after_expiry_closes_it(self):
+        payment = self._payment(expires_at=timezone.now() - datetime.timedelta(minutes=30))
+        with patch('billing.fonepay.payment_status', return_value={'paymentStatus': 'pending'}):
             self.assertEqual(payments.verify_payment(payment).status, Payment.Status.EXPIRED)
 
     def test_failed_is_recorded_and_grants_nothing(self):

@@ -5,6 +5,7 @@ ad (if any) fills a zone, so every zone picks and counts consistently.
 from django.db.models import F, Q
 from django.utils import timezone
 
+from ajna_health_lens.visitor import is_crawler
 from billing.access import user_has_perk
 
 from .models import AdEvent, AdSlot
@@ -33,7 +34,7 @@ def get_ad_for_request(request, zone):
     if is_ad_free_reader(request):
         return None
     ad = get_ad_for_zone(zone)
-    if ad:
+    if ad and not is_crawler(request):
         record_impression(ad)
     return ad
 

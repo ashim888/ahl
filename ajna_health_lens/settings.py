@@ -266,6 +266,10 @@ AXES_USERNAME_FORM_FIELD = 'username'
 # it in Django admin (axes.AccessAttempt) — 30 minutes is enough friction to
 # stop a credential-stuffing run without locking a real reader out for long.
 AXES_COOLOFF_TIME = datetime.timedelta(minutes=30)
+
+# django-ratelimit's key='ip' reads the visitor's address through this, not
+# REMOTE_ADDR, which is 127.0.0.1 for everyone behind nginx (ajna_health_lens/visitor.py).
+RATELIMIT_IP_META_KEY = 'ajna_health_lens.visitor.client_ip'
 AXES_RESET_ON_SUCCESS = True
 # axes.W006 warns that username-only lockout doesn't stop an attacker who
 # rotates IPs/cookies — true, but that's deliberately EmailLoginView's job

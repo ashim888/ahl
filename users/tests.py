@@ -42,6 +42,17 @@ class LoginRateLimitTests(TestCase):
         response = self.client.post(reverse('users:login'), {'username': 'nobody-overflow@example.com', 'password': 'wrong'})
         self.assertEqual(response.status_code, 403)
 
+    def test_visitors_behind_the_proxy_have_their_own_limit(self):
+        # Behind nginx REMOTE_ADDR is 127.0.0.1 for everyone; X-Real-IP tells
+        # visitors apart (ajna_health_lens/visitor.py), so one visitor using up
+        # the limit doesn't block the next one.
+        for i in range(16):
+            self.client.post(reverse('users:login'), {'username': f'a{i}@example.com', 'password': 'wrong'},
+                             REMOTE_ADDR='127.0.0.1', HTTP_X_REAL_IP='203.0.113.1')
+        response = self.client.post(reverse('users:login'), {'username': 'b@example.com', 'password': 'wrong'},
+                                    REMOTE_ADDR='127.0.0.1', HTTP_X_REAL_IP='203.0.113.2')
+        self.assertEqual(response.status_code, 200)
+
 
 @FAST_PASSWORD_HASHERS
 class AccountLockoutTests(TestCase):

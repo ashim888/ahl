@@ -5,7 +5,9 @@
 {% block title %}{% trans "Subscribe" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-{% trans "SUBSCRIBE" as eyebrow %}{% trans "Read without limits" as title %}{% trans "Full access to subscriber-only and special articles." as lead %}
+{% comment %} The pitch is the positioning (PRODUCT.md): journal-backed, referenced, board-reviewed. The meta line holds only facts the checkout keeps (SUBSCRIPTION_CANCEL_DAYS, no auto-renewal). {% endcomment %}
+{% trans "Read every story, evidence included" as title %}{% trans "Subscriber articles and special reports from the newsroom of a peer-reviewed journal, with numbered references, citation export and a named editorial board." as lead %}
+{% blocktrans with days=cancel_days|local_digits asvar meta %}NO AUTOMATIC RENEWAL · FULL REFUND IF YOU CANCEL WITHIN {{ days }} DAYS{% endblocktrans %}
 {% include 'includes/page_hero.html' %}
 
 <div class="max-w-6xl mx-auto px-6 py-12">
@@ -24,7 +26,7 @@
         {% for plan in plans %}
             <div class="relative flex flex-col bg-card overflow-hidden transition-[border-color,box-shadow] hover:shadow-lg {% if plan.is_featured %}border-2 border-accent md:-mt-3 md:mb-3{% else %}border border-border hover:border-foreground{% endif %}">
                 {% if plan.is_featured %}
-                    <p class="bg-accent text-white text-center font-mono-editorial text-[0.65rem] tracking-widest py-1.5">{% trans "MOST POPULAR" %}</p>
+                    <p class="bg-accent text-white text-center font-mono-editorial text-[0.65rem] tracking-widest py-1.5">{% trans "OUR PICK" %}</p>
                 {% endif %}
                 <div class="flex flex-col flex-1 p-6">
                     <span class="section-label text-accent">{{ plan.get_plan_type_display }}</span>
@@ -32,7 +34,9 @@
                     {% if plan.description %}<p lang="{{ plan.description|content_lang }}" class="mt-2 text-sm text-muted-foreground leading-relaxed">{{ plan.description }}</p>{% endif %}
 
                     <p class="mt-5 font-display text-4xl font-bold">{{ plan.price|money }}</p>
-                    <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{% vat_breakdown plan.price as bill %}{% blocktrans with days=plan.duration_days rate=bill.rate %}+ {{ rate }}% VAT · every {{ days }} days{% endblocktrans %}</p>
+                    <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{% vat_breakdown plan.price as bill %}{% blocktrans with days=plan.duration_days|local_digits rate=bill.rate %}+ {{ rate }}% VAT · every {{ days }} days{% endblocktrans %}</p>
+
+                    {% if plan.months_paid %}<p class="mt-2 text-sm font-medium">{% blocktrans with read=plan.months_read|local_digits paid=plan.months_paid|local_digits %}{{ read }} months for the price of {{ paid }}{% endblocktrans %}</p>{% endif %}
 
                     <div class="rule-thin my-5"></div>
                     <ul class="space-y-2.5 mb-6 flex-1">
@@ -45,7 +49,7 @@
                             </li>
                         {% endfor %}
                         {% if plan.features.all|length > 5 %}
-                            <li class="text-xs text-muted-foreground pl-6">{% blocktrans with count=plan.features.all|length|add:"-5" %}+ {{ count }} more{% endblocktrans %}</li>
+                            <li class="text-xs text-muted-foreground pl-6">{% blocktrans with count=plan.features.all|length|add:"-5"|local_digits %}+ {{ count }} more{% endblocktrans %}</li>
                         {% endif %}
                     </ul>
 

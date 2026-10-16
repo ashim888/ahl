@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from .money import format_money
 
@@ -40,9 +41,9 @@ class SubscriptionPlan(models.Model):
     """
 
     class PlanType(models.TextChoices):
-        INDIVIDUAL_MONTHLY = 'individual_monthly', 'Individual — Monthly'
-        INDIVIDUAL_ANNUAL = 'individual_annual', 'Individual — Annual'
-        INSTITUTIONAL = 'institutional', 'Institutional'
+        INDIVIDUAL_MONTHLY = 'individual_monthly', _('Individual — Monthly')
+        INDIVIDUAL_ANNUAL = 'individual_annual', _('Individual — Annual')
+        INSTITUTIONAL = 'institutional', _('Institutional')
 
     name = models.CharField(max_length=100)
     plan_type = models.CharField(max_length=30, choices=PlanType.choices)

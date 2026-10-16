@@ -38,7 +38,7 @@
         <aside class="mt-8 lg:mt-10 order-first lg:order-none">
             <div class="lg:sticky lg:top-28 border {% if plan.is_featured %}border-2 border-accent{% else %}border-border{% endif %} bg-card overflow-hidden">
                 {% if plan.is_featured %}
-                    <p class="bg-accent text-white text-center font-mono-editorial text-[0.65rem] tracking-widest py-1.5">{% trans "MOST POPULAR" %}</p>
+                    <p class="bg-accent text-white text-center font-mono-editorial text-[0.65rem] tracking-widest py-1.5">{% trans "OUR PICK" %}</p>
                 {% endif %}
                 <div class="p-6">
                     <p class="font-display text-4xl font-bold">{{ plan.price|money }}</p>

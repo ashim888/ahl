@@ -3872,3 +3872,27 @@ msgstr "पासवर्ड परिवर्तन भयो"
 
 msgid "Your new password is set. Use it the next time you log in."
 msgstr "तपाईंको नयाँ पासवर्ड राखियो। अर्को पटक लगइन गर्दा यही प्रयोग गर्नुहोस्।"
+
+msgid "OUR PICK"
+msgstr "हाम्रो सिफारिस"
+
+msgid "Individual — Monthly"
+msgstr "व्यक्तिगत — मासिक"
+
+msgid "Individual — Annual"
+msgstr "व्यक्तिगत — वार्षिक"
+
+msgid "Institutional"
+msgstr "संस्थागत"
+
+msgid "Read every story, evidence included"
+msgstr "हरेक समाचार पूरा पढ्नुहोस्, प्रमाणसहित"
+
+msgid "Subscriber articles and special reports from the newsroom of a peer-reviewed journal, with numbered references, citation export and a named editorial board."
+msgstr "सहकर्मी-समीक्षित जर्नलको समाचार कक्षबाट सदस्य-लेख र विशेष रिपोर्टहरू — क्रमबद्ध सन्दर्भ, उद्धरण निर्यात र नाम खुलाइएको सम्पादकीय बोर्डसहित।"
+
+msgid "NO AUTOMATIC RENEWAL · FULL REFUND IF YOU CANCEL WITHIN %(days)s DAYS"
+msgstr "स्वतः नवीकरण हुँदैन · %(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता"
+
+msgid "%(read)s months for the price of %(paid)s"
+msgstr "%(paid)s महिनाको मूल्यमा %(read)s महिना"

@@ -1,5 +1,7 @@
 from django import forms
 
+from ajna_health_lens.visitor import client_ip
+
 from .captcha import verify_turnstile
 from .models import StoryPitch
 
@@ -57,7 +59,7 @@ class StoryPitchForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         token = self.data.get('cf-turnstile-response', '')
-        remote_ip = self.request.META.get('REMOTE_ADDR') if self.request else None
+        remote_ip = client_ip(self.request) if self.request else None
         if not verify_turnstile(token, remote_ip):
             raise forms.ValidationError('CAPTCHA verification failed — please try again.')
         return cleaned_data

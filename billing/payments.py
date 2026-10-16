@@ -264,9 +264,11 @@ def verify_payment(payment: Payment) -> Payment:
             locked.completed_at = timezone.now()
             locked.save()
             transaction.on_commit(lambda: emails.send_payment_failed(locked, underpaid=state == 'success'))
-        elif timezone.now() >= locked.expires_at + datetime.timedelta(minutes=5):
-            # Well past its window with no success reported: close it. (The
-            # grace period covers a payment completed at the last second.)
+        elif data is not None and timezone.now() >= locked.expires_at + datetime.timedelta(minutes=5):
+            # Fonepay answered, well past the window, without a success: close
+            # it. (The grace period covers a payment completed at the last
+            # second.) Never close on a failed check: the reader may have paid
+            # while Fonepay was unreachable; the daily sweep closes it if not.
             # No email — an abandoned QR isn't news to the reader.
             locked.status = Payment.Status.EXPIRED
             locked.completed_at = timezone.now()

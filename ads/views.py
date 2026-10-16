@@ -10,6 +10,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from ajna_health_lens.visitor import is_crawler
 from users.decorators import role_required
 from users.models import User
 
@@ -30,7 +31,8 @@ def ad_click(request, pk):
     counts a click, then sends the reader on to the sponsor's page.
     """
     ad = get_object_or_404(AdSlot, pk=pk)
-    record_click(ad)
+    if not is_crawler(request):
+        record_click(ad)
     return redirect(ad.link_url)
 
 

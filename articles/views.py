@@ -25,6 +25,7 @@ from django_ratelimit.decorators import ratelimit
 
 from ajna_health_lens.comments_views import pop_comment_flash
 from ajna_health_lens.mail import send_templated_email
+from ajna_health_lens.visitor import is_crawler
 from billing.models import SubscriptionPlan
 from billing.access import (
     FREE_SAMPLE_LIMIT_PER_MONTH, GIFTABLE_ACCESS_TYPES, METERED_ACCESS_TYPES, article_is_accessible,
@@ -88,6 +89,8 @@ def _record_article_view(request, article) -> bool:
     to count keyword impressions under exactly the same rules.
     """
     if request.user.is_authenticated and request.user.is_editorial_staff:
+        return False
+    if is_crawler(request):  # also spares a session row per crawled page
         return False
     if not request.session.session_key:
         request.session.save()

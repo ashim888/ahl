@@ -725,10 +725,22 @@ class PlanDetailAndComparisonTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Premium')
         self.assertContains(response, 'Priority support')
-        self.assertContains(response, 'MOST POPULAR')
+        self.assertContains(response, 'OUR PICK')
         # Comparison table includes the other plans too.
         self.assertContains(response, 'Basic')
         self.assertContains(response, 'Enterprise')
+
+    def test_browse_page_states_the_annual_saving_from_real_prices(self):
+        # Rs. 1,000 a year against Rs. 100 a month: 12 months for the price of 10.
+        response = self.client.get(reverse('billing:plan_browse'))
+        self.assertContains(response, '12 months for the price of 10', count=1)
+        self.assertNotContains(response, 'MOST POPULAR')
+
+    def test_no_saving_claimed_when_annual_costs_a_year_of_months(self):
+        self.premium.price = 1200
+        self.premium.save(update_fields=['price'])
+        response = self.client.get(reverse('billing:plan_browse'))
+        self.assertNotContains(response, 'for the price of')
 
     def test_inactive_plan_detail_page_404s(self):
         self.basic.is_active = False

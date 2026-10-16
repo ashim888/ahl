@@ -10,6 +10,7 @@ untouched: srcset gives '', backdrop gives ''.
 """
 from io import BytesIO
 from pathlib import PurePosixPath
+from urllib.parse import unquote
 
 from django import template
 from django.conf import settings
@@ -27,7 +28,8 @@ BACKDROP_WIDTH = 64
 def _upload_name(url) -> str | None:
     """Storage name of an uploaded file from its URL, or None if `url` isn't one."""
     url = str(url or '')
-    return url[len(settings.MEDIA_URL):] if url.startswith(settings.MEDIA_URL) else None
+    # unquote: storage percent-encodes non-ASCII names (Devanagari filenames) in URLs.
+    return unquote(url[len(settings.MEDIA_URL):]) if url.startswith(settings.MEDIA_URL) else None
 
 
 def _variant(name: str, width: int, blur: int = 0) -> str:
@@ -56,7 +58,7 @@ def _cached(key: str, build):
     if value is None:
         try:
             value = build()
-        except (OSError, ValueError, Image.DecompressionBombError):
+        except Exception:  # Pillow signals some broken files with SyntaxError; a damaged upload must not break the page.
             value = ''
         cache.set(key, value, None)
     return value

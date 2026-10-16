@@ -180,6 +180,23 @@ def _subscription_context(request) -> dict:
     }
 
 
+def mark_value_for_money(plans) -> None:
+    """Sets plan.months_read / plan.months_paid on an annual individual plan
+    that costs fewer months than it lasts, against the cheapest monthly plan
+    (Rs. 4,999 a year vs Rs. 499 a month → 12 months for the price of 10).
+    Both stay None otherwise, so the page never claims a saving it can't show.
+    """
+    monthly = min((p for p in plans if p.plan_type == SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY),
+                  key=lambda p: p.price, default=None)
+    for plan in plans:
+        plan.months_read = plan.months_paid = None
+        if monthly and plan.plan_type == SubscriptionPlan.PlanType.INDIVIDUAL_ANNUAL:
+            read = round(plan.duration_days / monthly.duration_days)
+            paid = round(plan.price / monthly.price)
+            if paid < read:
+                plan.months_read, plan.months_paid = read, paid
+
+
 class PlanBrowseView(ListView):
     model = SubscriptionPlan
     template_name = 'billing/plan_browse.html'
@@ -191,8 +208,11 @@ class PlanBrowseView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(_subscription_context(self.request))
+        context['plans'] = list(context['plans'])
+        mark_value_for_money(context['plans'])
         context['comparison_matrix'] = build_comparison_matrix(context['plans'])
         context['contact_email'] = settings.JOURNAL_CONTACT_EMAIL
+        context['cancel_days'] = settings.SUBSCRIPTION_CANCEL_DAYS
         context['meta_description'] = (
             f'Subscribe to {settings.JOURNAL_NAME}: every subscriber article, monthly or yearly, paid with Fonepay. '
             f'No automatic renewal — cancel within {settings.SUBSCRIPTION_CANCEL_DAYS} days for a full refund.'

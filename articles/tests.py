@@ -3742,9 +3742,38 @@ class ImageTagsTests(TestCase):
 
         self.assertTrue(backdrop(self.url).endswith('-64w-blur.webp'))
 
+    def test_devanagari_filenames_get_copies_too(self):
+        from io import BytesIO
+
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+        from PIL import Image
+
+        from .templatetags.image_tags import srcset
+
+        buf = BytesIO()
+        Image.new('RGB', (1200, 800), 'red').save(buf, 'PNG')
+        name = default_storage.save('articles/images/सवसथय.png', ContentFile(buf.getvalue()))
+        self.assertIn('480w', srcset(default_storage.url(name)))
+
     def test_non_uploads_and_missing_files_pass_through_empty(self):
         from .templatetags.image_tags import backdrop, srcset
 
         self.assertEqual(srcset('https://i.ytimg.com/vi/x/hqdefault.jpg'), '')
         self.assertEqual(backdrop(''), '')
         self.assertEqual(srcset('/media/articles/images/missing.png'), '')
+
+
+class CrawlerViewTests(TestCase):
+    """ajna_health_lens/visitor.py is_crawler — bots aren't readers."""
+
+    def test_a_crawler_reading_an_article_is_not_counted_and_gets_no_session(self):
+        from .models import ArticleView
+
+        article = Article.objects.create(title='Crawled', slug='crawled', status=Article.Status.PUBLISHED,
+                                         access_type='open_access', published_at=timezone.now())
+        response = self.client.get(article.get_absolute_url(), HTTP_USER_AGENT='Mozilla/5.0 (compatible; Googlebot/2.1)')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(ArticleView.objects.filter(article=article).exists())
+        self.client.get(article.get_absolute_url(), HTTP_USER_AGENT='Mozilla/5.0 (Linux; Android 14) Chrome/130')
+        self.assertTrue(ArticleView.objects.filter(article=article).exists())

@@ -13,7 +13,7 @@ class PlanFeatureAdmin(TranslationAdmin):
 
 
 @admin.register(SubscriptionPlan)
-class SubscriptionPlanAdmin(admin.ModelAdmin):
+class SubscriptionPlanAdmin(TranslationAdmin):
     list_display = ['name', 'plan_type', 'price', 'duration_days', 'is_featured', 'is_active']
     list_filter = ['plan_type', 'is_active']
     search_fields = ['name']
