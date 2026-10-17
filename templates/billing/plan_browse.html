@@ -22,46 +22,33 @@
         </div>
     {% endif %}
 
-    <div class="grid md:grid-cols-3 gap-6 items-stretch">
+    {% comment %}
+    Rate card, set like a newspaper's subscription notice: one ruled block,
+    plans as columns split by hairlines, the price as each column's
+    headline, one button each. The features live once, in the comparison
+    table below. Red marks only the pick's button.
+    {% endcomment %}
+    <div class="grid md:grid-cols-3 border-t-2 border-b border-foreground md:divide-x divide-border">
         {% for plan in plans %}
-            <div class="relative flex flex-col bg-card overflow-hidden transition-[border-color,box-shadow] hover:shadow-lg {% if plan.is_featured %}border-2 border-accent md:-mt-3 md:mb-3{% else %}border border-border hover:border-foreground{% endif %}">
-                {% if plan.is_featured %}
-                    <p class="bg-accent text-white text-center font-mono-editorial text-[0.65rem] tracking-widest py-1.5">{% trans "OUR PICK" %}</p>
-                {% endif %}
-                <div class="flex flex-col flex-1 p-6">
-                    <span class="section-label text-accent">{{ plan.get_plan_type_display }}</span>
-                    <h2 lang="{{ plan.name|content_lang }}" class="font-display text-xl font-bold leading-snug mt-2" style="letter-spacing: -0.01em;">{{ plan.name }}</h2>
-                    {% if plan.description %}<p lang="{{ plan.description|content_lang }}" class="mt-2 text-sm text-muted-foreground leading-relaxed">{{ plan.description }}</p>{% endif %}
-
-                    <p class="mt-5 font-display text-4xl font-bold">{{ plan.price|money }}</p>
-                    <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{% vat_breakdown plan.price as bill %}{% blocktrans with days=plan.duration_days|local_digits rate=bill.rate %}+ {{ rate }}% VAT · every {{ days }} days{% endblocktrans %}</p>
-
-                    {% if plan.months_paid %}<p class="mt-2 text-sm font-medium">{% blocktrans with read=plan.months_read|local_digits paid=plan.months_paid|local_digits %}{{ read }} months for the price of {{ paid }}{% endblocktrans %}</p>{% endif %}
-
-                    <div class="rule-thin my-5"></div>
-                    <ul class="space-y-2.5 mb-6 flex-1">
-                        {% for feature in plan.features.all|slice:":5" %}
-                            <li class="flex items-start gap-2.5 text-sm">
-                                <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/>
-                                </svg>
-                                <span lang="{{ feature.label|content_lang }}">{{ feature.label }}</span>
-                            </li>
-                        {% endfor %}
-                        {% if plan.features.all|length > 5 %}
-                            <li class="text-xs text-muted-foreground pl-6">{% blocktrans with count=plan.features.all|length|add:"-5"|local_digits %}+ {{ count }} more{% endblocktrans %}</li>
-                        {% endif %}
-                    </ul>
-
-                    {% include 'billing/includes/plan_cta.html' with featured=plan.is_featured %}
-                    <a href="{% url 'billing:plan_detail' plan.pk %}{% if next_path %}?next={{ next_path|urlencode }}{% endif %}"
-                       class="block text-center mt-3 font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">
-                        {% trans "SEE PLAN DETAILS →" %}
-                    </a>
+            {% vat_breakdown plan.price as bill %}
+            <section class="flex flex-col py-8 md:px-8 md:first:pl-0 md:last:pr-0 {% if not forloop.first %}border-t border-border md:border-t-0{% endif %}" aria-labelledby="plan-{{ plan.pk }}">
+                <div class="flex items-baseline justify-between gap-4">
+                    <h2 id="plan-{{ plan.pk }}" lang="{{ plan.name|content_lang }}" class="font-display text-2xl font-bold leading-snug" style="letter-spacing: -0.01em;">
+                        <a href="{% url 'billing:plan_detail' plan.pk %}{% if next_path %}?next={{ next_path|urlencode }}{% endif %}" class="hover:underline underline-offset-4 decoration-2">{{ plan.name }}</a>
+                    </h2>
+                    {% if plan.is_featured %}<span class="shrink-0 font-mono-editorial text-[0.65rem] tracking-widest text-foreground border-b-2 border-accent pb-0.5">{% trans "OUR PICK" %}</span>{% endif %}
                 </div>
-            </div>
+                {% if plan.description %}<p lang="{{ plan.description|content_lang }}" class="mt-3 text-sm text-muted-foreground leading-relaxed">{{ plan.description }}</p>{% endif %}
+
+                <div class="mt-auto pt-6">
+                    <p class="font-display text-5xl font-bold tracking-tight">{{ plan.price|money }}</p>
+                    <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">{% blocktrans with total=bill.total|money days=plan.duration_days|local_digits %}{{ total }} with VAT · every {{ days }} days{% endblocktrans %}</p>
+                    {% if plan.months_paid %}<p class="mt-2 text-sm font-medium">{% blocktrans with read=plan.months_read|local_digits paid=plan.months_paid|local_digits %}{{ read }} months for the price of {{ paid }}{% endblocktrans %}</p>{% endif %}
+                    <div class="mt-6">{% include 'billing/includes/plan_cta.html' with featured=plan.is_featured %}</div>
+                </div>
+            </section>
         {% empty %}
-            <p class="md:col-span-3 border border-dashed border-border px-6 py-14 text-center text-muted-foreground">{% trans "No plans available right now — check back soon." %}</p>
+            <p class="md:col-span-3 py-14 text-center text-muted-foreground">{% trans "No plans available right now — check back soon." %}</p>
         {% endfor %}
     </div>
     <p class="mt-6 text-sm text-muted-foreground">
@@ -71,7 +58,6 @@
 
     {% if plans|length > 1 %}
         <div class="mt-16 pt-10 border-t-2 border-foreground">
-            <p class="section-label text-muted-foreground mb-2">{% trans "COMPARE PLANS" %}</p>
             <h2 class="font-display text-2xl font-bold mb-8" style="letter-spacing: -0.02em;">{% trans "Full feature comparison" %}</h2>
             {% include 'billing/includes/comparison_table.html' with plans=plans comparison_matrix=comparison_matrix %}
         </div>

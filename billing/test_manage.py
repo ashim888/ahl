@@ -49,8 +49,8 @@ class BillingStaffScreenTests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertFalse(page.context['is_create'])
         response = self.client.post(url, {
-            'name': 'Monthly Plus', 'plan_type': self.monthly.plan_type, 'price': '599', 'duration_days': 30,
-            'description': '', 'gift_articles_per_month': 0, 'is_active': 'on',
+            'name_en': 'Monthly Plus', 'plan_type': self.monthly.plan_type, 'price': '599', 'duration_days': 30,
+            'description_en': '', 'gift_articles_per_month': 0, 'is_active': 'on',
         }, follow=True)
         self.assertContains(response, '&quot;Monthly Plus&quot; updated.')
         self.monthly.refresh_from_db()

@@ -236,6 +236,7 @@ class PlanDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['plan_features'] = self.object.features.order_by('order', 'id')
+        context['cancel_days'] = settings.SUBSCRIPTION_CANCEL_DAYS
         context.update(_subscription_context(self.request))
         all_plans = list(
             SubscriptionPlan.objects.filter(is_active=True).order_by('price').prefetch_related('features'),

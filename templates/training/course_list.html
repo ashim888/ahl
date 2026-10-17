@@ -28,15 +28,15 @@
         <dl class="md:col-span-5 grid grid-cols-3 gap-4 md:border-l md:border-primary-foreground/20 md:pl-10">
             <div>
                 <dt class="font-mono-editorial text-[0.65rem] tracking-widest opacity-60">{% trans "COURSES" %}</dt>
-                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.courses }}</dd>
+                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.courses|local_digits }}</dd>
             </div>
             <div>
                 <dt class="font-mono-editorial text-[0.65rem] tracking-widest opacity-60">{% trans "LEARNERS" %}</dt>
-                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.learners }}</dd>
+                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.learners|local_digits }}</dd>
             </div>
             <div>
                 <dt class="font-mono-editorial text-[0.65rem] tracking-widest opacity-60">{% trans "INSTRUCTORS" %}</dt>
-                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.instructors }}</dd>
+                <dd class="font-display text-3xl font-bold mt-1">{{ catalog_stats.instructors|local_digits }}</dd>
             </div>
         </dl>
     </div>
@@ -80,7 +80,7 @@
                 {% if is_filtered %}{% trans "Matching courses" %}{% else %}{% trans "All courses" %}{% endif %}
             </h2>
             <p class="text-sm text-muted-foreground mt-1">
-                {% blocktrans count counter=courses|length %}{{ counter }} course{% plural %}{{ counter }} courses{% endblocktrans %}{% if filters.q %} · “{{ filters.q }}”{% endif %}
+                {% blocktrans count counter=courses|length asvar counted_label %}{{ counter }} course{% plural %}{{ counter }} courses{% endblocktrans %}{{ counted_label|local_digits }}{% if filters.q %} · “{{ filters.q }}”{% endif %}
             </p>
         </div>
         <form method="get" class="flex flex-wrap items-center gap-2" id="course-filters">

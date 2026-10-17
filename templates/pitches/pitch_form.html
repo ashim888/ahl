@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% block title %}Pitch a Story — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{% trans "Pitch a story" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block extra_head %}
     {% if turnstile_site_key %}
@@ -11,12 +11,11 @@
 {% block content %}
 <div class="max-w-2xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Pitch a Story</h1>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Pitch a story" %}</h1>
     <p class="mt-2 text-muted-foreground">
-        Have a health story you think we should cover? Send us the pitch — no account, no manuscript,
-        no file upload required. Our editorial team reviews every pitch and will follow up either way.
+        {% trans "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed. An editor reads every pitch and replies either way." %}
         {% if user.is_authenticated %}
-            See your past pitches and their status on <a href="{% url 'pitches:my_pitches' %}" class="underline hover:text-accent">My Pitches</a>.
+            {% url 'pitches:my_pitches' as my_pitches_url %}{% blocktrans %}See your past pitches and their status on <a href="{{ my_pitches_url }}" class="underline hover:text-accent">My pitches</a>.{% endblocktrans %}
         {% endif %}
     </p>
 

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n news_time %}
 
-{% block title %}Your profile — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{% trans "Your profile" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-6 py-14">
@@ -10,32 +11,32 @@
             <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{{ profile_user.email }}</p>
         </div>
         <a href="{% url 'users:profile_edit' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">
-            EDIT PROFILE
+            {% trans "EDIT PROFILE" %}
         </a>
     </div>
 
     <div class="mt-2">
         <div class="flex justify-between items-baseline py-3 border-b border-border">
-            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Role</span>
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Role" %}</span>
             <span class="text-sm font-medium text-right">{{ profile_user.get_role_display }}</span>
         </div>
         <div class="flex justify-between items-baseline py-3 border-b border-border">
-            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Verification status</span>
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Verification status" %}</span>
             <span class="text-sm font-medium text-right">
                 {{ profile_user.get_verification_status_display }}
                 {% if profile_user == user and user.can_request_verification %}
-                    · <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">Request verification</a>
+                    · <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">{% trans "Request verification" %}</a>
                 {% elif profile_user == user and user.verification_status == 'pending' %}
-                    · <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">Details</a>
+                    · <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">{% trans "Details" %}</a>
                 {% endif %}
             </span>
         </div>
         <div class="flex justify-between items-baseline py-3 border-b border-border">
-            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Affiliation</span>
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Affiliation" %}</span>
             <span class="text-sm font-medium text-right">{{ profile_user.affiliation|default:"—" }}</span>
         </div>
         <div class="flex justify-between items-baseline py-3 border-b border-border">
-            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Department</span>
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Department" %}</span>
             <span class="text-sm font-medium text-right">{{ profile_user.department|default:"—" }}</span>
         </div>
         <div class="flex justify-between items-baseline py-3 border-b border-border">
@@ -43,40 +44,40 @@
             <span class="text-sm font-medium text-right">{{ profile_user.orcid|default:"—" }}</span>
         </div>
         <div class="flex justify-between items-baseline py-3 border-b border-border">
-            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">Research interests</span>
+            <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Research interests" %}</span>
             <span class="text-sm font-medium text-right">{{ profile_user.research_interests|default:"—" }}</span>
         </div>
     </div>
 
     <div class="mt-8 border border-border bg-card px-5 py-4 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">SUBSCRIPTION</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "SUBSCRIPTION" %}</p>
             <p class="mt-1 text-sm font-medium">
-                {% if billing_subscription %}{{ billing_subscription.plan.name }} · until {{ billing_paid_through|date:"j M Y" }}
-                {% elif billing_organization %}Through {{ billing_organization.name }}
-                {% else %}No active subscription{% endif %}
+                {% if billing_subscription %}{{ billing_subscription.plan.name }} · {% blocktrans with date=billing_paid_through|date:"j M Y"|local_digits %}until {{ date }}{% endblocktrans %}
+                {% elif billing_organization %}{% blocktrans with name=billing_organization.name %}Through {{ name }}{% endblocktrans %}
+                {% else %}{% trans "No active subscription" %}{% endif %}
             </p>
         </div>
         <div class="flex flex-col items-end gap-2">
-            <a href="{% url 'billing:account' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">BILLING &amp; RECEIPTS →</a>
-            {% for org in managed_organizations %}<a href="{% url 'billing:org_dashboard_for' org.pk %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">{{ org.name|upper }} DASHBOARD →</a>{% endfor %}
-            <a href="{% url 'users:privacy' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">PRIVACY &amp; YOUR DATA →</a>
+            <a href="{% url 'billing:account' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">{% trans "BILLING & RECEIPTS →" %}</a>
+            {% for org in managed_organizations %}<a href="{% url 'billing:org_dashboard_for' org.pk %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">{% blocktrans with name=org.name|upper %}{{ name }} DASHBOARD →{% endblocktrans %}</a>{% endfor %}
+            <a href="{% url 'users:privacy' %}" class="font-mono-editorial text-xs tracking-widest border-b border-foreground hover:border-accent hover:text-accent pb-0.5">{% trans "PRIVACY & YOUR DATA →" %}</a>
         </div>
     </div>
 
     {% if profile_user.bio %}
         <div class="mt-8">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">BIO</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-2">{% trans "BIO" %}</p>
             <p class="text-sm text-foreground leading-relaxed">{{ profile_user.bio }}</p>
         </div>
     {% endif %}
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">FOLLOWED SECTIONS</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "FOLLOWED SECTIONS" %}</p>
             {% if followed_sections %}
                 <a href="{% url 'articles:for_you' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
-                    VIEW YOUR FEED →
+                    {% trans "VIEW YOUR FEED →" %}
                 </a>
             {% endif %}
         </div>
@@ -88,30 +89,28 @@
                         <form method="post" action="{% url 'sections:section_follow_toggle' section.slug %}">
                             {% csrf_token %}
                             <button type="submit" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent underline">
-                                Unfollow
+                                {% trans "Unfollow" %}
                             </button>
                         </form>
                     </div>
                 {% endfor %}
             </div>
             <p class="mt-3 text-xs text-muted-foreground">
-                New articles from these sections appear in your <a href="{% url 'articles:for_you' %}" class="underline hover:text-accent">For You feed</a>
-                and a weekly digest email.
+                {% url 'articles:for_you' as for_you_url %}{% blocktrans %}New articles from these sections appear in your <a href="{{ for_you_url }}" class="underline hover:text-accent">For You feed</a> and a weekly digest email.{% endblocktrans %}
             </p>
         {% else %}
             <p class="text-sm text-muted-foreground">
-                Not following any sections yet — visit a topic's page and click <strong>+ Follow</strong> to build a
-                personalized feed and get a weekly digest.
+                {% blocktrans %}Not following any sections yet. Open a section's page and press <strong>+ FOLLOW</strong> to build your own feed and get a weekly digest.{% endblocktrans %}
             </p>
         {% endif %}
     </div>
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">FOLLOWED KEYWORDS</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "FOLLOWED KEYWORDS" %}</p>
             {% if followed_keywords %}
                 <a href="{% url 'articles:for_you' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
-                    VIEW YOUR FEED →
+                    {% trans "VIEW YOUR FEED →" %}
                 </a>
             {% endif %}
         </div>
@@ -125,7 +124,7 @@
                         <form method="post" action="{% url 'articles:keyword_follow_toggle' follow.keyword.slug %}">
                             {% csrf_token %}
                             <button type="submit" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent underline">
-                                Unfollow
+                                {% trans "Unfollow" %}
                             </button>
                         </form>
                     </div>
@@ -133,18 +132,17 @@
             </div>
         {% else %}
             <p class="text-sm text-muted-foreground">
-                Not following any keywords yet — on an article tagged with a keyword used more than once, click
-                <strong>+ Follow</strong> next to it.
+                {% blocktrans %}Not following any keywords yet. On an article, press <strong>+ FOLLOW</strong> next to a keyword.{% endblocktrans %}
             </p>
         {% endif %}
     </div>
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">SAVED ARTICLES</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "SAVED ARTICLES" %}</p>
             {% if saved_articles %}
                 <a href="{% url 'articles:reading_list' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
-                    VIEW READING LIST →
+                    {% trans "VIEW READING LIST →" %}
                 </a>
             {% endif %}
         </div>
@@ -158,7 +156,7 @@
                         <form method="post" action="{% url 'articles:article_bookmark_toggle' bookmark.article.slug %}">
                             {% csrf_token %}
                             <button type="submit" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent underline whitespace-nowrap">
-                                Remove
+                                {% trans "Remove" %}
                             </button>
                         </form>
                     </div>
@@ -166,14 +164,14 @@
             </div>
         {% else %}
             <p class="text-sm text-muted-foreground">
-                Nothing saved yet — click <strong>+ Save for later</strong> on any article to add it here.
+                {% blocktrans %}Nothing saved yet. Press <strong>+ SAVE FOR LATER</strong> on any article to add it here.{% endblocktrans %}
             </p>
         {% endif %}
     </div>
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">GIFTED ARTICLES</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "GIFTED ARTICLES" %}</p>
         </div>
         {% if active_gifts %}
             <div class="divide-y divide-border border-t border-border">
@@ -183,28 +181,26 @@
                             {{ gift.article.title }}
                         </a>
                         <span class="font-mono-editorial text-xs text-muted-foreground whitespace-nowrap">
-                            Expires {{ gift.expires_at|date:"M j, Y" }}
+                            {% blocktrans with date=gift.expires_at|date:"M j, Y"|local_digits %}Expires {{ date }}{% endblocktrans %}
                         </span>
                     </div>
                 {% endfor %}
             </div>
             <p class="mt-3 text-xs text-muted-foreground">
-                Visit an article you're subscribed to and click <strong>Gift this article</strong> to get the
-                shareable link again.
+                {% blocktrans %}To get a link again, open the article and press <strong>GIFT THIS ARTICLE</strong>.{% endblocktrans %}
             </p>
         {% else %}
             <p class="text-sm text-muted-foreground">
-                No active gift links — on a subscription-tier article you can read, click
-                <strong>Gift this article</strong> to share it free with someone else.
+                {% blocktrans %}No active gift links. On a subscriber article you can read, press <strong>GIFT THIS ARTICLE</strong> to share it free with someone.{% endblocktrans %}
             </p>
         {% endif %}
     </div>
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">STORY PITCHES</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "STORY PITCHES" %}</p>
             <a href="{% url 'pitches:pitch_create' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
-                PITCH A STORY →
+                {% trans "PITCH A STORY →" %}
             </a>
         </div>
         {% if story_pitches %}
@@ -217,20 +213,20 @@
                 {% endfor %}
             </div>
             <a href="{% url 'pitches:my_pitches' %}" class="mt-3 inline-block font-mono-editorial text-xs text-muted-foreground hover:text-accent underline">
-                View all my pitches →
+                {% trans "View all my pitches →" %}
             </a>
         {% else %}
             <p class="text-sm text-muted-foreground">
-                No pitches yet — <a href="{% url 'pitches:pitch_create' %}" class="underline hover:text-accent">send us your first one</a>.
+                {% url 'pitches:pitch_create' as pitch_url %}{% blocktrans %}No pitches yet. <a href="{{ pitch_url }}" class="underline hover:text-accent">Send us your first one</a>.{% endblocktrans %}
             </p>
         {% endif %}
     </div>
 
     <div class="mt-10">
         <div class="flex items-center justify-between mb-4">
-            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">TRAINING ENROLLMENTS</p>
+            <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "TRAINING ENROLLMENTS" %}</p>
             <a href="{% url 'training:course_list' %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
-                BROWSE COURSES →
+                {% trans "BROWSE COURSES →" %}
             </a>
         </div>
         {% if enrollments %}
@@ -247,7 +243,7 @@
                 {% endfor %}
             </div>
         {% else %}
-            <p class="text-sm text-muted-foreground">Not enrolled in any training programs yet.</p>
+            <p class="text-sm text-muted-foreground">{% trans "Not enrolled in any training courses yet." %}</p>
         {% endif %}
     </div>
 </div>

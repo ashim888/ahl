@@ -2,7 +2,7 @@ import datetime
 import json
 
 from django.db import IntegrityError
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -1998,7 +1998,7 @@ class ForYouViewTests(TestCase):
         self.client.force_login(self.reader)
         response = self.client.get(reverse('articles:for_you'))
         self.assertTrue(response.context['has_follows'])
-        self.assertContains(response, 'check back soon')
+        self.assertContains(response, 'Check back soon')
 
 
 class BookmarkToggleTests(TestCase):
@@ -3777,3 +3777,22 @@ class CrawlerViewTests(TestCase):
         self.assertFalse(ArticleView.objects.filter(article=article).exists())
         self.client.get(article.get_absolute_url(), HTTP_USER_AGENT='Mozilla/5.0 (Linux; Android 14) Chrome/130')
         self.assertTrue(ArticleView.objects.filter(article=article).exists())
+
+
+class DatelineTests(SimpleTestCase):
+    """The masthead dateline: Bikram Sambat in Nepali, AD then BS in English."""
+
+    def test_nepali_and_english(self):
+        from django.utils import translation
+
+        from .templatetags.news_time import dateline
+
+        day = datetime.date(2026, 10, 17)  # 31 Aswin 2083, a Saturday
+        with translation.override('ne'):
+            self.assertEqual(dateline(day), 'शनिबार, ३१ असोज २०८३')
+        with translation.override('en'):
+            self.assertEqual(dateline(day), 'Saturday, 17 October 2026 · 31 Aswin 2083 BS')
+
+    def test_reference_count_ignores_blank_lines(self):
+        self.assertEqual(Article(references='A\n\n  \nB\n').reference_count, 2)
+        self.assertEqual(Article().reference_count, 0)

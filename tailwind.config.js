@@ -21,6 +21,8 @@ module.exports = {
         'accent-foreground': '#ffffff',
         // Pressed/hovered press red, and the coral for display type on ink (9.2:1).
         'accent-hover': '#a93226',
+        // Form field borders: 3.3:1 on paper (WCAG non-text contrast); `border` stays the lighter rule colour.
+        'input-border': '#8f8a82',
         coral: '#f4a08f',
         border: '#d4d0cb',
       },

@@ -3896,3 +3896,429 @@ msgstr "स्वतः नवीकरण हुँदैन · %(days)s दि
 
 msgid "%(read)s months for the price of %(paid)s"
 msgstr "%(paid)s महिनाको मूल्यमा %(read)s महिना"
+
+msgid "The full article: %(minutes)s min read"
+msgstr "पूरा लेख: %(minutes)s मिनेट पढाइ"
+
+msgid "%(n)s reference"
+msgid_plural "%(n)s references"
+msgstr[0] "%(n)s सन्दर्भ"
+msgstr[1] "%(n)s सन्दर्भ"
+
+msgid "One payment, yours to keep: the article stays in your account, and the receipt comes by email."
+msgstr "एक पटकको भुक्तानी, सधैँका लागि तपाईंको: लेख तपाईंको खातामा रहन्छ, र रसिद इमेलमा आउँछ।"
+
+msgid "Subscriptions don't renew automatically, and you get a full refund if you cancel within %(days)s days."
+msgstr "सदस्यता आफैँ नवीकरण हुँदैन, र %(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता पाउनुहुन्छ।"
+
+msgid "Your email address"
+msgstr "तपाईंको इमेल ठेगाना"
+
+msgid "%(total)s with VAT · every %(days)s days"
+msgstr "भ्याटसहित %(total)s · हरेक %(days)s दिन"
+
+msgid "Full refund if you cancel within %(days)s days."
+msgstr "%(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता।"
+
+msgid "ABOUT THE JOURNAL"
+msgstr "जर्नलको बारेमा"
+
+msgid "POLICIES"
+msgstr "नीतिहरू"
+
+msgid "Pitch a story"
+msgstr "कथा प्रस्ताव गर्नुहोस्"
+
+msgid "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed. An editor reads every pitch and replies either way."
+msgstr "हामीले लेख्नुपर्ने स्वास्थ्य कथा छ? प्रस्ताव पठाउनुहोस्: खाता, पाण्डुलिपि वा फाइल चाहिँदैन। सम्पादकले हरेक प्रस्ताव पढ्छन् र जे निर्णय भए पनि जवाफ दिन्छन्।"
+
+#, python-format
+msgid "See your past pitches and their status on <a href=\"%(my_pitches_url)s\" class=\"underline hover:text-accent\">My pitches</a>."
+msgstr "तपाईंका पुराना प्रस्ताव र तिनको स्थिति <a href=\"%(my_pitches_url)s\" class=\"underline hover:text-accent\">मेरा प्रस्तावहरू</a> मा हेर्नुहोस्।"
+
+msgid "Title"
+msgstr "शीर्षक"
+
+msgid "Summary"
+msgstr "सारांश"
+
+msgid "Draft (optional)"
+msgstr "मस्यौदा (ऐच्छिक)"
+
+msgid "The pitch itself: what the story is and why it matters now."
+msgstr "प्रस्ताव आफैँ: कथा के हो र अहिले किन महत्त्वपूर्ण छ।"
+
+msgid "If you already have a draft, paste it here. Not required."
+msgstr "मस्यौदा तयार छ भने यहाँ टाँस्नुहोस्। अनिवार्य होइन।"
+
+msgid "So we can follow up if we'd like to run your story."
+msgstr "तपाईंको कथा प्रकाशित गर्न चाहेमा हामी सम्पर्क गर्न सकौँ भनेर।"
+
+msgid "Unverified"
+msgstr "अप्रमाणित"
+
+msgid "Verified Author"
+msgstr "प्रमाणित लेखक"
+
+msgid "Reviewer"
+msgstr "समीक्षक"
+
+msgid "Editor"
+msgstr "सम्पादक"
+
+msgid "Editor-in-Chief"
+msgstr "प्रधान सम्पादक"
+
+msgid "Admin"
+msgstr "प्रशासक"
+
+msgid "Not requested"
+msgstr "अनुरोध गरिएको छैन"
+
+msgid "Pending"
+msgstr "विचाराधीन"
+
+msgid "Approved"
+msgstr "स्वीकृत"
+
+msgid "Rejected"
+msgstr "अस्वीकृत"
+
+msgid "Submitted"
+msgstr "पठाइएको"
+
+msgid "In Review"
+msgstr "समीक्षामा"
+
+msgid "Accepted"
+msgstr "स्वीकृत"
+
+msgid "Active"
+msgstr "सक्रिय"
+
+msgid "Completed"
+msgstr "पूरा भएको"
+
+msgid "Cancelled"
+msgstr "रद्द गरिएको"
+
+msgid "Paid"
+msgstr "भुक्तानी भएको"
+
+msgid "Refunded"
+msgstr "रकम फिर्ता भएको"
+
+#, python-format
+msgid "Articles tagged \"%(keyword)s\""
+msgstr "\"%(keyword)s\" मुख्य शब्द भएका लेखहरू"
+
+msgid "All Articles"
+msgstr "सबै लेखहरू"
+
+msgid "Archive"
+msgstr "अभिलेख"
+
+msgid "Your profile"
+msgstr "तपाईंको प्रोफाइल"
+
+msgid "EDIT PROFILE"
+msgstr "प्रोफाइल सम्पादन गर्नुहोस्"
+
+msgid "Role"
+msgstr "भूमिका"
+
+msgid "Verification status"
+msgstr "प्रमाणीकरणको स्थिति"
+
+msgid "Request verification"
+msgstr "प्रमाणीकरण अनुरोध गर्नुहोस्"
+
+msgid "Details"
+msgstr "विवरण"
+
+msgid "Affiliation"
+msgstr "आबद्ध संस्था"
+
+msgid "Department"
+msgstr "विभाग"
+
+msgid "Research interests"
+msgstr "अनुसन्धान रुचि"
+
+msgid "SUBSCRIPTION"
+msgstr "सदस्यता"
+
+#, python-format
+msgid "until %(date)s"
+msgstr "%(date)s सम्म"
+
+#, python-format
+msgid "Through %(name)s"
+msgstr "%(name)s मार्फत"
+
+msgid "No active subscription"
+msgstr "सक्रिय सदस्यता छैन"
+
+msgid "BILLING & RECEIPTS →"
+msgstr "बिलिङ र रसिद →"
+
+#, python-format
+msgid "%(name)s DASHBOARD →"
+msgstr "%(name)s ड्यासबोर्ड →"
+
+msgid "PRIVACY & YOUR DATA →"
+msgstr "गोपनीयता र तपाईंको डाटा →"
+
+msgid "BIO"
+msgstr "परिचय"
+
+msgid "FOLLOWED SECTIONS"
+msgstr "पछ्याइएका खण्डहरू"
+
+msgid "VIEW YOUR FEED →"
+msgstr "तपाईंको फिड हेर्नुहोस् →"
+
+msgid "Unfollow"
+msgstr "पछ्याउन छाड्नुहोस्"
+
+#, python-format
+msgid "New articles from these sections appear in your <a href=\"%(for_you_url)s\" class=\"underline hover:text-accent\">For You feed</a> and a weekly digest email."
+msgstr "यी खण्डका नयाँ लेखहरू तपाईंको <a href=\"%(for_you_url)s\" class=\"underline hover:text-accent\">तपाईंका लागि फिड</a> र साप्ताहिक सारांश इमेलमा आउँछन्।"
+
+msgid "Not following any sections yet. Open a section's page and press <strong>+ FOLLOW</strong> to build your own feed and get a weekly digest."
+msgstr "अहिलेसम्म कुनै खण्ड पछ्याइएको छैन। कुनै खण्डको पेज खोलेर <strong>+ पछ्याउनुहोस्</strong> थिच्नुहोस्, तपाईंको आफ्नै फिड बन्छ र साप्ताहिक सारांश पनि आउँछ।"
+
+msgid "FOLLOWED KEYWORDS"
+msgstr "पछ्याइएका मुख्य शब्दहरू"
+
+msgid "Not following any keywords yet. On an article, press <strong>+ FOLLOW</strong> next to a keyword."
+msgstr "अहिलेसम्म कुनै मुख्य शब्द पछ्याइएको छैन। लेखमा कुनै मुख्य शब्दको छेउमा <strong>+ पछ्याउनुहोस्</strong> थिच्नुहोस्।"
+
+msgid "SAVED ARTICLES"
+msgstr "सुरक्षित लेखहरू"
+
+msgid "VIEW READING LIST →"
+msgstr "पठन सूची हेर्नुहोस् →"
+
+msgid "Nothing saved yet. Press <strong>+ SAVE FOR LATER</strong> on any article to add it here."
+msgstr "अहिलेसम्म केही सुरक्षित छैन। कुनै पनि लेखमा <strong>+ पछि पढ्न राख्नुहोस्</strong> थिचेर यहाँ थप्नुहोस्।"
+
+msgid "GIFTED ARTICLES"
+msgstr "उपहार दिइएका लेखहरू"
+
+#, python-format
+msgid "Expires %(date)s"
+msgstr "%(date)s मा म्याद सकिन्छ"
+
+msgid "To get a link again, open the article and press <strong>🎁 GIFT THIS ARTICLE</strong>."
+msgstr "लिंक फेरि चाहिए लेख खोलेर <strong>🎁 यो लेख उपहार दिनुहोस्</strong> थिच्नुहोस्।"
+
+msgid "No active gift links. On a subscriber article you can read, press <strong>🎁 GIFT THIS ARTICLE</strong> to share it free with someone."
+msgstr "सक्रिय उपहार लिंक छैन। तपाईंले पढ्न सक्ने सदस्य-लेखमा <strong>🎁 यो लेख उपहार दिनुहोस्</strong> थिचेर कसैलाई निःशुल्क पढ्न दिनुहोस्।"
+
+msgid "STORY PITCHES"
+msgstr "कथा प्रस्तावहरू"
+
+msgid "View all my pitches →"
+msgstr "मेरा सबै प्रस्ताव हेर्नुहोस् →"
+
+#, python-format
+msgid "No pitches yet. <a href=\"%(pitch_url)s\" class=\"underline hover:text-accent\">Send us your first one</a>."
+msgstr "अहिलेसम्म कुनै प्रस्ताव छैन। <a href=\"%(pitch_url)s\" class=\"underline hover:text-accent\">पहिलो प्रस्ताव पठाउनुहोस्</a>।"
+
+msgid "TRAINING ENROLLMENTS"
+msgstr "तालिम भर्नाहरू"
+
+msgid "BROWSE COURSES →"
+msgstr "कोर्सहरू हेर्नुहोस् →"
+
+msgid "Not enrolled in any training courses yet."
+msgstr "अहिलेसम्म कुनै तालिम कोर्समा भर्ना हुनुभएको छैन।"
+
+msgid "Edit profile"
+msgstr "प्रोफाइल सम्पादन"
+
+msgid "SAVE"
+msgstr "सेभ गर्नुहोस्"
+
+msgid "CANCEL"
+msgstr "रद्द गर्नुहोस्"
+
+msgid "Latest articles from the sections and keywords you follow."
+msgstr "तपाईंले पछ्याएका खण्ड र मुख्य शब्दका पछिल्ला लेखहरू।"
+
+msgid "Nothing new from what you follow yet. Check back soon."
+msgstr "तपाईंले पछ्याएकामा अहिलेसम्म नयाँ केही छैन। केही समयपछि फेरि हेर्नुहोस्।"
+
+msgid "You're not following any sections or keywords yet."
+msgstr "तपाईंले अहिलेसम्म कुनै खण्ड वा मुख्य शब्द पछ्याउनुभएको छैन।"
+
+msgid "Open a section from the menu above, or a keyword on any article, and press <strong>+ FOLLOW</strong> to build your feed. You'll also get a weekly digest email."
+msgstr "माथिको मेनुबाट कुनै खण्ड, वा कुनै लेखको मुख्य शब्द खोलेर <strong>+ पछ्याउनुहोस्</strong> थिच्नुहोस्, तपाईंको फिड बन्छ। साप्ताहिक सारांश इमेल पनि आउँछ।"
+
+msgid "Articles you've saved for later."
+msgstr "पछि पढ्न तपाईंले राखेका लेखहरू।"
+
+msgid "Nothing saved yet."
+msgstr "अहिलेसम्म केही सुरक्षित छैन।"
+
+msgid "Press <strong>+ SAVE FOR LATER</strong> on any article to add it here."
+msgstr "कुनै पनि लेखमा <strong>+ पछि पढ्न राख्नुहोस्</strong> थिचेर यहाँ थप्नुहोस्।"
+
+msgid "My pitches"
+msgstr "मेरा प्रस्तावहरू"
+
+msgid "+ NEW PITCH"
+msgstr "+ नयाँ प्रस्ताव"
+
+msgid "EDITOR'S NOTE"
+msgstr "सम्पादकको टिप्पणी"
+
+msgid "Read the published article →"
+msgstr "प्रकाशित लेख पढ्नुहोस् →"
+
+msgid "Turned into a draft article. Our editors are finishing it."
+msgstr "मस्यौदा लेख बनिसकेको छ। हाम्रा सम्पादकहरू यसलाई पूरा गर्दै छन्।"
+
+#, python-format
+msgid "Submitted %(date)s"
+msgstr "%(date)s मा पठाइएको"
+
+msgid "Verification"
+msgstr "प्रमाणीकरण"
+
+msgid "Become a verified contributor"
+msgstr "प्रमाणित योगदानकर्ता बन्नुहोस्"
+
+msgid "You don't need verification to read, subscribe, comment or pitch a story. It's for health professionals and researchers who write for us and want their credentials shown. An editor checks your affiliation, ORCID and publications, so fill those in on your profile first."
+msgstr "पढ्न, सदस्यता लिन, टिप्पणी गर्न वा कथा प्रस्ताव गर्न प्रमाणीकरण चाहिँदैन। यो हाम्रा लागि लेख्ने र आफ्नो योग्यता देखाउन चाहने स्वास्थ्यकर्मी तथा अनुसन्धानकर्ताका लागि हो। सम्पादकले तपाईंको आबद्ध संस्था, ORCID र प्रकाशनहरू जाँच्छन्, त्यसैले पहिले प्रोफाइलमा ती भर्नुहोस्।"
+
+msgid "REQUEST VERIFICATION"
+msgstr "प्रमाणीकरण अनुरोध गर्नुहोस्"
+
+msgid "Update your profile first"
+msgstr "पहिले प्रोफाइल अद्यावधिक गर्नुहोस्"
+
+msgid "Your account is pending verification"
+msgstr "तपाईंको खाता प्रमाणीकरणको पर्खाइमा छ"
+
+msgid "An editor reviews your affiliation, ORCID and publication history before your profile is verified. This usually takes under 48 hours. You can keep reading free articles in the meantime."
+msgstr "प्रोफाइल प्रमाणित गर्नुअघि सम्पादकले तपाईंको आबद्ध संस्था, ORCID र प्रकाशन इतिहास हेर्छन्। यसमा प्रायः ४८ घण्टाभन्दा कम लाग्छ। त्यतिन्जेल तपाईं निःशुल्क लेखहरू पढ्न सक्नुहुन्छ।"
+
+msgid "Verification was not approved"
+msgstr "प्रमाणीकरण स्वीकृत भएन"
+
+msgid "Your last verification request wasn't approved. You can update your profile and reapply now."
+msgstr "तपाईंको पछिल्लो प्रमाणीकरण अनुरोध स्वीकृत भएन। प्रोफाइल अद्यावधिक गरेर अहिले नै फेरि आवेदन दिन सक्नुहुन्छ।"
+
+#, python-format
+msgid "Your last verification request wasn't approved. You can update your profile and reapply on %(date)s."
+msgstr "तपाईंको पछिल्लो प्रमाणीकरण अनुरोध स्वीकृत भएन। प्रोफाइल अद्यावधिक गरेर %(date)s मा फेरि आवेदन दिन सक्नुहुन्छ।"
+
+msgid "REAPPLY FOR VERIFICATION"
+msgstr "प्रमाणीकरणका लागि फेरि आवेदन दिनुहोस्"
+
+msgid "You're verified"
+msgstr "तपाईं प्रमाणित हुनुभयो"
+
+msgid "Go to your profile"
+msgstr "आफ्नो प्रोफाइलमा जानुहोस्"
+
+msgid "Older articles, kept for the record. Reading them in full needs a subscription plan that includes the archive."
+msgstr "अभिलेखका लागि राखिएका पुराना लेखहरू। पूरा पढ्न अभिलेखसहितको सदस्यता योजना चाहिन्छ।"
+
+msgid "Nothing in the archive yet."
+msgstr "अभिलेखमा अहिलेसम्म केही छैन।"
+
+msgid "Access denied"
+msgstr "पहुँच छैन"
+
+msgid "403 — ACCESS DENIED"
+msgstr "४०३ — पहुँच छैन"
+
+msgid "You don't have access to this page"
+msgstr "यो पेजमा तपाईंको पहुँच छैन"
+
+#, python-format
+msgid "You're logged in as <span class=\"font-semibold text-foreground\">%(name)s</span> (%(role)s), and this page needs a different role. If you think this is a mistake, or you need wider access for your work, contact an editor."
+msgstr "तपाईं <span class=\"font-semibold text-foreground\">%(name)s</span> (%(role)s) को रूपमा लग इन हुनुहुन्छ, तर यो पेजका लागि अर्को भूमिका चाहिन्छ। यो गल्ती हो जस्तो लागे, वा कामका लागि थप पहुँच चाहिए, सम्पादकलाई सम्पर्क गर्नुहोस्।"
+
+msgid "BACK TO HOME"
+msgstr "गृहपृष्ठमा फर्कनुहोस्"
+
+msgid "REQUEST ACCESS"
+msgstr "पहुँच अनुरोध गर्नुहोस्"
+
+msgid "This page needs an account with access you don't have yet, or you're not logged in."
+msgstr "यो पेजका लागि तपाईंसँग अहिले नभएको पहुँचसहितको खाता चाहिन्छ, वा तपाईं लग इन हुनुहुन्न।"
+
+msgid "Log out instead"
+msgstr "बरु लग आउट गर्नुहोस्"
+
+msgctxt "payment status"
+msgid "Pending"
+msgstr "भुक्तानी बाँकी"
+
+msgid "Bio"
+msgstr "परिचय"
+
+msgid "Photo"
+msgstr "फोटो"
+
+msgid "CV file"
+msgstr "सीभी फाइल"
+
+msgid "LinkedIn URL"
+msgstr "LinkedIn लिंक"
+
+msgid "ResearchGate URL"
+msgstr "ResearchGate लिंक"
+
+msgid "Publications"
+msgstr "प्रकाशनहरू"
+
+msgid "ORCID iD, e.g. 0000-0002-1825-0097."
+msgstr "ORCID iD, जस्तै 0000-0002-1825-0097।"
+
+msgid "JPG or PNG, up to 5 MB."
+msgstr "JPG वा PNG, ५ MB सम्म।"
+
+msgid "PDF, DOC or DOCX, up to 10 MB."
+msgstr "PDF, DOC वा DOCX, १० MB सम्म।"
+
+msgid "Prior publication history, reviewed by an editor during verification."
+msgstr "पहिलेका प्रकाशनहरू, जुन प्रमाणीकरणका बेला सम्पादकले हेर्छन्।"
+
+msgid "First name"
+msgstr "पहिलो नाम"
+
+msgid "Last name"
+msgstr "थर"
+
+msgid "Source"
+msgstr "स्रोत"
+
+msgid "All references ↓"
+msgstr "सबै सन्दर्भ ↓"
+
+msgid "Sources listed at the end of the story"
+msgstr "स्रोतहरू लेखको अन्त्यमा सूचीबद्ध छन्"
+
+#, python-format
+msgid "%(counter)s source"
+msgid_plural "%(counter)s sources"
+msgstr[0] "%(counter)s स्रोत"
+msgstr[1] "%(counter)s स्रोत"
+
+msgid "GIFT THIS ARTICLE"
+msgstr "यो लेख उपहार दिनुहोस्"
+
+#, python-format
+msgid "This article was gifted to you by <strong class=\"text-foreground\">%(gifter)s</strong> — free to read, no subscription needed."
+msgstr "यो लेख <strong class=\"text-foreground\">%(gifter)s</strong> ले तपाईंलाई उपहार दिनुभएको हो — सदस्यता बिना निःशुल्क पढ्नुहोस्।"
+
+msgid "To get a link again, open the article and press <strong>GIFT THIS ARTICLE</strong>."
+msgstr "लिंक फेरि चाहिए लेख खोलेर <strong>यो लेख उपहार दिनुहोस्</strong> थिच्नुहोस्।"
+
+msgid "No active gift links. On a subscriber article you can read, press <strong>GIFT THIS ARTICLE</strong> to share it free with someone."
+msgstr "सक्रिय उपहार लिंक छैन। तपाईंले पढ्न सक्ने सदस्य-लेखमा <strong>यो लेख उपहार दिनुहोस्</strong> थिचेर कसैलाई निःशुल्क पढ्न दिनुहोस्।"

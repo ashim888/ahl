@@ -99,12 +99,18 @@
 
     // Swipe on touch screens.
     var startX = null;
+    var startY = null;
     var track = root.querySelector('[data-hero-track]');
-    track.addEventListener('touchstart', function (event) { startX = event.touches[0].clientX; }, {passive: true});
+    track.addEventListener('touchstart', function (event) {
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+    }, {passive: true});
     track.addEventListener('touchend', function (event) {
       if (startX === null) return;
       var dx = event.changedTouches[0].clientX - startX;
-      if (Math.abs(dx) > 40) { show(current + (dx < 0 ? 1 : -1), true); start(); }
+      var dy = event.changedTouches[0].clientY - startY;
+      // Mostly sideways only: a page scroll that drifts sideways must not flip the story.
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { show(current + (dx < 0 ? 1 : -1), true); start(); }
       startX = null;
     });
 

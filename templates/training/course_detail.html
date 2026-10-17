@@ -43,11 +43,11 @@
             </div>
             <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm opacity-90">
                 {% if enrolled_count %}
-                    <span>{% blocktrans count counter=enrolled_count %}<strong>{{ counter }}</strong> learner enrolled{% plural %}<strong>{{ counter }}</strong> learners enrolled{% endblocktrans %}</span>
+                    <span>{% blocktrans count counter=enrolled_count asvar counted_label %}<strong>{{ counter }}</strong> learner enrolled{% plural %}<strong>{{ counter }}</strong> learners enrolled{% endblocktrans %}{{ counted_label|local_digits }}</span>
                 {% endif %}
                 {% if course.start_date %}<span>{% blocktrans with date=course.start_date|date:"F j, Y"|local_digits %}Starts {{ date }}{% endblocktrans %}</span>{% endif %}
                 {% if spots_left is not None and spots_left > 0 and spots_left <= 10 %}
-                    <span class="text-accent font-semibold">{% blocktrans count counter=spots_left %}Only {{ counter }} seat left{% plural %}Only {{ counter }} seats left{% endblocktrans %}</span>
+                    <span class="text-accent font-semibold">{% blocktrans count counter=spots_left asvar counted_label %}Only {{ counter }} seat left{% plural %}Only {{ counter }} seats left{% endblocktrans %}{{ counted_label|local_digits }}</span>
                 {% endif %}
             </div>
         </div>
@@ -150,7 +150,7 @@
                     <div class="flex items-end justify-between gap-4">
                         <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Syllabus" %}</h2>
                         <span class="font-mono-editorial text-xs text-muted-foreground">
-                            {% blocktrans count counter=modules|length %}{{ counter }} MODULE{% plural %}{{ counter }} MODULES{% endblocktrans %}
+                            {% blocktrans count counter=modules|length asvar counted_label %}{{ counter }} MODULE{% plural %}{{ counter }} MODULES{% endblocktrans %}{{ counted_label|local_digits }}
                         </span>
                     </div>
                     <ol class="mt-5 border-t-2 border-foreground">
@@ -228,13 +228,13 @@
                     <div class="mt-5">{% include 'training/includes/enroll_action.html' %}</div>
                     {% if spots_left is not None %}
                         <p class="mt-3 font-mono-editorial text-xs text-center {% if spots_left <= 5 %}text-accent{% else %}text-muted-foreground{% endif %}">
-                            {% if spots_left > 0 %}{% blocktrans with total=course.max_enrollments count counter=spots_left %}{{ counter }} OF {{ total }} SEAT LEFT{% plural %}{{ counter }} OF {{ total }} SEATS LEFT{% endblocktrans %}{% else %}{% trans "THIS COURSE IS FULL" %}{% endif %}
+                            {% if spots_left > 0 %}{% blocktrans with total=course.max_enrollments count counter=spots_left asvar counted_label %}{{ counter }} OF {{ total }} SEAT LEFT{% plural %}{{ counter }} OF {{ total }} SEATS LEFT{% endblocktrans %}{{ counted_label|local_digits }}{% else %}{% trans "THIS COURSE IS FULL" %}{% endif %}
                         </p>
                     {% endif %}
 
                     <p class="section-label text-muted-foreground mt-7">{% trans "THIS COURSE INCLUDES" %}</p>
                     <ul class="mt-3 space-y-2.5 text-sm">
-                        {% if modules %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{% blocktrans count counter=modules|length %}{{ counter }} module{% plural %}{{ counter }} modules{% endblocktrans %}</li>{% endif %}
+                        {% if modules %}<li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{% blocktrans count counter=modules|length asvar counted_label %}{{ counter }} module{% plural %}{{ counter }} modules{% endblocktrans %}{{ counted_label|local_digits }}</li>{% endif %}
                         <li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{{ course.duration }}{% if course.effort %} · {{ course.effort }}{% endif %}</li>
                         <li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{{ course.get_mode_display }} · {{ course.language }}</li>
                         <li class="flex gap-2.5"><span aria-hidden="true" class="text-muted-foreground">▸</span>{% if course.start_date %}{% blocktrans with date=course.start_date|date:"F j, Y"|local_digits %}Starts {{ date }}{% endblocktrans %}{% else %}{% trans "Start any time" %}{% endif %}</li>

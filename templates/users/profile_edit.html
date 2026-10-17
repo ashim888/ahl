@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Edit profile — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{% trans "Edit profile" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Edit profile</h1>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Edit profile" %}</h1>
 
     <form method="post" enctype="multipart/form-data" class="mt-8 space-y-5">
         {% csrf_token %}
@@ -25,10 +26,10 @@
         {% endfor %}
         <div class="flex gap-3 pt-2">
             <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
-                SAVE
+                {% trans "SAVE" %}
             </button>
             <a href="{% url 'users:profile' %}" class="font-mono-editorial text-xs tracking-widest border border-border px-6 py-3 hover:border-foreground transition-colors">
-                CANCEL
+                {% trans "CANCEL" %}
             </a>
         </div>
     </form>

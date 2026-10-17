@@ -1,60 +1,54 @@
 {% extends 'base.html' %}
+{% load i18n news_time %}
 
-{% block title %}Verification — {{ JOURNAL_NAME }}{% endblock %}
+{% block title %}{% trans "Verification" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
 <div class="max-w-xl mx-auto px-6 py-24 text-center">
     {% with status=user.verification_status %}
         {% if status == 'not_requested' %}
-            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">Become a verified contributor</h1>
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Become a verified contributor" %}</h1>
             <p class="mt-4 text-muted-foreground leading-relaxed">
-                You don't need verification to read, subscribe, comment or pitch a story. It's for
-                health professionals and researchers who write for us and want their credentials
-                shown. An editor checks your affiliation, ORCID and publications, so fill those in on
-                your profile first.
+                {% trans "You don't need verification to read, subscribe, comment or pitch a story. It's for health professionals and researchers who write for us and want their credentials shown. An editor checks your affiliation, ORCID and publications, so fill those in on your profile first." %}
             </p>
             <form method="post" action="{% url 'users:reapply_verification' %}" class="mt-6">
                 {% csrf_token %}
                 <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
-                    REQUEST VERIFICATION
+                    {% trans "REQUEST VERIFICATION" %}
                 </button>
             </form>
             <a href="{% url 'users:profile_edit' %}" class="mt-4 inline-block font-mono-editorial text-xs text-muted-foreground hover:text-accent">
-                Update your profile first
+                {% trans "Update your profile first" %}
             </a>
         {% elif status == 'pending' %}
-            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">Your account is pending verification</h1>
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Your account is pending verification" %}</h1>
             <p class="mt-4 text-muted-foreground leading-relaxed">
-                An editor reviews your affiliation, ORCID, and publication history before your profile
-                is verified. This usually takes under 48 hours. You can still browse open-access
-                content in the meantime.
+                {% trans "An editor reviews your affiliation, ORCID and publication history before your profile is verified. This usually takes under 48 hours. You can keep reading free articles in the meantime." %}
             </p>
         {% elif status == 'rejected' %}
-            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">Verification was not approved</h1>
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "Verification was not approved" %}</h1>
             <p class="mt-4 text-muted-foreground leading-relaxed">
-                Your last verification request wasn't approved. You can update your
-                profile and reapply
                 {% if user.can_reapply %}
-                    now.
+                    {% trans "Your last verification request wasn't approved. You can update your profile and reapply now." %}
                 {% else %}
-                    on {{ user.reapply_available_at|date:"F j, Y" }}.
+                    {% blocktrans with date=user.reapply_available_at|date:"F j, Y"|local_digits %}Your last verification request wasn't approved. You can update your profile and reapply on {{ date }}.{% endblocktrans %}
                 {% endif %}
             </p>
             {% if user.can_reapply %}
                 <form method="post" action="{% url 'users:reapply_verification' %}" class="mt-6">
                     {% csrf_token %}
                     <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-6 py-3 hover:bg-accent transition-colors">
-                        REAPPLY FOR VERIFICATION
+                        {% trans "REAPPLY FOR VERIFICATION" %}
                     </button>
                 </form>
             {% endif %}
             <a href="{% url 'users:profile_edit' %}" class="mt-4 inline-block font-mono-editorial text-xs text-muted-foreground hover:text-accent">
-                Update your profile first
+                {% trans "Update your profile first" %}
             </a>
         {% else %}
-            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">You're verified</h1>
+            <h1 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "You're verified" %}</h1>
             <p class="mt-4 text-muted-foreground">
-                <a href="{% url 'users:profile' %}" class="underline hover:text-accent">Go to your profile</a>.
+                <a href="{% url 'users:profile' %}" class="underline hover:text-accent">{% trans "Go to your profile" %}</a>
             </p>
         {% endif %}
     {% endwith %}

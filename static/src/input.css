@@ -11,6 +11,9 @@
   :focus-visible { outline: 2px solid theme('colors.foreground'); outline-offset: 3px; }
   .bg-foreground :focus-visible { outline-color: theme('colors.primary-foreground'); }
   ::selection { background: theme('colors.foreground'); color: theme('colors.primary-foreground'); }
+  /* Pressed feedback the instant a finger lands: phones have no hover, so
+     without this a tap shows nothing until the next page loads. */
+  button:not(:disabled):active, [type="submit"]:not(:disabled):active, a[class*="bg-"]:active { opacity: 0.8; }
 }
 
 /* Accessibility: red text inside dark sections (page heroes, the video
@@ -214,3 +217,42 @@
   /* Keeps the centred hero text readable over any part of a photo. */
   .hero-text-shadow { text-shadow: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 18px rgb(0 0 0 / 0.45); }
 }
+
+/* Keyword search on /articles/ uses Tagify's select mode for one tag; its dropdown arrow made a plain search box look like a menu. */
+.tagify--select::after { display: none; }
+
+/* Placeholders are examples, not labels, but still have to be readable: muted ink, 5.3:1 on paper. */
+::placeholder { color: theme('colors.muted-foreground'); opacity: 1; }
+
+/* Article citations (static/js/citations.js). The superscript number gets a thumb-sized
+   hit area without moving the text; the source opens under it as a floating card (paper,
+   ink border, the soft shadow DESIGN.md gives things that float), grown from the number. */
+.prose-article sup a[href^="#ref-"] {
+  position: relative; padding: 0 0.15em; color: theme('colors.accent'); font-weight: 600; text-decoration: none;
+}
+.prose-article sup a[href^="#ref-"]::after { content: ''; position: absolute; inset: -0.6rem -0.4rem; }
+.prose-article sup a[href^="#ref-"]:active,
+.prose-article sup a[href^="#ref-"][aria-expanded="true"] { background: theme('colors.accent'); color: #fff; }
+.cite-card {
+  position: absolute; z-index: 40; width: min(24rem, calc(100vw - 2rem)); padding: 1rem 1.125rem;
+  font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; text-align: left; text-indent: 0;
+  background: theme('colors.background'); border: 1px solid theme('colors.foreground');
+  box-shadow: 0 18px 40px -12px rgb(17 17 16 / 0.28);
+  animation: cite-card-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cite-card .cite-card__label { margin: 0; font-family: theme('fontFamily.mono-editorial'); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: theme('colors.accent'); }
+:lang(ne) .cite-card .cite-card__label { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; letter-spacing: normal; font-size: 0.8rem; }
+.cite-card .cite-card__text { margin-top: 0.4rem; font-size: 0.9rem; line-height: 1.55; color: theme('colors.foreground'); overflow-wrap: anywhere; }
+.cite-card .cite-card__text a { text-decoration: underline; text-underline-offset: 2px; }
+.cite-card .cite-card__all { display: inline-block; margin-top: 0.75rem; font-size: 0.8rem; text-decoration: underline; text-underline-offset: 3px; }
+.cite-card .cite-card__all:hover, .cite-card .cite-card__text a:hover { color: theme('colors.accent'); }
+@keyframes cite-card-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+.cite-card--out { animation: cite-card-out 120ms ease-in forwards; pointer-events: none; }
+@keyframes cite-card-out { to { opacity: 0; transform: scale(0.98); } }
+@media (prefers-reduced-motion: reduce) {
+  .cite-card { animation-name: cite-card-fade; } .cite-card--out { animation-name: cite-card-fade-out; }
+  @keyframes cite-card-fade { from { opacity: 0; } } @keyframes cite-card-fade-out { to { opacity: 0; } }
+}
+/* Jumping to a source (no script, or "All references") lands on it visibly, clear of the sticky header. */
+li[id^="ref-"] { scroll-margin-top: 7rem; }
+li[id^="ref-"]:target { background: theme('colors.secondary'); outline: 6px solid theme('colors.secondary'); color: theme('colors.foreground'); }

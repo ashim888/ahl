@@ -1,15 +1,14 @@
 {% extends 'base.html' %}
-{% load news_time ads_tags %}
+{% load i18n news_time ads_tags %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-14">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">Archive</h1>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Archive" %}</h1>
     <p class="mt-2 text-sm text-muted-foreground">
-        Older articles, kept for the historical record. Full-text access requires a subscription plan with
-        archive access.
+        {% trans "Older articles, kept for the record. Reading them in full needs a subscription plan that includes the archive." %}
     </p>
 
     <div class="mt-10 divide-y divide-border">
@@ -37,7 +36,7 @@
                             {% if a %}
                                 {% if a.author.is_active %}<a href="{% url 'articles:author_detail' a.author.slug %}" class="text-xs text-muted-foreground font-medium hover:text-accent">{{ a.display_name }}</a>{% else %}<span class="text-xs text-muted-foreground font-medium">{{ a.display_name }}</span>{% endif %}
                             {% else %}
-                                <span class="text-xs text-muted-foreground font-medium">Editorial staff</span>
+                                <span class="text-xs text-muted-foreground font-medium">{% trans "Editorial staff" %}</span>
                             {% endif %}
                         {% endwith %}
                         <span class="text-border text-xs">·</span>
@@ -49,7 +48,7 @@
             </article>
             {% if forloop.counter == 5 or forloop.last and forloop.counter < 5 %}{% ad_slot 'list_banner' wrapper_class='py-6 flex justify-center' %}{% endif %}
         {% empty %}
-            <p class="text-muted-foreground py-10">Nothing in the archive yet.</p>
+            <p class="text-muted-foreground py-10">{% trans "Nothing in the archive yet." %}</p>
         {% endfor %}
     </div>
 

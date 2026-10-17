@@ -20,7 +20,7 @@
             {% if is_renewal %}{% blocktrans with start=starts|date:"j M Y"|local_digits end=ends|date:"j M Y"|local_digits %}Renewal · {{ start }} – {{ end }} (starts when your current subscription ends){% endblocktrans %}
             {% else %}{% blocktrans with start=starts|date:"j M Y"|local_digits end=ends|date:"j M Y"|local_digits %}Access {{ start }} – {{ end }}{% endblocktrans %}{% endif %}
         </div>
-        {% blocktrans asvar days_label with days=plan.duration_days %}{{ days }} days access{% endblocktrans %}
+        {% blocktrans asvar days_label with days=plan.duration_days|local_digits %}{{ days }} days access{% endblocktrans %}
         {% include 'billing/includes/bill_summary.html' with quote=quote label=days_label %}
     </div>
     <p class="mt-3 text-xs text-muted-foreground">{% trans "Subscriptions don’t renew automatically — we’ll email you before yours ends." %}</p>

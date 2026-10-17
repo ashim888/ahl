@@ -187,7 +187,8 @@ beside it with small thumbnails. Stacks on phones.
     {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=news_commentary" dek=news_dek %}
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-x-10 gap-y-8">
         {% with lead=latest_news.0 %}
-        <article class="group relative lg:col-span-7">
+        {# Sticky on desktop: the lead stays in view while the ranked column beside it runs longer. #}
+        <article class="group relative lg:col-span-7 lg:sticky lg:top-28 lg:self-start">
             {# No picture: the plate shrinks to a 21:9 strip and the headline carries the lead. #}
             <div class="relative {% if lead.card_image_url %}aspect-[3/2]{% else %}aspect-[21/9]{% endif %} bg-secondary overflow-hidden">
                 {% if lead.card_image_url %}

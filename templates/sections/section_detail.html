@@ -25,7 +25,7 @@
             <div>
                 <h1 class="font-display text-4xl md:text-5xl font-bold leading-tight" style="letter-spacing: -0.025em;">{{ section.name }}</h1>
                 <p class="mt-4 font-mono-editorial text-xs tracking-widest opacity-60">
-                    {% blocktrans count counter=page_obj.paginator.count %}{{ counter }} ARTICLE{% plural %}{{ counter }} ARTICLES{% endblocktrans %}{% if follower_count %} · {% blocktrans count counter=follower_count %}{{ counter }} FOLLOWER{% plural %}{{ counter }} FOLLOWERS{% endblocktrans %}{% endif %}
+                    {% blocktrans count counter=page_obj.paginator.count asvar counted_label %}{{ counter }} ARTICLE{% plural %}{{ counter }} ARTICLES{% endblocktrans %}{{ counted_label|local_digits }}{% if follower_count %} · {% blocktrans count counter=follower_count asvar counted_label %}{{ counter }} FOLLOWER{% plural %}{{ counter }} FOLLOWERS{% endblocktrans %}{{ counted_label|local_digits }}{% endif %}
                 </p>
             </div>
             {% if user.is_authenticated %}

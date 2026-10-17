@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n news_time %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 {% block extra_head %}
@@ -24,7 +24,7 @@
                 <p class="mt-3 opacity-75">{{ affiliation }}{% if department %}, {{ department }}{% endif %}</p>
             {% endif %}
             <div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono-editorial text-xs tracking-widest">
-                <span class="opacity-60">{% blocktrans count counter=author_articles|length %}{{ counter }} ARTICLE{% plural %}{{ counter }} ARTICLES{% endblocktrans %}</span>
+                <span class="opacity-60">{% blocktrans count counter=author_articles|length asvar counted_label %}{{ counter }} ARTICLE{% plural %}{{ counter }} ARTICLES{% endblocktrans %}{{ counted_label|local_digits }}</span>
                 {% if board_membership %}
                     <a href="{% url 'editorial_board:public_list' %}?tab=board" class="text-accent hover:underline">
                         {% trans "EDITORIAL BOARD" %} — {{ board_membership.role_title|upper }} →

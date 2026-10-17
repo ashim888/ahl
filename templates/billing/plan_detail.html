@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load money_tags %}
-{% load i18n %}
+{% load i18n news_time %}
 
 {% block title %}{{ plan.name }} — {% trans "Subscribe" %} — {{ JOURNAL_NAME }}{% endblock %}
 
@@ -42,7 +42,7 @@
                 {% endif %}
                 <div class="p-6">
                     <p class="font-display text-4xl font-bold">{{ plan.price|money }}</p>
-                    <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{% vat_breakdown plan.price as bill %}{% blocktrans with days=plan.duration_days rate=bill.rate total=bill.total|money %}+ {{ rate }}% VAT ({{ total }} in all) · for {{ days }} days{% endblocktrans %}</p>
+                    <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{% vat_breakdown plan.price as bill %}{% blocktrans with days=plan.duration_days|local_digits rate=bill.rate total=bill.total|money %}+ {{ rate }}% VAT ({{ total }} in all) · for {{ days }} days{% endblocktrans %}</p>
                     <div class="mt-5">
                         {% include 'billing/includes/plan_cta.html' with featured=True %}
                         {% if plan.plan_type != 'institutional' %}
@@ -51,7 +51,7 @@
                             {% else %}
                                 <p class="text-xs text-muted-foreground leading-relaxed mt-4">{% trans "Payment processing isn't live yet — checkout runs in test mode and activates access immediately." %}</p>
                             {% endif %}
-                            <p class="mt-2 text-xs text-muted-foreground leading-relaxed">{% trans "Subscriptions don’t renew automatically — we’ll email you before yours ends." %}</p>
+                            <p class="mt-2 text-xs text-muted-foreground leading-relaxed">{% trans "Subscriptions don’t renew automatically — we’ll email you before yours ends." %} {% blocktrans with days=cancel_days|local_digits %}Full refund if you cancel within {{ days }} days.{% endblocktrans %}</p>
                         {% endif %}
                     </div>
                 </div>

@@ -38,7 +38,7 @@ story. Expects `videos` (list of Articles with `section` loaded).
                                 <svg class="relative w-7 h-7 md:w-8 md:h-8 ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
                             </span>
                         </a>
-                        {% if videos|length > 1 %}<span data-stage-counter aria-hidden="true" class="absolute bottom-3 right-3 font-mono-editorial text-xs tracking-widest text-white/80">01 / {{ videos|length|stringformat:"02d" }}</span>{% endif %}
+                        {% if videos|length > 1 %}<span data-stage-counter aria-hidden="true" class="absolute bottom-3 right-3 font-mono-editorial text-xs tracking-widest text-white/80">{{ "01"|local_digits }} / {{ videos|length|stringformat:"02d"|local_digits }}</span>{% endif %}
                     </div>
                 </div>
             </div>
@@ -101,7 +101,7 @@ story. Expects `videos` (list of Articles with `section` loaded).
                                 {% include 'articles/includes/press_plate.html' with article=article %}
                             {% endif %}
                             {% include 'articles/includes/play_badge.html' with article=article small=True %}
-                            <span aria-hidden="true" class="absolute top-2 left-2 font-mono-editorial text-[0.65rem] tracking-widest text-white/90 bg-black/60 px-1.5 py-0.5">{{ forloop.counter|stringformat:"02d" }}</span>
+                            <span aria-hidden="true" class="absolute top-2 left-2 font-mono-editorial text-[0.65rem] tracking-widest text-white/90 bg-black/60 px-1.5 py-0.5">{{ forloop.counter|stringformat:"02d"|local_digits }}</span>
                             <span aria-hidden="true" class="absolute bottom-0 inset-x-0 h-1 bg-accent scale-x-0 origin-left transition-transform duration-300 group-aria-[current=true]:scale-x-100"></span>
                         </div>
                         <p lang="{{ article.title|content_lang }}" class="mt-2.5 text-sm font-semibold leading-snug line-clamp-2 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</p>
@@ -125,7 +125,12 @@ story. Expects `videos` (list of Articles with `section` loaded).
         var reel = $('reel'), prev = $('reel-prev'), next = $('reel-next');
         var total = Math.max(items.length, 1), current = 0, frame = null;
 
-        function pad(n) { return (n < 10 ? '0' : '') + n; }
+        // Devanagari digits on Nepali pages, matching the server-rendered counter.
+        var nepali = document.documentElement.lang === 'ne';
+        function pad(n) {
+            var s = (n < 10 ? '0' : '') + n;
+            return nepali ? s.replace(/\d/g, function (d) { return '०१२३४५६७८९'[d]; }) : s;
+        }
 
         function stop() {
             if (frame) { frame.remove(); frame = null; }

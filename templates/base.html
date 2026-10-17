@@ -82,7 +82,7 @@
         form input[type="text"], form input[type="email"], form input[type="password"],
         form input[type="url"], form input[type="date"], form input[type="number"],
         form textarea, form select {
-            width: 100%; border: 1px solid #d4d0cb; padding: 0.5rem 0.75rem; font-size: 0.875rem; background: transparent;
+            width: 100%; border: 1px solid #8f8a82; padding: 0.5rem 0.75rem; font-size: 0.875rem; background: transparent;
         }
         form input:focus, form textarea:focus, form select:focus {
             outline: 2px solid transparent; box-shadow: 0 0 0 2px #111110;
@@ -137,7 +137,7 @@
         .prose-article th, .prose-article td { border: 1px solid #d4d0cb; padding: 0.5rem 0.75rem; text-align: left; }
         .prose-article th { background: #f0ede8; font-weight: 600; }
         .prose-article figure { margin: 2.5rem 0; }
-        .prose-article figcaption { margin-top: 0.75rem; font-size: 0.8rem; color: #6b6860; }
+        .prose-article figcaption { margin-top: 0.75rem; font-size: 0.75rem; color: #6b6860; }
         .prose-article sup { vertical-align: super; font-size: 0.7em; }
         .prose-article a { text-decoration: underline; }
         /* CKEditor's codeBlock ("code" + "codeBlock" toolbar buttons, see
@@ -275,18 +275,21 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen flex flex-col bg-background text-foreground">
+<body class="min-h-screen min-h-dvh flex flex-col bg-background text-foreground">
 
     {% with path=request.path %}
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-foreground focus:text-primary-foreground focus:px-4 focus:py-2 font-mono-editorial text-xs tracking-widest">{% trans "SKIP TO CONTENT" %}</a>
     <div class="bg-foreground text-primary-foreground py-2 px-6" role="region" aria-label="{% trans 'Latest issue' %}">
         <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <span class="font-mono-editorial text-xs tracking-widest opacity-80 min-w-0 truncate">
+                <time datetime="{% now 'Y-m-d' %}">{% dateline %}</time>{# Phones: the date alone; the issue needs the width. #}<span class="hidden sm:inline">
+                <span aria-hidden="true"> · </span>
                 {% if latest_issue %}
                     <a href="{% url 'issues:issue_detail' latest_issue.slug %}" class="hover:underline underline-offset-2">{% trans "LATEST ISSUE" %}: {{ latest_issue.title|upper }}{% if latest_issue.publication_date %} · {{ latest_issue.publication_date|date:"M Y"|upper|local_digits }}{% endif %}</a>
                 {% else %}
                     {% trans JOURNAL_TAGLINE as tagline %}{{ tagline|upper }}
                 {% endif %}
+                </span>
             </span>
             {# Journal credentials: the ISSN once there is a real one, and the board that stands behind the journal. #}
             <span class="hidden sm:flex shrink-0 items-center gap-4 font-mono-editorial text-xs tracking-widest">
@@ -551,8 +554,9 @@
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">
                     <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
-                    <input type="email" name="email" required placeholder="you@example.com"
-                           class="flex-1 md:w-64 px-3 py-2 text-sm bg-white/10 border border-white/20 text-primary-foreground placeholder-white/40 focus:outline-none focus:border-white/50">
+                    <label for="footer-newsletter-email" class="sr-only">{% trans "Your email address" %}</label>
+                    <input type="email" name="email" id="footer-newsletter-email" autocomplete="email" required placeholder="you@example.com"
+                           class="flex-1 md:w-64 px-3 py-2 text-sm bg-white/10 border border-white/50 text-primary-foreground placeholder-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground">
                     <button type="submit"
                             class="font-mono-editorial text-xs tracking-widest bg-primary-foreground text-foreground px-4 py-2 hover:opacity-80 transition-opacity whitespace-nowrap">
                         {% trans 'SIGN UP FREE' %}
@@ -562,7 +566,7 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-8 mb-10">
                 <div>
                     <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'SECTIONS' %}</p>
                     <a href="{% url 'articles:home' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Home" %}</a>
@@ -591,10 +595,6 @@
                     <a href="{% url 'articles:correction_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Corrections" %}</a>
                     <a href="#" data-cookie-settings class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Cookie settings" %}</a>
                     {% if user.is_authenticated %}<a href="{% url 'users:privacy' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Privacy & your data" %}</a>{% endif %}
-                </div>
-                <div>
-                    <h2 class="font-display text-xl font-black mb-3" style="letter-spacing: -0.02em;">{{ JOURNAL_NAME|upper }}</h2>
-                    <p class="text-xs opacity-70 leading-relaxed">{% trans JOURNAL_TAGLINE as tagline %}{{ tagline }}</p>
                 </div>
             </div>
             <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">

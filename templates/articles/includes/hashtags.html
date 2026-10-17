@@ -1,2 +1,2 @@
 {# Topic pills on a card or list row (article_hashtags tag). `relative z-10` keeps them clickable above a card's whole-card link. #}
-{% if keywords %}<ul class="flex flex-wrap gap-1.5 {{ extra_class }}" aria-label="Topics">{% for kw in keywords %}<li class="max-w-full">{% include 'articles/includes/topic_pill.html' with topic=kw size='sm' extra='relative z-10' %}</li>{% endfor %}</ul>{% endif %}
+{% load i18n %}{% if keywords %}<ul class="flex flex-wrap gap-1.5 {{ extra_class }}" aria-label="{% trans 'Topics' %}">{% for kw in keywords %}<li class="max-w-full">{% include 'articles/includes/topic_pill.html' with topic=kw size='sm' extra='relative z-10' %}</li>{% endfor %}</ul>{% endif %}

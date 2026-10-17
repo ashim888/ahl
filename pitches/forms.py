@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from ajna_health_lens.visitor import client_ip
 
@@ -29,8 +30,15 @@ class StoryPitchForm(forms.ModelForm):
             'body': forms.Textarea(attrs={'rows': 10}),
         }
         labels = {
-            'submitter_name': 'Your name',
-            'submitter_email': 'Your email',
+            'title': _('Title'),
+            'summary': _('Summary'),
+            'body': _('Draft (optional)'),
+            'submitter_name': _('Your name'),
+            'submitter_email': _('Your email'),
+        }
+        help_texts = {
+            'summary': _('The pitch itself: what the story is and why it matters now.'),
+            'body': _('If you already have a draft, paste it here. Not required.'),
         }
 
     def __init__(self, *args, request=None, **kwargs):
@@ -48,7 +56,7 @@ class StoryPitchForm(forms.ModelForm):
         else:
             self.fields['submitter_name'].required = True
             self.fields['submitter_email'].required = True
-            self.fields['submitter_email'].help_text = "So we can follow up if we'd like to run your story."
+            self.fields['submitter_email'].help_text = _("So we can follow up if we'd like to run your story.")
 
     def clean_website(self):
         value = self.cleaned_data.get('website')

@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, pgettext_lazy
 
 from articles.validators import article_image_extension_validator, validate_featured_image_size
 
@@ -159,14 +159,14 @@ class CourseModule(models.Model):
 
 class Enrollment(models.Model):
     class Status(models.TextChoices):
-        ACTIVE = 'active', 'Active'
-        COMPLETED = 'completed', 'Completed'
-        CANCELLED = 'cancelled', 'Cancelled'
+        ACTIVE = 'active', _('Active')
+        COMPLETED = 'completed', _('Completed')
+        CANCELLED = 'cancelled', _('Cancelled')
 
     class PaymentStatus(models.TextChoices):
-        PENDING = 'pending', 'Pending'
-        PAID = 'paid', 'Paid'
-        REFUNDED = 'refunded', 'Refunded'
+        PENDING = 'pending', pgettext_lazy('payment status', 'Pending')
+        PAID = 'paid', _('Paid')
+        REFUNDED = 'refunded', _('Refunded')
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enrollments',

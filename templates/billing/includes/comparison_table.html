@@ -8,13 +8,13 @@ must come from the same call so columns/rows line up.
     <table class="w-full border-collapse text-sm min-w-[560px]">
         <thead>
             <tr>
-                <th class="text-left pb-4 pr-4 font-mono-editorial text-xs text-muted-foreground tracking-widest align-bottom">
+                <th class="sticky left-0 z-10 bg-background text-left pb-4 pr-4 font-mono-editorial text-xs text-muted-foreground tracking-widest align-bottom">
                     {% trans "WHAT'S INCLUDED" %}
                 </th>
                 {% for plan in plans %}
                     <th class="pb-4 px-4 text-center align-bottom min-w-[140px]">
                         {% if plan.is_featured %}
-                            <p class="font-mono-editorial text-[0.65rem] text-accent tracking-widest mb-1">{% trans "OUR PICK" %}</p>
+                            <p class="font-mono-editorial text-[0.65rem] text-foreground tracking-widest mb-1">{% trans "OUR PICK" %}</p>
                         {% endif %}
                         <a href="{% url 'billing:plan_detail' plan.pk %}" lang="{{ plan.name|content_lang }}" class="font-display text-base font-bold hover:underline underline-offset-4">{{ plan.name }}</a>
                         <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{{ plan.price|money }}</p>
@@ -25,7 +25,7 @@ must come from the same call so columns/rows line up.
         <tbody>
             {% for row in comparison_matrix %}
                 <tr class="border-t border-border">
-                    <td class="py-3 pr-4 text-muted-foreground">{{ row.feature.label }}</td>
+                    <td class="sticky left-0 z-10 bg-background py-3 pr-4 text-muted-foreground max-w-[10rem] sm:max-w-none" lang="{{ row.feature.label|content_lang }}">{{ row.feature.label }}</td>
                     {% for included in row.included %}
                         <td class="py-3 px-4 text-center">
                             {% if included %}
@@ -33,7 +33,7 @@ must come from the same call so columns/rows line up.
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/>
                                 </svg>
                             {% else %}
-                                <span class="text-border" role="img" aria-label="{% trans 'Not included' %}">—</span>
+                                <span class="text-muted-foreground" role="img" aria-label="{% trans 'Not included' %}">—</span>
                             {% endif %}
                         </td>
                     {% endfor %}

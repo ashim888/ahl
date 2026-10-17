@@ -372,7 +372,7 @@ class CorrectionListView(ListView):
         context = super().get_context_data(**kwargs)
         context['kinds'] = ArticleCorrection.Kind.choices
         context['selected_kind'] = self.request.GET.get('kind', '')
-        context['meta_title'] = f'Corrections — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("Corrections")} — {settings.JOURNAL_NAME}'
         context['meta_description'] = (
             f'Every correction, clarification and update {settings.JOURNAL_NAME} has made to a published story.'
         )
@@ -463,14 +463,14 @@ class ArticleListView(ListView):
             # The topic page is the one address search engines should index.
             context['canonical_url'] = self.request.build_absolute_uri(
                 reverse('articles:topic_detail', args=[selected_keyword_slug]))
-            context['meta_title'] = f'Articles tagged "{selected_keyword_label}" — {settings.JOURNAL_NAME}'
+            context['meta_title'] = _('Articles tagged "%(keyword)s"') % {'keyword': selected_keyword_label} + f' — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'Articles about {selected_keyword_label} from {settings.JOURNAL_NAME}.'
         elif context['selected_type']:
             type_label = dict(Article.ArticleType.choices).get(context['selected_type'], '')
             context['meta_title'] = f'{type_label} — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'{type_label} articles from {settings.JOURNAL_NAME}.'
         else:
-            context['meta_title'] = f'All Articles — {settings.JOURNAL_NAME}'
+            context['meta_title'] = f'{_("All Articles")} — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'Browse all published articles from {settings.JOURNAL_NAME}.'
         return context
 
@@ -496,7 +496,7 @@ class ArchiveListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['meta_title'] = f'Archive — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("Archive")} — {settings.JOURNAL_NAME}'
         context['meta_description'] = f'Archived articles from {settings.JOURNAL_NAME}.'
         return context
 
@@ -539,7 +539,7 @@ class ForYouView(ListView):
             SectionFollow.objects.filter(user=self.request.user).exists()
             or KeywordFollow.objects.filter(user=self.request.user).exists()
         )
-        context['meta_title'] = f'For You — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("For You")} — {settings.JOURNAL_NAME}'
         context['meta_robots'] = 'noindex, follow'  # personalized, not a page worth indexing
         return context
 
@@ -580,14 +580,15 @@ class ArticleDetailView(DetailView):
         # expired/unknown token isn't an error, it just falls through to
         # the normal access rules (real entitlement, then metering) as if
         # no gift link were involved.
+        has_locked_content = bool(self.object.html_content or self.object.has_video or self.object.pdf_file)
+        context['has_locked_content'] = has_locked_content
         gift_token = self.kwargs.get('gift_token')
         gift = get_valid_article_gift(self.object, gift_token) if gift_token else None
         if gift:
             show_full_text = True
             context['gift_banner'] = gift.gifter
         # Nothing behind the paywall yet (no text, video or PDF): don't spend one of the reader's free reads on it.
-        elif not show_full_text and self.object.access_type in METERED_ACCESS_TYPES \
-                and (self.object.html_content or self.object.has_video or self.object.pdf_file):
+        elif not show_full_text and self.object.access_type in METERED_ACCESS_TYPES and has_locked_content:
             # Metering is a separate, stateful concern from the real
             # entitlement check above — see billing.access.consume_free_sample's
             # own docstring for why the two aren't merged into one function.
@@ -603,6 +604,7 @@ class ArticleDetailView(DetailView):
             context['cheapest_monthly_plan'] = SubscriptionPlan.objects.filter(
                 is_active=True, plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
             ).order_by('price').first()
+            context['cancel_days'] = settings.SUBSCRIPTION_CANCEL_DAYS
         user = self.request.user
         if show_full_text and user.is_authenticated and not user.is_editorial_staff \
                 and self.object.status == Article.Status.PUBLISHED and not self.kwargs.get('preview'):
@@ -911,7 +913,7 @@ class ReadingListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['meta_title'] = f'Reading List — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("Reading List")} — {settings.JOURNAL_NAME}'
         context['meta_robots'] = 'noindex, follow'  # personal, not a page worth indexing
         return context
 

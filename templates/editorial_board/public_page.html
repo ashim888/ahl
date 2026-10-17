@@ -1,24 +1,25 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
 {% block content %}
 <div class="border-b-2 border-foreground">
     <div class="max-w-7xl mx-auto px-6 pt-12 pb-0">
-        <p class="section-label text-muted-foreground mb-3">About</p>
+        <p class="section-label text-muted-foreground mb-3">{% trans "ABOUT" %}</p>
         <h1 class="font-display text-5xl font-bold mb-10" style="letter-spacing: -0.025em;">{{ JOURNAL_NAME }}</h1>
         <div class="flex gap-0 -mb-px">
             <a href="?tab=about"
                class="font-mono-editorial text-xs tracking-widest px-6 py-4 border-b-2 {% if active_tab == 'about' %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground{% endif %}">
-                ABOUT THE JOURNAL
+                {% trans "ABOUT THE JOURNAL" %}
             </a>
             <a href="?tab=board"
                class="font-mono-editorial text-xs tracking-widest px-6 py-4 border-b-2 {% if active_tab == 'board' %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground{% endif %}">
-                EDITORIAL BOARD
+                {% trans "EDITORIAL BOARD" %}
             </a>
             <a href="?tab=policies"
                class="font-mono-editorial text-xs tracking-widest px-6 py-4 border-b-2 {% if active_tab == 'policies' %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground{% endif %}">
-                POLICIES
+                {% trans "POLICIES" %}
             </a>
         </div>
     </div>

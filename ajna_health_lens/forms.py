@@ -1,5 +1,5 @@
 # Reader-facing forms: square, hairline, ink focus ring (base.html's form rules) — The Broadsheet Lens.
-TAILWIND_INPUT = 'w-full border border-border bg-transparent px-3 py-2 text-sm'
+TAILWIND_INPUT = 'w-full border border-input-border bg-transparent px-3 py-2 text-sm'
 
 
 def apply_tailwind_widgets(form, skip=('cv_file', 'file')):
