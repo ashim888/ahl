@@ -15,7 +15,7 @@ Django==5.2.17
 djangorestframework==3.17.2
 docutils==0.23
 mysqlclient==2.2.8
-pillow==12.3.0
+pillow==13.0.0
 python-dotenv==1.2.2
 pytz==2026.3.post1
 requests==2.34.2
