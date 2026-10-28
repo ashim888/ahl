@@ -77,10 +77,11 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="(min-width: 768px) 60vw, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
                      {% if article.featured_image_width %}width="{{ article.featured_image_width }}" height="{{ article.featured_image_height }}"{% endif %}
                      class="relative mx-auto block w-auto max-w-full h-auto object-contain py-6 sm:py-10"
-                     style="max-height: min(78vh, 760px);">
+                     style="max-height: min(52vh, 760px);">
             </div>
         {% else %}
-            <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 520px);">
+            {# Capped by screen height too, so the headline still starts within the first screen on a laptop. #}
+            <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 44vh, 520px);">
                 <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="100vw" alt="{{ article.featured_image_alt|default:article.title }}"
                      class="w-full h-full object-cover" style="filter: grayscale(15%); object-position: {{ article.featured_image_position }};">
             </div>
@@ -139,6 +140,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             <div class="flex items-center gap-3 mb-5">
                 {% if article.is_breaking %}<span class="font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-accent text-white px-2 py-0.5">{% trans "BREAKING" %}</span>{% endif %}
                 <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
+                {% include 'articles/includes/story_flags.html' with article=article %}
                 {% if article.issue %}
                     <span class="text-border">·</span>
                     <a href="{% url 'issues:issue_detail' article.issue.slug %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
@@ -184,13 +186,14 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             {{ featured_author.display_affiliation }}
                         </p>
                     {% endif %}
+                    {% if article.doi %}<p class="mt-1 font-mono-editorial text-xs text-muted-foreground">DOI <a href="https://doi.org/{{ article.doi }}" class="underline underline-offset-2 hover:text-accent">{{ article.doi }}</a></p>{% endif %}
                 </div>
                 <div class="text-right flex-shrink-0">
                     <p class="font-mono-editorial text-xs text-muted-foreground">
                         {% if article.published_at %}<time datetime="{{ article.published_at|date:'c' }}">{% if article.published_at|date:"Hi" == "0000" %}{{ article.published_at|date:"F j, Y"|local_digits }}{% else %}{{ article.published_at|date:"F j, Y · g:i A"|local_digits }}{% endif %}</time>{% endif %}
                     </p>
                     {% if article.last_updated_at %}
-                        <p class="font-mono-editorial text-xs text-accent mt-0.5">
+                        <p class="font-mono-editorial text-xs text-foreground mt-0.5">
                             {% trans "Updated" %} <time datetime="{{ article.last_updated_at|date:'c' }}">{{ article.last_updated_at|date:"M j, g:i A"|local_digits }}</time>
                         </p>
                     {% endif %}
@@ -570,18 +573,11 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                                 <li>
                                     <a href="{% url 'articles:article_detail' trending.slug %}" class="group flex items-baseline gap-3">
                                         <span class="font-display text-lg font-bold text-accent" aria-hidden="true">{{ forloop.counter|local_digits }}</span>
-                                        <span class="text-sm font-medium leading-snug group-hover:underline decoration-1 underline-offset-[3px]">{{ trending.title }}</span>
+                                        <span class="font-display text-base font-semibold leading-snug group-hover:underline decoration-1 underline-offset-[3px]">{{ trending.title }}</span>
                                     </a>
                                 </li>
                             {% endfor %}
                         </ol>
-                    </div>
-                {% endif %}
-
-                {% if article.doi %}
-                    <div class="border border-border p-4 mb-8 bg-secondary">
-                        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">DOI</p>
-                        <p class="text-xs text-muted-foreground leading-relaxed">{{ article.doi }}</p>
                     </div>
                 {% endif %}
 

@@ -15,7 +15,7 @@ renders differently per viewport:
     {% if section.children.all %}
         {% if mobile %}
             <details class="nav-section-dropdown block">
-                <summary class="cursor-pointer list-none flex items-center gap-1 select-none py-2 font-mono-editorial text-xs tracking-widest
+                <summary class="cursor-pointer list-none flex items-center gap-1 select-none py-3 font-mono-editorial text-xs tracking-widest
                                  {% if active in path %}text-accent{% else %}hover:text-accent{% endif %}">
                     <a href="{{ section.nav_url }}">{{ section.name|upper }}</a>
                     <svg class="w-2.5 h-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -24,7 +24,7 @@ renders differently per viewport:
                 </summary>
                 <div class="pl-4 pb-2 space-y-1">
                     {% for child in section.children.all %}
-                        <a href="{{ child.nav_url }}" class="block font-mono-editorial text-xs tracking-widest py-1.5 opacity-70">
+                        <a href="{{ child.nav_url }}" class="block font-mono-editorial text-xs tracking-widest py-2.5 opacity-70">
                             {{ child.name|upper }}
                         </a>
                     {% endfor %}
@@ -51,7 +51,7 @@ renders differently per viewport:
         {% endif %}
     {% else %}
         <a href="{{ section.nav_url }}"
-           class="{% if mobile %}block py-2 font-mono-editorial text-xs tracking-widest {% if active in path %}text-accent{% endif %}
+           class="{% if mobile %}block py-3 font-mono-editorial text-xs tracking-widest {% if active in path %}text-accent{% endif %}
                   {% else %}font-mono-editorial text-[0.65rem] tracking-widest px-5 py-4 border-b-2 whitespace-nowrap {% if active in path %}border-accent text-accent{% else %}border-transparent hover:text-accent{% endif %}
                   {% endif %}">
             {{ section.name|upper }}

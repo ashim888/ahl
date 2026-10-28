@@ -109,17 +109,6 @@
         </form>
     </div>
 
-    {# Topic chips #}
-    {% if categories|length > 1 %}
-        <div class="flex flex-wrap gap-2 mt-5">
-            <a href="{% url 'training:course_list' %}"
-               class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 border {% if not filters.category %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{% trans "All" %}</a>
-            {% for category in categories %}
-                <a href="?category={{ category|urlencode }}"
-                   class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 border {% if filters.category|lower == category|lower %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}">{{ category }}</a>
-            {% endfor %}
-        </div>
-    {% endif %}
 
     <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for course in courses %}

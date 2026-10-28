@@ -508,3 +508,47 @@ class AdSettingsManageViewTests(TestCase):
         response = self.client.get(reverse('ads:manage_adslot_list'))
         self.assertContains(response, '"Advertise Here" placeholders')
         self.assertContains(response, 'name="placeholder_zones"')
+
+
+class GroupedSlotTests(TestCase):
+    """Slots shown side by side (the homepage rectangle row, group='homepage_rectangles')
+    never show one sponsor twice; the slot that would repeat collapses instead of
+    offering itself as "Advertise Here"."""
+
+    def setUp(self):
+        AdSettings.objects.all().delete()
+
+    def test_sponsor_fills_one_slot_of_the_row(self):
+        first = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, sponsor_name='Dice')
+        repeat = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_2, sponsor_name='  DICE ')
+        other = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_3, sponsor_name='Annapurna Dental')
+        settings_row = AdSettings.get_solo()
+        settings_row.placeholder_zones = [AdSlot.Zone.HOMEPAGE_RECTANGLE_2]
+        settings_row.save()
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('ads:click', args=[first.pk]))
+        self.assertNotContains(response, reverse('ads:click', args=[repeat.pk]))
+        self.assertContains(response, reverse('ads:click', args=[other.pk]))
+        self.assertNotContains(response, 'ADVERTISE HERE')
+        repeat.refresh_from_db()
+        self.assertEqual(repeat.impression_count, 0)
+
+    def test_other_zones_still_repeat_a_sponsor(self):
+        header = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Dice')
+        rect = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, sponsor_name='Dice')
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('ads:click', args=[header.pk]))
+        self.assertContains(response, reverse('ads:click', args=[rect.pk]))
+
+
+class AdFreePagesTests(TestCase):
+    """Sign-in, account and pitch pages carry no ads."""
+
+    def test_login_register_and_pitch_pages_show_no_ad(self):
+        header = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD)
+        anchor = make_ad(zone=AdSlot.Zone.MOBILE_ANCHOR)
+        for name in ('users:login', 'users:register', 'users:password_reset', 'pitches:pitch_create'):
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 200, name)
+            self.assertNotContains(response, reverse('ads:click', args=[header.pk]), msg_prefix=name)
+            self.assertNotContains(response, reverse('ads:click', args=[anchor.pk]), msg_prefix=name)

@@ -9,17 +9,21 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-6 py-14">
+{# Form on the left; on desktop the newsprint panel beside it says what a good pitch carries and what happens next (as on login and sign-up). #}
+<div class="max-w-7xl mx-auto px-6 py-12 lg:py-16 grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+{# Title first on every screen; on phones the guidance follows it, then the form. #}
+<header class="lg:col-span-12 w-full max-w-2xl mx-auto lg:mx-0">
     <div class="rule-editorial mb-6"></div>
     <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Pitch a story" %}</h1>
     <p class="mt-2 text-muted-foreground">
-        {% trans "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed. An editor reads every pitch and replies either way." %}
+        {% trans "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed." %}
         {% if user.is_authenticated %}
             {% url 'pitches:my_pitches' as my_pitches_url %}{% blocktrans %}See your past pitches and their status on <a href="{{ my_pitches_url }}" class="underline hover:text-accent">My pitches</a>.{% endblocktrans %}
         {% endif %}
     </p>
-
-    <form method="post" class="mt-8 space-y-5">
+</header>
+<div class="lg:col-span-7 w-full max-w-2xl mx-auto lg:mx-0 order-last lg:order-none">
+    <form method="post" class="space-y-5">
         {% csrf_token %}
         {{ form.website }}
         {% if form.non_field_errors %}
@@ -28,15 +32,16 @@
         {% for field in form.visible_fields %}
             <div>
                 <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ field.id_for_label }}">
-                    {{ field.label|upper }}
+                    {{ field.label|upper }}{% if field.field.required %} <span class="text-accent">*</span>{% endif %}
                 </label>
                 {{ field }}
+                {# ids match the aria-describedby Django puts on the field, so screen readers read hint and error with it #}
                 {% if field.help_text %}
-                    <p class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
+                    <p id="{{ field.auto_id }}_helptext" class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
                 {% endif %}
-                {% for error in field.errors %}
+                {% if field.errors %}<div id="{{ field.auto_id }}_error">{% for error in field.errors %}
                     <p class="mt-1 text-xs text-accent">{{ error }}</p>
-                {% endfor %}
+                {% endfor %}</div>{% endif %}
             </div>
         {% endfor %}
         {% if turnstile_site_key %}
@@ -48,4 +53,12 @@
         </button>
     </form>
 </div>
+{# Phones: the guidance sits between the title and the form, read before the pitch is written. #}
+<div class="lg:col-span-5 w-full max-w-2xl mx-auto lg:max-w-none lg:sticky lg:top-28">
+    {% include 'pitches/includes/pitch_side.html' %}
+</div>
+</div>
 {% endblock %}
+
+{# Account, sign-in and pitch pages carry no ads (header banner, phone anchor). #}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}

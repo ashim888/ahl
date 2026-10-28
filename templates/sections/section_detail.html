@@ -91,7 +91,11 @@
             {% if forloop.last %}</div>{% endif %}
         {% endif %}
     {% empty %}
-        <p class="border border-dashed border-border px-6 py-14 text-center text-muted-foreground">{% trans "No articles in this section yet." %}</p>
+        {# Not a dead end: point on to the latest stories. #}
+        <div class="border border-dashed border-border px-6 py-14 text-center">
+            <p class="text-muted-foreground">{% trans "No articles in this section yet." %}</p>
+            <a href="{% url 'articles:article_list' %}" class="mt-4 inline-block font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "READ THE LATEST STORIES →" %}</a>
+        </div>
     {% endfor %}
 
     <div class="mt-10">{% include 'includes/pagination_editorial.html' %}</div>

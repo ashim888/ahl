@@ -9,7 +9,7 @@ from django.contrib.auth.views import LoginView, PasswordResetConfirmView, Passw
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
+from django.urls import Resolver404, resolve, reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -47,6 +47,21 @@ STAFF_MANAGE_ROLES = User.SENIOR_STAFF_ROLES
 GROUP_MANAGE_ROLES = (User.Role.ADMIN,)
 
 
+def return_article(request):
+    """The published story a reader was sent here from (?next=/articles/<slug>/), if any —
+    the login and sign-up pages show it so the reader knows where they'll land."""
+    target = request.POST.get('next') or request.GET.get('next') or ''
+    if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return None
+    try:
+        match = resolve(target.split('?')[0])
+    except Resolver404:
+        return None
+    if match.view_name != 'articles:article_detail':
+        return None
+    return Article.objects.filter(slug=match.kwargs.get('slug'), status=Article.Status.PUBLISHED).first()
+
+
 @method_decorator(ratelimit(key='ip', rate='10/h', method='POST', block=True), name='dispatch')
 class RegisterView(CreateView):
     """Rate-limited by IP on POST only — viewing the form (GET) is unlimited,
@@ -70,6 +85,7 @@ class RegisterView(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['next'] = self.request.GET.get('next', '')
+        context['return_article'] = return_article(self.request)
         context['meta_description'] = (
             f'Create a free {settings.JOURNAL_NAME} account to save articles, follow topics, comment and subscribe.'
         )
@@ -106,6 +122,11 @@ class EmailLoginView(LoginView):
 
     template_name = 'users/login.html'
     redirect_authenticated_user = True
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['return_article'] = return_article(self.request)
+        return context
 
 
 @method_decorator(ratelimit(key='ip', rate='5/h', method='POST', block=True), name='dispatch')

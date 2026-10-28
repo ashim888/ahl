@@ -222,7 +222,7 @@
 .tagify--select::after { display: none; }
 
 /* Placeholders are examples, not labels, but still have to be readable: muted ink, 5.3:1 on paper. */
-::placeholder { color: theme('colors.muted-foreground'); opacity: 1; }
+input::placeholder, textarea::placeholder { color: theme('colors.muted-foreground'); opacity: 1; } /* as specific as Tailwind's own preflight rule, which set #9ca3af (2.4:1) */
 
 /* Article citations (static/js/citations.js). The superscript number gets a thumb-sized
    hit area without moving the text; the source opens under it as a floating card (paper,
@@ -230,7 +230,7 @@
 .prose-article sup a[href^="#ref-"] {
   position: relative; padding: 0 0.15em; color: theme('colors.accent'); font-weight: 600; text-decoration: none;
 }
-.prose-article sup a[href^="#ref-"]::after { content: ''; position: absolute; inset: -0.6rem -0.4rem; }
+.prose-article sup a[href^="#ref-"]::after { content: ''; position: absolute; inset: -0.85rem -0.6rem; } /* ~40px to a thumb, without reaching the next line's text */
 .prose-article sup a[href^="#ref-"]:active,
 .prose-article sup a[href^="#ref-"][aria-expanded="true"] { background: theme('colors.accent'); color: #fff; }
 .cite-card {

@@ -118,7 +118,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
     <h1 class="font-display text-4xl font-bold">{{ JOURNAL_NAME }}</h1>
     <p class="mt-3 text-muted-foreground">{{ JOURNAL_TAGLINE }}</p>
     <p class="mt-6 text-sm text-muted-foreground">{% trans "No articles published yet — check back soon." %}</p>
-    <a href="{% url 'editorial_board:public_list' %}" class="mt-6 inline-block font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "MEET THE BOARD →" %}</a>
+    <a href="{% url 'editorial_board:public_list' %}?tab=board" class="mt-6 inline-block font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "MEET THE BOARD →" %}</a>
 </section>
 {% endif %}
 
@@ -169,10 +169,11 @@ empty either side of a single 300px-wide ad — however many of the three
 an editor's actually filled in (ad_slot renders nothing for an empty
 zone) fill the row, centered as a group.
 {% endcomment %}
+{# Phones show only the first rectangle; the other two join it from tablet width up. #}
 <div class="max-w-7xl mx-auto px-6 pb-8 flex flex-wrap justify-center gap-6">
-    {% ad_slot 'homepage_rectangle' %}
-    {% ad_slot 'homepage_rectangle_2' %}
-    {% ad_slot 'homepage_rectangle_3' %}
+    {% ad_slot 'homepage_rectangle' group='homepage_rectangles' %}
+    {% ad_slot 'homepage_rectangle_2' group='homepage_rectangles' wrapper_class='hidden md:block' %}
+    {% ad_slot 'homepage_rectangle_3' group='homepage_rectangles' wrapper_class='hidden md:block' %}
 </div>
 
 {% if latest_news %}
@@ -291,7 +292,7 @@ rigor is what sets this site apart, so it comes before opinion and video.
         {% trans "Board &amp; Policies" as title %}{% trans "MEET THE BOARD →" as link_label %}
         {% blocktrans asvar board_dek with journal=JOURNAL_NAME %}{{ journal }} is governed by an independent editorial board. Peer review for original research is conducted externally via OJS.{% endblocktrans %}
         {% url 'editorial_board:public_list' as board_url %}
-        {% include 'includes/section_heading.html' with link_url=board_url dek=board_dek %}
+        {% include 'includes/section_heading.html' with link_url=board_url|add:'?tab=board' dek=board_dek %}
         <ul class="grid grid-cols-1 sm:grid-cols-2 {% if board_preview|length == 4 %}lg:grid-cols-4{% else %}lg:grid-cols-3{% endif %} gap-x-6 gap-y-8">
             {% for member in board_preview %}
                 <li class="flex items-start gap-4">

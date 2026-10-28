@@ -1000,9 +1000,12 @@ class TrendingSectionTests(TestCase):
     def test_articles_ranked_by_recent_view_count(self):
         from articles.models import ArticleView
 
-        # Not news (that's Latest News) and older than the hero, so neither is already on the page.
+        # Not news (that's Latest News), older than the hero, and pushed out of the
+        # two-story research band by newer papers, so neither is already on the page.
         popular = make_article('popular-article', Article.ArticleType.REVIEW_ARTICLE)
         unpopular = make_article('unpopular-article', Article.ArticleType.CASE_REPORT)
+        make_article('newer-paper-1', Article.ArticleType.REVIEW_ARTICLE)
+        make_article('newer-paper-2', Article.ArticleType.REVIEW_ARTICLE)
         make_article('newest-hero-article', Article.ArticleType.EDITORIAL)
         for i in range(5):
             ArticleView.objects.create(article=popular, session_key=f's{i}')
@@ -1012,6 +1015,16 @@ class TrendingSectionTests(TestCase):
         trending = list(response.context['trending_articles'])
         self.assertEqual(trending[0], popular)
         self.assertIn(unpopular, trending)
+
+    def test_story_in_another_homepage_section_is_not_repeated(self):
+        from articles.models import ArticleView
+
+        paper = make_article('only-paper', Article.ArticleType.REVIEW_ARTICLE)  # lands in the research band
+        make_article('newest-hero-article', Article.ArticleType.EDITORIAL)
+        ArticleView.objects.create(article=paper, session_key='s0')
+        response = self.client.get(reverse('articles:home'))
+        self.assertIn(paper, response.context['research_highlights'])
+        self.assertNotIn(paper, response.context['trending_articles'])
 
     def test_views_older_than_a_week_are_excluded(self):
         import datetime

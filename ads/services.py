@@ -25,21 +25,33 @@ def is_ad_free_reader(request):
     return request.user.is_authenticated and user_has_perk(request.user, 'grants_ad_free_reading')
 
 
-def get_ad_for_request(request, zone):
+def sponsor_key(ad_slot) -> str:
+    """Two bookings belong to the same sponsor when their names match, ignoring case and spaces."""
+    return ' '.join(ad_slot.sponsor_name.split()).lower()
+
+
+def get_ad_for_request(request, zone, group=''):
     """None for an ad-free reader — otherwise picks and records one
     impression for `zone`. Deliberately never cached: subscription status
     is per-request, and an impression must be counted on every real view,
     not once per cache TTL.
+
+    `group` names slots shown side by side (the homepage rectangle row):
+    within one page view a sponsor fills only one slot of a group, so the
+    reader never sees the same advertiser twice in a row.
     """
     if is_ad_free_reader(request):
         return None
-    ad = get_ad_for_zone(zone)
+    shown = request.__dict__.setdefault('_ad_sponsors_by_group', {}).setdefault(group, set()) if group else set()
+    ad = get_ad_for_zone(zone, exclude_sponsors=shown)
+    if ad and group:
+        shown.add(sponsor_key(ad))
     if ad and not is_crawler(request):
         record_impression(ad)
     return ad
 
 
-def get_ad_for_zone(zone):
+def get_ad_for_zone(zone, exclude_sponsors=()):
     today = timezone.localdate()
     candidates = AdSlot.objects.filter(
         zone=zone, is_active=True, start_date__lte=today,
@@ -47,7 +59,9 @@ def get_ad_for_zone(zone):
     # order_by('?') for simple rotation across multiple active sponsors in
     # the same zone — fine at this site's scale, not meant to scale to a
     # large ad inventory.
-    return candidates.order_by('?').first()
+    if not exclude_sponsors:
+        return candidates.order_by('?').first()
+    return next((ad for ad in candidates.order_by('?') if sponsor_key(ad) not in exclude_sponsors), None)
 
 
 def record_impression(ad_slot):

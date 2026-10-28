@@ -4,7 +4,9 @@
 {% block title %}{% trans "Create an account" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto px-6 py-16">
+{# Form on the left; on desktop the newsprint panel beside it says what the account is for, or which story the reader returns to. #}
+<div class="max-w-7xl mx-auto px-6 py-12 lg:py-20 grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+<div class="lg:col-span-5 w-full max-w-md mx-auto lg:mx-0">
     <div class="rule-editorial mb-6"></div>
     <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Create an account" %}</h1>
     <p class="mt-2 text-sm text-muted-foreground">
@@ -25,7 +27,7 @@
                         {% if field.name == 'first_name' %}{% trans "FIRST NAME" %}{% else %}{% trans "LAST NAME" %}{% endif %} <span class="text-accent">*</span>
                     </label>
                     {{ field }}
-                    {% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
+                    {% if field.errors %}<div id="{{ field.auto_id }}_error">{% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}</div>{% endif %}
                 </div>
             {% endif %}{% endfor %}
         </div>
@@ -37,9 +39,9 @@
                 </label>
                 {{ field }}
                 {% if field.name == 'password1' %}
-                    <p class="mt-1 text-xs text-muted-foreground">{% trans "At least 8 characters. Avoid common words and all-number passwords." %}</p>
+                    <p id="{{ field.auto_id }}_helptext" class="mt-1 text-xs text-muted-foreground">{% trans "At least 8 characters. Avoid common words and all-number passwords." %}</p>
                 {% endif %}
-                {% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
+                {% if field.errors %}<div id="{{ field.auto_id }}_error">{% for error in field.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}</div>{% endif %}
             </div>
         {% endif %}{% endfor %}
 
@@ -49,7 +51,7 @@
                     <input type="checkbox" name="{{ form.accept_terms.html_name }}" id="{{ form.accept_terms.id_for_label }}" class="mt-1" {% if form.accept_terms.value %}checked{% endif %} required>
                     <span>{% trans "I agree to the" %}{% for legal_page in form.consent_pages %}{% if not forloop.first %} {% trans "and" %}{% endif %} <a href="{{ legal_page.get_absolute_url }}" target="_blank" class="underline hover:text-accent">{{ legal_page.title }}</a>{% endfor %}{% trans "." context "end of: I agree to the Terms and Privacy policy" %}</span>
                 </label>
-                {% for error in form.accept_terms.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}
+                {% if form.accept_terms.errors %}<div id="{{ form.accept_terms.auto_id }}_error">{% for error in form.accept_terms.errors %}<p class="mt-1 text-xs text-accent">{{ error }}</p>{% endfor %}</div>{% endif %}
             </div>
         {% endif %}
 
@@ -59,7 +61,14 @@
     </form>
 
     <p class="mt-6 font-mono-editorial text-xs text-muted-foreground">
-        {% trans "Already have an account?" %} <a href="{% url 'users:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="hover:text-accent">{% trans "Log in" %}</a>.
+        {% trans "Already have an account?" %} <a href="{% url 'users:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="underline underline-offset-2 hover:text-accent">{% trans "Log in" %}</a>.
     </p>
 </div>
+<div class="lg:col-span-6 lg:col-start-7 w-full max-w-md mx-auto lg:max-w-none lg:sticky lg:top-28">
+    {% include 'users/includes/account_side.html' with verb='register' %}
+</div>
+</div>
 {% endblock %}
+
+{# Account, sign-in and pitch pages carry no ads (header banner, phone anchor). #}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}

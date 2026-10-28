@@ -20,7 +20,7 @@
                              class="w-full h-full object-cover" style="filter: grayscale(10%); {{ article.card_image_style }}">
                         {% include 'articles/includes/play_badge.html' with article=article small=True %}
                     {% else %}
-                        <div class="w-full h-full bg-secondary"></div>
+                        {% include 'articles/includes/press_plate.html' with article=article %}
                     {% endif %}
                 </a>
                 <div class="flex-1 min-w-0">

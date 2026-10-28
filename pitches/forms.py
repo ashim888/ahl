@@ -39,6 +39,7 @@ class StoryPitchForm(forms.ModelForm):
         help_texts = {
             'summary': _('The pitch itself: what the story is and why it matters now.'),
             'body': _('If you already have a draft, paste it here. Not required.'),
+            'submitter_name': '',  # the model's note is for editors ("only used for an anonymous pitch"), not readers
         }
 
     def __init__(self, *args, request=None, **kwargs):

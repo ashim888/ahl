@@ -294,7 +294,7 @@
             {# Journal credentials: the ISSN once there is a real one, and the board that stands behind the journal. #}
             <span class="hidden sm:flex shrink-0 items-center gap-4 font-mono-editorial text-xs tracking-widest">
                 {% if JOURNAL_ISSN %}<span class="opacity-60">ISSN {{ JOURNAL_ISSN }}</span>{% endif %}
-                {% trans "Editorial Board" as board_label %}<a href="{% url 'editorial_board:public_list' %}" class="opacity-80 hover:opacity-100 hover:underline underline-offset-2">{{ board_label|upper }} →</a>
+                {% trans "Editorial Board" as board_label %}<a href="{% url 'editorial_board:public_list' %}?tab=board" class="opacity-80 hover:opacity-100 hover:underline underline-offset-2">{{ board_label|upper }} →</a>
             </span>
         </div>
     </div>
@@ -304,9 +304,13 @@
             <div class="header-top-collapse">
             <div class="header-top-collapse-inner flex items-center justify-between py-4 sm:py-5 border-b border-border">
                 <button type="button" id="mobile-menu-button" aria-label="{% trans 'Menu' %}" aria-expanded="false"
-                        class="lg:hidden -ml-2 p-2 text-foreground relative after:absolute after:-inset-1 after:content-['']">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        class="group lg:hidden -ml-2 p-2 text-foreground relative after:absolute after:-inset-1 after:content-['']">
+                    {# Three lines when closed, a cross when open (follows aria-expanded, which the menu script sets). #}
+                    <svg class="w-5 h-5 group-aria-expanded:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    <svg class="w-5 h-5 hidden group-aria-expanded:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
                     </svg>
                 </button>
 
@@ -438,11 +442,11 @@
                        class="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none font-mono-editorial text-xs !border-0">
             </form>
             <nav class="px-4 py-4 space-y-1" aria-label="{% trans 'Main menu' %}">
-                <a href="{% url 'articles:home' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if path == '/' %}text-accent{% endif %}">{% trans "HOME" %}</a>
+                <a href="{% url 'articles:home' %}" class="block py-3 font-mono-editorial text-xs tracking-widest {% if path == '/' %}text-accent{% endif %}">{% trans "HOME" %}</a>
                 {% include 'includes/main_nav.html' with mobile=True %}
-                <a href="{% url 'articles:article_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">{% trans "ARTICLES" %}</a>
-                <a href="{% url 'editorial_board:public_list' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">{% trans "ABOUT" %}</a>
-                <a href="{% url 'pitches:pitch_create' %}" class="block py-2 font-mono-editorial text-xs tracking-widest {% if '/pitches/' in path %}text-accent{% endif %}">{% trans "PITCH A STORY" %}</a>
+                <a href="{% url 'articles:article_list' %}" class="block py-3 font-mono-editorial text-xs tracking-widest {% if '/articles/' in path %}text-accent{% endif %}">{% trans "ARTICLES" %}</a>
+                <a href="{% url 'editorial_board:public_list' %}" class="block py-3 font-mono-editorial text-xs tracking-widest {% if '/about/' in path %}text-accent{% endif %}">{% trans "ABOUT" %}</a>
+                <a href="{% url 'pitches:pitch_create' %}" class="block py-3 font-mono-editorial text-xs tracking-widest {% if '/pitches/' in path %}text-accent{% endif %}">{% trans "PITCH A STORY" %}</a>
             </nav>
             <div class="border-t border-border px-4 py-4">
                 {% if user.is_authenticated %}
@@ -568,7 +572,7 @@
             </div>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-8 mb-10">
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'SECTIONS' %}</p>
+                    <p class="font-mono-editorial text-xs tracking-widest text-primary-foreground border-b border-white/20 pb-2 mb-4">{% trans 'SECTIONS' %}</p>
                     <a href="{% url 'articles:home' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Home" %}</a>
                     {% for section in nav_sections %}
                         <a href="{{ section.nav_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ section.name }}</a>
@@ -576,7 +580,7 @@
                     <a href="{% url 'billing:plan_browse' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Subscribe" %}</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'JOURNAL' %}</p>
+                    <p class="font-mono-editorial text-xs tracking-widest text-primary-foreground border-b border-white/20 pb-2 mb-4">{% trans 'JOURNAL' %}</p>
                     <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Issue Archive" %}</a>
                     <a href="{% url 'articles:archive_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Article Archive" %}</a>
                     <a href="{% url 'articles:topic_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Topics" %}</a>
@@ -584,10 +588,9 @@
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Policy" %}</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-4">{% trans 'ABOUT' %}</p>
-                    <a href="{% url 'editorial_board:public_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Board" %}</a>
+                    <p class="font-mono-editorial text-xs tracking-widest text-primary-foreground border-b border-white/20 pb-2 mb-4">{% trans 'ABOUT' %}</p>
+                    <a href="{% url 'editorial_board:public_list' %}?tab=board" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Board" %}</a>
                     {% if faq_page %}<a href="{{ faq_page.get_absolute_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "FAQ" %}</a>{% endif %}
-                    <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Policies" %}</a>
                     <a href="{% url 'users:register' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Register" %}</a>
                     {% for legal_page in legal_pages %}
                         <a href="{{ legal_page.get_absolute_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ legal_page.title }}</a>

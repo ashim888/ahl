@@ -847,3 +847,27 @@ class Custom403PageTests(TestCase):
         response = self.client.get(reverse('ads:manage_adslot_list'))
         self.assertEqual(response.status_code, 302)
         self.assertIn('/login/', response.url)
+
+
+class ReturnArticleTests(TestCase):
+    """Login and sign-up show the story the reader came from (?next=), never an off-site or unpublished one."""
+
+    def setUp(self):
+        from articles.models import Article
+        self.article = Article.objects.create(
+            title='Dengue in Kathmandu', slug='dengue-ktm', status=Article.Status.PUBLISHED, abstract='x',
+        )
+
+    def test_login_and_register_show_the_story(self):
+        nxt = reverse('articles:article_detail', args=['dengue-ktm'])
+        for name in ('users:login', 'users:register'):
+            response = self.client.get(f'{reverse(name)}?next={nxt}')
+            self.assertEqual(response.context['return_article'], self.article)
+            self.assertContains(response, 'Dengue in Kathmandu')
+
+    def test_ignores_other_pages_offsite_and_drafts(self):
+        from articles.models import Article
+        Article.objects.create(title='Draft', slug='draft-one', status=Article.Status.DRAFT, abstract='x')
+        for nxt in ('/subscribe/', 'https://evil.example/articles/dengue-ktm/', '/articles/draft-one/', '/articles/nope/'):
+            response = self.client.get(f"{reverse('users:login')}?next={nxt}")
+            self.assertIsNone(response.context['return_article'], nxt)

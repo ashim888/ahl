@@ -64,3 +64,6 @@
     {% include 'includes/pagination_editorial.html' %}
 </div>
 {% endblock %}
+
+{# Account, sign-in and pitch pages carry no ads (header banner, phone anchor). #}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}

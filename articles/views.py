@@ -317,11 +317,10 @@ class HomeView(TemplateView):
 
         # Trending — the one section that's purely algorithm-driven, not
         # editor-curated (no HomepageSection value for it). It sits between
-        # the hero and Latest News, so it skips what those two already show;
-        # further down (opinion, research…) a repeat is fine.
-        sections['trending_articles'] = _trending_articles(
-            limit=5, exclude=[a.pk for a in hero_slides + latest_news],
-        )
+        # the hero and Latest News, and skips every story the homepage already
+        # shows anywhere (opinion, research, video too): one page, no repeats.
+        # With little traffic it may list fewer than five, which is fine.
+        sections['trending_articles'] = _trending_articles(limit=5, exclude=used_pks)
         from .topics import trending_topics
 
         # A topic on a single story isn't a trend: keep the ones covered more

@@ -28,10 +28,12 @@
     headline, one button each. The features live once, in the comparison
     table below. Red marks only the pick's button.
     {% endcomment %}
-    <div class="grid md:grid-cols-3 border-t-2 border-b border-foreground md:divide-x divide-border">
+    {# Two shared rows (subgrid): name + description, then price + action, so the three prices sit on one line whatever each column holds. #}
+    <div class="grid md:grid-cols-3 md:grid-rows-[auto_auto] border-t-2 border-b border-foreground md:divide-x divide-border">
         {% for plan in plans %}
             {% vat_breakdown plan.price as bill %}
-            <section class="flex flex-col py-8 md:px-8 md:first:pl-0 md:last:pr-0 {% if not forloop.first %}border-t border-border md:border-t-0{% endif %}" aria-labelledby="plan-{{ plan.pk }}">
+            <section class="flex flex-col md:grid md:grid-rows-subgrid md:row-span-2 py-8 md:px-8 md:first:pl-0 md:last:pr-0 {% if not forloop.first %}border-t border-border md:border-t-0{% endif %}" aria-labelledby="plan-{{ plan.pk }}">
+                <div>
                 <div class="flex items-baseline justify-between gap-4">
                     <h2 id="plan-{{ plan.pk }}" lang="{{ plan.name|content_lang }}" class="font-display text-2xl font-bold leading-snug" style="letter-spacing: -0.01em;">
                         <a href="{% url 'billing:plan_detail' plan.pk %}{% if next_path %}?next={{ next_path|urlencode }}{% endif %}" class="hover:underline underline-offset-4 decoration-2">{{ plan.name }}</a>
@@ -39,8 +41,9 @@
                     {% if plan.is_featured %}<span class="shrink-0 font-mono-editorial text-[0.65rem] tracking-widest text-foreground border-b-2 border-accent pb-0.5">{% trans "OUR PICK" %}</span>{% endif %}
                 </div>
                 {% if plan.description %}<p lang="{{ plan.description|content_lang }}" class="mt-3 text-sm text-muted-foreground leading-relaxed">{{ plan.description }}</p>{% endif %}
+                </div>
 
-                <div class="mt-auto pt-6">
+                <div class="pt-6">
                     <p class="font-display text-5xl font-bold tracking-tight">{{ plan.price|money }}</p>
                     <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">{% blocktrans with total=bill.total|money days=plan.duration_days|local_digits %}{{ total }} with VAT · every {{ days }} days{% endblocktrans %}</p>
                     {% if plan.months_paid %}<p class="mt-2 text-sm font-medium">{% blocktrans with read=plan.months_read|local_digits paid=plan.months_paid|local_digits %}{{ read }} months for the price of {{ paid }}{% endblocktrans %}</p>{% endif %}
@@ -64,3 +67,6 @@
     {% endif %}
 </div>
 {% endblock %}
+
+{# The pages that sell ad-free reading carry no ads themselves (header banner, phone anchor). #}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}

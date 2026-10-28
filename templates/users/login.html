@@ -4,7 +4,9 @@
 {% block title %}{% trans "Log in" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto px-6 py-20">
+{# Form on the left; on desktop the newsprint panel beside it says what the account is for, or which story the reader returns to. #}
+<div class="max-w-7xl mx-auto px-6 py-12 lg:py-20 grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+<div class="lg:col-span-5 w-full max-w-md mx-auto lg:mx-0">
     <div class="rule-editorial mb-6"></div>
     <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Log in" %}</h1>
     {% comment %} Readers sent here by the paywall (or any login-only page) are told they'll land back where they were. {% endcomment %}
@@ -42,11 +44,19 @@
     <a href="{% url 'users:password_reset' %}" class="mt-5 inline-block py-2 font-mono-editorial text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">{% trans "Forgot password?" %}</a>
 
     <div class="mt-10 pt-6 border-t border-border">
-        <p class="text-sm text-muted-foreground">{% trans "New here? An account is free and keeps your saved stories and subscriptions in one place." %}</p>
+        {# What the account is for is in the panel beside the form; here only the way in. #}
+        <p class="text-sm text-muted-foreground">{% trans "New here?" %}</p>
         <a href="{% url 'users:register' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}"
            class="mt-4 block w-full text-center font-mono-editorial text-xs tracking-widest border border-foreground py-3.5 hover:bg-foreground hover:text-primary-foreground transition-colors">
             {% trans "CREATE AN ACCOUNT" %}
         </a>
     </div>
 </div>
+<div class="lg:col-span-6 lg:col-start-7 w-full max-w-md mx-auto lg:max-w-none lg:sticky lg:top-28">
+    {% include 'users/includes/account_side.html' with verb='login' %}
+</div>
+</div>
 {% endblock %}
+
+{# Account, sign-in and pitch pages carry no ads (header banner, phone anchor). #}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}

@@ -4,6 +4,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
@@ -111,15 +112,17 @@ class EditorialBoardPublicView(TemplateView):
         context['policies'] = POLICIES
 
         latest_issue = Issue.objects.filter(is_published=True).order_by('-created_at').first()
-        context['publication_facts'] = [
-            ('Latest issue', latest_issue.title if latest_issue else 'Not yet published'),
+        facts = [
+            (_('Latest issue'), latest_issue.title if latest_issue else _('Not yet published')),
             ('ISSN', settings.JOURNAL_ISSN),
-            ('Publisher', settings.JOURNAL_PUBLISHER),
-            ('Peer review', 'Conducted externally via OJS'),
-            ('Access model', 'Hybrid — open access and subscription, by article type'),
+            (_('Publisher'), settings.JOURNAL_PUBLISHER if settings.JOURNAL_PUBLISHER_CONFIRMED else ''),
+            (_('Peer review'), _('Done independently, through our journal system (OJS)')),
+            (_('Access'), _('Free, subscribers only, or a single purchase: decided story by story')),
         ]
+        # A fact with no real value (no ISSN yet, publisher unconfirmed) is left out, not shown blank.
+        context['publication_facts'] = [(label, value) for label, value in facts if value]
 
-        tab_titles = {'about': 'About', 'board': 'Editorial Board', 'policies': 'Policies'}
+        tab_titles = {'about': _('About'), 'board': _('Editorial Board'), 'policies': _('Policies')}
         context['meta_title'] = f'{tab_titles[context["active_tab"]]} — {settings.JOURNAL_NAME}'
         context['meta_description'] = f'About {settings.JOURNAL_NAME} — editorial board, publication policies, and how to reach us.'
         return context

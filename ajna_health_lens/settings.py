@@ -679,6 +679,8 @@ JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '').strip()
 if JOURNAL_ISSN == '0000-0000':
     JOURNAL_ISSN = ''
 JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing')
+# The default name above is unconfirmed (PRODUCT.md): public pages state it as fact only once it's set for real.
+JOURNAL_PUBLISHER_CONFIRMED = bool(os.environ.get('JOURNAL_PUBLISHER', '').strip())
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.com')
 
 # Every price on the site (subscriptions, special articles, training courses,

@@ -16,12 +16,13 @@
                     {{ field.label|upper }}
                 </label>
                 {{ field }}
+                {# ids match the aria-describedby Django puts on the field, so screen readers read hint and error with it #}
                 {% if field.help_text %}
-                    <p class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
+                    <p id="{{ field.auto_id }}_helptext" class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
                 {% endif %}
-                {% for error in field.errors %}
+                {% if field.errors %}<div id="{{ field.auto_id }}_error">{% for error in field.errors %}
                     <p class="mt-1 text-xs text-accent">{{ error }}</p>
-                {% endfor %}
+                {% endfor %}</div>{% endif %}
             </div>
         {% endfor %}
         <div class="flex gap-3 pt-2">
@@ -35,3 +36,6 @@
     </form>
 </div>
 {% endblock %}
+
+{# Account, sign-in and pitch pages carry no ads (header banner, phone anchor). #}
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}

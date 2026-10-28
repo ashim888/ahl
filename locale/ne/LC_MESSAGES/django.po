@@ -3889,7 +3889,7 @@ msgid "Read every story, evidence included"
 msgstr "हरेक समाचार पूरा पढ्नुहोस्, प्रमाणसहित"
 
 msgid "Subscriber articles and special reports from the newsroom of a peer-reviewed journal, with numbered references, citation export and a named editorial board."
-msgstr "सहकर्मी-समीक्षित जर्नलको समाचार कक्षबाट सदस्य-लेख र विशेष रिपोर्टहरू — क्रमबद्ध सन्दर्भ, उद्धरण निर्यात र नाम खुलाइएको सम्पादकीय बोर्डसहित।"
+msgstr "समकक्षी-समीक्षित जर्नलको समाचार कक्षबाट सदस्य-लेख र विशेष रिपोर्टहरू — क्रमबद्ध सन्दर्भ, उद्धरण निर्यात र नाम खुलाइएको सम्पादकीय बोर्डसहित।"
 
 msgid "NO AUTOMATIC RENEWAL · FULL REFUND IF YOU CANCEL WITHIN %(days)s DAYS"
 msgstr "स्वतः नवीकरण हुँदैन · %(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता"
@@ -4322,3 +4322,96 @@ msgstr "लिंक फेरि चाहिए लेख खोलेर <str
 
 msgid "No active gift links. On a subscriber article you can read, press <strong>GIFT THIS ARTICLE</strong> to share it free with someone."
 msgstr "सक्रिय उपहार लिंक छैन। तपाईंले पढ्न सक्ने सदस्य-लेखमा <strong>यो लेख उपहार दिनुहोस्</strong> थिचेर कसैलाई निःशुल्क पढ्न दिनुहोस्।"
+
+msgid "The story you were reading"
+msgstr "तपाईंले पढ्दै गरेको लेख"
+
+msgid "What a free account gives you"
+msgstr "निःशुल्क खाताले दिने सुविधा"
+
+msgid "YOU'LL RETURN TO"
+msgstr "तपाईं फर्कनुहुनेछ"
+
+msgid "Create your account and you'll go straight back to this story."
+msgstr "खाता बनाउनुहोस्, तपाईं सिधै यही लेखमा फर्कनुहुनेछ।"
+
+msgid "Log in and you'll go straight back to this story."
+msgstr "लग इन गर्नुहोस्, तपाईं सिधै यही लेखमा फर्कनुहुनेछ।"
+
+msgid "One free account"
+msgstr "एउटा निःशुल्क खाता"
+
+msgid "No subscription needed for any of this."
+msgstr "यी कुनै पनि कुराका लागि सदस्यता चाहिँदैन।"
+
+msgid "Keep stories in your reading list and pick them up on any device."
+msgstr "लेखहरू पठन सूचीमा राख्नुहोस् र जुनसुकै उपकरणमा पढ्नुहोस्।"
+
+msgid "Follow sections and topics for your own feed and a weekly digest email."
+msgstr "खण्ड र विषयहरू पछ्याउनुहोस्: आफ्नै फिड र साप्ताहिक सारांश इमेल पाउनुहोस्।"
+
+msgid "Join the conversation under any story."
+msgstr "जुनसुकै लेखमुनि छलफलमा सहभागी हुनुहोस्।"
+
+msgid "Send our editors a health story and follow its progress."
+msgstr "हाम्रा सम्पादकलाई स्वास्थ्य कथा पठाउनुहोस् र त्यसको प्रगति हेर्नुहोस्।"
+
+msgid "New here?"
+msgstr "नयाँ हुनुहुन्छ?"
+
+msgid "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed."
+msgstr "हामीले लेख्नुपर्ने स्वास्थ्य कथा छ? प्रस्ताव पठाउनुहोस्: खाता, पाण्डुलिपि वा फाइल चाहिँदैन।"
+
+msgid "How pitching works"
+msgstr "कथा प्रस्ताव कसरी काम गर्छ"
+
+msgid "A good pitch says"
+msgstr "राम्रो प्रस्तावले भन्छ"
+
+msgid "What happened, to whom, and where in Nepal."
+msgstr "के भयो, कसलाई, र नेपालको कहाँ।"
+
+msgid "Why it matters now: a new figure, a policy change, a pattern you've noticed."
+msgstr "अहिले किन महत्त्वपूर्ण छ: नयाँ तथ्याङ्क, नीतिगत परिवर्तन, वा तपाईंले देख्नुभएको ढाँचा।"
+
+msgid "How you know: documents, data, or people we can talk to."
+msgstr "तपाईंलाई कसरी थाहा भयो: कागजात, तथ्याङ्क, वा हामीले कुरा गर्न सक्ने व्यक्ति।"
+
+msgid "What happens next"
+msgstr "त्यसपछि के हुन्छ"
+
+#, python-format
+msgid "%(n)s RESULT FOR \"%(query)s\""
+msgid_plural "%(n)s RESULTS FOR \"%(query)s\""
+msgstr[0] "\"%(query)s\" का लागि %(n)s नतिजा"
+msgstr[1] "\"%(query)s\" का लागि %(n)s नतिजाहरू"
+
+msgid "STORY TYPE"
+msgstr "समाचारको प्रकार"
+
+msgid "FILTERS"
+msgstr "फिल्टर"
+
+msgid "READ THE LATEST STORIES →"
+msgstr "पछिल्ला समाचार पढ्नुहोस् →"
+
+msgid "Not yet published"
+msgstr "अझै प्रकाशित भएको छैन"
+
+msgid "Publisher"
+msgstr "प्रकाशक"
+
+msgid "Peer review"
+msgstr "समकक्षी समीक्षा"
+
+msgid "Done independently, through our journal system (OJS)"
+msgstr "हाम्रो जर्नल प्रणाली (OJS) मार्फत स्वतन्त्र रूपमा गरिन्छ"
+
+msgid "Access"
+msgstr "पहुँच"
+
+msgid "Free, subscribers only, or a single purchase: decided story by story"
+msgstr "निःशुल्क, सदस्यहरूका लागि मात्र, वा एकल खरिद: हरेक समाचारका लागि छुट्टै तय गरिन्छ"
+
+msgid "About"
+msgstr "बारेमा"
