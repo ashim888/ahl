@@ -5,7 +5,6 @@ ad (if any) fills a zone, so every zone picks and counts consistently.
 from django.db.models import F, Q
 from django.utils import timezone
 
-from ajna_health_lens.visitor import is_crawler
 from billing.access import user_has_perk
 
 from .models import AdEvent, AdSlot
@@ -31,10 +30,8 @@ def sponsor_key(ad_slot) -> str:
 
 
 def get_ad_for_request(request, zone, group=''):
-    """None for an ad-free reader — otherwise picks and records one
-    impression for `zone`. Deliberately never cached: subscription status
-    is per-request, and an impression must be counted on every real view,
-    not once per cache TTL.
+    """None for an ad-free reader — otherwise picks the ad for `zone`.
+    Deliberately never cached: subscription status is per-request.
 
     `group` names slots shown side by side (the homepage rectangle row):
     within one page view a sponsor fills only one slot of a group, so the
@@ -46,8 +43,9 @@ def get_ad_for_request(request, zone, group=''):
     ad = get_ad_for_zone(zone, exclude_sponsors=shown)
     if ad and group:
         shown.add(sponsor_key(ad))
-    if ad and not is_crawler(request):
-        record_impression(ad)
+    # The impression itself is counted by the browser once the ad is really on
+    # screen (ads.views.ad_seen), not here: a slot hidden at this screen size
+    # is rendered but never seen.
     return ad
 
 

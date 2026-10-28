@@ -6,6 +6,7 @@ app_name = 'ads'
 
 urlpatterns = [
     path('ads/<int:pk>/click/', views.ad_click, name='click'),
+    path('ads/<int:pk>/seen/', views.ad_seen, name='seen'),
 
     # Editorial — Editor/EiC/Admin (see EDITORIAL_ROLES in views.py)
     path('manage/ads/', views.AdSlotListView.as_view(), name='manage_adslot_list'),

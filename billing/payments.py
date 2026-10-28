@@ -25,6 +25,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext as _
 
 from . import emails, fonepay
 from .models import Payment, ReceiptSequence
@@ -307,7 +308,7 @@ def cancel_subscription(payment: Payment) -> Payment:
     locked = Payment.objects.select_for_update().get(pk=payment.pk)
     if not can_cancel(locked):
         raise CancellationError(
-            f'Subscriptions can only be cancelled within {settings.SUBSCRIPTION_CANCEL_DAYS} days of paying.',
+            _('Subscriptions can only be cancelled within %(days)s days of paying.') % {'days': settings.SUBSCRIPTION_CANCEL_DAYS},
         )
     UserSubscription.objects.filter(payment_reference=locked.reference).update(
         status=UserSubscription.Status.CANCELLED, cancelled_at=timezone.now(),

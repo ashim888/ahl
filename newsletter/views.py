@@ -80,12 +80,17 @@ def confirm(request, token):
 
 @csrf_exempt  # mail clients' one-click unsubscribe POSTs here without a session (RFC 8058)
 def unsubscribe(request, token):
+    """GET shows a confirm button: work-email link scanners open every link
+    in a message, and must not unsubscribe the reader by doing so. POST (the
+    button, or the mail client's one-click) unsubscribes."""
     subscriber = get_object_or_404(Subscriber, unsubscribe_token=token)
-    if subscriber.status != Subscriber.Status.UNSUBSCRIBED:
+    done = subscriber.status == Subscriber.Status.UNSUBSCRIBED
+    if request.method == 'POST' and not done:
         subscriber.status = Subscriber.Status.UNSUBSCRIBED
         subscriber.unsubscribed_at = timezone.now()
         subscriber.save(update_fields=['status', 'unsubscribed_at'])
-    return render(request, 'newsletter/unsubscribed.html', {'subscriber': subscriber})
+        done = True
+    return render(request, 'newsletter/unsubscribed.html', {'subscriber': subscriber, 'done': done})
 
 
 # -- Editorial — compose & send (admin_custom-style dashboard pages) -------

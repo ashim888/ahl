@@ -627,6 +627,12 @@
             }
             var label = slot.querySelector('[data-ad-label]');
             if (label) label.classList.remove('hidden');
+            // Now it has really been seen: count one impression (once per page view).
+            if (slot.dataset.adSeen && !slot.dataset.adCounted) {
+                slot.dataset.adCounted = '1';
+                if (navigator.sendBeacon) navigator.sendBeacon(slot.dataset.adSeen);
+                else fetch(slot.dataset.adSeen, {method: 'POST', keepalive: true});
+            }
         }
         function check() {
             document.querySelectorAll('[data-ad-slot]').forEach(function (slot) {

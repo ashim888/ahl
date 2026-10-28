@@ -256,8 +256,8 @@ def reapply_verification(request):
         # verification_status_changed_at stamp is actually persisted.
         user.verification_status = User.VerificationStatus.PENDING
         user.save()
-        messages.success(request, 'Your verification request has been sent to the editors.' if first_time
-                         else 'Your verification request has been resubmitted.')
+        messages.success(request, _('Your verification request has been sent to the editors.') if first_time
+                         else _('Your verification request has been resubmitted.'))
     return redirect('users:pending_verification')
 
 

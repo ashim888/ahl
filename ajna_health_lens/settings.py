@@ -791,7 +791,14 @@ Q_CLUSTER = {
     'name': 'ajna_health_lens',
     'orm': 'default',
     'workers': 2,
-    'timeout': 90,
-    'retry': 120,
+    # A newsletter or digest emails everyone in one loop: at ~0.4 s an email,
+    # a few hundred people outrun a short timeout. A killed job used to be
+    # retried from the first subscriber, forever, so the head of the list got
+    # the same email every two minutes. Now: 30 minutes per job, a single
+    # attempt (a failure shows as failed; scheduled jobs simply run again next
+    # time). retry must stay above timeout (Django-Q requirement).
+    'timeout': 1800,
+    'retry': 1900,
+    'max_attempts': 1,
     'sync': env_bool('Q_CLUSTER_SYNC', False),
 }

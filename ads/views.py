@@ -3,12 +3,15 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django_ratelimit.decorators import ratelimit
 
 from ajna_health_lens.visitor import is_crawler
 from users.decorators import role_required
@@ -17,7 +20,7 @@ from users.models import User
 from .forms import AdSlotForm
 from .models import AdEvent, AdSettings, AdSlot
 from .placements import PLACEMENTS
-from .services import record_click
+from .services import record_click, record_impression
 
 # House-ad management is editorial content work, same boundary as Article/
 # Training CRUD — not the money-sensitive tier billing's subscription grants
@@ -34,6 +37,21 @@ def ad_click(request, pk):
     if not is_crawler(request):
         record_click(ad)
     return redirect(ad.link_url)
+
+
+
+@csrf_exempt  # a navigator.sendBeacon ping carries no CSRF token
+@require_POST
+@ratelimit(key='ip', rate='120/m', method='POST', block=False)
+def ad_seen(request, pk):
+    """One impression, sent by the ad-slot script in base.html once the ad has
+    actually appeared on screen. Counting at render time counted slots the
+    reader's screen size hides (phone-only banners on desktop, the header
+    banner on phones), roughly doubling what sponsors were shown."""
+    ad = AdSlot.objects.filter(pk=pk, is_active=True).first()
+    if ad and not is_crawler(request) and not getattr(request, 'limited', False):
+        record_impression(ad)
+    return HttpResponse(status=204)
 
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')

@@ -792,7 +792,8 @@ class ArticleView(models.Model):
     viewed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        indexes = [models.Index(fields=['article', 'viewed_at'])]
+        # viewed_at alone serves Trending's "last 7 days, all articles" range.
+        indexes = [models.Index(fields=['article', 'viewed_at']), models.Index(fields=['viewed_at'])]
 
     def __str__(self):
         return f'View of {self.article} at {self.viewed_at}'

@@ -338,12 +338,14 @@ class AdSlotTemplateTagTests(TestCase):
     base.html/home.html, not just importable.
     """
 
-    def test_active_ad_in_zone_renders_and_records_impression(self):
+    def test_active_ad_renders_with_its_seen_ping_but_counts_nothing_yet(self):
+        # The page only carries the ad; the browser counts it once it is on screen.
         ad = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, 'Leaderboard Sponsor')
+        self.assertContains(response, f'data-ad-seen="{reverse("ads:seen", args=[ad.pk])}"')
         ad.refresh_from_db()
-        self.assertEqual(ad.impression_count, 1)
+        self.assertEqual(ad.impression_count, 0)
 
     def test_ad_free_subscriber_does_not_see_header_ad(self):
         from billing.models import SubscriptionPlan, UserSubscription
@@ -552,3 +554,28 @@ class AdFreePagesTests(TestCase):
             self.assertEqual(response.status_code, 200, name)
             self.assertNotContains(response, reverse('ads:click', args=[header.pk]), msg_prefix=name)
             self.assertNotContains(response, reverse('ads:click', args=[anchor.pk]), msg_prefix=name)
+
+
+
+class AdSeenTests(TestCase):
+    """ads:seen — the impression, sent by the browser once the ad is on screen."""
+
+    def test_seen_ping_counts_one_impression(self):
+        from django.test import Client
+
+        ad = make_ad()
+        response = Client(enforce_csrf_checks=True).post(reverse('ads:seen', args=[ad.pk]))  # a beacon: no CSRF token
+        self.assertEqual(response.status_code, 204)
+        ad.refresh_from_db()
+        self.assertEqual(ad.impression_count, 1)
+        self.assertEqual(AdEvent.objects.filter(ad_slot=ad, event_type=AdEvent.EventType.IMPRESSION).count(), 1)
+
+    def test_get_crawler_and_inactive_ad_count_nothing(self):
+        ad = make_ad()
+        inactive = make_ad(is_active=False)
+        self.assertEqual(self.client.get(reverse('ads:seen', args=[ad.pk])).status_code, 405)
+        self.client.post(reverse('ads:seen', args=[ad.pk]), HTTP_USER_AGENT='Googlebot/2.1')
+        self.client.post(reverse('ads:seen', args=[inactive.pk]))
+        ad.refresh_from_db()
+        inactive.refresh_from_db()
+        self.assertEqual((ad.impression_count, inactive.impression_count), (0, 0))

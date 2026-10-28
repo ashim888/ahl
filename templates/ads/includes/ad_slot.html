@@ -28,7 +28,7 @@ is removed instead, so neither an orphaned "AD" tag nor an empty gap
 (the header bar, sidebar margins) is left behind.
 {% endcomment %}
 {% if ad %}
-<div class="{{ wrapper_class }}" data-ad-slot role="complementary" aria-label="{% trans 'Advertisement' %} — {{ zone_label }}">
+<div class="{{ wrapper_class }}" data-ad-slot data-ad-seen="{% url 'ads:seen' ad.pk %}" role="complementary" aria-label="{% trans 'Advertisement' %} — {{ zone_label }}">
     <a href="{% url 'ads:click' ad.pk %}" target="_blank" rel="sponsored noopener"
        class="relative block mx-auto max-w-full" style="width: {{ ad.width }}px;">
         <img src="{{ ad.image.url }}" alt="{{ ad.sponsor_name }} (advertisement)"

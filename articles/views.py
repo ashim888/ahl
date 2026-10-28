@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 import re
 
@@ -195,6 +196,17 @@ def _trending_articles(limit=5, exclude=()):
     sidebar — see ArticleView in models.py for where these rows get
     recorded (and _record_article_view above for the dedup rules).
     """
+    # Cached for a few minutes: it was recomputed on every article page, over the
+    # whole view log (400 days of rows). Trending doesn't need to be to-the-second.
+    key = f"trending:{limit}:{','.join(map(str, sorted(exclude)))}"
+    articles = cache.get(key)
+    if articles is None:
+        articles = _rank_trending(limit, exclude)
+        cache.set(key, articles, 300)
+    return articles
+
+
+def _rank_trending(limit, exclude):
     trending_cutoff = timezone.now() - datetime.timedelta(days=7)
     trending_counts = (
         ArticleView.objects.filter(viewed_at__gte=trending_cutoff, article__status=Article.Status.PUBLISHED)
@@ -1005,7 +1017,8 @@ def search_suggest(request):
     query = request.GET.get('q', '').strip()[:100]
     if len(query) < 2:
         return JsonResponse({'results': []})
-    key = f'search:suggest:{cache.get(search.GENERATION_KEY) or 0}:{abs(hash(query.lower()))}'
+    # md5, not hash(): hash() differs per worker process, so each worker kept its own copies.
+    key = f'search:suggest:{cache.get(search.GENERATION_KEY) or 0}:{hashlib.md5(query.lower().encode()).hexdigest()}'
     results = cache.get(key)
     if results is None:
         results = [

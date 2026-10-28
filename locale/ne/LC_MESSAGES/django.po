@@ -4415,3 +4415,50 @@ msgstr "निःशुल्क, सदस्यहरूका लागि �
 
 msgid "About"
 msgstr "बारेमा"
+
+#, python-format
+msgid "Institutional plans are set up with your organization — email %(email)s."
+msgstr "संस्थागत योजना तपाईंको संस्थासँग मिलेर मिलाइन्छ — %(email)s मा इमेल गर्नुहोस्।"
+
+#, python-format
+msgid "Subscribed to \"%(plan)s\" — active until %(date)s."
+msgstr "\"%(plan)s\" को सदस्यता लिइयो — %(date)s सम्म सक्रिय।"
+
+#, python-format
+msgid "Purchased \"%(title)s\"."
+msgstr "\"%(title)s\" किनियो।"
+
+msgid "We couldn’t start the payment with Fonepay right now. Please try again in a moment."
+msgstr "अहिले Fonepay मार्फत भुक्तानी सुरु गर्न सकिएन। केही बेरपछि फेरि प्रयास गर्नुहोस्।"
+
+#, python-format
+msgid "Cancelled. Your refund of %(amount)s is on its way — we’ve emailed you."
+msgstr "रद्द गरियो। तपाईंको %(amount)s फिर्ता हुँदै छ — हामीले इमेल पठाएका छौँ।"
+
+#, python-format
+msgid "Payment received — %(item)s."
+msgstr "भुक्तानी प्राप्त भयो — %(item)s।"
+
+msgid "Your verification request has been sent to the editors."
+msgstr "तपाईंको प्रमाणीकरण अनुरोध सम्पादकहरूलाई पठाइयो।"
+
+msgid "Your verification request has been resubmitted."
+msgstr "तपाईंको प्रमाणीकरण अनुरोध फेरि पठाइयो।"
+
+msgid "You're already enrolled in this course."
+msgstr "तपाईं यो कोर्समा पहिले नै भर्ना हुनुहुन्छ।"
+
+msgid "This course is full."
+msgstr "यो कोर्स भरिइसकेको छ।"
+
+#, python-format
+msgid "Enrolled in \"%(title)s\"."
+msgstr "\"%(title)s\" मा भर्ना भइयो।"
+
+#, python-format
+msgid "Subscriptions can only be cancelled within %(days)s days of paying."
+msgstr "सदस्यता भुक्तानी गरेको %(days)s दिनभित्र मात्र रद्द गर्न सकिन्छ।"
+
+#, python-format
+msgid "Stop sending our newsletter to %(email)s."
+msgstr "%(email)s मा हाम्रो न्युजलेटर पठाउन बन्द गर्नुहोस्।"

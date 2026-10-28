@@ -1101,8 +1101,8 @@ class AdFreeSubscriberPerkTests(TestCase):
     """"Ad-free reading" is a promised subscriber perk (billing app) —
     ads.services.get_ad_for_request (called from the `ad_slot` template tag,
     ads/templatetags/ads_tags.py) is the one place that enforces it. See
-    ads/tests.py:AdSlotTemplateTagTests for the general "ad renders and
-    records an impression" coverage — this class is scoped to the
+    ads/tests.py:AdSlotTemplateTagTests and AdSeenTests for the general
+    "ad renders, then the browser counts it" coverage — this class is scoped to the
     subscriber-perk behavior specifically.
     """
 
@@ -1144,10 +1144,10 @@ class AdFreeSubscriberPerkTests(TestCase):
         response = self.client.get(reverse('articles:home'))
         self.assertNotContains(response, 'Test Sponsor')
 
-    def test_impression_is_recorded_when_ad_shown(self):
-        self.client.get(reverse('articles:home'))
-        self.ad.refresh_from_db()
-        self.assertEqual(self.ad.impression_count, 1)
+    def test_shown_ad_carries_its_seen_ping(self):
+        # Counted by the browser once on screen (ads.views.ad_seen), not at render.
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('ads:seen', args=[self.ad.pk]))
 
 
 class SlugAndShortCodeTests(TestCase):

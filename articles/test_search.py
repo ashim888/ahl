@@ -84,6 +84,13 @@ class SearchFeatureTests(TestCase):
         self.assertContains(response, 'Public summary on <mark>dengue</mark>')
         self.assertNotContains(response, 'SECRET')
 
+    def test_overlapping_words_never_break_the_markup(self):
+        # "mark" and "ar" both match inside <mark>; highlighting word by word used to
+        # wrap text inside the tags it had just added.
+        article = Article(access_type=Article.AccessType.OPEN_ACCESS, html_content='<p>The dark mark remains.</p>')
+        excerpt = search.snippet(article, 'mark ar')
+        self.assertEqual(excerpt, 'The d<mark>ar</mark>k <mark>mark</mark> remains.')
+
     def test_did_you_mean(self):
         Keyword.objects.create(name='Malaria')
         response = self._get(q='maleria')

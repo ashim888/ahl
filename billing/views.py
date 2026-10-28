@@ -10,14 +10,16 @@ from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.utils.translation import gettext as _
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.formats import date_format
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from django_ratelimit.decorators import ratelimit
 
 from articles.models import Article
+from articles.templatetags.news_time import local_digits
 from users.decorators import role_required
 from users.models import User
 
@@ -253,7 +255,7 @@ def subscribe_checkout(request, pk):
     gets the new period from the day after their current one ends."""
     plan = get_object_or_404(SubscriptionPlan, pk=pk, is_active=True)
     if plan.plan_type == SubscriptionPlan.PlanType.INSTITUTIONAL:
-        messages.info(request, f'Institutional plans are set up with your organization — email {settings.JOURNAL_CONTACT_EMAIL}.')
+        messages.info(request, _('Institutional plans are set up with your organization — email %(email)s.') % {'email': settings.JOURNAL_CONTACT_EMAIL})
         return redirect('billing:plan_detail', pk=plan.pk)
 
     next_path = _next_path(request)
@@ -271,7 +273,9 @@ def subscribe_checkout(request, pk):
             success=next_path or reverse('billing:account'), return_path=next_path, buyer_pan=buyer_pan,
         )
         if isinstance(result, Payment):
-            messages.success(request, f'Subscribed to "{plan.name}" — active until {ends:%-d %b %Y}.')
+            messages.success(request, _('Subscribed to "%(plan)s" — active until %(date)s.') % {
+                'plan': plan.name, 'date': local_digits(date_format(ends, 'j F Y')),
+            })
             return redirect(payments.success_url(result))
         if result is not None:
             return result
@@ -302,7 +306,7 @@ def purchase_checkout(request, slug):
             success=article.get_absolute_url(), buyer_pan=buyer_pan,
         )
         if isinstance(result, Payment):
-            messages.success(request, f'Purchased "{article.title}".')
+            messages.success(request, _('Purchased "%(title)s".') % {'title': article.title})
             return redirect('articles:article_detail', slug=article.slug)
         if result is not None:
             return result
@@ -320,7 +324,7 @@ def _start_fonepay(request, **payment_kwargs):
         payment = payments.start_payment(request.user, **payment_kwargs)
     except fonepay.FonepayError:
         logger.exception('Could not start Fonepay payment for %s', request.user)
-        messages.error(request, 'We couldn\'t start the payment with Fonepay right now. Please try again in a moment.')
+        messages.error(request, _('We couldn’t start the payment with Fonepay right now. Please try again in a moment.'))
         return redirect(request.get_full_path())
     return redirect('billing:payment_page', reference=payment.reference)
 
@@ -387,7 +391,7 @@ def subscription_cancel(request, reference):
     except payments.CancellationError as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, f'Cancelled. Your refund of {format_money(payment.amount)} is on its way — we’ve emailed you.')
+        messages.success(request, _('Cancelled. Your refund of %(amount)s is on its way — we’ve emailed you.') % {'amount': format_money(payment.amount)})
     return redirect('billing:account')
 
 
@@ -418,7 +422,7 @@ def payment_page(request, reference):
     if payment.status == Payment.Status.PENDING:
         payment = payments.verify_payment(payment) if payment.is_expired else payment
     if payment.status == Payment.Status.SUCCESS:
-        messages.success(request, f'Payment received — {payment.description}.')
+        messages.success(request, _('Payment received — %(item)s.') % {'item': payment.description})
         return redirect(payments.success_url(payment))
     banks = []
     if payment.status == Payment.Status.PENDING:
