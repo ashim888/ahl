@@ -48,7 +48,7 @@
     </div>
     <div class="flex items-end justify-between gap-0.5 h-28">
         {% for d in revenue_trend %}
-            <div class="flex-1 h-full flex items-end" title="{{ d.label }}: {{ d.count|money }}">
+            <div class="flex-1 h-full flex items-end cursor-pointer hover:bg-gray-50 rounded-t" data-tip="{{ d.label }}: {{ d.count|money }}">
                 <div class="w-full rounded-t-sm bg-emerald-500" style="height: {{ d.pct }}%; min-height: {% if d.count %}3px{% else %}0{% endif %};"></div>
             </div>
         {% endfor %}

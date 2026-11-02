@@ -23,7 +23,7 @@
             {% endif %}
             <div class="relative h-full flex items-end gap-px sm:gap-0.5">
                 {% for col in c.columns %}
-                    <div class="flex-1 h-full flex items-end justify-center gap-px hover:bg-gray-50 rounded-t" title="{{ col.title }}">
+                    <div class="flex-1 h-full flex items-end justify-center gap-px hover:bg-gray-50 rounded-t cursor-pointer" data-tip="{{ col.title }}">
                         {% for bar in col.bars %}
                             <div class="flex-1 max-w-[1.75rem] rounded-t-sm" style="height: {{ bar.pct }}%; background: {{ bar.color }}; min-height: {% if bar.value %}2px{% else %}0{% endif %};"></div>
                         {% endfor %}
