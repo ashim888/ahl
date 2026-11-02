@@ -20,7 +20,7 @@ levels don't depend on which Tailwind classes made it into the build.
                     {% for cell in row.cells %}
                         <span class="aspect-square rounded-[3px] bg-gray-50 flex items-center justify-center text-[0.55rem] {% if cell.dark %}text-white{% else %}text-gray-600{% endif %}"
                               style="{{ cell.style }}"
-                              title="{{ row.label }} {{ cell.hour|stringformat:'02d' }}:00–{{ cell.hour|stringformat:'02d' }}:59 — {{ cell.count }} click{{ cell.count|pluralize }}">{% if cell.count %}{{ cell.count }}{% endif %}</span>
+                              data-tip="{{ row.label }} {{ cell.hour|stringformat:'02d' }}:00–{{ cell.hour|stringformat:'02d' }}:59 — {{ cell.count }} click{{ cell.count|pluralize }}">{% if cell.count %}{{ cell.count }}{% endif %}</span>
                     {% endfor %}
                     <span class="text-right text-xs font-semibold text-gray-700 self-center">{{ row.total }}</span>
                 {% endfor %}

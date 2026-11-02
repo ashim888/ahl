@@ -41,7 +41,7 @@
     <div class="overflow-x-auto">
         <div class="flex items-end justify-between gap-1.5 h-40 min-w-[640px]">
             {% for d in daily_stats %}
-                <div class="flex-1 flex flex-col items-center h-full" title="{{ d.label }}: {{ d.impressions }} impressions, {{ d.clicks }} clicks">
+                <div class="flex-1 flex flex-col items-center h-full cursor-pointer hover:bg-gray-50 rounded-t" data-tip="{{ d.label }}: {{ d.impressions }} impressions, {{ d.clicks }} clicks">
                     <div class="relative w-full max-w-6 h-full flex items-end justify-center">
                         <div class="absolute bottom-0 w-full rounded-t-md bg-sky-200" style="height: {{ d.impressions_pct }}%; min-height: {% if d.impressions %}4px{% else %}0{% endif %};"></div>
                         <div class="absolute bottom-0 w-1/2 rounded-t-md bg-sky-600" style="height: {{ d.clicks_pct }}%; min-height: {% if d.clicks %}4px{% else %}0{% endif %};"></div>
