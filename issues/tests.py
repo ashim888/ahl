@@ -148,3 +148,22 @@ class IssueDetailArticleThumbnailTests(TestCase):
         response = self.client.get(reverse('issues:issue_detail', args=[self.issue.slug]))
         self.assertNotContains(response, 'alt="No Image"')
         self.assertContains(response, 'No Image')
+
+
+class HomepageSpecialIssuesTests(TestCase):
+    """Only issues editors mark as special reach the homepage band, with their real date."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_only_special_issues_are_shown_with_their_date(self):
+        import datetime
+
+        special = Issue.objects.create(title='Monsoon Health', slug='monsoon-health', is_published=True,
+                                       is_special=True, publication_date=datetime.date(2026, 7, 1))
+        Issue.objects.create(title='Ordinary Issue', slug='ordinary-issue', is_published=True)
+        response = self.client.get(reverse('articles:home'))
+        self.assertEqual(response.context['special_issues'], [special])
+        self.assertContains(response, 'Jul 2026')
+        self.assertNotContains(response, 'Available Now')

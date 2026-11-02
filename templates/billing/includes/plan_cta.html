@@ -1,4 +1,4 @@
-{% load i18n %}{% load money_tags %}
+{% load i18n news_time %}{% load money_tags %}
 {% comment %}
 The buy button for one plan, on the pricing page and a plan's own page:
 Subscribe, or Renew (starts after the current one), or — for institutional
@@ -18,7 +18,7 @@ organization, next_path, contact_email; `featured` styles it red.
         {% if paid_through %}{% trans "RENEW OR SWITCH" %}{% else %}{% trans "SUBSCRIBE" %}{% endif %}
     </a>
     {% if paid_through %}
-        <p class="mt-3 text-xs text-muted-foreground leading-relaxed">{% blocktrans with date=renewal_starts|date:"j M Y" %}Starts {{ date }}, when your current subscription ends — no days lost.{% endblocktrans %}</p>
+        <p class="mt-3 text-xs text-muted-foreground leading-relaxed">{% blocktrans with date=renewal_starts|date:"j M Y"|local_digits %}Starts {{ date }}, when your current subscription ends — no days lost.{% endblocktrans %}</p>
     {% elif organization %}
         <p class="mt-3 text-xs text-muted-foreground leading-relaxed">{% blocktrans with org=organization.name %}You already read with {{ org }}’s subscription.{% endblocktrans %}</p>
     {% endif %}

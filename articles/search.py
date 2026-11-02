@@ -168,8 +168,11 @@ def snippet(article, query: str, length: int = 220) -> str:
     start = max(min(positions) - 60, 0) if positions else 0
     excerpt = text[start:start + length]
     excerpt = ('… ' if start else '') + html.escape(excerpt) + (' …' if start + length < len(text) else '')
-    for word in sorted(set(words), key=len, reverse=True):
-        excerpt = re.sub(f'({re.escape(html.escape(word))})', r'<mark>\1</mark>', excerpt, flags=re.IGNORECASE)
+    # One pass for all words (longest first in the alternation), so a word can
+    # never match inside a <mark> tag an earlier word just added ("mark", "ar").
+    if words:
+        pattern = '|'.join(re.escape(html.escape(word)) for word in sorted(set(words), key=len, reverse=True))
+        excerpt = re.sub(f'({pattern})', r'<mark>\1</mark>', excerpt, flags=re.IGNORECASE)
     return mark_safe(excerpt)
 
 

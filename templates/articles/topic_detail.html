@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n topic_tags ads_tags %}
+{% load i18n topic_tags ads_tags news_time %}
 
 {% block title %}{{ meta_title }}{% endblock %}
 
@@ -13,7 +13,7 @@
             <h1 class="flex items-center gap-3 font-display text-4xl md:text-5xl font-bold" style="letter-spacing: -0.025em;"><span class="inline-flex h-11 w-11 md:h-14 md:w-14 shrink-0 items-center justify-center rounded-full bg-accent font-mono-editorial text-2xl md:text-3xl text-white" aria-hidden="true">#</span><span>{{ hashtag|slice:"1:" }}</span></h1>
             <p class="mt-2 text-sm text-muted-foreground">
                 {{ keyword.name }} ·
-                {% blocktrans count n=total %}{{ n }} story{% plural %}{{ n }} stories{% endblocktrans %}
+                {% blocktrans count n=total asvar counted_label %}{{ n }} story{% plural %}{{ n }} stories{% endblocktrans %}{{ counted_label|local_digits }}
             </p>
         </div>
         {% if user.is_authenticated %}
@@ -41,7 +41,7 @@
             {% if page_obj.has_other_pages %}
                 <nav class="mt-10 flex items-center justify-between font-mono-editorial text-xs tracking-widest" aria-label="{% trans 'Pages' %}">
                     {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="border border-foreground px-4 py-2 hover:text-accent hover:border-accent">← {% trans "NEWER" %}</a>{% else %}<span></span>{% endif %}
-                    <span class="text-muted-foreground">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    <span class="text-muted-foreground">{{ page_obj.number|local_digits }} / {{ page_obj.paginator.num_pages|local_digits }}</span>
                     {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="border border-foreground px-4 py-2 hover:text-accent hover:border-accent">{% trans "OLDER" %} →</a>{% else %}<span></span>{% endif %}
                 </nav>
             {% endif %}

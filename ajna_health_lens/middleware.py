@@ -11,6 +11,16 @@ class InternalBrokenLinkEmailsMiddleware(BrokenLinkEmailsMiddleware):
         return super().is_ignorable_request(request, uri, domain, referer)
 
 
+def ignore_browser_language(get_response):
+    """Nepali first: LocaleMiddleware (next in MIDDLEWARE) would otherwise pick
+    English for any browser that asks for it, and most phones in Nepal ask for
+    en-US. Without the header it uses the switcher's cookie, else LANGUAGE_CODE."""
+    def middleware(request):
+        request.META.pop('HTTP_ACCEPT_LANGUAGE', None)
+        return get_response(request)
+    return middleware
+
+
 class SecurityHeadersMiddleware:
     """Adds Content-Security-Policy (or -Report-Only) and Permissions-Policy
     to every response, from settings.CSP_DIRECTIVES / PERMISSIONS_POLICY.

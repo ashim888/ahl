@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n news_time %}
 
 {% block title %}{% trans "Corrections" %} — {{ JOURNAL_NAME }}{% endblock %}
 
@@ -20,7 +20,7 @@
             <li class="py-6">
                 <p class="font-mono-editorial text-xs text-muted-foreground">
                     <span class="text-accent font-semibold">{{ correction.get_kind_display|upper }}</span> ·
-                    <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|date:"j M Y" }}</time>
+                    <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|date:"j M Y"|local_digits }}</time>
                     {% if correction.article.section %} · {{ correction.article.section.name }}{% endif %}
                 </p>
                 <h2 class="font-display text-lg font-bold mt-1 leading-snug"><a href="{{ correction.article.get_absolute_url }}#corrections" class="hover:text-accent">{{ correction.article.title }}</a></h2>
@@ -30,7 +30,7 @@
             <li class="py-10 text-center text-muted-foreground">{% trans "No corrections yet." %}</li>
         {% endfor %}
     </ol>
-    {% include 'includes/pagination.html' %}
+    {% include 'includes/pagination_editorial.html' %}
 
     <p class="mt-10 text-sm text-muted-foreground">
         {% trans "Spotted something we got wrong? Use the “Report it” link on the article, or write to" %} <a href="mailto:{{ JOURNAL_CONTACT_EMAIL }}" class="underline hover:text-accent">{{ JOURNAL_CONTACT_EMAIL }}</a>.

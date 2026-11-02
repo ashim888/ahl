@@ -23,6 +23,7 @@ class Issue(models.Model):
         null=True, blank=True, help_text='Optional — shown on the issue page if set.',
     )
     is_published = models.BooleanField(default=False)
+    is_special = models.BooleanField(default=False, help_text='Show on the homepage under "Special Issues".')
     editorial_note = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

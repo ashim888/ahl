@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* A long URL or compound word in a headline or summary breaks inside itself
+   instead of widening the page on phones. */
+@layer base {
+  h1, h2, h3, h4, p, li, dd { overflow-wrap: break-word; }
+  /* Keyboard focus in the house colours: an ink ring on paper, a paper ring
+     on ink bands. Components with their own focus-visible style keep it. */
+  :focus-visible { outline: 2px solid theme('colors.foreground'); outline-offset: 3px; }
+  .bg-foreground :focus-visible { outline-color: theme('colors.primary-foreground'); }
+  ::selection { background: theme('colors.foreground'); color: theme('colors.primary-foreground'); }
+  /* Pressed feedback the instant a finger lands: phones have no hover, so
+     without this a tap shows nothing until the next page loads. */
+  button:not(:disabled):active, [type="submit"]:not(:disabled):active, a[class*="bg-"]:active { opacity: 0.8; }
+}
+
 /* Accessibility: red text inside dark sections (page heroes, the video
    showcase, footer) uses the lighter red so it meets WCAG AA contrast. */
 @layer utilities {
@@ -11,14 +25,14 @@
 
 /* Topic hashtags (#Dengue) — one component everywhere: article page, cards,
    homepage "Trending", topic pages, search (articles/includes/topic_pill.html).
-   A soft tinted chip with the "#" in a red disc; it fills red and lifts on
-   hover. --hot is the dark variant for the top trending topics. */
+   A flat paper chip with a hairline border and the "#" in a red disc; it
+   fills red on hover. --hot is the ink variant for the top
+   trending topics. */
 @layer components {
   .topic-pill {
-    @apply inline-flex max-w-full items-center gap-1.5 rounded-full border border-accent/20 bg-gradient-to-br from-accent/[0.07] to-amber-50/80
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-card
            font-medium text-foreground whitespace-nowrap transition duration-200 ease-out
-           hover:-translate-y-px hover:border-accent hover:bg-accent hover:from-accent hover:to-accent hover:text-white
-           hover:shadow-[0_8px_18px_-8px_rgba(192,57,43,0.6)]
+           hover:border-accent hover:bg-accent hover:text-white
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2;
   }
   .topic-pill__hash {
@@ -28,32 +42,154 @@
   .topic-pill:hover .topic-pill__hash { @apply bg-white text-accent; }
   .topic-pill__name { @apply min-w-0 truncate; }
   .topic-pill__count {
-    @apply rounded-full bg-foreground/[0.06] px-1.5 py-px text-[0.85em] font-normal tabular-nums text-muted-foreground transition-colors;
+    @apply rounded-full bg-foreground/[0.06] px-1.5 py-px text-[0.9em] font-normal tabular-nums text-muted-foreground transition-colors;
   }
   .topic-pill:hover .topic-pill__count { @apply bg-white/20 text-white; }
 
-  .topic-pill--sm { @apply py-0.5 pl-0.5 pr-2.5 text-[11px]; }
-  .topic-pill--sm .topic-pill__hash { @apply h-4 w-4 text-[10px]; }
+  .topic-pill--sm { @apply py-0.5 pl-0.5 pr-2.5 text-xs; }
+  .topic-pill--sm .topic-pill__hash { @apply h-4 w-4 text-[11px]; }
   .topic-pill--md { @apply py-1 pl-1 pr-3 text-xs; }
   .topic-pill--md .topic-pill__hash { @apply h-5 w-5 text-[12px]; }
   .topic-pill--lg { @apply py-1.5 pl-1.5 pr-4 text-sm; }
   .topic-pill--lg .topic-pill__hash { @apply h-6 w-6 text-[14px]; }
 
-  .topic-pill--hot { @apply border-foreground bg-foreground from-foreground to-foreground text-primary-foreground; }
+  .topic-pill--hot { @apply border-foreground bg-foreground text-primary-foreground; }
   .topic-pill--hot .topic-pill__count { @apply bg-white/15 text-white/80; }
-  .topic-pill__rank { @apply font-mono-editorial text-[0.8em] font-bold text-accent-on-dark; }
+  /* Press red on paper pills (5.4:1); the lighter red only on the ink ones. */
+  .topic-pill__rank { @apply font-mono-editorial text-[0.8em] font-bold text-accent; }
+  .topic-pill--hot .topic-pill__rank { @apply text-accent-on-dark; }
   .topic-pill:hover .topic-pill__rank { @apply text-white; }
 }
 
-/* Homepage top-story slider (static/js/hero_slider.js): a short fade as a
-   slide comes in — none for readers who prefer reduced motion. */
+/* Story flags (articles/includes/story_flags.html) — "Peer-reviewed" and
+   paid-access marks, identical on every card. Square, hairline, typewriter
+   capitals; the peer-reviewed mark is ink (it's a credential), access marks
+   are graphite (they're information). */
 @layer components {
-  @keyframes hero-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .hero-slide--in { animation: hero-fade-in 0.45s ease-out; }
-  @media (prefers-reduced-motion: reduce) { .hero-slide--in { animation: none; } }
-  .hero-dot { width: 0.625rem; }
+  .story-flags { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
+  .story-flag {
+    display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.125rem 0.375rem;
+    border: 1px solid theme('colors.border'); color: theme('colors.muted-foreground');
+    font-family: theme('fontFamily.mono-editorial'); font-size: 0.65rem; line-height: 1.2;
+    letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+  }
+  .story-flag svg { width: 0.75rem; height: 0.75rem; flex-shrink: 0; }
+  .story-flag--reviewed { border-color: theme('colors.foreground'); color: theme('colors.foreground'); }
+  .story-flags--on-ink .story-flag { border-color: rgb(250 250 248 / 0.35); color: rgb(250 250 248 / 0.8); }
+  .story-flags--on-ink .story-flag--reviewed { border-color: rgb(250 250 248 / 0.8); color: theme('colors.primary-foreground'); }
+  :lang(ne) .story-flag { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; letter-spacing: normal; font-size: 0.75rem; }
+}
+
+/* Press plate (articles/includes/press_plate.html) — the cover for a story
+   with no picture. Sized with container units so one plate works as the
+   homepage lead, a card cover and a 96px list thumbnail. The halftone uses
+   currentColor, so it inverts with the plate. On hover inside a card
+   (.group) the letter drifts up and left, like a plate seating in the press. */
+@layer components {
+  .press-plate {
+    position: absolute; inset: 0; overflow: hidden; container-type: size;
+    background: theme('colors.background'); color: theme('colors.foreground');
+  }
+  .press-plate::before {
+    content: ''; position: absolute; inset: 0; opacity: 0.22;
+    background-image: radial-gradient(currentColor 0.9px, transparent 1.2px);
+    background-size: 7px 7px;
+    -webkit-mask-image: linear-gradient(125deg, transparent 30%, #000 95%);
+    mask-image: linear-gradient(125deg, transparent 30%, #000 95%);
+  }
+  .press-plate__initial {
+    position: absolute; right: 5cqw; bottom: -0.15em;
+    font-family: theme('fontFamily.display'); font-weight: 700;
+    font-size: min(100cqh, 72cqw); line-height: 1; letter-spacing: -0.04em;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* Devanagari: the headline bar (shirorekha) runs past the glyph's advance,
+     and the letter sits higher in its line box than a Latin capital. */
+  .press-plate__initial:lang(ne) { right: 6cqw; bottom: -0.12em; font-size: min(128cqh, 78cqw); letter-spacing: normal; }
+  .group:hover .press-plate__initial { transform: translate(-2.5cqw, -3cqh); }
+  /* Quiet: the plate supports a headline instead of leading the band. */
+  .press-plate--quiet .press-plate__initial { font-size: min(70cqh, 38cqw); }
+  .press-plate--quiet .press-plate__initial:lang(ne) { font-size: min(88cqh, 42cqw); }
+  /* A quiet plate sits beside a headline and label that already say what it is. */
+  .press-plate--quiet .press-plate__stamp { display: none; }
+  .press-plate__stamp {
+    position: absolute; left: 7cqw; top: 9cqh; display: flex; flex-direction: column; gap: 0.5rem;
+    font-family: theme('fontFamily.mono-editorial'); font-size: 0.6rem; letter-spacing: 0.2em;
+    color: theme('colors.muted-foreground');
+  }
+  .press-plate__rule { display: block; width: 2.5rem; height: 2px; background: theme('colors.accent'); }
+
+  .press-plate--ink { background: theme('colors.foreground'); color: theme('colors.primary-foreground'); }
+  .press-plate--ink .press-plate__stamp { color: rgb(250 250 248 / 0.6); }
+  .press-plate--ink .press-plate__rule { background: theme('colors.accent-on-dark'); }
+
+  .press-plate--outline { background: theme('colors.secondary'); }
+  .press-plate--outline .press-plate__initial { color: transparent; -webkit-text-stroke: 1.5px theme('colors.foreground'); }
+
+  /* Thumbnails: just the letter and the screen. */
+  @container (max-width: 220px) { .press-plate__stamp { display: none; } }
+  :lang(ne) .press-plate__stamp { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; letter-spacing: normal; font-size: 0.7rem; }
+  @media (prefers-reduced-motion: reduce) { .press-plate__initial { transition: none; } .group:hover .press-plate__initial { transform: none; } }
+}
+
+/* Homepage top-story slider (static/js/hero_slider.js). When the story
+   changes (never on first load) the band fades in and the headline is
+   inked left to right, like a roller passing over the plate. Reduced
+   motion keeps only the fade. While autoplay runs, the current cover line's rule fills
+   over the interval, so the reader can see that and when it will move on. */
+@layer components {
+  @keyframes hero-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  /* The negative insets keep descenders and the hover underline uncut. */
+  @keyframes hero-ink-roll { from { clip-path: inset(-20% 100% -30% -5%); } to { clip-path: inset(-20% -5% -30% -5%); } }
+  .hero-slide--in { animation: hero-fade-in 0.3s ease-out; }
+  .hero-slide--in h2 { animation: hero-ink-roll 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+  @media (prefers-reduced-motion: reduce) { .hero-slide--in h2 { animation: none; } }
+  /* Cover lines: the slide control, set like the "also inside" lines on a
+     magazine cover. Phones scroll them sideways; wide screens give each an
+     equal column. The current line is white with a press-red rule. */
+  .hero-lines { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .hero-lines::-webkit-scrollbar { display: none; }
+  @media (min-width: 640px) { .hero-line { flex-basis: 42%; } }
+  /* Below 1024px the rail scrolls: fade its right edge so a cut-off line reads as "more". */
+  @media (max-width: 1023px) {
+    .hero-lines { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent); }
+  }
+  @media (min-width: 1024px) {
+    .hero-lines { display: grid; grid-template-columns: repeat(var(--hero-lines), minmax(0, 1fr)); overflow: visible; }
+  }
+  .hero-line {
+    flex: 0 0 72%; scroll-snap-align: start; display: flex; flex-direction: column; gap: 0.5rem;
+    min-height: 2.75rem; text-align: start; color: rgb(250 250 248 / 0.6); transition: color 0.2s ease-out;
+  }
+  .hero-line:hover, .hero-line[aria-current="true"] { color: theme('colors.primary-foreground'); }
+  /* Phones: the current story is the one on screen, so the rail starts at the next. */
+  @media (max-width: 639px) { .hero-line[aria-current="true"] { display: none; } }
+  .hero-line:focus-visible { outline: 2px solid theme('colors.primary-foreground'); outline-offset: 4px; }
+  .hero-line__bar { position: relative; display: block; height: 2px; overflow: hidden; background: rgb(250 250 248 / 0.2); }
+  .hero-line__bar::before {
+    content: ''; position: absolute; inset: 0; transform: scaleX(0); transform-origin: left;
+    background: theme('colors.accent'); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  :dir(rtl) .hero-line__bar::before { transform-origin: right; }
+  .hero-line[aria-current="true"] .hero-line__bar::before { transform: scaleX(1); }
+  @keyframes hero-line-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .hero-line.hero-line--run .hero-line__bar::before { animation: hero-line-fill var(--hero-interval, 7s) linear forwards; }
+  .hero-line__num { font-family: theme('fontFamily.mono-editorial'); font-size: 0.7rem; letter-spacing: 0.15em; }
+  .hero-line__num:lang(ne) { letter-spacing: normal; font-size: 0.8rem; }
+  .hero-line__title {
+    font-family: theme('fontFamily.display'); font-size: 0.95rem; font-weight: 600; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    text-decoration-thickness: 1px; text-underline-offset: 3px;
+  }
+  .hero-line:hover .hero-line__title { text-decoration-line: underline; }
+  .hero-line__title:lang(ne) { line-height: 1.45; }
+  @media (prefers-reduced-motion: reduce) { .hero-line, .hero-line__bar::before { transition: none; } }
   /* `hidden` must win over the slide's own display:grid / the controls' flex. */
-  .hero-slide[hidden], [data-hero-controls][hidden] { display: none !important; }
+  .hero-slide[hidden], [data-hero-controls][hidden], [data-hero-pause][hidden] { display: none !important; }
+  /* With JavaScript on, only the first slide shows from first paint (the slider
+     takes over once ready), so the page doesn't collapse by three slides on load.
+     Without JavaScript every slide still stacks. */
+  .js [data-hero-slider]:not([data-hero-ready]) [data-hero-slide]:not(:first-child) { display: none; }
   /* A whole (uncropped) picture fades out at its edges into the blurred copy
      of itself behind it, instead of sitting on it like a pasted-on card. */
   .hero-feather {
@@ -64,7 +200,7 @@
                 linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
     mask-composite: intersect;
   }
-  /* Cover picture melting into the navy on its left (wide screens) or at
+  /* Cover picture melting into the ink band on its left (wide screens) or at
      its bottom (phones), with a soft edge top and bottom / left and right. */
   .hero-fade-left {
     -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 42%),
@@ -81,3 +217,42 @@
   /* Keeps the centred hero text readable over any part of a photo. */
   .hero-text-shadow { text-shadow: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 18px rgb(0 0 0 / 0.45); }
 }
+
+/* Keyword search on /articles/ uses Tagify's select mode for one tag; its dropdown arrow made a plain search box look like a menu. */
+.tagify--select::after { display: none; }
+
+/* Placeholders are examples, not labels, but still have to be readable: muted ink, 5.3:1 on paper. */
+input::placeholder, textarea::placeholder { color: theme('colors.muted-foreground'); opacity: 1; } /* as specific as Tailwind's own preflight rule, which set #9ca3af (2.4:1) */
+
+/* Article citations (static/js/citations.js). The superscript number gets a thumb-sized
+   hit area without moving the text; the source opens under it as a floating card (paper,
+   ink border, the soft shadow DESIGN.md gives things that float), grown from the number. */
+.prose-article sup a[href^="#ref-"] {
+  position: relative; padding: 0 0.15em; color: theme('colors.accent'); font-weight: 600; text-decoration: none;
+}
+.prose-article sup a[href^="#ref-"]::after { content: ''; position: absolute; inset: -0.85rem -0.6rem; } /* ~40px to a thumb, without reaching the next line's text */
+.prose-article sup a[href^="#ref-"]:active,
+.prose-article sup a[href^="#ref-"][aria-expanded="true"] { background: theme('colors.accent'); color: #fff; }
+.cite-card {
+  position: absolute; z-index: 40; width: min(24rem, calc(100vw - 2rem)); padding: 1rem 1.125rem;
+  font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; text-align: left; text-indent: 0;
+  background: theme('colors.background'); border: 1px solid theme('colors.foreground');
+  box-shadow: 0 18px 40px -12px rgb(17 17 16 / 0.28);
+  animation: cite-card-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cite-card .cite-card__label { margin: 0; font-family: theme('fontFamily.mono-editorial'); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: theme('colors.accent'); }
+:lang(ne) .cite-card .cite-card__label { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; letter-spacing: normal; font-size: 0.8rem; }
+.cite-card .cite-card__text { margin-top: 0.4rem; font-size: 0.9rem; line-height: 1.55; color: theme('colors.foreground'); overflow-wrap: anywhere; }
+.cite-card .cite-card__text a { text-decoration: underline; text-underline-offset: 2px; }
+.cite-card .cite-card__all { display: inline-block; margin-top: 0.75rem; font-size: 0.8rem; text-decoration: underline; text-underline-offset: 3px; }
+.cite-card .cite-card__all:hover, .cite-card .cite-card__text a:hover { color: theme('colors.accent'); }
+@keyframes cite-card-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+.cite-card--out { animation: cite-card-out 120ms ease-in forwards; pointer-events: none; }
+@keyframes cite-card-out { to { opacity: 0; transform: scale(0.98); } }
+@media (prefers-reduced-motion: reduce) {
+  .cite-card { animation-name: cite-card-fade; } .cite-card--out { animation-name: cite-card-fade-out; }
+  @keyframes cite-card-fade { from { opacity: 0; } } @keyframes cite-card-fade-out { to { opacity: 0; } }
+}
+/* Jumping to a source (no script, or "All references") lands on it visibly, clear of the sticky header. */
+li[id^="ref-"] { scroll-margin-top: 7rem; }
+li[id^="ref-"]:target { background: theme('colors.secondary'); outline: 6px solid theme('colors.secondary'); color: theme('colors.foreground'); }

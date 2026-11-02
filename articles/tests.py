@@ -2,7 +2,7 @@ import datetime
 import json
 
 from django.db import IntegrityError
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -976,6 +976,22 @@ class KeywordEventTrackingTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
 
+class LatestNewsLeadTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_newest_story_leads_even_without_a_picture(self):
+        # Recency is the promise of "Latest"; a picture-less lead gets a press plate.
+        pictured = make_article('pictured-news', Article.ArticleType.NEWS_COMMENTARY)
+        Article.objects.filter(pk=pictured.pk).update(video_url='https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        make_article('newest-news-without-picture', Article.ArticleType.NEWS_COMMENTARY)
+        make_article('newest-hero-article', Article.ArticleType.EDITORIAL)  # the hero takes the very newest
+        response = self.client.get(reverse('articles:home'))
+        self.assertEqual(response.context['latest_news'][0].slug, 'newest-news-without-picture')
+        self.assertContains(response, 'press-plate')
+
+
 class TrendingSectionTests(TestCase):
     def setUp(self):
         from django.core.cache import cache
@@ -984,8 +1000,13 @@ class TrendingSectionTests(TestCase):
     def test_articles_ranked_by_recent_view_count(self):
         from articles.models import ArticleView
 
-        popular = make_article('popular-article', Article.ArticleType.NEWS_COMMENTARY)
-        unpopular = make_article('unpopular-article', Article.ArticleType.NEWS_COMMENTARY)
+        # Not news (that's Latest News), older than the hero, and pushed out of the
+        # two-story research band by newer papers, so neither is already on the page.
+        popular = make_article('popular-article', Article.ArticleType.REVIEW_ARTICLE)
+        unpopular = make_article('unpopular-article', Article.ArticleType.CASE_REPORT)
+        make_article('newer-paper-1', Article.ArticleType.REVIEW_ARTICLE)
+        make_article('newer-paper-2', Article.ArticleType.REVIEW_ARTICLE)
+        make_article('newest-hero-article', Article.ArticleType.EDITORIAL)
         for i in range(5):
             ArticleView.objects.create(article=popular, session_key=f's{i}')
         ArticleView.objects.create(article=unpopular, session_key='s0')
@@ -994,6 +1015,16 @@ class TrendingSectionTests(TestCase):
         trending = list(response.context['trending_articles'])
         self.assertEqual(trending[0], popular)
         self.assertIn(unpopular, trending)
+
+    def test_story_in_another_homepage_section_is_not_repeated(self):
+        from articles.models import ArticleView
+
+        paper = make_article('only-paper', Article.ArticleType.REVIEW_ARTICLE)  # lands in the research band
+        make_article('newest-hero-article', Article.ArticleType.EDITORIAL)
+        ArticleView.objects.create(article=paper, session_key='s0')
+        response = self.client.get(reverse('articles:home'))
+        self.assertIn(paper, response.context['research_highlights'])
+        self.assertNotIn(paper, response.context['trending_articles'])
 
     def test_views_older_than_a_week_are_excluded(self):
         import datetime
@@ -1007,6 +1038,16 @@ class TrendingSectionTests(TestCase):
         )
         response = self.client.get(reverse('articles:home'))
         self.assertNotIn(article, response.context['trending_articles'])
+
+    def test_stories_already_in_hero_or_latest_news_are_skipped(self):
+        from articles.models import ArticleView
+
+        news = make_article('trending-news-article', Article.ArticleType.NEWS_COMMENTARY)
+        ArticleView.objects.create(article=news, session_key='s0')
+        response = self.client.get(reverse('articles:home'))
+        shown = response.context['hero_slides'] + response.context['latest_news']
+        self.assertIn(news, shown)
+        self.assertNotIn(news, response.context['trending_articles'])
 
     def test_unpublished_articles_never_trend(self):
         from articles.models import ArticleView
@@ -1060,8 +1101,8 @@ class AdFreeSubscriberPerkTests(TestCase):
     """"Ad-free reading" is a promised subscriber perk (billing app) —
     ads.services.get_ad_for_request (called from the `ad_slot` template tag,
     ads/templatetags/ads_tags.py) is the one place that enforces it. See
-    ads/tests.py:AdSlotTemplateTagTests for the general "ad renders and
-    records an impression" coverage — this class is scoped to the
+    ads/tests.py:AdSlotTemplateTagTests and AdSeenTests for the general
+    "ad renders, then the browser counts it" coverage — this class is scoped to the
     subscriber-perk behavior specifically.
     """
 
@@ -1103,10 +1144,10 @@ class AdFreeSubscriberPerkTests(TestCase):
         response = self.client.get(reverse('articles:home'))
         self.assertNotContains(response, 'Test Sponsor')
 
-    def test_impression_is_recorded_when_ad_shown(self):
-        self.client.get(reverse('articles:home'))
-        self.ad.refresh_from_db()
-        self.assertEqual(self.ad.impression_count, 1)
+    def test_shown_ad_carries_its_seen_ping(self):
+        # Counted by the browser once on screen (ads.views.ad_seen), not at render.
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('ads:seen', args=[self.ad.pk]))
 
 
 class SlugAndShortCodeTests(TestCase):
@@ -1970,7 +2011,7 @@ class ForYouViewTests(TestCase):
         self.client.force_login(self.reader)
         response = self.client.get(reverse('articles:for_you'))
         self.assertTrue(response.context['has_follows'])
-        self.assertContains(response, 'check back soon')
+        self.assertContains(response, 'Check back soon')
 
 
 class BookmarkToggleTests(TestCase):
@@ -2593,6 +2634,18 @@ class ReaderTextSizeAndNepaliTypographyTests(TestCase):
         self.assertEqual(content_lang('स्वास्थ्य सजगता'), 'ne')
         self.assertEqual(content_lang('Health news with one word स्वास्थ्य'), 'en')
         self.assertEqual(content_lang('', 'ne'), 'ne')
+
+    def test_plate_initial_keeps_the_whole_devanagari_letter(self):
+        from .templatetags.text_filters import plate_initial
+        self.assertEqual(plate_initial('विश्व मानसिक स्वास्थ्य दिवस'), 'वि')  # vowel sign stays
+        self.assertEqual(plate_initial('क्षयरोग'), 'क्ष')  # conjunct stays whole
+        self.assertEqual(plate_initial('dengue'), 'D')
+
+    def test_subject_initial_filter(self):
+        from .templatetags.text_filters import subject_initial
+        self.assertEqual(subject_initial('Research Writing Fundamentals'), 'W')
+        self.assertEqual(subject_initial('epidemiology'), 'E')
+        self.assertEqual(subject_initial(''), '')
 
 
 class CommentEmailTemplateTests(TestCase):
@@ -3664,3 +3717,95 @@ class VideoStoryTests(TestCase):
         entry = Section.objects.get(slug='videos')
         self.assertEqual(entry.nav_url, reverse('articles:video_list'))
         self.assertContains(self.client.get(reverse('articles:home')), f'href="{reverse("articles:video_list")}"')
+
+
+class ImageTagsTests(TestCase):
+    """articles/templatetags/image_tags.py — smaller WebP copies of uploads."""
+
+    def setUp(self):
+        from io import BytesIO
+
+        from django.core.cache import cache
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+        from PIL import Image
+
+        cache.clear()
+        buf = BytesIO()
+        Image.new('RGB', (1200, 800), 'red').save(buf, 'PNG')
+        self.name = default_storage.save('articles/images/wide.png', ContentFile(buf.getvalue()))
+        self.url = default_storage.url(self.name)
+
+    def test_srcset_lists_copies_narrower_than_the_original_then_the_original(self):
+        from django.core.files.storage import default_storage
+        from PIL import Image
+
+        from .templatetags.image_tags import srcset
+
+        result = srcset(self.url)
+        self.assertIn('-480w.webp 480w', result)
+        self.assertIn('-960w.webp 960w', result)
+        self.assertNotIn('1600w', result)
+        self.assertTrue(result.endswith(f'{self.url} 1200w'))
+        with default_storage.open(f'resized/{self.name[:-4]}-480w.webp') as f, Image.open(f) as img:
+            self.assertEqual((img.format, img.width), ('WEBP', 480))
+
+    def test_backdrop_is_a_tiny_copy(self):
+        from .templatetags.image_tags import backdrop
+
+        self.assertTrue(backdrop(self.url).endswith('-64w-blur.webp'))
+
+    def test_devanagari_filenames_get_copies_too(self):
+        from io import BytesIO
+
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+        from PIL import Image
+
+        from .templatetags.image_tags import srcset
+
+        buf = BytesIO()
+        Image.new('RGB', (1200, 800), 'red').save(buf, 'PNG')
+        name = default_storage.save('articles/images/सवसथय.png', ContentFile(buf.getvalue()))
+        self.assertIn('480w', srcset(default_storage.url(name)))
+
+    def test_non_uploads_and_missing_files_pass_through_empty(self):
+        from .templatetags.image_tags import backdrop, srcset
+
+        self.assertEqual(srcset('https://i.ytimg.com/vi/x/hqdefault.jpg'), '')
+        self.assertEqual(backdrop(''), '')
+        self.assertEqual(srcset('/media/articles/images/missing.png'), '')
+
+
+class CrawlerViewTests(TestCase):
+    """ajna_health_lens/visitor.py is_crawler — bots aren't readers."""
+
+    def test_a_crawler_reading_an_article_is_not_counted_and_gets_no_session(self):
+        from .models import ArticleView
+
+        article = Article.objects.create(title='Crawled', slug='crawled', status=Article.Status.PUBLISHED,
+                                         access_type='open_access', published_at=timezone.now())
+        response = self.client.get(article.get_absolute_url(), HTTP_USER_AGENT='Mozilla/5.0 (compatible; Googlebot/2.1)')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(ArticleView.objects.filter(article=article).exists())
+        self.client.get(article.get_absolute_url(), HTTP_USER_AGENT='Mozilla/5.0 (Linux; Android 14) Chrome/130')
+        self.assertTrue(ArticleView.objects.filter(article=article).exists())
+
+
+class DatelineTests(SimpleTestCase):
+    """The masthead dateline: Bikram Sambat in Nepali, AD then BS in English."""
+
+    def test_nepali_and_english(self):
+        from django.utils import translation
+
+        from .templatetags.news_time import dateline
+
+        day = datetime.date(2026, 10, 17)  # 31 Aswin 2083, a Saturday
+        with translation.override('ne'):
+            self.assertEqual(dateline(day), 'शनिबार, ३१ असोज २०८३')
+        with translation.override('en'):
+            self.assertEqual(dateline(day), 'Saturday, 17 October 2026 · 31 Aswin 2083 BS')
+
+    def test_reference_count_ignores_blank_lines(self):
+        self.assertEqual(Article(references='A\n\n  \nB\n').reference_count, 2)
+        self.assertEqual(Article().reference_count, 0)

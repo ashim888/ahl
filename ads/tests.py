@@ -79,6 +79,13 @@ class ImpressionAndClickTrackingTests(TestCase):
         ad.refresh_from_db()
         self.assertEqual(ad.click_count, 1)
 
+    def test_crawlers_are_sent_on_but_not_counted(self):
+        ad = make_ad()
+        response = self.client.get(reverse('ads:click', args=[ad.pk]), HTTP_USER_AGENT='Googlebot/2.1')
+        self.assertEqual(response.url, ad.link_url)
+        ad.refresh_from_db()
+        self.assertEqual(ad.click_count, 0)
+
     def test_record_impression_writes_event_log_row(self):
         ad = make_ad()
         record_impression(ad)
@@ -331,12 +338,14 @@ class AdSlotTemplateTagTests(TestCase):
     base.html/home.html, not just importable.
     """
 
-    def test_active_ad_in_zone_renders_and_records_impression(self):
+    def test_active_ad_renders_with_its_seen_ping_but_counts_nothing_yet(self):
+        # The page only carries the ad; the browser counts it once it is on screen.
         ad = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Leaderboard Sponsor')
         response = self.client.get(reverse('articles:home'))
         self.assertContains(response, 'Leaderboard Sponsor')
+        self.assertContains(response, f'data-ad-seen="{reverse("ads:seen", args=[ad.pk])}"')
         ad.refresh_from_db()
-        self.assertEqual(ad.impression_count, 1)
+        self.assertEqual(ad.impression_count, 0)
 
     def test_ad_free_subscriber_does_not_see_header_ad(self):
         from billing.models import SubscriptionPlan, UserSubscription
@@ -501,3 +510,72 @@ class AdSettingsManageViewTests(TestCase):
         response = self.client.get(reverse('ads:manage_adslot_list'))
         self.assertContains(response, '"Advertise Here" placeholders')
         self.assertContains(response, 'name="placeholder_zones"')
+
+
+class GroupedSlotTests(TestCase):
+    """Slots shown side by side (the homepage rectangle row, group='homepage_rectangles')
+    never show one sponsor twice; the slot that would repeat collapses instead of
+    offering itself as "Advertise Here"."""
+
+    def setUp(self):
+        AdSettings.objects.all().delete()
+
+    def test_sponsor_fills_one_slot_of_the_row(self):
+        first = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, sponsor_name='Dice')
+        repeat = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_2, sponsor_name='  DICE ')
+        other = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_3, sponsor_name='Annapurna Dental')
+        settings_row = AdSettings.get_solo()
+        settings_row.placeholder_zones = [AdSlot.Zone.HOMEPAGE_RECTANGLE_2]
+        settings_row.save()
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('ads:click', args=[first.pk]))
+        self.assertNotContains(response, reverse('ads:click', args=[repeat.pk]))
+        self.assertContains(response, reverse('ads:click', args=[other.pk]))
+        self.assertNotContains(response, 'ADVERTISE HERE')
+        repeat.refresh_from_db()
+        self.assertEqual(repeat.impression_count, 0)
+
+    def test_other_zones_still_repeat_a_sponsor(self):
+        header = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD, sponsor_name='Dice')
+        rect = make_ad(zone=AdSlot.Zone.HOMEPAGE_RECTANGLE_1, sponsor_name='Dice')
+        response = self.client.get(reverse('articles:home'))
+        self.assertContains(response, reverse('ads:click', args=[header.pk]))
+        self.assertContains(response, reverse('ads:click', args=[rect.pk]))
+
+
+class AdFreePagesTests(TestCase):
+    """Sign-in, account and pitch pages carry no ads."""
+
+    def test_login_register_and_pitch_pages_show_no_ad(self):
+        header = make_ad(zone=AdSlot.Zone.HEADER_LEADERBOARD)
+        anchor = make_ad(zone=AdSlot.Zone.MOBILE_ANCHOR)
+        for name in ('users:login', 'users:register', 'users:password_reset', 'pitches:pitch_create'):
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 200, name)
+            self.assertNotContains(response, reverse('ads:click', args=[header.pk]), msg_prefix=name)
+            self.assertNotContains(response, reverse('ads:click', args=[anchor.pk]), msg_prefix=name)
+
+
+
+class AdSeenTests(TestCase):
+    """ads:seen — the impression, sent by the browser once the ad is on screen."""
+
+    def test_seen_ping_counts_one_impression(self):
+        from django.test import Client
+
+        ad = make_ad()
+        response = Client(enforce_csrf_checks=True).post(reverse('ads:seen', args=[ad.pk]))  # a beacon: no CSRF token
+        self.assertEqual(response.status_code, 204)
+        ad.refresh_from_db()
+        self.assertEqual(ad.impression_count, 1)
+        self.assertEqual(AdEvent.objects.filter(ad_slot=ad, event_type=AdEvent.EventType.IMPRESSION).count(), 1)
+
+    def test_get_crawler_and_inactive_ad_count_nothing(self):
+        ad = make_ad()
+        inactive = make_ad(is_active=False)
+        self.assertEqual(self.client.get(reverse('ads:seen', args=[ad.pk])).status_code, 405)
+        self.client.post(reverse('ads:seen', args=[ad.pk]), HTTP_USER_AGENT='Googlebot/2.1')
+        self.client.post(reverse('ads:seen', args=[inactive.pk]))
+        ad.refresh_from_db()
+        inactive.refresh_from_db()
+        self.assertEqual((ad.impression_count, inactive.impression_count), (0, 0))

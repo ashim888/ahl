@@ -9,6 +9,7 @@ from django.utils.translation import ngettext
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from articles.models import Article
+from articles.templatetags.news_time import local_digits
 from articles.seo import breadcrumb_list_structured_data
 from users.decorators import role_required
 from users.models import User
@@ -63,7 +64,7 @@ class IssueDetailView(DetailView):
         meta = ngettext('%(count)d ARTICLE', '%(count)d ARTICLES', article_count) % {'count': article_count}
         if self.object.publication_date:
             meta += f' · {date_format(self.object.publication_date, "F j, Y").upper()}'
-        context['hero_meta'] = meta
+        context['hero_meta'] = local_digits(meta)
         context['breadcrumb_json'] = breadcrumb_list_structured_data([
             ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
             ('Issues', self.request.build_absolute_uri(reverse('issues:issue_list'))),

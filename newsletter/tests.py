@@ -70,9 +70,23 @@ class SubscribeFlowTests(TestCase):
         self.assertEqual(subscriber.status, Subscriber.Status.CONFIRMED)
         self.assertIsNotNone(subscriber.confirmed_at)
 
-    def test_unsubscribe_marks_subscriber_unsubscribed(self):
-        subscriber = Subscriber.objects.create(email='unsub@example.com', status=Subscriber.Status.CONFIRMED)
+    def test_opening_the_link_only_asks(self):
+        # Work-email scanners open every link; that alone must not unsubscribe.
+        subscriber = Subscriber.objects.create(email='scan@example.com', status=Subscriber.Status.CONFIRMED)
         response = self.client.get(reverse('newsletter:unsubscribe', args=[subscriber.unsubscribe_token]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<form method="post"')
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.Status.CONFIRMED)
+
+    def test_unsubscribe_marks_subscriber_unsubscribed(self):
+        from django.test import Client
+
+        subscriber = Subscriber.objects.create(email='unsub@example.com', status=Subscriber.Status.CONFIRMED)
+        # A mail client's one-click POST: no session, no CSRF token.
+        response = Client(enforce_csrf_checks=True).post(
+            reverse('newsletter:unsubscribe', args=[subscriber.unsubscribe_token]), {'List-Unsubscribe': 'One-Click'},
+        )
         self.assertEqual(response.status_code, 200)
         subscriber.refresh_from_db()
         self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)

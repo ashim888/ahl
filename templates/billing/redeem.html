@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n news_time %}
 
 {% block title %}{% trans "Redeem a code" %} — {{ JOURNAL_NAME }}{% endblock %}
 {% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
@@ -10,7 +10,7 @@
     {% if promo and promo.is_trial %}
         <p class="section-label text-accent">{% trans "FREE TRIAL" %}</p>
         <h1 class="font-display text-3xl font-bold mt-2" style="letter-spacing: -0.02em;">
-            {% blocktrans with days=promo.trial_days plan=promo.trial_plan.name %}{{ days }} days of {{ plan }}, free{% endblocktrans %}
+            {% blocktrans with days=promo.trial_days|local_digits plan=promo.trial_plan.name %}{{ days }} days of {{ plan }}, free{% endblocktrans %}
         </h1>
         {% if promo.description %}<p class="mt-3 text-muted-foreground">{{ promo.description }}</p>{% endif %}
         <ul class="mt-6 space-y-2 text-sm">

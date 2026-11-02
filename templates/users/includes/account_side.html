@@ -1,0 +1,42 @@
+{% load i18n text_filters %}{% comment %}
+The newsprint panel beside the login and sign-up forms (desktop: the right-hand
+column; phones: after the form). With `return_article` (the story the reader
+was sent from, users/views.py return_article) it shows that story, so the
+reader knows where they'll land; otherwise what a free account actually
+does, named with the buttons the reader will meet on the site.
+  return_article  the story to return to, or None
+  verb            'login' or 'register' (the line under the story)
+{% endcomment %}
+<aside class="bg-secondary border-t-2 border-foreground px-6 py-8 sm:px-10 sm:py-10" aria-label="{% if return_article %}{% trans 'The story you were reading' %}{% else %}{% trans 'What a free account gives you' %}{% endif %}">
+    {% if return_article %}
+        <p class="font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "YOU'LL RETURN TO" %}</p>
+        {% if return_article.card_image_url %}
+            <img src="{{ return_article.card_image_url }}" alt="" loading="lazy" class="mt-5 w-full aspect-[3/2] object-cover" style="{{ return_article.card_image_style }}">
+        {% endif %}
+        <p lang="{{ return_article.title|content_lang }}" class="mt-5 font-display text-2xl sm:text-3xl font-bold leading-tight" style="letter-spacing: -0.015em; text-wrap: balance;">{{ return_article.title }}</p>
+        <p class="mt-4 text-sm text-muted-foreground leading-relaxed">
+            {% if verb == 'register' %}{% trans "Create your account and you'll go straight back to this story." %}{% else %}{% trans "Log in and you'll go straight back to this story." %}{% endif %}
+        </p>
+    {% else %}
+        <p class="font-display text-2xl sm:text-3xl font-bold leading-tight" style="letter-spacing: -0.015em;">{% trans "One free account" %}</p>
+        <p class="mt-2 text-sm text-muted-foreground">{% trans "No subscription needed for any of this." %}</p>
+        <ul class="mt-8 divide-y divide-border border-t border-border">
+            <li class="py-5">
+                <p class="font-mono-editorial text-xs tracking-widest">{% trans "+ SAVE FOR LATER" %}</p>
+                <p class="mt-1.5 text-sm text-muted-foreground leading-relaxed">{% trans "Keep stories in your reading list and pick them up on any device." %}</p>
+            </li>
+            <li class="py-5">
+                <p class="font-mono-editorial text-xs tracking-widest">{% trans "+ FOLLOW" %}</p>
+                <p class="mt-1.5 text-sm text-muted-foreground leading-relaxed">{% trans "Follow sections and topics for your own feed and a weekly digest email." %}</p>
+            </li>
+            <li class="py-5">
+                <p class="font-mono-editorial text-xs tracking-widest">{% trans "Comments" %}</p>
+                <p class="mt-1.5 text-sm text-muted-foreground leading-relaxed">{% trans "Join the conversation under any story." %}</p>
+            </li>
+            <li class="py-5">
+                <p class="font-mono-editorial text-xs tracking-widest">{% trans "PITCH A STORY" %}</p>
+                <p class="mt-1.5 text-sm text-muted-foreground leading-relaxed">{% trans "Send our editors a health story and follow its progress." %}</p>
+            </li>
+        </ul>
+    {% endif %}
+</aside>

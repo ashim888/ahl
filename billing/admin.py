@@ -1,4 +1,5 @@
 from django.contrib import admin
+from modeltranslation.admin import TranslationAdmin
 
 from .models import (
     ArticlePurchase, Organization, OrganizationMember, Payment, PlanFeature, SubscriptionPlan, UserSubscription,
@@ -6,13 +7,13 @@ from .models import (
 
 
 @admin.register(PlanFeature)
-class PlanFeatureAdmin(admin.ModelAdmin):
+class PlanFeatureAdmin(TranslationAdmin):
     list_display = ['label', 'order']
     ordering = ['order', 'id']
 
 
 @admin.register(SubscriptionPlan)
-class SubscriptionPlanAdmin(admin.ModelAdmin):
+class SubscriptionPlanAdmin(TranslationAdmin):
     list_display = ['name', 'plan_type', 'price', 'duration_days', 'is_featured', 'is_active']
     list_filter = ['plan_type', 'is_active']
     search_fields = ['name']

@@ -25,6 +25,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext as _
 
 from . import emails, fonepay
 from .models import Payment, ReceiptSequence
@@ -264,9 +265,11 @@ def verify_payment(payment: Payment) -> Payment:
             locked.completed_at = timezone.now()
             locked.save()
             transaction.on_commit(lambda: emails.send_payment_failed(locked, underpaid=state == 'success'))
-        elif timezone.now() >= locked.expires_at + datetime.timedelta(minutes=5):
-            # Well past its window with no success reported: close it. (The
-            # grace period covers a payment completed at the last second.)
+        elif data is not None and timezone.now() >= locked.expires_at + datetime.timedelta(minutes=5):
+            # Fonepay answered, well past the window, without a success: close
+            # it. (The grace period covers a payment completed at the last
+            # second.) Never close on a failed check: the reader may have paid
+            # while Fonepay was unreachable; the daily sweep closes it if not.
             # No email — an abandoned QR isn't news to the reader.
             locked.status = Payment.Status.EXPIRED
             locked.completed_at = timezone.now()
@@ -305,7 +308,7 @@ def cancel_subscription(payment: Payment) -> Payment:
     locked = Payment.objects.select_for_update().get(pk=payment.pk)
     if not can_cancel(locked):
         raise CancellationError(
-            f'Subscriptions can only be cancelled within {settings.SUBSCRIPTION_CANCEL_DAYS} days of paying.',
+            _('Subscriptions can only be cancelled within %(days)s days of paying.') % {'days': settings.SUBSCRIPTION_CANCEL_DAYS},
         )
     UserSubscription.objects.filter(payment_reference=locked.reference).update(
         status=UserSubscription.Status.CANCELLED, cancelled_at=timezone.now(),

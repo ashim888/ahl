@@ -449,12 +449,13 @@ class OrphanMediaCommandTests(TestCase):
         inline = self._file('articles/inline/2026/09/inline.png')
         orphan = self._file('manuscripts/2026/08/1_manuscript_v1.pdf')
         fresh = self._file('articles/inline/2026/09/just-uploaded.png', age_days=0)
+        resized = self._file('resized/articles/images/used-480w.webp')
         Article.objects.create(
             title='Uses files', slug='uses-files', featured_image='articles/images/used.jpg',
             html_content='<figure class="image"><img src="/media/articles/inline/2026/09/inline.png"></figure>',
         )
         call_command('quarantine_orphan_media', '--move', stdout=open('/dev/null', 'w'))
-        self.assertTrue(featured.exists() and inline.exists() and fresh.exists())
+        self.assertTrue(featured.exists() and inline.exists() and fresh.exists() and resized.exists())
         self.assertFalse(orphan.exists())
         self.assertTrue((self.orphans / 'manuscripts/2026/08/1_manuscript_v1.pdf').is_file())
         self.assertIn('manuscripts/2026/08/1_manuscript_v1.pdf', (self.orphans / 'manifest.tsv').read_text())

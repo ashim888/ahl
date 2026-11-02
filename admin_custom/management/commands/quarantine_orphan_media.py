@@ -66,6 +66,10 @@ class Command(BaseCommand):
             if not path.is_file() or path.name.startswith('.'):
                 continue
             name = path.relative_to(media_root).as_posix()
+            # resized/: WebP copies made by articles/templatetags/image_tags.py, never
+            # referenced by a field, but cached page markup points at them.
+            if name.startswith('resized/'):
+                continue
             if name in referenced or path.stat().st_mtime > cutoff:
                 continue
             orphans.append((name, path))

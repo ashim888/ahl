@@ -3,6 +3,7 @@ import datetime
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 from ajna_health_lens.storage import private_storage
@@ -51,21 +52,21 @@ class User(AbstractUser):
     """Custom user, authenticated by email instead of username."""
 
     class Role(models.TextChoices):
-        UNVERIFIED = 'unverified', 'Unverified'
-        VERIFIED_AUTHOR = 'verified_author', 'Verified Author'
-        REVIEWER = 'reviewer', 'Reviewer'
-        EDITOR = 'editor', 'Editor'
-        EDITOR_IN_CHIEF = 'editor_in_chief', 'Editor-in-Chief'
-        ADMIN = 'admin', 'Admin'
+        UNVERIFIED = 'unverified', _('Unverified')
+        VERIFIED_AUTHOR = 'verified_author', _('Verified Author')
+        REVIEWER = 'reviewer', _('Reviewer')
+        EDITOR = 'editor', _('Editor')
+        EDITOR_IN_CHIEF = 'editor_in_chief', _('Editor-in-Chief')
+        ADMIN = 'admin', _('Admin')
 
     class VerificationStatus(models.TextChoices):
         # A reader who never asked to be verified — the default for a
         # self-registered account, so a news site's everyday signups never
         # land in the verification queue or email the Editor-in-Chief.
-        NOT_REQUESTED = 'not_requested', 'Not requested'
-        PENDING = 'pending', 'Pending'
-        APPROVED = 'approved', 'Approved'
-        REJECTED = 'rejected', 'Rejected'
+        NOT_REQUESTED = 'not_requested', _('Not requested')
+        PENDING = 'pending', _('Pending')
+        APPROVED = 'approved', _('Approved')
+        REJECTED = 'rejected', _('Rejected')
 
     REAPPLY_COOLDOWN_DAYS = 30
 

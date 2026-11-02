@@ -439,6 +439,12 @@ class AnalyticsRetentionTests(TestCase):
             name='analytics_retention_daily', func='admin_custom.retention.prune_analytics_events',
         ).exists())
 
+    def test_expired_sessions_are_cleared_daily(self):
+        from django_q.models import Schedule
+        self.assertTrue(Schedule.objects.filter(
+            name='clear_sessions_daily', func='django.core.management.call_command', args="'clearsessions'",
+        ).exists())
+
 
 class NewCommentStaffAlertTests(TestCase):
     """admin_custom/signals.py — senior staff are emailed when a comment goes live."""

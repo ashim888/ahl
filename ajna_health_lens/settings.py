@@ -162,6 +162,7 @@ MIDDLEWARE = [
     # by the set_language view (see urls.py) and activates it for the
     # request. Cookie/session-based, not URL-prefixed, since public and
     # /manage/ routes are interleaved in one urls.py per app.
+    'ajna_health_lens.middleware.ignore_browser_language',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -265,6 +266,10 @@ AXES_USERNAME_FORM_FIELD = 'username'
 # it in Django admin (axes.AccessAttempt) — 30 minutes is enough friction to
 # stop a credential-stuffing run without locking a real reader out for long.
 AXES_COOLOFF_TIME = datetime.timedelta(minutes=30)
+
+# django-ratelimit's key='ip' reads the visitor's address through this, not
+# REMOTE_ADDR, which is 127.0.0.1 for everyone behind nginx (ajna_health_lens/visitor.py).
+RATELIMIT_IP_META_KEY = 'ajna_health_lens.visitor.client_ip'
 AXES_RESET_ON_SUCCESS = True
 # axes.W006 warns that username-only lockout doesn't stop an attacker who
 # rotates IPs/cookies — true, but that's deliberately EmailLoginView's job
@@ -295,9 +300,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-# Nepali first: most stories are in Nepali. A browser that asks for English
-# still gets English (LocaleMiddleware reads Accept-Language before falling
-# back to this), and the language switcher's choice is remembered.
+# Nepali first: most stories are in Nepali. Every reader gets Nepali unless
+# they pick English with the language switcher (remembered by cookie); the
+# browser's Accept-Language is ignored (middleware.ignore_browser_language).
 LANGUAGE_CODE = 'ne'
 
 # Nav/UI-chrome translation only for now (see ROADMAP.md) — article content
@@ -669,8 +674,13 @@ JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Health Lens')
 # pages, receipts and legal text keep JOURNAL_NAME.
 JOURNAL_NAME_NE = os.environ.get('JOURNAL_NAME_NE', 'अज्ना हेल्थ लेन्स')
 JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
-JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '0000-0000')
+# '0000-0000' was the old .env.example placeholder: never show a made-up ISSN.
+JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '').strip()
+if JOURNAL_ISSN == '0000-0000':
+    JOURNAL_ISSN = ''
 JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing')
+# The default name above is unconfirmed (PRODUCT.md): public pages state it as fact only once it's set for real.
+JOURNAL_PUBLISHER_CONFIRMED = bool(os.environ.get('JOURNAL_PUBLISHER', '').strip())
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.com')
 
 # Every price on the site (subscriptions, special articles, training courses,
@@ -781,7 +791,14 @@ Q_CLUSTER = {
     'name': 'ajna_health_lens',
     'orm': 'default',
     'workers': 2,
-    'timeout': 90,
-    'retry': 120,
+    # A newsletter or digest emails everyone in one loop: at ~0.4 s an email,
+    # a few hundred people outrun a short timeout. A killed job used to be
+    # retried from the first subscriber, forever, so the head of the list got
+    # the same email every two minutes. Now: 30 minutes per job, a single
+    # attempt (a failure shows as failed; scheduled jobs simply run again next
+    # time). retry must stay above timeout (Django-Q requirement).
+    'timeout': 1800,
+    'retry': 1900,
+    'max_attempts': 1,
     'sync': env_bool('Q_CLUSTER_SYNC', False),
 }

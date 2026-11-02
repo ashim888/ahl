@@ -7,7 +7,7 @@ from .models import Issue
 class IssueForm(forms.ModelForm):
     class Meta:
         model = Issue
-        fields = ['title', 'slug', 'cover_image', 'publication_date', 'is_published', 'editorial_note']
+        fields = ['title', 'slug', 'cover_image', 'publication_date', 'is_published', 'is_special', 'editorial_note']
         widgets = {
             'publication_date': forms.DateInput(attrs={'type': 'date'}),
             'editorial_note': forms.Textarea(attrs={'rows': 5}),

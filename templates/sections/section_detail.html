@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load news_time ads_tags %}
+{% load news_time ads_tags image_tags %}
 {% load i18n %}
 
 {% block title %}{{ meta_title }}{% endblock %}
@@ -25,7 +25,7 @@
             <div>
                 <h1 class="font-display text-4xl md:text-5xl font-bold leading-tight" style="letter-spacing: -0.025em;">{{ section.name }}</h1>
                 <p class="mt-4 font-mono-editorial text-xs tracking-widest opacity-60">
-                    {% blocktrans count counter=page_obj.paginator.count %}{{ counter }} ARTICLE{% plural %}{{ counter }} ARTICLES{% endblocktrans %}{% if follower_count %} · {% blocktrans count counter=follower_count %}{{ counter }} FOLLOWER{% plural %}{{ counter }} FOLLOWERS{% endblocktrans %}{% endif %}
+                    {% blocktrans count counter=page_obj.paginator.count asvar counted_label %}{{ counter }} ARTICLE{% plural %}{{ counter }} ARTICLES{% endblocktrans %}{{ counted_label|local_digits }}{% if follower_count %} · {% blocktrans count counter=follower_count asvar counted_label %}{{ counter }} FOLLOWER{% plural %}{{ counter }} FOLLOWERS{% endblocktrans %}{{ counted_label|local_digits }}{% endif %}
                 </p>
             </div>
             {% if user.is_authenticated %}
@@ -47,7 +47,7 @@
             <div class="mt-8 flex flex-wrap gap-2">
                 {% for child in section.children.all %}
                     <a href="{{ child.nav_url }}"
-                       class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 rounded-full border border-primary-foreground/30 hover:border-accent hover:text-accent transition-colors">
+                       class="font-mono-editorial text-[0.65rem] tracking-wider uppercase px-3 py-1.5 border border-primary-foreground/30 hover:border-accent hover:text-accent transition-colors">
                         {{ child.name }}
                     </a>
                 {% endfor %}
@@ -60,26 +60,26 @@
     {% for article in articles %}
         {% if forloop.first and not page_obj.has_previous %}
             {# Lead story — newest (or pinned) article as a wide banner #}
-            <article class="group relative grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-all mb-12">
+            <article class="group relative grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow] mb-12">
                 <div class="relative aspect-video md:aspect-auto md:min-h-[300px] bg-secondary overflow-hidden [&>*]:absolute [&>*]:inset-0">
                     {% if article.card_image_url %}
-                        <img src="{{ article.card_image_url }}" style="{{ article.card_image_style }}" alt="{{ article.title }}" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
+                        <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 768px) 50vw, 100vw" style="{{ article.card_image_style }}" alt="{{ article.title }}" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
                         {% include 'articles/includes/play_badge.html' with article=article %}
                     {% else %}
-                        <div class="w-full h-full" style="background: linear-gradient(135deg, #e8e4de 0%, #cfc9c0 100%);"></div>
+                        {% include 'articles/includes/press_plate.html' with article=article %}
                     {% endif %}
                 </div>
                 <div class="p-7 md:p-10 flex flex-col">
                     <span class="section-label text-accent">
                         {% if article.is_pinned %}{% trans "PINNED" %} · {% endif %}{{ article.get_article_type_display }}
                     </span>
-                    <h2 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-3 group-hover:text-accent transition-colors" style="letter-spacing: -0.02em;">
+                    <h2 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-3 group-hover:underline decoration-1 underline-offset-[3px]" style="letter-spacing: -0.02em;">
                         <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0">{{ article.title }}</a>
                     </h2>
                     {% with summary=article.summary %}{% if summary %}<p class="mt-3 text-muted-foreground leading-relaxed line-clamp-4">{{ summary }}</p>{% endif %}{% endwith %}
                     <p class="mt-auto pt-6 text-sm text-muted-foreground">
                         {% with a=article.articleauthor_set.all|first %}<span class="font-medium text-foreground">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>{% endwith %}
-                        · {{ article.estimated_read_minutes }} {% trans "min read" %}{% if article.published_at %} · {{ article.published_at|news_time }}{% endif %}
+                        · {{ article.estimated_read_minutes|local_digits }} {% trans "min read" %}{% if article.published_at %} · {{ article.published_at|news_time }}{% endif %}
                     </p>
                 </div>
             </article>
@@ -91,7 +91,11 @@
             {% if forloop.last %}</div>{% endif %}
         {% endif %}
     {% empty %}
-        <p class="border border-dashed border-border px-6 py-14 text-center text-muted-foreground">{% trans "No articles in this section yet." %}</p>
+        {# Not a dead end: point on to the latest stories. #}
+        <div class="border border-dashed border-border px-6 py-14 text-center">
+            <p class="text-muted-foreground">{% trans "No articles in this section yet." %}</p>
+            <a href="{% url 'articles:article_list' %}" class="mt-4 inline-block font-mono-editorial text-xs tracking-widest border-b border-foreground pb-0.5 hover:text-accent hover:border-accent">{% trans "READ THE LATEST STORIES →" %}</a>
+        </div>
     {% endfor %}
 
     <div class="mt-10">{% include 'includes/pagination_editorial.html' %}</div>

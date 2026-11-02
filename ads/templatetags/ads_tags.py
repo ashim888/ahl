@@ -1,13 +1,13 @@
 from django import template
 
 from ads.models import AdSettings, AdSlot
-from ads.services import get_ad_for_request, is_ad_free_reader
+from ads.services import get_ad_for_request, get_ad_for_zone, is_ad_free_reader
 
 register = template.Library()
 
 
 @register.inclusion_tag('ads/includes/ad_slot.html', takes_context=True)
-def ad_slot(context, zone, wrapper_class=''):
+def ad_slot(context, zone, wrapper_class='', group=''):
     """Renders one ad placement — the single call site every zone (site
     header, homepage, article page, ...) goes through, so ad selection,
     the ad-free-subscriber check, and impression recording (all in
@@ -25,11 +25,16 @@ def ad_slot(context, zone, wrapper_class=''):
     ad-free reader (a subscriber), who never sees one regardless of this
     setting: a placeholder is still an ad-shaped thing occupying the page,
     and "ad-free reading" is a promised perk, not just "no active ads."
+
+    `group` (slots shown side by side) keeps one sponsor out of two slots
+    of the same group; a slot left empty that way is sold, so it collapses
+    rather than offering itself as "Advertise Here".
     """
     request = context['request']
-    ad = get_ad_for_request(request, zone)
+    ad = get_ad_for_request(request, zone, group)
     placeholder = None
-    if not ad and not is_ad_free_reader(request) and AdSettings.get_solo().is_placeholder_enabled_for(zone):
+    sold = bool(group) and not ad and get_ad_for_zone(zone) is not None
+    if not ad and not sold and not is_ad_free_reader(request) and AdSettings.get_solo().is_placeholder_enabled_for(zone):
         width, height = AdSlot.ZONE_DIMENSIONS[zone]
         placeholder = {
             'zone_label': AdSlot.Zone(zone).label,

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n news_time %}
 
 {% block title %}{% trans "Checkout" %} — {{ course.title }} — {{ JOURNAL_NAME }}{% endblock %}
 
@@ -19,7 +19,7 @@
                 <h2 class="font-display text-lg font-bold leading-snug mt-1">{{ course.title }}</h2>
                 <p class="mt-1 text-sm text-muted-foreground">{{ course.instructor }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">
-                    {{ course.duration }} · {{ course.get_mode_display }}{% if course.start_date %} · {% blocktrans with date=course.start_date|date:"F j, Y" %}Starts {{ date }}{% endblocktrans %}{% endif %}
+                    {{ course.duration }} · {{ course.get_mode_display }}{% if course.start_date %} · {% blocktrans with date=course.start_date|date:"F j, Y"|local_digits %}Starts {{ date }}{% endblocktrans %}{% endif %}
                 </p>
             </div>
         </div>

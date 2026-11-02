@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load money_tags %}
+{% load money_tags image_tags %}
 {% load topic_tags %}
-{% load i18n %}
+{% load i18n news_time static %}
 {% load text_filters ads_tags comments comments_xtd %}
 
 {% block title %}{{ article.meta_title }} — {{ JOURNAL_NAME }}{% endblock %}
@@ -50,7 +50,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
         {% else %}
             <a href="#paywall" class="relative block w-full bg-black overflow-hidden group" style="aspect-ratio: 16 / 9;">
                 {% if article.card_image_url %}
-                    <img src="{{ article.card_image_url }}" alt="{{ article.featured_image_alt|default:article.title }}"
+                    <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 1024px) 66vw, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
                          class="w-full h-full object-cover opacity-60">
                 {% endif %}
                 <span class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
@@ -72,16 +72,17 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
         {% if article.featured_image_shows_whole %}
             {# Square/tall images (diagrams, charts, posters) are shown whole, centred on a blurred copy of themselves (Article.featured_image_fit). #}
             <div class="relative w-full overflow-hidden bg-foreground">
-                <img src="{{ article.featured_image.url }}" alt="" aria-hidden="true"
-                     class="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50">
-                <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}"
+                {% with wash=article.featured_image.url|backdrop %}<img src="{{ wash|default:article.featured_image.url }}" alt="" aria-hidden="true"
+                     class="absolute inset-0 w-full h-full object-cover scale-125 opacity-50{% if not wash %} blur-2xl{% endif %}">{% endwith %}
+                <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="(min-width: 768px) 60vw, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
                      {% if article.featured_image_width %}width="{{ article.featured_image_width }}" height="{{ article.featured_image_height }}"{% endif %}
-                     class="relative mx-auto block w-auto max-w-full h-auto object-contain py-6 sm:py-10 drop-shadow-2xl"
-                     style="max-height: min(78vh, 760px);">
+                     class="relative mx-auto block w-auto max-w-full h-auto object-contain py-6 sm:py-10"
+                     style="max-height: min(52vh, 760px);">
             </div>
         {% else %}
-            <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 520px);">
-                <img src="{{ article.featured_image.url }}" alt="{{ article.featured_image_alt|default:article.title }}"
+            {# Capped by screen height too, so the headline still starts within the first screen on a laptop. #}
+            <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 44vh, 520px);">
+                <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="100vw" alt="{{ article.featured_image_alt|default:article.title }}"
                      class="w-full h-full object-cover" style="filter: grayscale(15%); object-position: {{ article.featured_image_position }};">
             </div>
         {% endif %}
@@ -100,19 +101,19 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             <div class="sticky top-24 flex flex-col gap-3">
                 <button type="button" data-share="facebook"
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on Facebook' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.6rem] font-bold">FB</span><span class="sr-only">{% trans 'Share on Facebook' %}</span>
+                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">FB</span><span class="sr-only">{% trans 'Share on Facebook' %}</span>
                 </button>
                 <button type="button" data-share="whatsapp"
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on WhatsApp' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.6rem] font-bold">WA</span><span class="sr-only">{% trans 'Share on WhatsApp' %}</span>
+                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">WA</span><span class="sr-only">{% trans 'Share on WhatsApp' %}</span>
                 </button>
                 <button type="button" data-share="x"
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on X' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.6rem] font-bold">X</span><span class="sr-only">{% trans 'Share on X' %}</span>
+                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">X</span><span class="sr-only">{% trans 'Share on X' %}</span>
                 </button>
                 <button type="button" data-share="linkedin"
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on LinkedIn' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.6rem] font-bold">LI</span><span class="sr-only">{% trans 'Share on LinkedIn' %}</span>
+                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">LI</span><span class="sr-only">{% trans 'Share on LinkedIn' %}</span>
                 </button>
                 <button type="button" id="copy-link-btn" data-copy-url="{{ canonical_url }}"
                         class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Copy link' %}" title="{% trans 'Copy link' %}">
@@ -139,6 +140,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             <div class="flex items-center gap-3 mb-5">
                 {% if article.is_breaking %}<span class="font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-accent text-white px-2 py-0.5">{% trans "BREAKING" %}</span>{% endif %}
                 <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
+                {% include 'articles/includes/story_flags.html' with article=article %}
                 {% if article.issue %}
                     <span class="text-border">·</span>
                     <a href="{% url 'issues:issue_detail' article.issue.slug %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
@@ -169,10 +171,9 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 {% if featured_author.author.display_photo %}
                     <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-12 h-12 flex-shrink-0 object-cover">
                 {% else %}
-                    <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center"
-                         style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
-                        <span class="font-display text-lg font-bold text-white">
-                            {% if featured_author %}{{ featured_author.display_name|first|upper }}{% else %}{{ JOURNAL_NAME|first }}{% endif %}
+                    <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center border border-foreground">
+                        <span class="font-display text-lg font-bold">
+                            {% if featured_author %}{{ featured_author.display_name|plate_initial }}{% else %}{{ JOURNAL_NAME|plate_initial }}{% endif %}
                         </span>
                     </div>
                 {% endif %}
@@ -185,14 +186,15 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             {{ featured_author.display_affiliation }}
                         </p>
                     {% endif %}
+                    {% if article.doi %}<p class="mt-1 font-mono-editorial text-xs text-muted-foreground">DOI <a href="https://doi.org/{{ article.doi }}" class="underline underline-offset-2 hover:text-accent">{{ article.doi }}</a></p>{% endif %}
                 </div>
                 <div class="text-right flex-shrink-0">
                     <p class="font-mono-editorial text-xs text-muted-foreground">
-                        {% if article.published_at %}<time datetime="{{ article.published_at|date:'c' }}">{% if article.published_at|date:"Hi" == "0000" %}{{ article.published_at|date:"F j, Y" }}{% else %}{{ article.published_at|date:"F j, Y · g:i A" }}{% endif %}</time>{% endif %}
+                        {% if article.published_at %}<time datetime="{{ article.published_at|date:'c' }}">{% if article.published_at|date:"Hi" == "0000" %}{{ article.published_at|date:"F j, Y"|local_digits }}{% else %}{{ article.published_at|date:"F j, Y · g:i A"|local_digits }}{% endif %}</time>{% endif %}
                     </p>
                     {% if article.last_updated_at %}
-                        <p class="font-mono-editorial text-xs text-accent mt-0.5">
-                            {% trans "Updated" %} <time datetime="{{ article.last_updated_at|date:'c' }}">{{ article.last_updated_at|date:"M j, g:i A" }}</time>
+                        <p class="font-mono-editorial text-xs text-foreground mt-0.5">
+                            {% trans "Updated" %} <time datetime="{{ article.last_updated_at|date:'c' }}">{{ article.last_updated_at|date:"M j, g:i A"|local_digits }}</time>
                         </p>
                     {% endif %}
                     {% if corrections %}
@@ -202,7 +204,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             </a>
                         {% endwith %}
                     {% endif %}
-                    <p class="font-mono-editorial text-xs text-muted-foreground mt-0.5">{{ article.estimated_read_minutes }} {% trans "min read" %}</p>
+                    <p class="font-mono-editorial text-xs text-muted-foreground mt-0.5">{{ article.estimated_read_minutes|local_digits }} {% trans "min read" %}</p>
                 </div>
             </div>
 
@@ -236,7 +238,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             {% csrf_token %}
                             <button type="submit"
                                     class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 border border-foreground hover:border-accent hover:text-accent transition-colors">
-                                {% if gift_link %}{% trans "↻ REFRESH GIFT LINK" %}{% else %}{% trans "🎁 GIFT THIS ARTICLE" %}{% endif %}
+                                {% if gift_link %}{% trans "↻ REFRESH GIFT LINK" %}{% else %}<svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="12" height="3"/><path d="M3 9v5h10V9M8 6v8M8 6S6.5 2.5 4.8 3.4C3.4 4.2 5 6 8 6zm0 0s1.5-3.5 3.2-2.6C12.6 4.2 11 6 8 6z"/></svg>{% trans "GIFT THIS ARTICLE" %}{% endif %}
                             </button>
                         </form>
                     {% endif %}
@@ -246,6 +248,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                     base.html) in steps; remembered per browser. Script at the
                     bottom of this template.
                     {% endcomment %}
+                    {% if show_full_text %}
                     <div class="ml-auto inline-flex items-stretch border border-foreground" role="group" aria-label="{% trans 'Text size' %}" id="text-size-controls">
                         <button type="button" data-text-size="down" title="{% trans 'Smaller text' %}"
                                 class="font-display font-bold px-3 py-1.5 text-sm hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A−</span><span class="sr-only">{% trans 'Decrease text size' %}</span></button>
@@ -254,6 +257,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         <button type="button" data-text-size="up" title="{% trans 'Larger text' %}"
                                 class="font-display font-bold px-3 py-1.5 text-lg hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A+</span><span class="sr-only">{% trans 'Increase text size' %}</span></button>
                     </div>
+                    {% endif %}
                 </div>
             {% endif %}
 
@@ -261,7 +265,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6">
                     <p class="text-sm text-muted-foreground mb-2">
                         {% trans "Share this link — anyone who opens it reads the full article free, no account or subscription needed, for 14 days." %}
-                        {% if gift_remaining == 0 %}{% trans "You've used all your gifts for this month." %}{% else %}{% blocktrans count counter=gift_remaining %}You have {{ counter }} gift left this month.{% plural %}You have {{ counter }} gifts left this month.{% endblocktrans %}{% endif %}
+                        {% if gift_remaining == 0 %}{% trans "You've used all your gifts for this month." %}{% else %}{% blocktrans count counter=gift_remaining asvar counted_label %}You have {{ counter }} gift left this month.{% plural %}You have {{ counter }} gifts left this month.{% endblocktrans %}{{ counted_label|local_digits }}{% endif %}
                     </p>
                     <div class="flex gap-2">
                         <input type="text" id="gift-link-input" value="{{ gift_link }}" readonly
@@ -291,7 +295,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% if gift_banner %}
                 <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6">
                     <p class="text-sm text-muted-foreground">
-                        {% blocktrans with gifter=gift_banner.get_full_name %}🎁 This article was gifted to you by <strong class="text-foreground">{{ gifter }}</strong> — free to read, no subscription needed.{% endblocktrans %}
+                        {% blocktrans with gifter=gift_banner.get_full_name %}This article was gifted to you by <strong class="text-foreground">{{ gifter }}</strong> — free to read, no subscription needed.{% endblocktrans %}
                     </p>
                 </div>
             {% endif %}
@@ -312,7 +316,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
 
             {% if show_full_text %}
                 {% if article.html_content %}
-                    <div class="prose-article leading-relaxed text-foreground">
+                    <div class="prose-article leading-relaxed text-foreground" data-citations data-cite-label="{% trans 'Source' %}" data-cite-all="{% trans 'All references ↓' %}">
                         {% for chunk, ad_zone in content_blocks %}
                             {{ chunk|safe }}
                             {% if ad_zone %}
@@ -323,66 +327,84 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 {% elif not article.has_video %}
                     <p class="text-sm text-muted-foreground">{% trans "Full text has not been added for this article yet." %}</p>
                 {% endif %}
+            {% elif not has_locked_content %}
+                {# Nothing to sell yet: never put a price on an empty article. #}
+                <p class="text-sm text-muted-foreground">{% trans "Full text has not been added for this article yet." %}</p>
             {% else %}
-                {# Paywall — same card language as the course enrollment / plan price cards #}
-                <div id="paywall" class="border border-border bg-card shadow-xl overflow-hidden scroll-mt-24">
-                    <div class="bg-foreground text-primary-foreground px-6 py-4 flex items-center gap-3">
-                        <svg class="w-5 h-5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
-                        <p class="section-label text-primary-foreground">
-                            {% if article.status == 'archived' %}{% trans "Archive Access Required" %}{% elif article.access_type == 'pay_per_article' %}{% trans "Special Article" %}{% else %}{% trans "Subscription Required" %}{% endif %}
+                {% comment %}
+                Paywall, set as a notice in the paper rather than a floating card:
+                2px ink rule, what's locked, what it costs (the cheapest monthly
+                plan, and this article's own price when it's sold singly), and the
+                same SUBSCRIBE / BUY buttons for everyone — checkout asks a
+                logged-out reader to log in and brings them back.
+                {% endcomment %}
+                <section id="paywall" class="border-t-2 border-foreground pt-6 scroll-mt-24" aria-labelledby="paywall-heading">
+                    <h2 id="paywall-heading" class="flex items-center gap-2.5 section-label text-foreground">
+                        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10"/><path stroke-linecap="square" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
+                        {% if article.status == 'archived' %}{% trans "Archive Access Required" %}{% elif article.access_type == 'pay_per_article' %}{% trans "Single purchase" %}{% else %}{% trans "Subscription Required" %}{% endif %}
+                    </h2>
+                    {% if article.status == 'archived' %}
+                        <p class="mt-3 max-w-[62ch] text-base text-muted-foreground leading-relaxed">
+                            {% trans "This is an archived article — full-text access requires a subscription plan with archive access, regardless of this article's original access tier." %}
                         </p>
-                    </div>
-                    <div class="p-6">
-                        {% if article.status == 'archived' %}
-                            <p class="text-sm text-muted-foreground leading-relaxed">
-                                {% trans "This is an archived article — full-text access requires a subscription plan with archive access, regardless of this article's original access tier." %}
-                            </p>
-                        {% elif article.access_type == 'pay_per_article' %}
-                            <p class="font-display text-3xl font-bold">{{ article.price|money }} <span class="text-sm font-normal text-muted-foreground">+ {% trans "VAT" %}</span></p>
-                            <p class="mt-2 text-sm text-muted-foreground leading-relaxed">
-                                {% blocktrans with price=article.price|money %}This is a one-time-purchase special article — {{ price }} for full access, or read it free with an active subscription.{% endblocktrans %}
-                            </p>
+                    {% elif article.access_type == 'pay_per_article' %}
+                        <p class="mt-4 font-display text-3xl font-bold">{{ article.price|money }} <span class="text-sm font-normal text-muted-foreground">+ {% trans "VAT" %}</span></p>
+                        <p class="mt-2 max-w-[62ch] text-base text-muted-foreground leading-relaxed">
+                            {% blocktrans with price=article.price|money %}This is a one-time-purchase special article — {{ price }} for full access, or read it free with an active subscription.{% endblocktrans %}
+                        </p>
+                    {% else %}
+                        <p class="mt-3 max-w-[62ch] text-base text-muted-foreground leading-relaxed">
+                            {% trans "This article requires an active subscription for full-text access." %}
+                        </p>
+                    {% endif %}
+                    {% comment %} What the price buys: the whole piece's length, and its references when it has them. {% endcomment %}
+                    <p class="mt-3 font-mono-editorial text-xs tracking-wider text-foreground">
+                        {% blocktrans with minutes=article.estimated_read_minutes|local_digits %}The full article: {{ minutes }} min read{% endblocktrans %}{% if references_list %} · {% blocktrans count counter=references_list|length with n=references_list|length|local_digits %}{{ n }} reference{% plural %}{{ n }} references{% endblocktrans %}{% endif %}
+                    </p>
+                    {% if cheapest_monthly_plan and article.status != 'archived' %}
+                        <p class="mt-1 font-mono-editorial text-xs tracking-wider text-foreground">
+                            {% blocktrans with price=cheapest_monthly_plan.price|money %}Subscriptions from {{ price }} a month{% endblocktrans %}
+                        </p>
+                    {% endif %}
+                    {% if pending_organization %}
+                        <div class="mt-5 border-t border-border bg-secondary px-4 py-3">
+                            <p class="text-sm">{% blocktrans with org=pending_organization.name email=user.email %}<strong>{{ org }}</strong> has a subscription. Confirm <strong>{{ email }}</strong> is your address and you can read this straight away.{% endblocktrans %}</p>
+                            <form method="post" action="{% url 'users:send_email_confirmation' %}" class="mt-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 py-3 hover:bg-accent">{% trans "EMAIL ME A CONFIRMATION LINK" %}</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        {% if article.access_type == 'pay_per_article' and article.status != 'archived' %}
+                            <a href="{% url 'billing:purchase_checkout' article.slug %}"
+                               class="inline-block font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:bg-accent-hover transition-colors">
+                                {% blocktrans with price=article.price|money %}BUY FOR {{ price }}{% endblocktrans %}
+                            </a>
+                            <a href="{% url 'billing:plan_browse' %}?next={{ request.path|urlencode }}"
+                               class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-6 py-3.5 hover:bg-foreground hover:text-primary-foreground transition-colors">
+                                {% trans "SUBSCRIBE" %}
+                            </a>
                         {% else %}
-                            <p class="text-sm text-muted-foreground leading-relaxed">
-                                {% trans "This article requires an active subscription for full-text access." %}
-                            </p>
-                        {% endif %}
-                        {% if pending_organization %}
-                            <div class="mt-5 border-l-2 border-accent bg-secondary px-4 py-3">
-                                <p class="text-sm">{% blocktrans with org=pending_organization.name email=user.email %}<strong>{{ org }}</strong> has a subscription. Confirm <strong>{{ email }}</strong> is your address and you can read this straight away.{% endblocktrans %}</p>
-                                <form method="post" action="{% url 'users:send_email_confirmation' %}" class="mt-3">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="next" value="{{ request.path }}">
-                                    <button type="submit" class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 py-2.5 hover:bg-accent">{% trans "EMAIL ME A CONFIRMATION LINK" %}</button>
-                                </form>
-                            </div>
-                        {% endif %}
-                        {% if user.is_authenticated %}
-                            <div class="mt-5 flex flex-wrap gap-3">
-                                {% if article.access_type == 'pay_per_article' and article.status != 'archived' %}
-                                    <a href="{% url 'billing:purchase_checkout' article.slug %}"
-                                       class="inline-block font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
-                                        {% blocktrans with price=article.price|money %}BUY FOR {{ price }}{% endblocktrans %}
-                                    </a>
-                                    <a href="{% url 'billing:plan_browse' %}?next={{ request.path|urlencode }}"
-                                       class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-6 py-3.5 hover:border-accent hover:text-accent transition-colors">
-                                        {% trans "SUBSCRIBE" %}
-                                    </a>
-                                {% else %}
-                                    <a href="{% url 'billing:plan_browse' %}?next={{ request.path|urlencode }}"
-                                       class="inline-block font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:opacity-90 transition-opacity">
-                                        {% trans "SUBSCRIBE" %}
-                                    </a>
-                                {% endif %}
-                            </div>
-                        {% else %}
-                            <p class="text-sm text-muted-foreground leading-relaxed mt-4">
-                                <a href="{% url 'users:login' %}?next={{ request.path|urlencode }}" class="underline">{% trans "Log in" %}</a>
-                                {% trans "to subscribe or purchase this article." %}
-                            </p>
+                            <a href="{% url 'billing:plan_browse' %}?next={{ request.path|urlencode }}"
+                               class="inline-block font-mono-editorial text-xs tracking-widest bg-accent text-white px-6 py-3.5 hover:bg-accent-hover transition-colors">
+                                {% trans "SUBSCRIBE" %}
+                            </a>
                         {% endif %}
                     </div>
-                </div>
+                    {% if article.status != 'archived' %}
+                        <p class="mt-4 max-w-[62ch] text-sm text-muted-foreground leading-relaxed">
+                            {% if article.access_type == 'pay_per_article' %}{% trans "One payment, yours to keep: the article stays in your account, and the receipt comes by email." %}
+                            {% else %}{% blocktrans with days=cancel_days|local_digits %}Subscriptions don't renew automatically, and you get a full refund if you cancel within {{ days }} days.{% endblocktrans %}{% endif %}
+                        </p>
+                    {% endif %}
+                    {% if not user.is_authenticated %}
+                        <p class="mt-2 text-sm text-muted-foreground">
+                            {% trans "Already a subscriber?" %} <a href="{% url 'users:login' %}?next={{ request.path|urlencode }}" class="text-foreground underline underline-offset-2">{% trans "Log in" %}</a>
+                        </p>
+                    {% endif %}
+                </section>
             {% endif %}
 
             {% include 'articles/includes/health_disclaimer.html' %}
@@ -394,7 +416,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         {% for correction in corrections %}
                             <li>
                                 <span class="font-semibold">{{ correction.get_kind_display }}</span>
-                                <span class="font-mono-editorial text-xs text-muted-foreground"> · <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|date:"M j, Y, g:i A" }}</time></span>
+                                <span class="font-mono-editorial text-xs text-muted-foreground"> · <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|date:"M j, Y, g:i A"|local_digits }}</time></span>
                                 <p class="mt-0.5 text-foreground">{{ correction.note }}</p>
                             </li>
                         {% endfor %}
@@ -422,7 +444,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             <li class="max-w-full">{% if preview_mode %}{% include 'articles/includes/topic_pill.html' with topic=kw size='lg' %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=kw size='lg' placement='footer' %}{% endif %}</li>
                         {% endfor %}
                     </ul>
-                    <a href="{% url 'articles:topic_list' %}" class="mt-4 inline-block font-mono-editorial text-[0.7rem] tracking-widest text-muted-foreground hover:text-accent">{% trans "EXPLORE ALL TOPICS →" %}</a>
+                    <a href="{% url 'articles:topic_list' %}" class="mt-4 inline-block font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">{% trans "EXPLORE ALL TOPICS →" %}</a>
                 </section>
             {% endif %}
 
@@ -458,7 +480,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 <div id="comments" class="mt-12 pt-8 border-t-2 border-foreground">
                     {% get_comment_count for article as comment_count %}
                     <h2 class="font-display text-xl font-bold mb-6" style="letter-spacing: -0.015em;">
-                        {% trans "Comments" %}{% if comment_count %} ({{ comment_count }}){% endif %}
+                        {% trans "Comments" %}{% if comment_count %} ({{ comment_count|local_digits }}){% endif %}
                     </h2>
                     {% comment %}
                     One-shot notice after posting/confirming a comment — set by
@@ -518,9 +540,8 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             {% if featured_author.author.display_photo %}
                                 <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-14 h-14 flex-shrink-0 object-cover">
                             {% else %}
-                                <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center"
-                                     style="background: linear-gradient(135deg, #d4d0cb 0%, #4a4845 100%);">
-                                    <span class="font-display text-xl font-bold text-white">{{ featured_author.display_name|first|upper }}</span>
+                                <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center border border-foreground">
+                                    <span class="font-display text-xl font-bold">{{ featured_author.display_name|plate_initial }}</span>
                                 </div>
                             {% endif %}
                             <div>
@@ -551,19 +572,12 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             {% for trending in trending_articles %}
                                 <li>
                                     <a href="{% url 'articles:article_detail' trending.slug %}" class="group flex items-baseline gap-3">
-                                        <span class="font-display text-lg font-bold text-border group-hover:text-accent">{{ forloop.counter }}</span>
-                                        <span class="text-sm font-medium leading-snug group-hover:text-accent group-hover:underline">{{ trending.title }}</span>
+                                        <span class="font-display text-lg font-bold text-accent" aria-hidden="true">{{ forloop.counter|local_digits }}</span>
+                                        <span class="font-display text-base font-semibold leading-snug group-hover:underline decoration-1 underline-offset-[3px]">{{ trending.title }}</span>
                                     </a>
                                 </li>
                             {% endfor %}
                         </ol>
-                    </div>
-                {% endif %}
-
-                {% if article.doi %}
-                    <div class="border border-border p-4 mb-8 bg-secondary">
-                        <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">DOI</p>
-                        <p class="text-xs text-muted-foreground leading-relaxed">{{ article.doi }}</p>
                     </div>
                 {% endif %}
 
@@ -758,4 +772,5 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script src="{% static 'js/citations.js' %}" defer></script>
 {% endblock %}

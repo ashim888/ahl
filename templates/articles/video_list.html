@@ -5,8 +5,8 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-6 py-12">
-    {% trans "VIDEOS" as eyebrow %}{% trans "Watch" as heading %}
-    {% include 'includes/section_heading.html' with eyebrow=eyebrow title=heading %}
+    {% trans "Videos" as heading %}
+    {% include 'includes/section_heading.html' with title=heading heading_tag='h1' %}
 
     {% if videos %}
         {% if not page_obj.has_previous %}
@@ -24,7 +24,7 @@
                 {% endif %}
             {% endfor %}
         </div>
-        {% include 'includes/pagination.html' %}
+        {% include 'includes/pagination_editorial.html' %}
     {% else %}
         <p class="py-16 text-center text-muted-foreground">{% trans "No videos yet — check back soon." %}</p>
     {% endif %}

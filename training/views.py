@@ -2,10 +2,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
@@ -145,13 +147,13 @@ def course_checkout(request, pk):
     existing = Enrollment.objects.filter(user=request.user, course=course).first()
 
     if existing and existing.status != Enrollment.Status.CANCELLED:
-        messages.info(request, "You're already enrolled in this course.")
+        messages.info(request, _("You're already enrolled in this course."))
         return redirect('training:course_detail', pk=pk)
 
     # Seats held by people still paying count as taken (payments.seats_taken),
     # so the last seat can't be sold twice.
     if course.max_enrollments is not None and payments.seats_taken(course, exclude_user=request.user) >= course.max_enrollments:
-        messages.error(request, 'This course is full.')
+        messages.error(request, _('This course is full.'))
         return redirect('training:course_detail', pk=pk)
 
     # Fonepay's minimum is Rs. 1 — a free course enrolls directly.
@@ -170,18 +172,24 @@ def course_checkout(request, pk):
             success=reverse('training:course_detail', args=[pk]), buyer_pan=buyer_pan,
         )
         if isinstance(result, Payment):
-            messages.success(request, f'Enrolled in "{course.title}".')
+            messages.success(request, _('Enrolled in "%(title)s".') % {'title': course.title})
             return redirect('training:course_detail', pk=pk)
         if result is not None:
             return result
     elif request.method == 'POST' and course.price <= 0:
-        # Free course: no payment, no receipt.
-        if existing:
-            existing.status = Enrollment.Status.ACTIVE
-            existing.save(update_fields=['status'])
-        else:
-            Enrollment.objects.create(user=request.user, course=course, payment_status=Enrollment.PaymentStatus.PAID)
-        messages.success(request, f'Enrolled in "{course.title}".')
+        # Free course: no payment, no receipt. The course row is locked and the
+        # seats re-counted, so two readers clicking at once can't both take the last one.
+        with transaction.atomic():
+            TrainingCourse.objects.select_for_update().get(pk=course.pk)
+            if course.max_enrollments is not None and payments.seats_taken(course, exclude_user=request.user) >= course.max_enrollments:
+                messages.error(request, _('This course is full.'))
+                return redirect('training:course_detail', pk=pk)
+            if existing:
+                existing.status = Enrollment.Status.ACTIVE
+                existing.save(update_fields=['status'])
+            else:
+                Enrollment.objects.create(user=request.user, course=course, payment_status=Enrollment.PaymentStatus.PAID)
+        messages.success(request, _('Enrolled in "%(title)s".') % {'title': course.title})
         return redirect('training:course_detail', pk=pk)
 
     return render(request, 'training/course_checkout.html', {

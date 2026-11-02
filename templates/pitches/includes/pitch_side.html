@@ -1,0 +1,22 @@
+{% load i18n news_time %}{% comment %}
+The newsprint panel beside the pitch form (desktop: right-hand column;
+phones: after the form), matching the one beside login and sign-up. What a
+good pitch carries, then what happens after sending it: the same three
+steps the thank-you page (pitch_thanks.html) confirms, word for word.
+{% endcomment %}
+<aside class="bg-secondary border-t-2 border-foreground px-6 py-8 sm:px-8 sm:py-10" aria-label="{% trans 'How pitching works' %}">
+    <p class="font-display text-2xl font-bold leading-tight" style="letter-spacing: -0.015em;">{% trans "A good pitch says" %}</p>
+    <ul class="mt-5 space-y-3 text-sm leading-relaxed">
+        <li class="border-l-2 border-accent pl-3">{% trans "What happened, to whom, and where in Nepal." %}</li>
+        <li class="border-l-2 border-accent pl-3">{% trans "Why it matters now: a new figure, a policy change, a pattern you've noticed." %}</li>
+        <li class="border-l-2 border-accent pl-3">{% trans "How you know: documents, data, or people we can talk to." %}</li>
+    </ul>
+
+    <p class="mt-10 pt-6 border-t border-border font-display text-2xl font-bold leading-tight" style="letter-spacing: -0.015em;">{% trans "What happens next" %}</p>
+    <ol class="mt-5 space-y-4 text-sm leading-relaxed">
+        {% trans "An editor reads every pitch, usually within a week." as step1 %}{% trans "We’ll email you when it’s accepted, needs more from you, or isn’t right for us." as step2 %}{% trans "If it’s accepted, an editor works with you to turn it into an article." as step3 %}
+        <li class="flex gap-3"><span class="font-display text-xl font-bold text-accent leading-none" aria-hidden="true">{{ 1|local_digits }}</span><span>{{ step1 }}</span></li>
+        <li class="flex gap-3"><span class="font-display text-xl font-bold text-accent leading-none" aria-hidden="true">{{ 2|local_digits }}</span><span>{{ step2 }}</span></li>
+        <li class="flex gap-3"><span class="font-display text-xl font-bold text-accent leading-none" aria-hidden="true">{{ 3|local_digits }}</span><span>{{ step3 }}</span></li>
+    </ol>
+</aside>

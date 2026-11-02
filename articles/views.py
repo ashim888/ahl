@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 import re
 
@@ -25,6 +26,8 @@ from django_ratelimit.decorators import ratelimit
 
 from ajna_health_lens.comments_views import pop_comment_flash
 from ajna_health_lens.mail import send_templated_email
+from ajna_health_lens.visitor import is_crawler
+from billing.models import SubscriptionPlan
 from billing.access import (
     FREE_SAMPLE_LIMIT_PER_MONTH, GIFTABLE_ACCESS_TYPES, METERED_ACCESS_TYPES, article_is_accessible,
     consume_free_sample, create_or_get_article_gift, free_sample_reads_used, get_existing_article_gift,
@@ -47,7 +50,7 @@ from .forms import (
     PublishArticleForm, ScheduleArticleForm, edit_token_for,
 )
 from .models import (
-    HOME_SECTIONS_CACHE_KEY, Article, ArticleCorrection, ArticleNote, ArticleRevision, ArticleView, Author, Bookmark,
+    HOME_SECTIONS_CACHE_KEY, RESEARCH_TYPES, Article, ArticleCorrection, ArticleNote, ArticleRevision, ArticleView, Author, Bookmark,
     Keyword, KeywordEvent, KeywordFollow,
 )
 from .revisions import compare, record_revision, restore_revision
@@ -64,13 +67,6 @@ KEYWORD_FOLLOW_MIN_ARTICLES = 1
 from .seo import breadcrumb_list_structured_data, news_article_structured_data, person_structured_data
 from .similarity import similar_articles
 
-# Article types treated as "peer-reviewed research" for the homepage's
-# "From the Journal" section — everything except news/editorial/letters.
-RESEARCH_TYPES = [
-    Article.ArticleType.ORIGINAL_RESEARCH, Article.ArticleType.REVIEW_ARTICLE,
-    Article.ArticleType.CASE_REPORT, Article.ArticleType.METHODOLOGY_PAPER,
-    Article.ArticleType.SHORT_COMMUNICATION,
-]
 OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_EDITOR]
 
 # Article CRUD (manage/ views below) is an editorial capability — ARCHITECTURE.md
@@ -94,6 +90,8 @@ def _record_article_view(request, article) -> bool:
     to count keyword impressions under exactly the same rules.
     """
     if request.user.is_authenticated and request.user.is_editorial_staff:
+        return False
+    if is_crawler(request):  # also spares a session row per crawled page
         return False
     if not request.session.session_key:
         request.session.save()
@@ -191,16 +189,28 @@ def related_articles_for(article, limit: int = RELATED_ARTICLES_LIMIT) -> list:
     return [related for related, _score in similar_articles(article, limit=limit)]
 
 
-def _trending_articles(limit=5):
+def _trending_articles(limit=5, exclude=()):
     """Published articles ranked by page views in the last 7 days (not an
     all-time count), so this reflects what's hot *now*, not what was hot
     once. Shared by HomeView's Trending section and ArticleDetailView's
     sidebar — see ArticleView in models.py for where these rows get
     recorded (and _record_article_view above for the dedup rules).
     """
+    # Cached for a few minutes: it was recomputed on every article page, over the
+    # whole view log (400 days of rows). Trending doesn't need to be to-the-second.
+    key = f"trending:{limit}:{','.join(map(str, sorted(exclude)))}"
+    articles = cache.get(key)
+    if articles is None:
+        articles = _rank_trending(limit, exclude)
+        cache.set(key, articles, 300)
+    return articles
+
+
+def _rank_trending(limit, exclude):
     trending_cutoff = timezone.now() - datetime.timedelta(days=7)
     trending_counts = (
         ArticleView.objects.filter(viewed_at__gte=trending_cutoff, article__status=Article.Status.PUBLISHED)
+        .exclude(article__in=exclude)
         .values('article').annotate(view_count=Count('id')).order_by('-view_count')[:limit]
     )
     view_counts_by_pk = {row['article']: row['view_count'] for row in trending_counts}
@@ -314,17 +324,21 @@ class HomeView(TemplateView):
         prefetch_related_objects(videos, 'section')
         sections['home_videos'] = videos
 
-        sections['special_issues'] = list(Issue.objects.all()[:3])
+        sections['special_issues'] = list(Issue.objects.filter(is_special=True)[:3])
         sections['board_preview'] = list(EditorialBoardMember.objects.filter(is_active=True)[:6])
 
         # Trending — the one section that's purely algorithm-driven, not
-        # editor-curated (no HomepageSection value for it) and not subject
-        # to the used_pks dedup above; it's fine for a trending piece to
-        # also appear in a curated section.
-        sections['trending_articles'] = _trending_articles(limit=5)
+        # editor-curated (no HomepageSection value for it). It sits between
+        # the hero and Latest News, and skips every story the homepage already
+        # shows anywhere (opinion, research, video too): one page, no repeats.
+        # With little traffic it may list fewer than five, which is fine.
+        sections['trending_articles'] = _trending_articles(limit=5, exclude=used_pks)
         from .topics import trending_topics
 
-        sections['trending_topics'] = trending_topics(10)
+        # A topic on a single story isn't a trend: keep the ones covered more
+        # than once, at most five, and drop the band rather than show one or two.
+        covered = [topic for topic in trending_topics(10) if topic.story_count > 1][:5]
+        sections['trending_topics'] = covered if len(covered) >= 3 else []
         return sections
 
     def get_context_data(self, **kwargs):
@@ -369,7 +383,7 @@ class CorrectionListView(ListView):
         context = super().get_context_data(**kwargs)
         context['kinds'] = ArticleCorrection.Kind.choices
         context['selected_kind'] = self.request.GET.get('kind', '')
-        context['meta_title'] = f'Corrections — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("Corrections")} — {settings.JOURNAL_NAME}'
         context['meta_description'] = (
             f'Every correction, clarification and update {settings.JOURNAL_NAME} has made to a published story.'
         )
@@ -460,14 +474,14 @@ class ArticleListView(ListView):
             # The topic page is the one address search engines should index.
             context['canonical_url'] = self.request.build_absolute_uri(
                 reverse('articles:topic_detail', args=[selected_keyword_slug]))
-            context['meta_title'] = f'Articles tagged "{selected_keyword_label}" — {settings.JOURNAL_NAME}'
+            context['meta_title'] = _('Articles tagged "%(keyword)s"') % {'keyword': selected_keyword_label} + f' — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'Articles about {selected_keyword_label} from {settings.JOURNAL_NAME}.'
         elif context['selected_type']:
             type_label = dict(Article.ArticleType.choices).get(context['selected_type'], '')
             context['meta_title'] = f'{type_label} — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'{type_label} articles from {settings.JOURNAL_NAME}.'
         else:
-            context['meta_title'] = f'All Articles — {settings.JOURNAL_NAME}'
+            context['meta_title'] = f'{_("All Articles")} — {settings.JOURNAL_NAME}'
             context['meta_description'] = f'Browse all published articles from {settings.JOURNAL_NAME}.'
         return context
 
@@ -493,7 +507,7 @@ class ArchiveListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['meta_title'] = f'Archive — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("Archive")} — {settings.JOURNAL_NAME}'
         context['meta_description'] = f'Archived articles from {settings.JOURNAL_NAME}.'
         return context
 
@@ -536,7 +550,7 @@ class ForYouView(ListView):
             SectionFollow.objects.filter(user=self.request.user).exists()
             or KeywordFollow.objects.filter(user=self.request.user).exists()
         )
-        context['meta_title'] = f'For You — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("For You")} — {settings.JOURNAL_NAME}'
         context['meta_robots'] = 'noindex, follow'  # personalized, not a page worth indexing
         return context
 
@@ -577,12 +591,15 @@ class ArticleDetailView(DetailView):
         # expired/unknown token isn't an error, it just falls through to
         # the normal access rules (real entitlement, then metering) as if
         # no gift link were involved.
+        has_locked_content = bool(self.object.html_content or self.object.has_video or self.object.pdf_file)
+        context['has_locked_content'] = has_locked_content
         gift_token = self.kwargs.get('gift_token')
         gift = get_valid_article_gift(self.object, gift_token) if gift_token else None
         if gift:
             show_full_text = True
             context['gift_banner'] = gift.gifter
-        elif not show_full_text and self.object.access_type in METERED_ACCESS_TYPES:
+        # Nothing behind the paywall yet (no text, video or PDF): don't spend one of the reader's free reads on it.
+        elif not show_full_text and self.object.access_type in METERED_ACCESS_TYPES and has_locked_content:
             # Metering is a separate, stateful concern from the real
             # entitlement check above — see billing.access.consume_free_sample's
             # own docstring for why the two aren't merged into one function.
@@ -593,6 +610,12 @@ class ArticleDetailView(DetailView):
                     'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
                 }
         context['show_full_text'] = show_full_text
+        if not show_full_text:
+            # The paywall says what reading costs: the cheapest monthly plan.
+            context['cheapest_monthly_plan'] = SubscriptionPlan.objects.filter(
+                is_active=True, plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            ).order_by('price').first()
+            context['cancel_days'] = settings.SUBSCRIPTION_CANCEL_DAYS
         user = self.request.user
         if show_full_text and user.is_authenticated and not user.is_editorial_staff \
                 and self.object.status == Article.Status.PUBLISHED and not self.kwargs.get('preview'):
@@ -901,7 +924,7 @@ class ReadingListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['meta_title'] = f'Reading List — {settings.JOURNAL_NAME}'
+        context['meta_title'] = f'{_("Reading List")} — {settings.JOURNAL_NAME}'
         context['meta_robots'] = 'noindex, follow'  # personal, not a page worth indexing
         return context
 
@@ -994,7 +1017,8 @@ def search_suggest(request):
     query = request.GET.get('q', '').strip()[:100]
     if len(query) < 2:
         return JsonResponse({'results': []})
-    key = f'search:suggest:{cache.get(search.GENERATION_KEY) or 0}:{abs(hash(query.lower()))}'
+    # md5, not hash(): hash() differs per worker process, so each worker kept its own copies.
+    key = f'search:suggest:{cache.get(search.GENERATION_KEY) or 0}:{hashlib.md5(query.lower().encode()).hexdigest()}'
     results = cache.get(key)
     if results is None:
         results = [

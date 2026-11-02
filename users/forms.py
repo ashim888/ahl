@@ -61,6 +61,28 @@ class ProfileUpdateForm(ModelForm):
             'orcid', 'affiliation', 'department', 'bio', 'photo', 'cv_file',
             'research_interests', 'linkedin_url', 'researchgate_url', 'publications',
         ]
+        # Reader-facing, so labels and hints are translated here rather than
+        # changing the model's (editorial-facing) verbose names and help text.
+        labels = {
+            'first_name': gettext_lazy('First name'),
+            'last_name': gettext_lazy('Last name'),
+            'orcid': 'ORCID',
+            'affiliation': gettext_lazy('Affiliation'),
+            'department': gettext_lazy('Department'),
+            'bio': gettext_lazy('Bio'),
+            'photo': gettext_lazy('Photo'),
+            'cv_file': gettext_lazy('CV file'),
+            'research_interests': gettext_lazy('Research interests'),
+            'linkedin_url': gettext_lazy('LinkedIn URL'),
+            'researchgate_url': gettext_lazy('ResearchGate URL'),
+            'publications': gettext_lazy('Publications'),
+        }
+        help_texts = {
+            'orcid': gettext_lazy('ORCID iD, e.g. 0000-0002-1825-0097.'),
+            'photo': gettext_lazy('JPG or PNG, up to 5 MB.'),
+            'cv_file': gettext_lazy('PDF, DOC or DOCX, up to 10 MB.'),
+            'publications': gettext_lazy('Prior publication history, reviewed by an editor during verification.'),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

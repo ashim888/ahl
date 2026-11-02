@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n text_filters %}
 {% load comments %}
 {% load comments_xtd %}
 
@@ -10,13 +10,13 @@ render_xtdcomment_tree for nested replies, same as the package default.
 {% for item in comments %}
 <div id="c{{ item.comment.id }}" class="flex gap-3{% if item.comment.level == 0 %} py-5 border-t border-border{% else %} mt-4{% endif %}">
     <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-secondary font-mono-editorial text-xs font-semibold text-foreground">
-        {{ item.comment.name|first|upper }}
+        {{ item.comment.name|plate_initial }}
     </div>
     <div class="flex-1 min-w-0">
         <div class="flex items-baseline gap-2 flex-wrap">
             <span class="text-sm font-semibold">{{ item.comment.name }}</span>
             {% if item.comment.user and item.comment.user|has_permission:"django_comments.can_moderate" %}
-                <span class="font-mono-editorial text-[0.6rem] tracking-widest text-accent">{% trans "STAFF" %}</span>
+                <span class="font-mono-editorial text-[0.65rem] tracking-widest text-accent">{% trans "STAFF" %}</span>
             {% endif %}
             <a href="{% get_comment_permalink item.comment %}" class="font-mono-editorial text-[0.65rem] text-muted-foreground hover:text-accent">
                 {{ item.comment.submit_date|timesince }} {% trans "ago" %}

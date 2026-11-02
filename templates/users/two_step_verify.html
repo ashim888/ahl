@@ -18,6 +18,6 @@
         <button type="submit" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent">{% trans "CONTINUE" %}</button>
     </form>
     <p class="mt-6 text-sm text-muted-foreground">{% trans "Lost your phone? Type one of your backup codes instead, or ask an Editor-in-Chief or Admin to reset your two-step sign-in." %}</p>
-    <form method="post" action="{% url 'users:logout' %}" class="mt-6">{% csrf_token %}<button type="submit" class="text-xs text-muted-foreground underline">{% trans "Sign out" %}</button></form>
+    <form method="post" action="{% url 'users:logout' %}" class="mt-6">{% csrf_token %}<button type="submit" class="text-xs text-muted-foreground underline">{% trans "Log out" %}</button></form>
 </div>
 {% endblock %}

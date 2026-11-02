@@ -32,6 +32,6 @@
             {% if error %}<p id="code-error" class="mt-2 text-sm text-accent" role="alert">{{ error }}</p>{% endif %}
         </li>
     </ol>
-    <form method="post" action="{% url 'users:logout' %}" class="mt-10">{% csrf_token %}<button type="submit" class="text-xs text-muted-foreground underline">{% trans "Sign out instead" %}</button></form>
+    <form method="post" action="{% url 'users:logout' %}" class="mt-10">{% csrf_token %}<button type="submit" class="text-xs text-muted-foreground underline">{% trans "Log out instead" %}</button></form>
 </div>
 {% endblock %}

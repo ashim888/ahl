@@ -16,12 +16,18 @@ class SubscriptionPlanForm(forms.ModelForm):
     class Meta:
         model = SubscriptionPlan
         fields = [
-            'name', 'plan_type', 'price', 'duration_days', 'description', 'features',
+            'name_en', 'name_ne', 'plan_type', 'price', 'duration_days', 'description_en', 'description_ne', 'features',
             'grants_ad_free_reading', 'grants_unlimited_articles', 'grants_premium_newsletter',
             'grants_full_archive', 'gift_articles_per_month', 'is_featured', 'is_active',
         ]
+        # name/description are per-language columns (billing/translation.py), listed explicitly as in SectionForm.
+        labels = {
+            'name_en': 'Name (English)', 'name_ne': 'Name (Nepali)',
+            'description_en': 'Description (English)', 'description_ne': 'Description (Nepali)',
+        }
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
+            'description_en': forms.Textarea(attrs={'rows': 4}),
+            'description_ne': forms.Textarea(attrs={'rows': 4}),
             'features': forms.CheckboxSelectMultiple,
         }
 

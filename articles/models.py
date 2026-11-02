@@ -437,15 +437,16 @@ class Article(models.Model):
         return 
 
     @property
+    def reference_count(self) -> int:
+        """How many sources the story cites: the non-blank lines of `references`."""
+        return sum(1 for line in (self.references or '').splitlines() if line.strip())
+
+    @property
     def estimated_read_minutes(self):
-        """Word count / 200wpm. Only counts html_content for open-access
-        articles — a rough public-facing estimate, not viewer-aware (the
-        actual paywall gate for subscription/pay-per-article tiers lives in
-        billing.access.article_is_accessible, not here).
-        """
-        text = self.abstract or ''
-        if self.access_type == self.AccessType.OPEN_ACCESS and self.html_content:
-            text += ' ' + self.html_content
+        """Word count / 200wpm, of the whole article whatever its access
+        tier: the paywall tells a reader how much they'd be paying for, and
+        a length reveals none of the locked text."""
+        text = (self.abstract or '') + ' ' + strip_tags(self.html_content or '')
         return max(1, round(len(text.split()) / 200))
 
     class Meta:
@@ -515,6 +516,13 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_research(self) -> bool:
+        """The journal's own peer-reviewed work (reviewed on OJS) — not news,
+        opinion, letters or video. Drives the homepage "From the Journal"
+        section and the "Peer-reviewed" marker on cards."""
+        return self.article_type in RESEARCH_TYPES
 
     @property
     def is_breaking(self) -> bool:
@@ -649,6 +657,13 @@ class Author(models.Model):
             )
 
 
+# The journal's peer-reviewed research — everything except news, editorials, letters and video.
+RESEARCH_TYPES = (
+    Article.ArticleType.ORIGINAL_RESEARCH, Article.ArticleType.REVIEW_ARTICLE, Article.ArticleType.CASE_REPORT,
+    Article.ArticleType.METHODOLOGY_PAPER, Article.ArticleType.SHORT_COMMUNICATION,
+)
+
+
 class ArticleAuthor(models.Model):
     """One byline entry: an Author (see above — no site account needed) in
     a given position on an article.
@@ -777,7 +792,8 @@ class ArticleView(models.Model):
     viewed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        indexes = [models.Index(fields=['article', 'viewed_at'])]
+        # viewed_at alone serves Trending's "last 7 days, all articles" range.
+        indexes = [models.Index(fields=['article', 'viewed_at']), models.Index(fields=['viewed_at'])]
 
     def __str__(self):
         return f'View of {self.article} at {self.viewed_at}'

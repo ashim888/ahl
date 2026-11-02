@@ -36,6 +36,7 @@
 
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.publication_date %}
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.is_published %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.is_special %}
             </div>
 
             <details class="mt-8 group" {% if form.editorial_note.errors %}open{% endif %}>

@@ -4,7 +4,7 @@ Enroll button / enrolled state for the course page's enrollment card.
 {% endcomment %}
 {% if user.is_authenticated and enrollment and enrollment.status != 'cancelled' %}
     <div class="flex items-center gap-2 border border-foreground bg-secondary px-4 py-3 text-sm">
-        <svg class="w-4 h-4 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+        <svg class="w-4 h-4 shrink-0 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
         <span class="font-medium">
             {% if enrollment.status == 'completed' %}{% trans "You've completed this course" %}{% else %}{% trans "You're enrolled" %}{% endif %}
         </span>

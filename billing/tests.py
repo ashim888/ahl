@@ -355,8 +355,8 @@ class PlanManageFormViewTests(TestCase):
     def test_create_saves_every_perk_field(self):
         self.client.force_login(self.admin)
         response = self.client.post(reverse('billing:manage_plan_create'), {
-            'name': 'Full Plan', 'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
-            'price': '9.99', 'duration_days': 30, 'description': '',
+            'name_en': 'Full Plan', 'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            'price': '9.99', 'duration_days': 30, 'description_en': '',
             'grants_ad_free_reading': 'on', 'grants_unlimited_articles': 'on', 'grants_premium_newsletter': 'on',
             'grants_full_archive': 'on', 'gift_articles_per_month': 3,
         })
@@ -374,8 +374,8 @@ class PlanManageFormViewTests(TestCase):
         # defaulting to True.
         self.client.force_login(self.admin)
         self.client.post(reverse('billing:manage_plan_create'), {
-            'name': 'Bare Plan', 'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
-            'price': '9.99', 'duration_days': 30, 'description': '', 'gift_articles_per_month': 0,
+            'name_en': 'Bare Plan', 'plan_type': SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+            'price': '9.99', 'duration_days': 30, 'description_en': '', 'gift_articles_per_month': 0,
         })
         plan = SubscriptionPlan.objects.get(name='Bare Plan')
         self.assertFalse(plan.grants_ad_free_reading)
@@ -390,8 +390,8 @@ class PlanManageFormViewTests(TestCase):
         )
         self.client.force_login(self.admin)
         self.client.post(reverse('billing:manage_plan_update', args=[plan.pk]), {
-            'name': plan.name, 'plan_type': plan.plan_type, 'price': plan.price, 'duration_days': plan.duration_days,
-            'description': '', 'gift_articles_per_month': 5,
+            'name_en': plan.name, 'plan_type': plan.plan_type, 'price': plan.price, 'duration_days': plan.duration_days,
+            'description_en': '', 'gift_articles_per_month': 5,
         })
         plan.refresh_from_db()
         self.assertEqual(plan.gift_articles_per_month, 5)
@@ -484,6 +484,39 @@ class MeteredPaywallViewTests(TestCase):
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
         self.assertContains(response, 'of your')
         self.assertContains(response, str(FREE_SAMPLE_LIMIT_PER_MONTH))
+
+    def test_article_with_nothing_behind_the_paywall_does_not_use_a_free_read(self):
+        from billing.models import MeteredArticleRead
+        article = self._subscription_article(0)
+        article.html_content = ''
+        article.save()
+        self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertFalse(MeteredArticleRead.objects.filter(article=article).exists())
+
+    @patch('billing.access.FREE_SAMPLE_LIMIT_PER_MONTH', 0)
+    def test_paywall_states_the_cheapest_monthly_price(self):
+        SubscriptionPlan.objects.create(name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY,
+                                        price=499, duration_days=30)
+        article = self._subscription_article(0)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'Subscriptions from')
+        self.assertContains(response, '499')
+
+    @patch('billing.access.FREE_SAMPLE_LIMIT_PER_MONTH', 0)
+    def test_paywall_says_how_long_the_locked_article_is_and_hides_text_size(self):
+        article = self._subscription_article(0)
+        article.html_content = '<p>' + 'word ' * 1000 + '</p>'
+        article.save()
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'The full article: 5 min read')
+        self.assertContains(response, "don't renew automatically")
+        self.assertNotContains(response, 'id="text-size-controls"')
+
+    def test_an_empty_special_article_is_never_put_on_sale(self):
+        article = make_article(Article.AccessType.PAY_PER_ARTICLE, price=12)
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(response, 'id="paywall"')
+        self.assertContains(response, 'Full text has not been added')
 
     def test_revisiting_the_same_article_does_not_use_a_second_slot(self):
         article = self._subscription_article(0)
@@ -708,10 +741,22 @@ class PlanDetailAndComparisonTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Premium')
         self.assertContains(response, 'Priority support')
-        self.assertContains(response, 'MOST POPULAR')
+        self.assertContains(response, 'OUR PICK')
         # Comparison table includes the other plans too.
         self.assertContains(response, 'Basic')
         self.assertContains(response, 'Enterprise')
+
+    def test_browse_page_states_the_annual_saving_from_real_prices(self):
+        # Rs. 1,000 a year against Rs. 100 a month: 12 months for the price of 10.
+        response = self.client.get(reverse('billing:plan_browse'))
+        self.assertContains(response, '12 months for the price of 10', count=1)
+        self.assertNotContains(response, 'MOST POPULAR')
+
+    def test_no_saving_claimed_when_annual_costs_a_year_of_months(self):
+        self.premium.price = 1200
+        self.premium.save(update_fields=['price'])
+        response = self.client.get(reverse('billing:plan_browse'))
+        self.assertNotContains(response, 'for the price of')
 
     def test_inactive_plan_detail_page_404s(self):
         self.basic.is_active = False

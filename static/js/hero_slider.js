@@ -1,6 +1,6 @@
 // Homepage top-story slider (templates/home.html, [data-hero-slider]).
-// Arrows, dots, swipe and ←/→ keys; advances every 7 s, but never when the
-// reader prefers reduced motion, and pauses while the pointer or keyboard
+// Cover lines (one button per story), swipe and ←/→ keys; advances every 7 s, but never when the
+// reader prefers reduced motion or is on a touch screen, and pauses while the pointer or keyboard
 // focus is on it, or after the Pause button. Without this script the slides
 // simply stack, so every top story is still reachable.
 (function () {
@@ -15,49 +15,70 @@
     var controls = root.querySelector('[data-hero-controls]');
     var status = root.querySelector('[data-hero-status]');
     var pauseButton = root.querySelector('[data-hero-pause]');
+    var lines = root.querySelector('[data-hero-lines]');
     var current = 0;
     var timer = null;
-    var userPaused = reduceMotion;
+    // Touch screens: no autoplay (the reader swipes or taps a cover line), so no pause button either.
+    var touch = window.matchMedia && window.matchMedia('(hover: none)').matches;
+    var userPaused = reduceMotion || touch;
     var hovering = false;
+    var ready = false;
+    root.style.setProperty('--hero-interval', INTERVAL + 'ms');
 
     controls.hidden = false;
-    if (reduceMotion) setPauseLabel(true);
+    if (touch && pauseButton) pauseButton.hidden = true;
+    else if (reduceMotion) setPauseLabel(true);
 
     function show(index, announce) {
       current = (index + slides.length) % slides.length;
       slides.forEach(function (slide, i) {
         var active = i === current;
         slide.hidden = !active;
-        slide.classList.toggle('hero-slide--in', active);
+        slide.classList.toggle('hero-slide--in', active && ready);
       });
       dots.forEach(function (dot, i) {
         var active = i === current;
         dot.setAttribute('aria-current', active ? 'true' : 'false');
-        dot.classList.toggle('w-6', active);
-        dot.classList.toggle('bg-accent', active);
-        dot.classList.toggle('bg-border', !active);
-        dot.classList.toggle('w-2.5', !active);
       });
+      // Phones: keep the current cover line in the sideways-scrolling rail's view
+      // (scrollLeft, not scrollIntoView, so the page itself never jumps).
+      if (lines && lines.scrollWidth > lines.clientWidth && dots[current]) {
+        lines.scrollTo({left: dots[current].offsetLeft - lines.offsetLeft, behavior: reduceMotion ? 'auto' : 'smooth'});
+      }
       if (announce && status) status.textContent = slides[current].getAttribute('aria-label') + ': ' +
         (slides[current].querySelector('h2') || {}).textContent.trim();
     }
 
     function setPauseLabel(paused) {
       if (!pauseButton) return;
+      // The label names the action it will take; no aria-pressed, which would read "Play, pressed".
       pauseButton.textContent = paused ? pauseButton.dataset.labelPlay : pauseButton.dataset.labelPause;
-      pauseButton.setAttribute('aria-pressed', paused ? 'true' : 'false');
     }
 
-    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    // The current cover line's rule fills over the interval; restarted with the timer, cleared when it stops.
+    function progress(running) {
+      dots.forEach(function (dot) { dot.classList.remove('hero-line--run'); });
+      if (!running || !dots[current]) return;
+      void dots[current].offsetWidth; // restart the fill
+      dots[current].classList.add('hero-line--run');
+    }
+
+    function stop() { if (timer) { clearInterval(timer); timer = null; } progress(false); }
     function start() {
       stop();
       if (userPaused || hovering) return;
-      timer = setInterval(function () { show(current + 1, false); }, INTERVAL);
+      timer = setInterval(function () { show(current + 1, false); progress(true); }, INTERVAL);
+      progress(true);
     }
 
-    root.querySelector('[data-hero-prev]').addEventListener('click', function () { show(current - 1, true); start(); });
-    root.querySelector('[data-hero-next]').addEventListener('click', function () { show(current + 1, true); start(); });
-    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { show(i, true); start(); }); });
+    // Keep keyboard and screen-reader focus on the page: on the current cover
+    // line, or, on phones where that line hides itself, the story's headline.
+    function keepFocus() {
+      var line = dots[current];
+      var target = line && line.offsetParent ? line : slides[current].querySelector('h2 a');
+      if (target) target.focus({preventScroll: true});
+    }
+    dots.forEach(function (dot, i) { dot.addEventListener('click', function () { show(i, true); start(); if (document.activeElement === dot) keepFocus(); }); });
     if (pauseButton) pauseButton.addEventListener('click', function () {
       userPaused = !userPaused;
       setPauseLabel(userPaused);
@@ -71,24 +92,33 @@
       if (!root.contains(event.relatedTarget)) { hovering = false; start(); }
     });
     root.addEventListener('keydown', function (event) {
-      if (event.key === 'ArrowLeft') { show(current - 1, true); event.preventDefault(); }
-      if (event.key === 'ArrowRight') { show(current + 1, true); event.preventDefault(); }
+      if (!event.target.closest('[data-hero-dot]')) return; // links inside the hero keep their keys
+      if (event.key === 'ArrowLeft') { show(current - 1, true); keepFocus(); event.preventDefault(); }
+      if (event.key === 'ArrowRight') { show(current + 1, true); keepFocus(); event.preventDefault(); }
     });
 
     // Swipe on touch screens.
     var startX = null;
+    var startY = null;
     var track = root.querySelector('[data-hero-track]');
-    track.addEventListener('touchstart', function (event) { startX = event.touches[0].clientX; }, {passive: true});
+    track.addEventListener('touchstart', function (event) {
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+    }, {passive: true});
     track.addEventListener('touchend', function (event) {
       if (startX === null) return;
       var dx = event.changedTouches[0].clientX - startX;
-      if (Math.abs(dx) > 40) { show(current + (dx < 0 ? 1 : -1), true); start(); }
+      var dy = event.changedTouches[0].clientY - startY;
+      // Mostly sideways only: a page scroll that drifts sideways must not flip the story.
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { show(current + (dx < 0 ? 1 : -1), true); start(); }
       startX = null;
     });
 
     document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
 
     show(0, false);
+    ready = true;
+    root.setAttribute('data-hero-ready', '');
     start();
   });
 })();

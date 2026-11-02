@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class StoryPitch(models.Model):
@@ -13,11 +14,11 @@ class StoryPitch(models.Model):
     """
 
     class Status(models.TextChoices):
-        SUBMITTED = 'submitted', 'Submitted'
-        IN_REVIEW = 'in_review', 'In Review'
-        ACCEPTED = 'accepted', 'Accepted'
-        REJECTED = 'rejected', 'Rejected'
-        PUBLISHED = 'published', 'Published'
+        SUBMITTED = 'submitted', _('Submitted')
+        IN_REVIEW = 'in_review', _('In Review')
+        ACCEPTED = 'accepted', _('Accepted')
+        REJECTED = 'rejected', _('Rejected')
+        PUBLISHED = 'published', _('Published')
 
     title = models.CharField(max_length=500)
     summary = models.TextField(help_text='The pitch itself — what the story is and why it matters now.')
