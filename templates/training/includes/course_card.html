@@ -5,11 +5,11 @@ course page. Expects `course` annotated with active_enrollment_count (see
 training/views.py _with_seat_counts).
 {% endcomment %}
 <a href="{% url 'training:course_detail' course.pk %}"
-   class="group flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow]">
-    <div class="aspect-video bg-secondary overflow-hidden">
+   class="group flex flex-col">
+    <div class="relative aspect-video bg-secondary overflow-hidden">
         {% include 'training/includes/course_cover.html' with course=course %}
     </div>
-    <div class="flex flex-col flex-1 p-5">
+    <div class="flex flex-col flex-1 pt-4">
         <div class="flex items-center gap-2 flex-wrap">
             {% if course.category %}<span lang="{{ course.category|content_lang }}" class="section-label text-accent">{{ course.category }}</span>{% endif %}
             {% if course.offers_certificate %}

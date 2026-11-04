@@ -22,7 +22,7 @@
     </div>
 
     <article class="receipt border border-border bg-card p-8 sm:p-10">
-        <div class="flex flex-wrap items-start justify-between gap-6 pb-6 border-b-2 border-foreground">
+        <div class="flex flex-wrap items-start justify-between gap-6 pb-6 border-b border-border">
             <div>
                 <p class="font-display text-2xl font-bold">{{ seller.legal_name }}</p>
                 {% if seller.address %}<p class="text-sm text-muted-foreground mt-1">{{ seller.address }}</p>{% endif %}
@@ -67,7 +67,7 @@
                     <td class="py-3 pr-4 text-muted-foreground">{% blocktrans with rate=vat_rate %}VAT ({{ rate }}%){% endblocktrans %}</td>
                     <td class="py-3 text-right whitespace-nowrap">{{ payment.vat_amount|money }}</td>
                 </tr>
-                <tr class="border-t-2 border-foreground">
+                <tr class="border-t border-foreground">
                     <td class="py-3 pr-4 font-mono-editorial text-xs tracking-widest">{% trans "TOTAL PAID" %}</td>
                     <td class="py-3 text-right whitespace-nowrap font-display text-2xl font-bold">{{ payment.amount|money }}</td>
                 </tr>
@@ -81,7 +81,7 @@
         </dl>
 
         {% if payment.status == 'refunded' %}
-            <div class="mt-8 border-t-2 border-foreground pt-6">
+            <div class="mt-8 border-t border-border pt-6">
                 <div class="flex flex-wrap justify-between gap-4">
                     <div>
                         <p class="section-label text-accent">{% trans "CREDIT NOTE" %}</p>
@@ -100,10 +100,10 @@
     </article>
 
     {% if is_staff_view %}
-        <section class="no-print mt-8 border border-border bg-secondary p-6 text-sm">
+        <section class="no-print mt-8 bg-secondary p-6 text-sm">
             <p class="font-mono-editorial text-xs tracking-widest text-muted-foreground">STAFF</p>
             {% if payment.attention %}
-                <div class="mt-3 border-l-2 border-accent bg-card px-4 py-3">
+                <div class="mt-3 bg-card px-4 py-3">
                     <p class="font-medium">Needs a look: {{ payment.attention }}</p>
                     <form method="post" action="{% url 'billing:manage_payment_handled' payment.reference %}" class="mt-2">
                         {% csrf_token %}

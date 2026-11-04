@@ -11,6 +11,15 @@
   :focus-visible { outline: 2px solid theme('colors.foreground'); outline-offset: 3px; }
   .bg-foreground :focus-visible { outline-color: theme('colors.primary-foreground'); }
   ::selection { background: theme('colors.foreground'); color: theme('colors.primary-foreground'); }
+  /* Headlines wrap into even lines instead of leaving one word stranded
+     (card headlines did, at every width). Inline text-wrap styles still win. */
+  /* The hidden attribute always wins: a display utility (inline-flex, flex…)
+     on the same element otherwise beats preflight's [hidden] rule, and
+     scripts that toggle .hidden (share buttons, the phone dock) silently fail. */
+  [hidden] { display: none !important; }
+  h1, h2, h3 { text-wrap: balance; }
+  /* The comment form's "notify me" checkbox: a 20px box, not the 13px default. */
+  #comments input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: theme('colors.foreground'); }
   /* Pressed feedback the instant a finger lands: phones have no hover, so
      without this a tap shows nothing until the next page loads. */
   button:not(:disabled):active, [type="submit"]:not(:disabled):active, a[class*="bg-"]:active { opacity: 0.8; }
@@ -26,8 +35,8 @@
 /* Topic hashtags (#Dengue) — one component everywhere: article page, cards,
    homepage "Trending", topic pages, search (articles/includes/topic_pill.html).
    A flat paper chip with a hairline border and the "#" in a red disc; it
-   fills red on hover. --hot is the ink variant for the top
-   trending topics. */
+   fills red on hover. --hot (the top trending topics) swaps the hairline
+   for an ink outline: marked, without a solid black block. */
 @layer components {
   .topic-pill {
     @apply inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-card
@@ -53,30 +62,32 @@
   .topic-pill--lg { @apply py-1.5 pl-1.5 pr-4 text-sm; }
   .topic-pill--lg .topic-pill__hash { @apply h-6 w-6 text-[14px]; }
 
-  .topic-pill--hot { @apply border-foreground bg-foreground text-primary-foreground; }
-  .topic-pill--hot .topic-pill__count { @apply bg-white/15 text-white/80; }
-  /* Press red on paper pills (5.4:1); the lighter red only on the ink ones. */
+  .topic-pill--hot { @apply border-foreground; }
+  /* Press red on paper (5.4:1). */
   .topic-pill__rank { @apply font-mono-editorial text-[0.8em] font-bold text-accent; }
-  .topic-pill--hot .topic-pill__rank { @apply text-accent-on-dark; }
   .topic-pill:hover .topic-pill__rank { @apply text-white; }
 }
 
 /* Story flags (articles/includes/story_flags.html) — "Peer-reviewed" and
-   paid-access marks, identical on every card. Square, hairline, typewriter
-   capitals; the peer-reviewed mark is ink (it's a credential), access marks
-   are graphite (they're information). */
+   paid-access marks, identical on every card. Set as typewriter capitals in
+   the metadata line, not boxed: a frame here repeated the list's hairlines at
+   chip scale (border audit, Nov 2026). Flags are split by a middle dot; the
+   peer-reviewed mark is ink and bold (it's a credential), the rest graphite
+   (they're information). */
 @layer components {
-  .story-flags { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
+  .story-flags { display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 0.5rem; row-gap: 0.25rem; }
   .story-flag {
-    display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.125rem 0.375rem;
-    border: 1px solid theme('colors.border'); color: theme('colors.muted-foreground');
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    color: theme('colors.muted-foreground');
     font-family: theme('fontFamily.mono-editorial'); font-size: 0.65rem; line-height: 1.2;
     letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
   }
+  .story-flag + .story-flag::before { content: "\00B7"; margin-right: 0.2rem; color: theme('colors.border'); }
   .story-flag svg { width: 0.75rem; height: 0.75rem; flex-shrink: 0; }
-  .story-flag--reviewed { border-color: theme('colors.foreground'); color: theme('colors.foreground'); }
-  .story-flags--on-ink .story-flag { border-color: rgb(250 250 248 / 0.35); color: rgb(250 250 248 / 0.8); }
-  .story-flags--on-ink .story-flag--reviewed { border-color: rgb(250 250 248 / 0.8); color: theme('colors.primary-foreground'); }
+  .story-flag--reviewed { color: theme('colors.foreground'); font-weight: 700; }
+  .story-flags--on-ink .story-flag { color: rgb(250 250 248 / 0.8); }
+  .story-flags--on-ink .story-flag + .story-flag::before { color: rgb(250 250 248 / 0.35); }
+  .story-flags--on-ink .story-flag--reviewed { color: theme('colors.primary-foreground'); }
   :lang(ne) .story-flag { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; letter-spacing: normal; font-size: 0.75rem; }
 }
 

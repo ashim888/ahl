@@ -59,7 +59,7 @@ picture that shouldn't be cropped (square, tall or very wide — Article.hero_sh
                             <span class="mt-2 block text-2xl sm:text-3xl lg:text-4xl font-semibold text-white/90">{{ parts.subtitle }}</span>{% endif %}
                         </a>
                     </h2>
-                    {% with summary=story.summary %}{% if summary %}<p lang="{{ summary|content_lang }}" class="text-base sm:text-lg leading-relaxed text-white/75 line-clamp-2 sm:line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% with summary=story.summary %}{% if summary %}<p lang="{{ summary|content_lang }}" class="text-base sm:text-lg leading-relaxed text-white/90 line-clamp-2 sm:line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
                     {% include 'articles/includes/story_flags.html' with article=story on_ink=True extra='self-start' %}
                     {% if topics %}
                         <ul class="flex flex-wrap items-center gap-y-2 text-sm text-white/85" aria-label="{% trans 'Topics' %}">
@@ -130,10 +130,10 @@ Most read this week, as a ranked strip under the cover: big red numerals,
 hairlines between the entries, the heavy rule on top that every homepage
 section heading uses.
 {% endcomment %}
-<section class="max-w-7xl mx-auto px-6 pt-10 pb-8">
+<section class="max-w-7xl mx-auto px-6 pt-12 pb-10">
     {% trans "Trending This Week" as title %}
     {% include 'includes/section_heading.html' %}
-    <ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 -mt-4">
+    <ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 -mt-2">
         {% for article in trending_articles %}
             <li class="border-b border-border lg:border-b-0 {% if not forloop.first %}lg:border-l{% endif %} {% if forloop.counter|divisibleby:2 %}sm:border-l lg:border-l{% endif %}">
                 <a href="{% url 'articles:article_detail' article.slug %}" class="group flex items-start gap-4 h-full py-4 sm:pr-4 {% if forloop.counter|divisibleby:2 %}sm:pl-4{% endif %} {% if not forloop.first %}lg:pl-4{% endif %}">
@@ -217,7 +217,7 @@ beside it with small thumbnails. Stacks on phones.
         {% endwith %}
 
         {% if latest_news|length > 1 %}
-        <ol class="lg:col-span-5 border-t-2 border-foreground lg:border-t-0 divide-y divide-border">
+        <ol class="lg:col-span-5 border-t border-border lg:border-t-0 divide-y divide-border">
             {% for article in latest_news|slice:"1:" %}
                 <li class="group relative flex gap-4 py-4 {% if forloop.first %}lg:pt-0{% endif %}">
                     <div class="min-w-0 flex-1">
@@ -225,7 +225,7 @@ beside it with small thumbnails. Stacks on phones.
                             {% if article.article_type != 'news_commentary' %}<span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% endif %}
                             {% include 'articles/includes/story_flags.html' with article=article %}
                         </div>
-                        <h3 lang="{{ article.title|content_lang }}" class="mt-1 font-display text-lg font-bold leading-snug line-clamp-3" style="letter-spacing: -0.005em; text-wrap: pretty;">
+                        <h3 lang="{{ article.title|content_lang }}" class="mt-1 font-display text-lg font-bold leading-snug line-clamp-3" style="letter-spacing: -0.005em; text-wrap: balance;">
                             <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0 group-hover:underline decoration-1 underline-offset-[3px]">{{ article.title }}</a>
                         </h3>
                         <p class="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
@@ -255,16 +255,16 @@ The journal and the board behind it sit straight after the news: journal-backed
 rigor is what sets this site apart, so it comes before opinion and video.
 {% endcomment %}
 {% if research_highlights %}
-<section class="bg-secondary border-t border-border">
+<section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'issues:issue_list' as all_url %}
         {% trans "From the Journal" as title %}{% trans "ALL ISSUES →" as link_label %}{% trans "Papers from our journal. Peer-reviewed means independent experts checked each one before publication." as journal_dek %}
         {% include 'includes/section_heading.html' with link_url=all_url dek=journal_dek %}
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-12">
             {% for article in research_highlights %}
                 {% comment %} One link for the whole card (the title's overlay); only the DOI sits above it. {% endcomment %}
-                <article class="group relative flex flex-col bg-card border border-border p-6 hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow]">
+                <article class="group relative flex flex-col">
                     <p class="flex flex-wrap items-center gap-x-2 font-mono-editorial text-xs text-muted-foreground">
                         <span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% if article.issue %}<span lang="{{ article.issue.title|content_lang }}">{{ article.issue.title }}</span>{% else %}{% trans "Online first" %}{% endif %}{% if article.published_at %} · {{ article.published_at|news_time }}{% endif %}
                     </p>
@@ -287,7 +287,7 @@ rigor is what sets this site apart, so it comes before opinion and video.
 {% comment %} Paper, not newsprint, so it reads as its own band after the journal. One
    link to the board page (members and policies live there). Four people
    get four columns; any other count gets three, so nobody sits alone. {% endcomment %}
-<section class="bg-background">
+<section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% trans "Board &amp; Policies" as title %}{% trans "MEET THE BOARD →" as link_label %}
         {% blocktrans asvar board_dek with journal=JOURNAL_NAME %}{{ journal }} is governed by an independent editorial board. Peer review for original research is conducted externally via OJS.{% endblocktrans %}
@@ -299,7 +299,7 @@ rigor is what sets this site apart, so it comes before opinion and video.
                     {% if member.photo %}
                         <img src="{{ member.photo.url }}" alt="" class="w-14 h-14 shrink-0 object-cover grayscale">
                     {% else %}
-                        <div class="w-14 h-14 shrink-0 border border-foreground flex items-center justify-center" aria-hidden="true">
+                        <div class="w-14 h-14 shrink-0 bg-secondary flex items-center justify-center" aria-hidden="true">
                             <span class="font-display text-xl font-bold">{{ member.last_name_initial }}</span>
                         </div>
                     {% endif %}
@@ -316,21 +316,21 @@ rigor is what sets this site apart, so it comes before opinion and video.
 {% endif %}
 
 {% if opinion_pieces %}
-<section class="border-t border-border">
+<section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'articles:article_list' as all_url %}
         {% trans "Opinion &amp; Commentary" as title %}{% trans "ALL OPINION →" as link_label %}
         {% include 'includes/section_heading.html' with link_url=all_url|add:"?type=editorial" %}
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
+        {# Columns follow the count, so one or two pieces don't sit in a third of the row beside empty space. #}
+        <div class="grid grid-cols-1 {% if opinion_pieces|length >= 3 %}lg:grid-cols-3{% elif opinion_pieces|length == 2 %}lg:grid-cols-2{% else %}max-w-[44rem]{% endif %} gap-x-12 gap-y-12">
             {% for article in opinion_pieces %}
-                <article class="article-link px-0 lg:px-8 first:pl-0 last:pr-0 pb-8 lg:pb-0">
-                    <div class="flex flex-wrap items-center gap-2 mb-3 pt-6 lg:pt-0">{% if article.article_type != 'news_commentary' %}<span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% endif %}<span class="font-mono-editorial text-xs text-muted-foreground">{{ article.published_at|news_time }}</span>{% include 'articles/includes/story_flags.html' with article=article %}</div>
+                <article class="article-link">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">{% if article.article_type != 'news_commentary' %}<span class="section-label text-accent">{{ article.get_article_type_display }}</span>{% endif %}<span class="font-mono-editorial text-xs text-muted-foreground">{{ article.published_at|news_time }}</span>{% include 'articles/includes/story_flags.html' with article=article %}</div>
                     <h3 lang="{{ article.title|content_lang }}" class="font-display text-xl font-bold leading-snug article-title mb-3" style="letter-spacing: -0.01em;">
                         <a href="{% url 'articles:article_detail' article.slug %}">{{ article.title }}</a>
                     </h3>
                     {% with summary=article.summary %}{% if summary %}<p lang="{{ summary|content_lang }}" class="max-w-[65ch] text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-3">{{ summary }}</p>{% endif %}{% endwith %}
-                    <div class="rule-thin mb-3"></div>
                     <div>
                         {% with a=article.articleauthor_set.all|first %}
                             <p class="text-sm font-semibold">
@@ -360,13 +360,13 @@ rigor is what sets this site apart, so it comes before opinion and video.
         {% url 'issues:issue_list' as all_url %}
         {% trans "Special Issues" as title %}{% trans "ALL ISSUES →" as link_label %}
         {% include 'includes/section_heading.html' with link_url=all_url %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
             {% for issue in special_issues %}
                 {% if issue.is_published %}
                     <a href="{% url 'issues:issue_detail' issue.slug %}"
-                       class="group flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow]">
-                        <div class="aspect-video bg-secondary overflow-hidden">{% include 'issues/includes/issue_cover.html' %}</div>
-                        <div class="flex flex-col flex-1 p-5">
+                       class="group flex flex-col">
+                        <div class="relative aspect-video bg-secondary overflow-hidden">{% include 'issues/includes/issue_cover.html' %}</div>
+                        <div class="flex flex-col flex-1 pt-4">
                             <h3 class="font-display text-xl font-bold leading-tight group-hover:underline decoration-1 underline-offset-[3px]" style="letter-spacing: -0.01em;">{{ issue.title }}</h3>
                             {% if issue.editorial_note %}<p class="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-3">{{ issue.editorial_note }}</p>{% endif %}
                             <p class="mt-auto pt-4 font-mono-editorial text-xs text-muted-foreground">
@@ -392,13 +392,13 @@ rigor is what sets this site apart, so it comes before opinion and video.
 {% endif %}
 
 {% if home_courses %}
-<section class="bg-secondary border-y border-border">
+<section>
     <div class="max-w-7xl mx-auto px-6 py-12">
         {% url 'training:course_list' as all_url %}
         {% trans "Learn with us" as title %}{% trans "ALL COURSES →" as link_label %}
         {% include 'includes/section_heading.html' with link_url=all_url %}
         {% comment %} Phones: a sideways rail, one card and a peek of the next, instead of three tall cards stacked. {% endcomment %}
-        <div class="-mx-6 px-6 scroll-px-6 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] lg:mx-0 lg:px-0 lg:pb-0 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible">
+        <div class="-mx-6 px-6 scroll-px-6 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] lg:mx-0 lg:px-0 lg:pb-0 lg:grid lg:grid-cols-3 lg:gap-8 lg:overflow-visible">
             {% for course in home_courses %}
                 <div class="grid shrink-0 basis-[82%] snap-start sm:basis-[46%] lg:basis-auto">{% include 'training/includes/course_card.html' %}</div>
             {% endfor %}
@@ -411,7 +411,7 @@ rigor is what sets this site apart, so it comes before opinion and video.
 The reader-contribution ask closes the page, after the reporting, the journal
 and the board have made the case for who's asking.
 {% endcomment %}
-<section class="border-t-2 border-foreground">
+<section class="bg-secondary">
     <div class="max-w-7xl mx-auto px-6 py-12 md:py-14 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
             <h2 class="font-display text-2xl md:text-4xl font-bold" style="letter-spacing: -0.02em; text-wrap: balance;">

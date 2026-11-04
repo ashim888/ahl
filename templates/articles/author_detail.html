@@ -11,7 +11,7 @@
 {% block content %}
 {% with photo=author.display_photo affiliation=author.display_affiliation department=author.display_department bio=author.display_bio orcid=author.display_orcid interests=author.display_research_interests %}
 <section class="bg-foreground text-primary-foreground">
-    <div class="max-w-6xl mx-auto px-6 py-12 md:py-16 flex flex-col sm:flex-row items-start gap-6">
+    <div class="max-w-7xl mx-auto px-6 py-12 md:py-16 flex flex-col sm:flex-row items-start gap-6">
         {% if photo %}
             <img src="{{ photo.url }}" alt="{{ author.name }}" class="w-24 h-24 md:w-28 md:h-28 shrink-0 object-cover rounded-full border-2 border-primary-foreground/20">
         {% else %}
@@ -39,7 +39,7 @@
     </div>
 </section>
 
-<div class="max-w-6xl mx-auto px-6 py-12">
+<div class="max-w-7xl mx-auto px-6 py-12">
     {% if bio or interests %}
         <div class="grid md:grid-cols-3 gap-8 mb-12">
             {% if bio %}
@@ -59,7 +59,7 @@
 
     {% blocktrans with name=author.name asvar heading %}Articles by {{ name }}{% endblocktrans %}
     {% include 'includes/section_heading.html' with title=heading %}
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
         {% for article in author_articles %}
             {% include 'articles/includes/article_card.html' with show_summary=True %}
         {% empty %}

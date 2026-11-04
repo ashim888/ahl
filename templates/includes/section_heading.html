@@ -1,10 +1,10 @@
 {% comment %}
 Section heading used across the homepage and catalog pages: display title,
-optional one-line dek under it, optional "see all" link on the right, heavy
-rule underneath. No eyebrow: the heading speaks alone. `heading_tag="h1"` when it is the page title. Usage:
+optional one-line dek under it, optional "see all" link on the right, a
+hairline underneath. No eyebrow: the heading speaks alone. `heading_tag="h1"` when it is the page title. Usage:
     {% include 'includes/section_heading.html' with title=_("Latest News") link_url=url link_label=_("ALL NEWS →") dek=_("…") %}
 {% endcomment %}
-<div class="flex items-end justify-between gap-4 pb-4 mb-8 border-b-2 border-foreground">
+<div class="flex items-end justify-between gap-4 pb-3 mb-6 border-b border-border">
     <div>
         <{{ heading_tag|default:"h2" }} class="font-display text-2xl md:text-3xl font-bold" style="letter-spacing: -0.02em;">{{ title }}</{{ heading_tag|default:"h2" }}>
         {% if dek %}<p class="mt-1.5 text-sm text-muted-foreground">{{ dek }}</p>{% endif %}

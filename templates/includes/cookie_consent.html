@@ -10,9 +10,9 @@ data-cookie-settings (footer link, Privacy & data page) reopens this.
 <div id="cookie-consent" role="dialog" aria-live="polite" aria-labelledby="cookie-consent-title"
      class="{% if cookie_choice_made %}hidden {% endif %}fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6"
      data-analytics-id="{{ GOOGLE_ANALYTICS_ID }}" data-cookie-name="cookie_consent">
-    <div class="max-w-3xl mx-auto bg-card border border-foreground shadow-2xl p-5 sm:p-6">
+    <div class="max-w-3xl mx-auto bg-card border border-border shadow-2xl p-5 sm:p-6">
         <p id="cookie-consent-title" class="font-display text-lg font-bold">{% trans "Cookies on this site" %}</p>
-        <p class="mt-2 text-sm text-muted-foreground leading-relaxed">
+        <p class="mt-2 max-w-[40em] text-sm text-muted-foreground leading-relaxed">
             {% trans "We use essential cookies to keep you signed in and the site working. With your permission we’d also like to use analytics cookies (Google Analytics) to understand how the site is used. You can change your mind at any time from “Cookie settings” at the bottom of every page." %}
             {% for legal_page in legal_pages %}{% if legal_page.slug == 'privacy' %}<a href="{{ legal_page.get_absolute_url }}" class="underline hover:text-accent">{% trans "Privacy policy" %}</a>{% endif %}{% endfor %}
         </p>

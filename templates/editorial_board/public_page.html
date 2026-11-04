@@ -4,7 +4,7 @@
 {% block title %}{{ meta_title }}{% endblock %}
 
 {% block content %}
-<div class="border-b-2 border-foreground">
+<div class="border-b border-border">
     <div class="max-w-7xl mx-auto px-6 pt-12 pb-0">
         <p class="section-label text-muted-foreground mb-3">{% trans "ABOUT" %}</p>
         <h1 class="font-display text-5xl font-bold mb-10" style="letter-spacing: -0.025em;">{{ JOURNAL_NAME }}</h1>
@@ -50,7 +50,7 @@
                     properly evidenced.
                 </p>
 
-                <div class="border-t-2 border-foreground pt-8">
+                <div class="mt-12">
                     <h3 class="font-display text-xl font-bold mb-5">Content Categories</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
                         {% for value, label in article_types %}
@@ -64,7 +64,7 @@
             </div>
 
             <aside class="lg:col-span-5 space-y-0">
-                <div class="border-t-2 border-foreground">
+                <div class="border-t border-border">
                     {% for label, value in publication_facts %}
                         <div class="flex justify-between items-baseline py-3 border-b border-border">
                             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{{ label }}</span>
@@ -73,7 +73,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="border border-border p-6 mt-8">
+                <div class="bg-secondary p-6 mt-8">
                     <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-5">CONTACT</p>
                     <p class="font-mono-editorial text-xs text-muted-foreground">General enquiries</p>
                     <a href="mailto:{{ JOURNAL_CONTACT_EMAIL }}" class="text-sm hover:text-accent">{{ JOURNAL_CONTACT_EMAIL }}</a>
@@ -84,20 +84,16 @@
 
     {% if active_tab == 'board' %}
         <div>
-            <div class="flex items-baseline gap-4 mb-8">
-                <div class="w-1 bg-accent" style="height: 20px;"></div>
-                <h2 class="font-display text-2xl font-bold">Editorial Board</h2>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <h2 class="font-display text-2xl font-bold mb-8">Editorial Board</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
                 {% for member in members %}
-                    <div class="border border-border hover:border-foreground transition-colors p-6">
+                    <div>
                         <div class="flex items-start gap-4 mb-4">
                             {% if member.photo %}
                                 <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="w-12 h-12 flex-shrink-0 object-cover">
                             {% else %}
-                                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center"
-                                     style="background: linear-gradient(135deg, #d4d0cb 0%, #6b6860 100%);">
-                                    <span class="font-display font-bold text-white text-base">{{ member.last_name_initial }}</span>
+                                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-secondary">
+                                    <span class="font-display font-bold text-base">{{ member.last_name_initial }}</span>
                                 </div>
                             {% endif %}
                             <div>
@@ -136,16 +132,16 @@
                 </div>
             </div>
 
-            <div class="space-y-2" id="policy-accordion">
+            <div class="divide-y divide-border border-y border-border" id="policy-accordion">
                 {% for policy in policies %}
-                    <div class="border border-border policy-panel">
-                        <button type="button" class="policy-toggle w-full flex items-center justify-between px-7 py-5 text-left hover:bg-secondary transition-colors">
+                    <div class="policy-panel">
+                        <button type="button" class="policy-toggle w-full flex items-center justify-between px-4 sm:px-6 py-5 text-left hover:bg-secondary transition-colors">
                             <span class="font-display text-lg font-bold" style="letter-spacing: -0.01em;">{{ policy.title }}</span>
                             <span class="font-mono-editorial text-xs text-muted-foreground policy-toggle-label">+ EXPAND</span>
                         </button>
-                        <div class="policy-body border-t border-border hidden">
+                        <div class="policy-body hidden pb-4">
                             {% for section in policy.sections %}
-                                <div class="px-7 py-6 {% if not forloop.last %}border-b border-border{% endif %}">
+                                <div class="px-4 sm:px-6 py-4">
                                     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
                                         <div class="lg:col-span-1">
                                             <p class="font-mono-editorial text-xs text-accent tracking-wide leading-relaxed">{{ section.heading }}</p>

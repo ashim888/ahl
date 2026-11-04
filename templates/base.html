@@ -65,11 +65,11 @@
         an equal-specificity class rule later in document order overrides an
         earlier one. Kept in sync with tailwind.config.js anyway so the two
         don't silently drift apart. {% endcomment %}
-        body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; background-color: #fafaf8; color: #111110; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; background-color: #ffffff; color: #111110; -webkit-font-smoothing: antialiased; }
         .font-display { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; }
         .font-mono-editorial { font-family: 'Space Mono', 'Noto Sans Devanagari', monospace; }
         .rule-editorial { border-top: 2px solid #111110; }
-        .rule-thin { border-top: 1px solid #d4d0cb; }
+        .rule-thin { border-top: 1px solid #e6e3df; }
         .section-label { font-family: 'Space Mono', 'Noto Sans Devanagari', monospace; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700; }
         .drop-cap::first-letter { font-family: 'Playfair Display', 'Noto Serif Devanagari', serif; font-size: 4.5rem; font-weight: 700; float: left; line-height: 0.8; margin-right: 0.08em; margin-top: 0.06em; }
         .article-link:hover .article-title { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
@@ -108,17 +108,19 @@
            Mangal/Nirmala on Windows) — a different design on every device,
            and never matching the rest of the page. */
         .prose-article { font-family: Georgia, 'Noto Serif Devanagari', serif; }
-        .prose-article h2 { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; font-size: 1.5rem; font-weight: 700; margin-top: 3rem; margin-bottom: 1.25rem; padding-top: 2rem; border-top: 1px solid #d4d0cb; letter-spacing: -0.015em; }
+        /* The reference list below an article reads in the body's serif, not UI sans. */
+        .prose-refs { font-family: Georgia, 'Noto Serif Devanagari', serif; text-wrap: pretty; }
+        .prose-article h2 { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; font-size: 1.5rem; font-weight: 700; margin-top: 3.25rem; margin-bottom: 1rem; letter-spacing: -0.015em; }
         .prose-article h3 { font-family: 'Playfair Display', 'Noto Serif Devanagari', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-        /* Text elements only (not figure/table/ad blocks, which stay full
-           column width) get a narrower, ~68-character measure — the column
-           itself (~699px at the lg breakpoint) is wider than ideal for
-           sustained reading at this font size. line-height tightened from
-           1.85 to 1.7 to match — very airy line-height needs a wide measure
-           to still feel balanced; a narrower one reads better a touch tighter. */
-        .prose-article p, .prose-article ul, .prose-article ol, .prose-article blockquote { max-width: 68ch; }
+        /* Text elements fill the article column (~699px at 1280) at the
+           default reader size (1.125 × 17px ≈ 19px, so about 36.5em: close to
+           a 68-character Latin line and ~35em of Devanagari). The cap only
+           bites at the smaller A− sizes, where an uncapped line would run
+           long. Widened from min(68ch, 35em) in Nov 2026, which left ~100px
+           of empty column before the sidebar rule. */
+        .prose-article p, .prose-article ul, .prose-article ol, .prose-article blockquote { max-width: min(76ch, 40em); }
         /* --reader-scale is set by the A− / A / A+ text-size control on the
-           article page (article_detail.html), 1 = default. */
+           article page (article_detail.html); 1.125 is the default, set inline on the article. */
         .prose-article p { margin-top: 1.5rem; font-size: calc(1.0625rem * var(--reader-scale, 1)); line-height: 1.7; }
         /* Editors paste text-align: justify from Word; on a phone it opens rivers between
            Devanagari words. Body text is set ragged-right, whatever the paste says. */
@@ -134,8 +136,8 @@
         .prose-article li { margin-top: 0.25rem; }
         .prose-article blockquote { border-left: 4px solid #c0392b; padding-left: 1.5rem; margin: 2.5rem 0; font-family: 'Playfair Display', 'Noto Serif Devanagari', serif; font-style: italic; font-size: calc(1.5rem * var(--reader-scale, 1)); font-weight: 600; line-height: 1.35; }
         .prose-article table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.875rem; }
-        .prose-article th, .prose-article td { border: 1px solid #d4d0cb; padding: 0.5rem 0.75rem; text-align: left; }
-        .prose-article th { background: #f0ede8; font-weight: 600; }
+        .prose-article th, .prose-article td { border: 1px solid #e6e3df; padding: 0.5rem 0.75rem; text-align: left; }
+        .prose-article th { background: #f5f4f1; font-weight: 600; }
         .prose-article figure { margin: 2.5rem 0; }
         .prose-article figcaption { margin-top: 0.75rem; font-size: 0.75rem; color: #6b6860; }
         .prose-article sup { vertical-align: super; font-size: 0.7em; }
@@ -154,7 +156,7 @@
         }
         .prose-article pre code { font-family: 'Space Mono', monospace; background: none; padding: 0; color: inherit; }
         .prose-article code {
-            font-family: 'Space Mono', monospace; background: #f0ede8; color: #111110;
+            font-family: 'Space Mono', monospace; background: #f5f4f1; color: #111110;
             padding: 0.15em 0.4em; font-size: 0.875em; border-radius: 0;
         }
 
@@ -213,6 +215,8 @@
         :lang(ne) .prose-article li { line-height: 1.9; }
         :lang(ne) .prose-article h2,
         :lang(ne) .prose-article h3 { line-height: 1.5; }
+        :lang(ne) .prose-article h2 { font-size: 1.75rem; }
+        :lang(ne) .prose-article h3 { font-size: 1.125rem; font-weight: 700; }
         :lang(ne) .prose-article > p:first-of-type::first-letter {
             font-size: inherit; font-weight: inherit; float: none; line-height: inherit; margin: 0;
         }
@@ -299,7 +303,7 @@
         </div>
     </div>
 
-    <header id="site-header" class="bg-background border-b-2 border-foreground sticky top-0 z-50">
+    <header id="site-header" class="bg-background border-b border-border sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6">
             <div class="header-top-collapse">
             <div class="header-top-collapse-inner flex items-center justify-between py-4 sm:py-5 border-b border-border">
@@ -403,7 +407,7 @@
                             {% endif %}
                         </a>
                     {% else %}
-                        <a href="{% url 'users:login' %}" class="hidden lg:inline whitespace-nowrap font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-foreground">
+                        <a href="{% url 'users:login' %}" class="relative hidden lg:inline whitespace-nowrap font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-foreground after:absolute after:-inset-x-2 after:-inset-y-3.5 after:content-['']">
                             {% trans "LOGIN" %}
                         </a>
                         <a href="{% url 'users:register' %}"
@@ -480,13 +484,17 @@
     </header>
 
     {% if breaking_news %}
-        {# Breaking-news banner — articles/breaking.py. Dismissal is remembered per story on this device. #}
-        <div id="breaking-banner" data-breaking-id="{{ breaking_news.pk }}" class="bg-accent text-white" role="region" aria-label="{% trans 'Breaking news' %}">
-            <div class="max-w-7xl mx-auto px-6 py-2.5 flex items-center gap-3">
-                <span class="shrink-0 inline-flex items-center gap-1.5 font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-white text-accent px-2 py-0.5">
+        {# Breaking-news banner — articles/breaking.py. Dismissal is remembered per set of stories on this device, so a new story brings it back. #}
+        <div id="breaking-banner" data-breaking-id="{% for story in breaking_news %}{{ story.pk }}{% if not forloop.last %},{% endif %}{% endfor %}" class="bg-accent text-white" role="region" aria-label="{% trans 'Breaking news' %}">
+            <div class="max-w-7xl mx-auto px-6 py-2.5 flex items-start gap-3">
+                <span class="shrink-0 mt-0.5 inline-flex items-center gap-1.5 font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-white text-accent px-2 py-0.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-accent" aria-hidden="true"></span>{% trans "BREAKING" %}
                 </span>
-                <a href="{{ breaking_news.url }}" class="flex-1 min-w-0 truncate text-sm font-semibold hover:underline underline-offset-2">{{ breaking_news.title }}</a>
+                <ul class="flex-1 min-w-0 space-y-1">
+                    {% for story in breaking_news %}
+                        <li class="truncate"><a href="{{ story.url }}" class="text-sm font-semibold hover:underline underline-offset-2">{{ story.title }}</a></li>
+                    {% endfor %}
+                </ul>
                 <button type="button" id="breaking-dismiss" class="shrink-0 text-white/80 hover:text-white text-lg leading-none" aria-label="{% trans 'Dismiss' %}">&times;</button>
             </div>
         </div>
@@ -506,16 +514,15 @@
     {% endwith %}
 
     {% comment %}Pages about money or terms (checkout, receipts, billing, policies) empty these blocks: no ads there.{% endcomment %}
-    {% block header_ad %}{% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center border-b border-border bg-secondary/40 py-2' %}{% endblock %}
+    {% block header_ad %}{% ad_slot 'header_leaderboard' wrapper_class='hidden md:flex md:justify-center bg-secondary/40 py-2' %}{% endblock %}
 
     <main id="main" tabindex="-1" class="flex-1 focus:outline-none">
         {% if messages %}
             <div class="max-w-7xl mx-auto px-6 pt-6 space-y-2">
                 {% for message in messages %}
-                    <div class="px-4 py-3 text-sm border font-mono-editorial
-                                {% if message.tags == 'success' %}bg-secondary border-foreground text-foreground
-                                {% elif message.tags == 'error' %}bg-accent/10 border-accent text-accent
-                                {% else %}bg-secondary border-border text-foreground{% endif %}">
+                    <div class="px-4 py-3 text-sm font-mono-editorial
+                                {% if message.tags == 'error' %}border border-accent bg-accent/10 text-accent
+                                {% else %}bg-secondary text-foreground{% endif %}">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -540,18 +547,39 @@
             if (!dock || !window.ResizeObserver) return;
             new ResizeObserver(function () { document.body.style.paddingBottom = dock.offsetHeight ? dock.offsetHeight + 'px' : ''; }).observe(dock);
         })();
+        // The dock (subscribe bar + anchor ad) waits until the reader is ~40% down the page, so it
+        // never covers the headline or byline they came for, and never shares the foot of the screen
+        // with the cookie banner (approved by the owner, Nov 2026). Without JavaScript it shows as before.
+        (function () {
+            var dock = document.querySelector('[data-mobile-dock]');
+            if (!dock) return;
+            var cookie = document.getElementById('cookie-consent');
+            var reached = false;
+            dock.hidden = true;
+            function cookieOpen() { return cookie && !cookie.classList.contains('hidden'); }
+            function update() {
+                if (!reached) {
+                    var max = document.documentElement.scrollHeight - window.innerHeight;
+                    reached = max <= 0 || window.scrollY / max >= 0.4;
+                }
+                dock.hidden = !reached || cookieOpen();
+            }
+            window.addEventListener('scroll', update, {passive: true});
+            if (cookie && window.MutationObserver) new MutationObserver(update).observe(cookie, {attributes: true, attributeFilter: ['class']});
+            update();
+        })();
         </script>
     {% endblock %}
 
-    <footer class="bg-foreground text-primary-foreground">
-        <div class="max-w-7xl mx-auto px-6 py-10">
-            <div class="border-b border-white/10 pb-8 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <footer class="bg-background text-foreground border-t border-border">
+        <div class="max-w-7xl mx-auto px-6 pt-12 pb-8">
+            <div class="mb-14 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest opacity-70 mb-1">{% trans 'NEWSLETTER' %}</p>
-                    <p class="text-sm opacity-70">{% trans "Free — the latest articles and news, straight to your inbox." %}</p>
+                    <p class="font-display text-xl font-bold">{% trans 'Newsletter' %}</p>
+                    <p class="mt-1 text-sm text-muted-foreground">{% trans "Free — the latest articles and news, straight to your inbox." %}</p>
                 </div>
                 {% if newsletter_subscribed %}
-                    <p class="text-sm opacity-70">{% trans "You’re subscribed — thank you." %}</p>
+                    <p class="text-sm text-muted-foreground">{% trans "You’re subscribed — thank you." %}</p>
                 {% else %}
                 <div class="w-full md:w-auto">
                 <form method="post" action="{% url 'newsletter:subscribe' %}" class="flex gap-2 w-full md:w-auto">
@@ -560,52 +588,56 @@
                     <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;" aria-hidden="true">
                     <label for="footer-newsletter-email" class="sr-only">{% trans "Your email address" %}</label>
                     <input type="email" name="email" id="footer-newsletter-email" autocomplete="email" required placeholder="you@example.com"
-                           class="flex-1 md:w-64 px-3 py-2 text-sm bg-white/10 border border-white/50 text-primary-foreground placeholder-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground">
+                           class="flex-1 md:w-72 px-3 py-2.5 text-sm bg-card border border-input-border text-foreground">
                     <button type="submit"
-                            class="font-mono-editorial text-xs tracking-widest bg-primary-foreground text-foreground px-4 py-2 hover:opacity-80 transition-opacity whitespace-nowrap">
+                            class="font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors whitespace-nowrap">
                         {% trans 'SIGN UP FREE' %}
                     </button>
                 </form>
-                {% include 'includes/privacy_notice.html' with kind='newsletter' class='mt-2 text-xs opacity-70 md:max-w-sm' %}
+                {% include 'includes/privacy_notice.html' with kind='newsletter' class='mt-2 text-xs text-muted-foreground md:max-w-sm' %}
                 </div>
                 {% endif %}
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-8 mb-10">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-10 mb-12">
+                <div class="col-span-2 md:col-span-1">
+                    <a href="{% url 'articles:home' %}" class="font-display text-xl font-black leading-none" style="letter-spacing: -0.02em;">{{ JOURNAL_NAME|upper }}</a>
+                    <p class="mt-2 max-w-xs text-sm text-muted-foreground">{% trans JOURNAL_TAGLINE as tagline %}{{ tagline }}</p>
+                </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest text-primary-foreground border-b border-white/20 pb-2 mb-4">{% trans 'SECTIONS' %}</p>
-                    <a href="{% url 'articles:home' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Home" %}</a>
+                    <p class="font-mono-editorial text-xs tracking-widest text-foreground mb-4">{% trans 'SECTIONS' %}</p>
+                    <a href="{% url 'articles:home' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Home" %}</a>
                     {% for section in nav_sections %}
-                        <a href="{{ section.nav_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ section.name }}</a>
+                        <a href="{{ section.nav_url }}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{{ section.name }}</a>
                     {% endfor %}
-                    <a href="{% url 'billing:plan_browse' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Subscribe" %}</a>
+                    <a href="{% url 'billing:plan_browse' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Subscribe" %}</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest text-primary-foreground border-b border-white/20 pb-2 mb-4">{% trans 'JOURNAL' %}</p>
-                    <a href="{% url 'issues:issue_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Issue Archive" %}</a>
-                    <a href="{% url 'articles:archive_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Article Archive" %}</a>
-                    <a href="{% url 'articles:topic_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Topics" %}</a>
-                    <a href="{% url 'articles:article_list' %}?type=original_research" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Research" %}</a>
-                    <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Policy" %}</a>
+                    <p class="font-mono-editorial text-xs tracking-widest text-foreground mb-4">{% trans 'JOURNAL' %}</p>
+                    <a href="{% url 'issues:issue_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Issue Archive" %}</a>
+                    <a href="{% url 'articles:archive_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Article Archive" %}</a>
+                    <a href="{% url 'articles:topic_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Topics" %}</a>
+                    <a href="{% url 'articles:article_list' %}?type=original_research" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Research" %}</a>
+                    <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Editorial Policy" %}</a>
                 </div>
                 <div>
-                    <p class="font-mono-editorial text-xs tracking-widest text-primary-foreground border-b border-white/20 pb-2 mb-4">{% trans 'ABOUT' %}</p>
-                    <a href="{% url 'editorial_board:public_list' %}?tab=board" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Editorial Board" %}</a>
-                    {% if faq_page %}<a href="{{ faq_page.get_absolute_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "FAQ" %}</a>{% endif %}
-                    <a href="{% url 'users:register' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Register" %}</a>
+                    <p class="font-mono-editorial text-xs tracking-widest text-foreground mb-4">{% trans 'ABOUT' %}</p>
+                    <a href="{% url 'editorial_board:public_list' %}?tab=board" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Editorial Board" %}</a>
+                    {% if faq_page %}<a href="{{ faq_page.get_absolute_url }}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "FAQ" %}</a>{% endif %}
+                    <a href="{% url 'users:register' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Register" %}</a>
                     {% for legal_page in legal_pages %}
-                        <a href="{{ legal_page.get_absolute_url }}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{{ legal_page.title }}</a>
+                        <a href="{{ legal_page.get_absolute_url }}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{{ legal_page.title }}</a>
                     {% endfor %}
-                    <a href="{% url 'articles:correction_list' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Corrections" %}</a>
-                    <a href="#" data-cookie-settings class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Cookie settings" %}</a>
-                    {% if user.is_authenticated %}<a href="{% url 'users:privacy' %}" class="block text-sm opacity-60 hover:opacity-100 mb-2">{% trans "Privacy & your data" %}</a>{% endif %}
+                    <a href="{% url 'articles:correction_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Corrections" %}</a>
+                    <a href="#" data-cookie-settings class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Cookie settings" %}</a>
+                    {% if user.is_authenticated %}<a href="{% url 'users:privacy' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Privacy & your data" %}</a>{% endif %}
                 </div>
             </div>
-            <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-                <p class="font-mono-editorial text-xs opacity-65">
+            <div class="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+                <p class="font-mono-editorial text-xs text-muted-foreground">
                     &copy; {% now "Y" %} {{ BUSINESS_LEGAL_NAME|default:JOURNAL_NAME_EN }}. {% trans "All rights reserved." %}
                     {% if BUSINESS_PAN %}· PAN {{ BUSINESS_PAN }}{% endif %}{% if BUSINESS_ADDRESS %} · {{ BUSINESS_ADDRESS }}{% endif %}
                 </p>
-                {% if JOURNAL_ISSN %}<p class="font-mono-editorial text-xs opacity-65">ISSN {{ JOURNAL_ISSN }}</p>{% endif %}
+                {% if JOURNAL_ISSN %}<p class="font-mono-editorial text-xs text-muted-foreground">ISSN {{ JOURNAL_ISSN }}</p>{% endif %}
             </div>
         </div>
     </footer>

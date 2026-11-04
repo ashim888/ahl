@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-6 py-14">
-    <div class="flex items-center justify-between pb-6 border-b-2 border-foreground">
+    <div class="flex items-center justify-between pb-6">
         <div>
             <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{{ profile_user.get_full_name }}</h1>
             <p class="font-mono-editorial text-xs text-muted-foreground mt-1">{{ profile_user.email }}</p>
@@ -16,13 +16,13 @@
     </div>
 
     <div class="mt-2">
-        <div class="flex justify-between items-baseline py-3 border-b border-border">
+        <div class="grid grid-cols-1 sm:grid-cols-[11rem_1fr] gap-x-6 gap-y-0.5 py-2">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Role" %}</span>
-            <span class="text-sm font-medium text-right">{{ profile_user.get_role_display }}</span>
+            <span class="text-sm font-medium">{{ profile_user.get_role_display }}</span>
         </div>
-        <div class="flex justify-between items-baseline py-3 border-b border-border">
+        <div class="grid grid-cols-1 sm:grid-cols-[11rem_1fr] gap-x-6 gap-y-0.5 py-2">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Verification status" %}</span>
-            <span class="text-sm font-medium text-right">
+            <span class="text-sm font-medium">
                 {{ profile_user.get_verification_status_display }}
                 {% if profile_user == user and user.can_request_verification %}
                     · <a href="{% url 'users:pending_verification' %}" class="underline hover:text-accent">{% trans "Request verification" %}</a>
@@ -31,25 +31,25 @@
                 {% endif %}
             </span>
         </div>
-        <div class="flex justify-between items-baseline py-3 border-b border-border">
+        <div class="grid grid-cols-1 sm:grid-cols-[11rem_1fr] gap-x-6 gap-y-0.5 py-2">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Affiliation" %}</span>
-            <span class="text-sm font-medium text-right">{{ profile_user.affiliation|default:"—" }}</span>
+            <span class="text-sm font-medium">{{ profile_user.affiliation|default:"—" }}</span>
         </div>
-        <div class="flex justify-between items-baseline py-3 border-b border-border">
+        <div class="grid grid-cols-1 sm:grid-cols-[11rem_1fr] gap-x-6 gap-y-0.5 py-2">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Department" %}</span>
-            <span class="text-sm font-medium text-right">{{ profile_user.department|default:"—" }}</span>
+            <span class="text-sm font-medium">{{ profile_user.department|default:"—" }}</span>
         </div>
-        <div class="flex justify-between items-baseline py-3 border-b border-border">
+        <div class="grid grid-cols-1 sm:grid-cols-[11rem_1fr] gap-x-6 gap-y-0.5 py-2">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">ORCID</span>
-            <span class="text-sm font-medium text-right">{{ profile_user.orcid|default:"—" }}</span>
+            <span class="text-sm font-medium">{{ profile_user.orcid|default:"—" }}</span>
         </div>
-        <div class="flex justify-between items-baseline py-3 border-b border-border">
+        <div class="grid grid-cols-1 sm:grid-cols-[11rem_1fr] gap-x-6 gap-y-0.5 py-2">
             <span class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Research interests" %}</span>
-            <span class="text-sm font-medium text-right">{{ profile_user.research_interests|default:"—" }}</span>
+            <span class="text-sm font-medium">{{ profile_user.research_interests|default:"—" }}</span>
         </div>
     </div>
 
-    <div class="mt-8 border border-border bg-card px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="mt-8 bg-secondary px-5 py-4 flex flex-wrap items-center justify-between gap-4">
         <div>
             <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "SUBSCRIPTION" %}</p>
             <p class="mt-1 text-sm font-medium">
@@ -82,7 +82,7 @@
             {% endif %}
         </div>
         {% if followed_sections %}
-            <div class="divide-y divide-border border-t border-border">
+            <div class="divide-y divide-border">
                 {% for section in followed_sections %}
                     <div class="py-3 flex items-center justify-between gap-4">
                         <a href="{{ section.nav_url }}" class="text-sm font-medium hover:text-accent">{{ section.name }}</a>
@@ -115,7 +115,7 @@
             {% endif %}
         </div>
         {% if followed_keywords %}
-            <div class="divide-y divide-border border-t border-border">
+            <div class="divide-y divide-border">
                 {% for follow in followed_keywords %}
                     <div class="py-3 flex items-center justify-between gap-4">
                         <a href="{% url 'articles:article_list' %}?keyword={{ follow.keyword.slug }}" class="text-sm font-medium hover:text-accent">
@@ -147,7 +147,7 @@
             {% endif %}
         </div>
         {% if saved_articles %}
-            <div class="divide-y divide-border border-t border-border">
+            <div class="divide-y divide-border">
                 {% for bookmark in saved_articles %}
                     <div class="py-3 flex items-center justify-between gap-4">
                         <a href="{% url 'articles:article_detail' bookmark.article.slug %}" class="text-sm font-medium hover:text-accent truncate">
@@ -174,7 +174,7 @@
             <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest">{% trans "GIFTED ARTICLES" %}</p>
         </div>
         {% if active_gifts %}
-            <div class="divide-y divide-border border-t border-border">
+            <div class="divide-y divide-border">
                 {% for gift in active_gifts %}
                     <div class="py-3 flex items-center justify-between gap-4">
                         <a href="{% url 'articles:article_detail' gift.article.slug %}" class="text-sm font-medium hover:text-accent truncate">
@@ -204,7 +204,7 @@
             </a>
         </div>
         {% if story_pitches %}
-            <div class="divide-y divide-border border-t border-border">
+            <div class="divide-y divide-border">
                 {% for pitch in story_pitches %}
                     <div class="py-3 flex items-center justify-between gap-4">
                         <span class="text-sm font-medium">{{ pitch.title }}</span>
@@ -230,7 +230,7 @@
             </a>
         </div>
         {% if enrollments %}
-            <div class="divide-y divide-border border-t border-border">
+            <div class="divide-y divide-border">
                 {% for enrollment in enrollments %}
                     <div class="py-3 flex items-center justify-between gap-4">
                         <a href="{% url 'training:course_detail' enrollment.course.pk %}" class="text-sm font-medium hover:text-accent">

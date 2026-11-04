@@ -3503,6 +3503,34 @@ class SearchSocialAndBreakingNewsTests(TestCase):
         self.assertFalse(article.is_breaking)
         self.assertIsNone(article.breaking_until)
 
+    def test_banner_lists_several_breaking_stories_newest_first_capped(self):
+        from .breaking import MAX_STORIES
+
+        now = timezone.now()
+        until = now + datetime.timedelta(hours=2)
+        for i in range(MAX_STORIES + 1):
+            self._live(title=f'Story {i}', slug=f'story-{i}', breaking_until=until,
+                       published_at=now - datetime.timedelta(minutes=10 - i))
+        home = self.client.get(reverse('articles:home')).content.decode()
+        banner = home[home.index('id="breaking-banner"'):home.index('id="breaking-dismiss"')]
+        self.assertNotIn('Story 0', banner)  # oldest falls off past the cap
+        positions = [banner.index(f'Story {i}') for i in range(MAX_STORIES, 0, -1)]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_breaking_can_run_48_hours_and_end_option_only_while_running(self):
+        from .forms import ArticleForm, edit_token_for
+
+        article = self._live()
+        self.assertNotIn('off', dict(ArticleForm(instance=article).fields['breaking_hours'].choices))
+        self.client.force_login(self.editor)
+        url = reverse('articles:manage_article_update', args=[article.slug])
+        self.client.post(url, {'title': article.title, 'slug': article.slug, 'article_type': 'news_commentary',
+                               'access_type': 'open_access', 'html_content': '<p>Rivers are rising.</p>',
+                               'action': 'publish', 'breaking_hours': '48', 'edit_token': edit_token_for(article)})
+        article.refresh_from_db()
+        self.assertAlmostEqual((article.breaking_until - timezone.now()).total_seconds(), 48 * 3600, delta=120)
+        self.assertIn('off', dict(ArticleForm(instance=article).fields['breaking_hours'].choices))
+
 
 class PublishPermissionTests(TestCase):
     """Only publishers (EiC/Admin, or Editors granted "Can publish") put

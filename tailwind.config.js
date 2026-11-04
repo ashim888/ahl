@@ -4,13 +4,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#fafaf8',
+        background: '#ffffff',
         foreground: '#111110',
         card: '#ffffff',
         'card-foreground': '#111110',
         primary: '#111110',
         'primary-foreground': '#fafaf8',
-        secondary: '#f0ede8',
+        secondary: '#f5f4f1',
         'secondary-foreground': '#111110',
         muted: '#e8e5e0',
         'muted-foreground': '#6b6860',
@@ -24,7 +24,7 @@ module.exports = {
         // Form field borders: 3.3:1 on paper (WCAG non-text contrast); `border` stays the lighter rule colour.
         'input-border': '#8f8a82',
         coral: '#f4a08f',
-        border: '#d4d0cb',
+        border: '#e6e3df',
       },
       fontFamily: {
         // Noto Sans/Serif Devanagari before the Latin fallback — Playfair

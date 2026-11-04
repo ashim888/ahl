@@ -38,61 +38,7 @@ takes the featured image's place. youtube-nocookie.com, so YouTube sets no
 cookies until the reader presses play. Gated like the text: a reader who
 can't read the story sees the thumbnail and a lock pointing to the paywall.
 {% endcomment %}
-{% if article.has_video %}
-    <figure class="max-w-5xl mx-auto sm:px-6 sm:pt-6">
-        {% if show_full_text %}
-            <div class="relative w-full bg-black overflow-hidden" style="aspect-ratio: 16 / 9;">
-                <iframe src="{{ article.video_embed_url }}" title="{{ article.title }}"
-                        class="absolute inset-0 w-full h-full" frameborder="0" loading="lazy"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-            </div>
-        {% else %}
-            <a href="#paywall" class="relative block w-full bg-black overflow-hidden group" style="aspect-ratio: 16 / 9;">
-                {% if article.card_image_url %}
-                    <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 1024px) 66vw, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
-                         class="w-full h-full object-cover opacity-60">
-                {% endif %}
-                <span class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
-                    <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
-                    <span class="font-mono-editorial text-xs tracking-widest bg-black/60 px-3 py-1.5 group-hover:bg-accent transition-colors">
-                        {% if article.access_type == 'pay_per_article' %}{% trans "BUY OR SUBSCRIBE TO WATCH" %}{% else %}{% trans "SUBSCRIBE TO WATCH" %}{% endif %}
-                    </span>
-                </span>
-            </a>
-        {% endif %}
-        {% if article.featured_image_caption or article.featured_image_credit %}
-            <figcaption class="px-6 sm:px-0 pt-2 text-xs text-muted-foreground">
-                {{ article.featured_image_caption }}{% if article.featured_image_caption and article.featured_image_credit %} {% endif %}{% if article.featured_image_credit %}<span class="font-mono-editorial tracking-wide">{% blocktrans with credit=article.featured_image_credit %}Video: {{ credit }}{% endblocktrans %}</span>{% endif %}
-            </figcaption>
-        {% endif %}
-    </figure>
-{% elif article.featured_image %}
-    <figure>
-        {% if article.featured_image_shows_whole %}
-            {# Square/tall images (diagrams, charts, posters) are shown whole, centred on a blurred copy of themselves (Article.featured_image_fit). #}
-            <div class="relative w-full overflow-hidden bg-foreground">
-                {% with wash=article.featured_image.url|backdrop %}<img src="{{ wash|default:article.featured_image.url }}" alt="" aria-hidden="true"
-                     class="absolute inset-0 w-full h-full object-cover scale-125 opacity-50{% if not wash %} blur-2xl{% endif %}">{% endwith %}
-                <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="(min-width: 768px) 60vw, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
-                     {% if article.featured_image_width %}width="{{ article.featured_image_width }}" height="{{ article.featured_image_height }}"{% endif %}
-                     class="relative mx-auto block w-auto max-w-full h-auto object-contain py-6 sm:py-10"
-                     style="max-height: min(52vh, 760px);">
-            </div>
-        {% else %}
-            {# Capped by screen height too, so the headline still starts within the first screen on a laptop. #}
-            <div class="w-full overflow-hidden bg-muted" style="height: min(56vw, 44vh, 520px);">
-                <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="100vw" alt="{{ article.featured_image_alt|default:article.title }}"
-                     class="w-full h-full object-cover" style="filter: grayscale(15%); object-position: {{ article.featured_image_position }};">
-            </div>
-        {% endif %}
-        {% if article.featured_image_caption or article.featured_image_credit %}
-            <figcaption class="max-w-7xl mx-auto px-6 pt-2 text-xs text-muted-foreground">
-                {{ article.featured_image_caption }}{% if article.featured_image_caption and article.featured_image_credit %} {% endif %}{% if article.featured_image_credit %}<span class="font-mono-editorial tracking-wide">{% blocktrans with credit=article.featured_image_credit %}Photo: {{ credit }}{% endblocktrans %}</span>{% endif %}
-            </figcaption>
-        {% endif %}
-    </figure>
-{% endif %}
+
 
 <div class="max-w-7xl mx-auto px-6">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12">
@@ -100,31 +46,31 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
         <aside class="hidden lg:flex lg:col-span-1 flex-col items-center pt-16" aria-label="{% trans 'Share' %}">
             <div class="sticky top-24 flex flex-col gap-3">
                 <button type="button" data-share="facebook"
-                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on Facebook' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">FB</span><span class="sr-only">{% trans 'Share on Facebook' %}</span>
+                        class="w-9 h-9 text-muted-foreground flex items-center justify-center hover:bg-secondary hover:text-foreground transition-colors" title="{% trans 'Share on Facebook' %}">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2h-3a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg><span class="sr-only">{% trans 'Share on Facebook' %}</span>
                 </button>
                 <button type="button" data-share="whatsapp"
-                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on WhatsApp' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">WA</span><span class="sr-only">{% trans 'Share on WhatsApp' %}</span>
+                        class="w-9 h-9 text-muted-foreground flex items-center justify-center hover:bg-secondary hover:text-foreground transition-colors" title="{% trans 'Share on WhatsApp' %}">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l1.7-4.6A9 9 0 1 1 8 19.6z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a4 4 0 0 1-1.8-1.8l.8-1-1-2z"/></svg><span class="sr-only">{% trans 'Share on WhatsApp' %}</span>
                 </button>
                 <button type="button" data-share="x"
-                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on X' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">X</span><span class="sr-only">{% trans 'Share on X' %}</span>
+                        class="w-9 h-9 text-muted-foreground flex items-center justify-center hover:bg-secondary hover:text-foreground transition-colors" title="{% trans 'Share on X' %}">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h4.5L20 20h-4.5z"/><path d="M20 4l-6.6 7.5M4 20l6.6-7.5"/></svg><span class="sr-only">{% trans 'Share on X' %}</span>
                 </button>
                 <button type="button" data-share="linkedin"
-                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" title="{% trans 'Share on LinkedIn' %}">
-                    <span aria-hidden="true" class="font-mono-editorial text-[0.65rem] font-bold">LI</span><span class="sr-only">{% trans 'Share on LinkedIn' %}</span>
+                        class="w-9 h-9 text-muted-foreground flex items-center justify-center hover:bg-secondary hover:text-foreground transition-colors" title="{% trans 'Share on LinkedIn' %}">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg><span class="sr-only">{% trans 'Share on LinkedIn' %}</span>
                 </button>
                 <button type="button" id="copy-link-btn" data-copy-url="{{ canonical_url }}"
-                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Copy link' %}" title="{% trans 'Copy link' %}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        class="w-9 h-9 text-muted-foreground flex items-center justify-center hover:bg-secondary hover:text-foreground transition-colors" aria-label="{% trans 'Copy link' %}" title="{% trans 'Copy link' %}">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
                     </svg>
                 </button>
                 <button type="button" id="copy-short-link-btn" data-copy-url="{{ short_url }}"
-                        class="w-8 h-8 border border-border flex items-center justify-center hover:border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors" aria-label="{% trans 'Copy short link' %}" title="{% trans 'Copy short link' %}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        class="w-9 h-9 text-muted-foreground flex items-center justify-center hover:bg-secondary hover:text-foreground transition-colors" aria-label="{% trans 'Copy short link' %}" title="{% trans 'Copy short link' %}">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M13.5 6h5a4 4 0 1 1 0 8h-3M10.5 18h-5a4 4 0 1 1 0-8h3"/>
                     </svg>
                 </button>
@@ -132,10 +78,10 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
         </aside>
 
         {% with article_text=article.title|add:" "|add:article.abstract %}
-        <article class="lg:col-span-7 pt-10 pb-20" id="article-main" lang="{{ article_text|content_lang:LANGUAGE_CODE }}">
+        <article class="lg:col-span-7 min-w-0 pt-10 pb-20" style="--reader-scale: 1.125;" id="article-main" lang="{{ article_text|content_lang:LANGUAGE_CODE }}">
         {% endwith %}
             {# Apply a remembered text size before the body text below is parsed/painted (no flash of default size); the A−/A/A+ buttons are wired up at the bottom of this template. #}
-            <script>try { var s = parseFloat(localStorage.getItem('ahl:reader-text-scale')); if (s) document.getElementById('article-main').style.setProperty('--reader-scale', s); } catch (e) {}</script>
+            <script>try { var s = parseFloat(localStorage.getItem('ahl:reader-text-scale-v2')); if (s) document.getElementById('article-main').style.setProperty('--reader-scale', s); } catch (e) {}</script>
 
             <div class="flex items-center gap-3 mb-5">
                 {% if article.is_breaking %}<span class="font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-accent text-white px-2 py-0.5">{% trans "BREAKING" %}</span>{% endif %}
@@ -149,29 +95,86 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 {% endif %}
             </div>
 
-            <h1 class="font-display text-4xl lg:text-5xl font-bold leading-tight mb-5" style="letter-spacing: -0.025em;">
+            <h1 class="font-display text-[2rem] sm:text-4xl lg:text-5xl font-bold leading-tight mb-5" style="letter-spacing: -0.025em; text-wrap: balance;">
                 {{ article.title }}
             </h1>
 
             {% if keyword_list %}
-                <ul class="flex flex-wrap gap-2 mb-6" aria-label="{% trans 'Topics' %}">
-                    {% for kw in keyword_list %}
+                <ul class="flex flex-wrap items-center gap-2 mb-6" aria-label="{% trans 'Topics' %}">
+                    {% for kw in keyword_list|slice:":4" %}
                         <li class="max-w-full">{% if preview_mode %}{% include 'articles/includes/topic_pill.html' with topic=kw %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=kw placement='header' %}{% endif %}</li>
                     {% endfor %}
+                    {% if keyword_list|length > 4 %}<li><a href="#story-topics" class="inline-flex min-h-11 min-w-11 items-center justify-center font-mono-editorial text-xs text-muted-foreground hover:text-accent" aria-label="{% trans 'All topics in this story' %}">+{{ keyword_list|length|add:"-4"|local_digits }}</a></li>{% endif %}
                 </ul>
             {% endif %}
 
             {% if article.abstract %}
-                <p class="leading-relaxed text-muted-foreground mb-8 font-light" style="font-size: calc(1.25rem * var(--reader-scale, 1));">
+                <p class="max-w-[34em] leading-relaxed text-muted-foreground mb-8" style="font-size: calc(1.25rem * var(--reader-scale, 1)); text-wrap: pretty;">
                     {{ article.abstract }}
                 </p>
             {% endif %}
 
-            <div class="flex items-start gap-4 py-6 border-t-2 border-foreground border-b border-border mb-10">
+            {% if article.has_video %}
+                <figure class="-mx-6 sm:mx-0 mb-8">
+                    {% if show_full_text %}
+                        <div class="relative w-full bg-black overflow-hidden" style="aspect-ratio: 16 / 9;">
+                            <iframe src="{{ article.video_embed_url }}" title="{{ article.title }}"
+                                    class="absolute inset-0 w-full h-full" frameborder="0" loading="lazy"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                        </div>
+                    {% else %}
+                        <a href="#paywall" class="relative block w-full bg-black overflow-hidden group" style="aspect-ratio: 16 / 9;">
+                            {% if article.card_image_url %}
+                                <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 1024px) 66vw, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
+                                     class="w-full h-full object-cover opacity-60">
+                            {% endif %}
+                            <span class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
+                                <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
+                                <span class="font-mono-editorial text-xs tracking-widest bg-black/60 px-3 py-1.5 group-hover:bg-accent transition-colors">
+                                    {% if article.access_type == 'pay_per_article' %}{% trans "BUY OR SUBSCRIBE TO WATCH" %}{% else %}{% trans "SUBSCRIBE TO WATCH" %}{% endif %}
+                                </span>
+                            </span>
+                        </a>
+                    {% endif %}
+                    {% if article.featured_image_caption or article.featured_image_credit %}
+                        <figcaption class="px-6 sm:px-0 pt-2.5 text-xs leading-relaxed text-muted-foreground">
+                            {{ article.featured_image_caption }}{% if article.featured_image_caption and article.featured_image_credit %} {% endif %}{% if article.featured_image_credit %}<span class="font-mono-editorial tracking-wide">{% blocktrans with credit=article.featured_image_credit %}Video: {{ credit }}{% endblocktrans %}</span>{% endif %}
+                        </figcaption>
+                    {% endif %}
+                </figure>
+            {% elif article.featured_image %}
+                <figure class="-mx-6 sm:mx-0 mb-8">
+                    {% if article.featured_image_shows_whole %}
+                        {# Square/tall images (diagrams, charts, posters) are shown whole, centred on a blurred copy of themselves (Article.featured_image_fit). #}
+                        <div class="relative w-full overflow-hidden bg-foreground">
+                            {% with wash=article.featured_image.url|backdrop %}<img src="{{ wash|default:article.featured_image.url }}" alt="" aria-hidden="true"
+                                 class="absolute inset-0 w-full h-full object-cover scale-125 opacity-50{% if not wash %} blur-2xl{% endif %}">{% endwith %}
+                            <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="(min-width: 1024px) 700px, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
+                                 {% if article.featured_image_width %}width="{{ article.featured_image_width }}" height="{{ article.featured_image_height }}"{% endif %}
+                                 class="relative mx-auto block w-auto max-w-full h-auto object-contain py-6 sm:py-10"
+                                 style="max-height: min(52vh, 760px);">
+                        </div>
+                    {% else %}
+                        {# 3:2 at the reading column's width: the headline and summary sit above it, so it no longer has to be squeezed to keep them on the first screen. #}
+                        <div class="w-full aspect-[3/2] overflow-hidden bg-muted">
+                            <img src="{{ article.featured_image.url }}" srcset="{{ article.featured_image.url|srcset }}" sizes="(min-width: 1024px) 700px, 100vw" alt="{{ article.featured_image_alt|default:article.title }}"
+                                 class="w-full h-full object-cover" style="filter: grayscale(15%); object-position: {{ article.featured_image_position }};">
+                        </div>
+                    {% endif %}
+                    {% if article.featured_image_caption or article.featured_image_credit %}
+                        <figcaption class="px-6 sm:px-0 pt-2.5 text-xs leading-relaxed text-muted-foreground">
+                            {{ article.featured_image_caption }}{% if article.featured_image_caption and article.featured_image_credit %} {% endif %}{% if article.featured_image_credit %}<span class="font-mono-editorial tracking-wide">{% blocktrans with credit=article.featured_image_credit %}Photo: {{ credit }}{% endblocktrans %}</span>{% endif %}
+                        </figcaption>
+                    {% endif %}
+                </figure>
+            {% endif %}
+
+            <div class="flex flex-wrap sm:flex-nowrap items-start gap-x-4 gap-y-3 py-5 border-y border-border mb-8">
                 {% if featured_author.author.display_photo %}
                     <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-12 h-12 flex-shrink-0 object-cover">
                 {% else %}
-                    <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center border border-foreground">
+                    <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-secondary">
                         <span class="font-display text-lg font-bold">
                             {% if featured_author %}{{ featured_author.display_name|plate_initial }}{% else %}{{ JOURNAL_NAME|plate_initial }}{% endif %}
                         </span>
@@ -188,7 +191,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                     {% endif %}
                     {% if article.doi %}<p class="mt-1 font-mono-editorial text-xs text-muted-foreground">DOI <a href="https://doi.org/{{ article.doi }}" class="underline underline-offset-2 hover:text-accent">{{ article.doi }}</a></p>{% endif %}
                 </div>
-                <div class="text-right flex-shrink-0">
+                <div class="basis-full pl-16 sm:basis-auto sm:pl-0 sm:text-right flex-shrink-0">
                     <p class="font-mono-editorial text-xs text-muted-foreground">
                         {% if article.published_at %}<time datetime="{{ article.published_at|date:'c' }}">{% if article.published_at|date:"Hi" == "0000" %}{{ article.published_at|date:"F j, Y"|local_digits }}{% else %}{{ article.published_at|date:"F j, Y · g:i A"|local_digits }}{% endif %}</time>{% endif %}
                     </p>
@@ -214,13 +217,13 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         <form method="post" action="{% url 'articles:article_bookmark_toggle' article.slug %}">
                             {% csrf_token %}
                             <button type="submit"
-                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 border {% if is_bookmarked %}border-foreground bg-foreground text-primary-foreground hover:bg-accent hover:border-accent{% else %}border-foreground hover:border-accent hover:text-accent{% endif %} transition-colors">
+                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 {% if is_bookmarked %}bg-foreground text-primary-foreground hover:bg-accent{% else %}bg-secondary hover:bg-foreground hover:text-primary-foreground{% endif %} transition-colors">
                                 {% if is_bookmarked %}{% trans "✓ SAVED" %}{% else %}{% trans "+ SAVE FOR LATER" %}{% endif %}
                             </button>
                         </form>
                     {% else %}
                         <a href="{% url 'users:login' %}?next={{ request.path }}"
-                           class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 border border-foreground hover:border-accent hover:text-accent transition-colors">
+                           class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 bg-secondary hover:bg-foreground hover:text-primary-foreground transition-colors">
                             {% trans "LOG IN TO SAVE" %}
                         </a>
                     {% endif %}
@@ -237,7 +240,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         <form method="post" action="{% url 'articles:article_gift_create' article.slug %}">
                             {% csrf_token %}
                             <button type="submit"
-                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 border border-foreground hover:border-accent hover:text-accent transition-colors">
+                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 bg-secondary hover:bg-foreground hover:text-primary-foreground transition-colors">
                                 {% if gift_link %}{% trans "↻ REFRESH GIFT LINK" %}{% else %}<svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="12" height="3"/><path d="M3 9v5h10V9M8 6v8M8 6S6.5 2.5 4.8 3.4C3.4 4.2 5 6 8 6zm0 0s1.5-3.5 3.2-2.6C12.6 4.2 11 6 8 6z"/></svg>{% trans "GIFT THIS ARTICLE" %}{% endif %}
                             </button>
                         </form>
@@ -249,11 +252,11 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                     bottom of this template.
                     {% endcomment %}
                     {% if show_full_text %}
-                    <div class="ml-auto inline-flex items-stretch border border-foreground" role="group" aria-label="{% trans 'Text size' %}" id="text-size-controls">
+                    <div class="ml-auto inline-flex items-stretch bg-secondary" role="group" aria-label="{% trans 'Text size' %}" id="text-size-controls">
                         <button type="button" data-text-size="down" title="{% trans 'Smaller text' %}"
                                 class="font-display font-bold px-3 py-1.5 text-sm hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A−</span><span class="sr-only">{% trans 'Decrease text size' %}</span></button>
                         <button type="button" data-text-size="reset" title="{% trans 'Default text size' %}"
-                                class="font-display font-bold px-3 py-1.5 text-base border-x border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors"><span aria-hidden="true">A</span><span class="sr-only">{% trans 'Default text size' %}</span></button>
+                                class="font-display font-bold px-3 py-1.5 text-base hover:bg-foreground hover:text-primary-foreground transition-colors"><span aria-hidden="true">A</span><span class="sr-only">{% trans 'Default text size' %}</span></button>
                         <button type="button" data-text-size="up" title="{% trans 'Larger text' %}"
                                 class="font-display font-bold px-3 py-1.5 text-lg hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A+</span><span class="sr-only">{% trans 'Increase text size' %}</span></button>
                     </div>
@@ -261,8 +264,23 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 </div>
             {% endif %}
 
+            {% if toc_entries %}
+                {# Phones: the article's structure up front, folded away; the sidebar copy is desktop-only in practice (it sits after the article below lg). #}
+                <details class="lg:hidden group/toc mb-8 bg-secondary px-4">
+                    <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 font-display text-base font-bold [&::-webkit-details-marker]:hidden">
+                        <span>{% trans "In this article" %} <span class="font-sans text-sm font-normal text-muted-foreground">({{ toc_entries|length|local_digits }})</span></span>
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-open/toc:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <ul class="space-y-1 pb-4 text-sm">
+                        {% for entry in toc_entries %}
+                            <li><a href="#{{ entry.id }}" data-toc-target="{{ entry.id }}" class="toc-link flex min-h-11 items-center text-muted-foreground hover:text-accent{% if entry.level == 3 %} pl-4{% endif %}">{{ entry.text }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            {% endif %}
+
             {% if gift_link %}
-                <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6">
+                <div class="bg-secondary px-4 py-3 mb-6">
                     <p class="text-sm text-muted-foreground mb-2">
                         {% trans "Share this link — anyone who opens it reads the full article free, no account or subscription needed, for 14 days." %}
                         {% if gift_remaining == 0 %}{% trans "You've used all your gifts for this month." %}{% else %}{% blocktrans count counter=gift_remaining asvar counted_label %}You have {{ counter }} gift left this month.{% plural %}You have {{ counter }} gifts left this month.{% endblocktrans %}{{ counted_label|local_digits }}{% endif %}
@@ -271,7 +289,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         <input type="text" id="gift-link-input" value="{{ gift_link }}" readonly
                                class="flex-1 border border-border px-3 py-2 text-xs bg-transparent font-mono-editorial">
                         <button type="button" id="gift-link-copy-btn"
-                                class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:border-accent hover:text-accent transition-colors whitespace-nowrap">
+                                class="font-mono-editorial text-xs tracking-widest px-4 py-2 bg-foreground text-primary-foreground hover:bg-accent transition-colors whitespace-nowrap">
                             {% trans "COPY" %}
                         </button>
                     </div>
@@ -293,7 +311,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% endif %}
 
             {% if gift_banner %}
-                <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6">
+                <div class="bg-secondary px-4 py-3 mb-6">
                     <p class="text-sm text-muted-foreground">
                         {% blocktrans with gifter=gift_banner.get_full_name %}This article was gifted to you by <strong class="text-foreground">{{ gifter }}</strong> — free to read, no subscription needed.{% endblocktrans %}
                     </p>
@@ -303,12 +321,12 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% ad_slot 'article_in_content' wrapper_class='hidden md:flex md:justify-center my-8' %}
 
             {% if free_sample_notice %}
-                <div class="border-l-2 border-accent bg-secondary px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div class="bg-secondary px-4 py-3 mb-6 flex flex-wrap items-center justify-between gap-3">
                     <p class="text-sm text-muted-foreground">
                         {% blocktrans with used=free_sample_notice.used limit=free_sample_notice.limit %}You've read <strong class="text-foreground">{{ used }}</strong> of your <strong class="text-foreground">{{ limit }}</strong> free subscription articles this month.{% endblocktrans %}
                     </p>
                     <a href="{% url 'billing:plan_browse' %}?next={{ request.path|urlencode }}"
-                       class="inline-block font-mono-editorial text-xs tracking-widest border border-foreground px-4 py-2 hover:border-accent hover:text-accent transition-colors whitespace-nowrap">
+                       class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 py-2 hover:bg-accent transition-colors whitespace-nowrap">
                         {% trans "SUBSCRIBE FOR UNLIMITED" %}
                     </a>
                 </div>
@@ -333,12 +351,12 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% else %}
                 {% comment %}
                 Paywall, set as a notice in the paper rather than a floating card:
-                2px ink rule, what's locked, what it costs (the cheapest monthly
+                1px ink rule, what's locked, what it costs (the cheapest monthly
                 plan, and this article's own price when it's sold singly), and the
                 same SUBSCRIBE / BUY buttons for everyone — checkout asks a
                 logged-out reader to log in and brings them back.
                 {% endcomment %}
-                <section id="paywall" class="border-t-2 border-foreground pt-6 scroll-mt-24" aria-labelledby="paywall-heading">
+                <section id="paywall" class="border-t border-foreground pt-6 scroll-mt-24" aria-labelledby="paywall-heading">
                     <h2 id="paywall-heading" class="flex items-center gap-2.5 section-label text-foreground">
                         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10"/><path stroke-linecap="square" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
                         {% if article.status == 'archived' %}{% trans "Archive Access Required" %}{% elif article.access_type == 'pay_per_article' %}{% trans "Single purchase" %}{% else %}{% trans "Subscription Required" %}{% endif %}
@@ -367,7 +385,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         </p>
                     {% endif %}
                     {% if pending_organization %}
-                        <div class="mt-5 border-t border-border bg-secondary px-4 py-3">
+                        <div class="mt-5 bg-secondary px-4 py-3">
                             <p class="text-sm">{% blocktrans with org=pending_organization.name email=user.email %}<strong>{{ org }}</strong> has a subscription. Confirm <strong>{{ email }}</strong> is your address and you can read this straight away.{% endblocktrans %}</p>
                             <form method="post" action="{% url 'users:send_email_confirmation' %}" class="mt-3">
                                 {% csrf_token %}
@@ -410,7 +428,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% include 'articles/includes/health_disclaimer.html' %}
 
             {% if corrections %}
-                <section id="corrections" class="mt-12 border-l-2 border-accent bg-secondary px-5 py-4">
+                <section id="corrections" class="mt-12 bg-secondary px-5 py-4">
                     <h2 class="section-label text-accent mb-3">{% trans "CORRECTIONS & UPDATES" %}</h2>
                     <ul class="space-y-3 text-sm leading-relaxed">
                         {% for correction in corrections %}
@@ -428,7 +446,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% if references_list %}
                 <div class="mt-12 pt-8 border-t border-border">
                     <h2 class="font-display text-xl font-bold mb-5" style="letter-spacing: -0.015em;">{% trans "References" %}</h2>
-                    <ol class="space-y-3 text-sm text-muted-foreground list-decimal list-inside">
+                    <ol class="prose-refs space-y-3 pl-6 list-decimal text-[0.9375rem] leading-relaxed text-foreground/80 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-accent">
                         {% for reference in references_list %}
                             <li id="ref-{{ forloop.counter }}">{{ reference|urlize }}</li>
                         {% endfor %}
@@ -437,7 +455,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% endif %}
 
             {% if keyword_list %}
-                <section class="mt-12 pt-8 border-t border-border" aria-labelledby="story-topics">
+                <section class="mt-12" aria-labelledby="story-topics">
                     <h2 id="story-topics" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "TOPICS IN THIS STORY" %}</h2>
                     <ul class="flex flex-wrap gap-2.5">
                         {% for kw in keyword_list %}
@@ -449,25 +467,28 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% endif %}
 
             {% if not preview_mode %}
-                <div class="mt-8 pt-8 border-t border-border">
-                    <h2 class="font-display text-lg font-bold mb-3">{% trans "Cite this article" %}</h2>
-                    <div class="flex gap-3 text-sm">
-                        <a href="{% url 'articles:article_citation' article.slug 'bibtex' %}" class="font-mono-editorial text-xs border border-border px-3 py-1.5 hover:border-foreground">BibTeX</a>
-                        <a href="{% url 'articles:article_citation' article.slug 'ris' %}" class="font-mono-editorial text-xs border border-border px-3 py-1.5 hover:border-foreground">RIS</a>
-                        <a href="{% url 'articles:article_citation' article.slug 'text' %}" class="font-mono-editorial text-xs border border-border px-3 py-1.5 hover:border-foreground">{% trans "Plain text" %}</a>
+                {# Same group as the topics above: spaced, not ruled off. #}
+                <details class="mt-8 group/cite">
+                    <summary class="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 font-display text-lg font-bold [&::-webkit-details-marker]:hidden">
+                        {% trans "Cite this article" %}
+                        <svg class="w-4 h-4 transition-transform group-open/cite:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </summary>
+                    <div class="mt-2 flex flex-wrap gap-3 text-sm">
+                        <a href="{% url 'articles:article_citation' article.slug 'bibtex' %}" class="inline-flex min-h-11 items-center font-mono-editorial text-xs bg-secondary px-3 hover:bg-foreground hover:text-primary-foreground transition-colors">BibTeX</a>
+                        <a href="{% url 'articles:article_citation' article.slug 'ris' %}" class="inline-flex min-h-11 items-center font-mono-editorial text-xs bg-secondary px-3 hover:bg-foreground hover:text-primary-foreground transition-colors">RIS</a>
+                        <a href="{% url 'articles:article_citation' article.slug 'text' %}" class="inline-flex min-h-11 items-center font-mono-editorial text-xs bg-secondary px-3 hover:bg-foreground hover:text-primary-foreground transition-colors">{% trans "Plain text" %}</a>
                     </div>
-                </div>
+                </details>
             {% endif %}
 
             <div class="flex flex-wrap items-center gap-2 mt-8 lg:hidden">
-                <span class="font-mono-editorial text-xs text-muted-foreground">{% trans "Share:" %}</span>
-                <button type="button" data-share="native" hidden class="font-mono-editorial text-xs bg-foreground text-primary-foreground px-3 py-1.5">{% trans "Share…" %}</button>
-                <button type="button" data-share="facebook" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "Facebook" %}</button>
-                <button type="button" data-share="whatsapp" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "WhatsApp" %}</button>
-                <button type="button" data-share="x" class="font-mono-editorial text-xs border border-border px-3 py-1.5">X</button>
-                <button type="button" data-share="linkedin" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "LinkedIn" %}</button>
-                <button type="button" id="copy-link-btn-mobile" data-copy-url="{{ canonical_url }}" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "Copy link" %}</button>
-                <button type="button" id="copy-short-link-btn-mobile" data-copy-url="{{ short_url }}" class="font-mono-editorial text-xs border border-border px-3 py-1.5">{% trans "Short link" %}</button>
+                <button type="button" data-share="native" hidden class="inline-flex min-h-11 items-center gap-2 font-mono-editorial text-xs bg-foreground text-primary-foreground px-4">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>{% trans "Share" %}
+                </button>
+                {# Without a system share sheet: the two networks Nepali readers actually share on. #}
+                <button type="button" data-share="whatsapp" data-share-fallback class="inline-flex min-h-11 items-center font-mono-editorial text-xs bg-secondary px-4 hover:bg-foreground hover:text-primary-foreground transition-colors">{% trans "WhatsApp" %}</button>
+                <button type="button" data-share="facebook" data-share-fallback class="inline-flex min-h-11 items-center font-mono-editorial text-xs bg-secondary px-4 hover:bg-foreground hover:text-primary-foreground transition-colors">{% trans "Facebook" %}</button>
+                <button type="button" id="copy-link-btn-mobile" data-copy-url="{{ canonical_url }}" class="inline-flex min-h-11 items-center font-mono-editorial text-xs bg-secondary px-4 hover:bg-foreground hover:text-primary-foreground transition-colors">{% trans "Copy link" %}</button>
             </div>
 
             {% ad_slot 'article_end' wrapper_class='mt-10 flex justify-center' %}
@@ -477,48 +498,14 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                     {% trans "Spotted an error, or something that shouldn’t be here?" %}
                     <a href="{% url 'report_content' %}?article={{ article.pk }}" rel="nofollow" class="underline hover:text-accent">{% trans "Report it" %}</a>
                 </p>
-                <div id="comments" class="mt-12 pt-8 border-t-2 border-foreground">
-                    {% get_comment_count for article as comment_count %}
-                    <h2 class="font-display text-xl font-bold mb-6" style="letter-spacing: -0.015em;">
-                        {% trans "Comments" %}{% if comment_count %} ({{ comment_count|local_digits }}){% endif %}
-                    </h2>
-                    {% comment %}
-                    One-shot notice after posting/confirming a comment — set by
-                    ajna_health_lens/comments_views.py, which also redirects here
-                    (#comments) instead of the top of the page.
-                    {% endcomment %}
-                    {% if comment_flash %}
-                        <div role="status" class="mb-6 px-4 py-3 border text-sm
-                                    {% if comment_flash.status == 'pending' %}border-accent bg-accent/10{% else %}border-foreground bg-secondary{% endif %}">
-                            {% if comment_flash.status == 'pending' %}
-                                <p class="font-semibold">{% trans "Almost there — please confirm your email." %}</p>
-                                <p class="mt-1 text-muted-foreground">
-                                    {% if comment_flash.email %}{% blocktrans with email=comment_flash.email %}We've sent a confirmation link to <span class="font-medium text-foreground">{{ email }}</span>.{% endblocktrans %}{% else %}{% trans "We've sent a confirmation link to your email address." %}{% endif %}
-                                    {% trans "Your comment will appear here once you click it. Can't find it? Check your spam folder." %}
-                                </p>
-                            {% else %}
-                                <p class="font-semibold">
-                                    {% if comment_flash.status == 'confirmed' %}{% trans "Thanks for confirming — your comment is now live." %}{% else %}{% trans "Your comment has been posted." %}{% endif %}
-                                </p>
-                                {% if comment_flash.comment_id %}
-                                    <a href="#c{{ comment_flash.comment_id }}" class="mt-1 inline-block font-mono-editorial text-xs underline hover:text-accent">{% trans "View your comment ↓" %}</a>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                    {% render_comment_form for article %}
-                    <div class="mt-2">
-                        {% render_xtdcomment_tree for article %}
-                    </div>
-                </div>
             {% endif %}
         </article>
 
-        <aside class="lg:col-span-4 lg:border-l border-border lg:pl-10 pb-20" aria-label="{% trans 'More from us' %}">
+        <aside class="lg:col-span-4 min-w-0 border-t border-border lg:border-t-0 lg:border-l lg:pl-10 pb-20" aria-label="{% trans 'More from us' %}">
             <div class="sticky top-24 pt-10">
 
                 {% if toc_entries %}
-                    <nav id="article-toc" aria-label="{% trans 'In this article' %}" class="border-t-2 border-foreground pt-6 mb-8">
+                    <nav id="article-toc" aria-label="{% trans 'In this article' %}" class="hidden lg:block mb-12">
                         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-4">{% trans "IN THIS ARTICLE" %}</p>
                         <ul class="space-y-2.5 text-sm">
                             {% for entry in toc_entries %}
@@ -534,13 +521,13 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 {% endif %}
 
                 {% if featured_author %}
-                    <div class="border-t-2 border-foreground pt-6 mb-8">
+                    <div class="mb-12">
                         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-4">{% trans "ABOUT THE AUTHOR" %}</p>
                         <div class="flex items-start gap-3 mb-4">
                             {% if featured_author.author.display_photo %}
                                 <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-14 h-14 flex-shrink-0 object-cover">
                             {% else %}
-                                <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center border border-foreground">
+                                <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center bg-secondary">
                                     <span class="font-display text-xl font-bold">{{ featured_author.display_name|plate_initial }}</span>
                                 </div>
                             {% endif %}
@@ -566,7 +553,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 {% endif %}
 
                 {% if trending_articles %}
-                    <div class="border-t-2 border-foreground pt-6 mb-8">
+                    <div class="mb-12">
                         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-4">{% trans "TRENDING THIS WEEK" %}</p>
                         <ol class="space-y-4">
                             {% for trending in trending_articles %}
@@ -582,7 +569,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 {% endif %}
 
                 {% if article.pdf_file and show_full_text %}
-                    <div class="border border-border p-4 mb-8">
+                    <div class="mb-12">
                         <p class="font-mono-editorial text-xs text-muted-foreground tracking-widest mb-3">PDF</p>
                         <a href="{% url 'articles:article_download' article.slug %}" target="_blank" rel="noopener"
                            class="text-xs border-b border-foreground hover:border-accent hover:text-accent pb-0.5">
@@ -601,10 +588,52 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
         <div class="py-12">
             {% trans "KEEP READING" as eyebrow %}{% trans "Related reading" as title %}
             {% include 'includes/section_heading.html' %}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-12">
                 {% for article in related_articles %}
                     {% include 'articles/includes/article_card.html' %}
                 {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if not preview_mode %}
+        {# Comments close the page, after related reading, in the reading column's width and position. #}
+        <div class="grid grid-cols-1 lg:grid-cols-12 lg:gap-12">
+            <div class="lg:col-span-7 lg:col-start-2 pb-20">
+                    <div id="comments" class="pt-10 border-t border-border">
+                        {% get_comment_count for article as comment_count %}
+                        <h2 class="font-display text-xl font-bold mb-6" style="letter-spacing: -0.015em;">
+                            {% trans "Comments" %}{% if comment_count %} ({{ comment_count|local_digits }}){% endif %}
+                        </h2>
+                        {% comment %}
+                        One-shot notice after posting/confirming a comment — set by
+                        ajna_health_lens/comments_views.py, which also redirects here
+                        (#comments) instead of the top of the page.
+                        {% endcomment %}
+                        {% if comment_flash %}
+                            <div role="status" class="mb-6 px-4 py-3 text-sm
+                                        {% if comment_flash.status == 'pending' %}border border-accent bg-accent/10{% else %}bg-secondary{% endif %}">
+                                {% if comment_flash.status == 'pending' %}
+                                    <p class="font-semibold">{% trans "Almost there — please confirm your email." %}</p>
+                                    <p class="mt-1 text-muted-foreground">
+                                        {% if comment_flash.email %}{% blocktrans with email=comment_flash.email %}We've sent a confirmation link to <span class="font-medium text-foreground">{{ email }}</span>.{% endblocktrans %}{% else %}{% trans "We've sent a confirmation link to your email address." %}{% endif %}
+                                        {% trans "Your comment will appear here once you click it. Can't find it? Check your spam folder." %}
+                                    </p>
+                                {% else %}
+                                    <p class="font-semibold">
+                                        {% if comment_flash.status == 'confirmed' %}{% trans "Thanks for confirming — your comment is now live." %}{% else %}{% trans "Your comment has been posted." %}{% endif %}
+                                    </p>
+                                    {% if comment_flash.comment_id %}
+                                        <a href="#c{{ comment_flash.comment_id }}" class="mt-1 inline-block font-mono-editorial text-xs underline hover:text-accent">{% trans "View your comment ↓" %}</a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% render_comment_form for article %}
+                        <div class="mt-2">
+                            {% render_xtdcomment_tree for article %}
+                        </div>
+                    </div>
             </div>
         </div>
     {% endif %}
@@ -615,11 +644,12 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
 // so a remembered size is applied before the body text is painted.
 (function () {
     var STEPS = [0.875, 1, 1.125, 1.25, 1.4];
-    var STORAGE_KEY = 'ahl:reader-text-scale';
+    var STORAGE_KEY = 'ahl:reader-text-scale-v2';
     var target = document.getElementById('article-main');
     var controls = document.getElementById('text-size-controls');
     if (!target) return;
-    var index = 1;
+    var DEFAULT_INDEX = 2; // 1.125
+    var index = DEFAULT_INDEX;
     try {
         var saved = parseFloat(localStorage.getItem(STORAGE_KEY));
         if (STEPS.indexOf(saved) !== -1) index = STEPS.indexOf(saved);
@@ -630,8 +660,10 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
         if (controls) {
             controls.querySelector('[data-text-size="down"]').disabled = index === 0;
             controls.querySelector('[data-text-size="up"]').disabled = index === STEPS.length - 1;
-            controls.querySelector('[data-text-size="reset"]').setAttribute('aria-pressed', index === 1 ? 'true' : 'false');
+            controls.querySelector('[data-text-size="reset"]').setAttribute('aria-pressed', index === DEFAULT_INDEX ? 'true' : 'false');
         }
+    }
+    function remember() {
         try { localStorage.setItem(STORAGE_KEY, String(STEPS[index])); } catch (e) { /* ignore */ }
     }
     if (controls) {
@@ -641,8 +673,9 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             var action = btn.dataset.textSize;
             if (action === 'down' && index > 0) index -= 1;
             else if (action === 'up' && index < STEPS.length - 1) index += 1;
-            else if (action === 'reset') index = 1;
+            else if (action === 'reset') index = DEFAULT_INDEX;
             apply();
+            remember();
         });
     }
     apply();
@@ -719,6 +752,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Phones: the system share sheet (Messenger, Viber, WhatsApp…) where the browser has one.
             if (!navigator.share) return;
             btn.hidden = false;
+            document.querySelectorAll('[data-share-fallback]').forEach(function (b) { b.hidden = true; });
             btn.addEventListener('click', function () {
                 navigator.share({ title: pageTitle, url: pageUrl }).catch(function () {});
             });

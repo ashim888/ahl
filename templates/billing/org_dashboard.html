@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-6 py-12">
-    <div class="flex flex-wrap items-end justify-between gap-4 pb-6 border-b-2 border-foreground">
+    <div class="flex flex-wrap items-end justify-between gap-4 pb-2">
         <div>
             <p class="section-label text-accent">{% trans "ORGANIZATION DASHBOARD" %}</p>
             <h1 class="font-display text-3xl font-bold mt-1" style="letter-spacing: -0.02em;">{{ organization.name }}</h1>
@@ -31,16 +31,16 @@
         <a href="{% url 'billing:org_report_csv' organization.pk %}?month={{ start|date:'Y-m' }}" class="font-mono-editorial text-xs tracking-widest border border-foreground px-3 py-1.5 hover:border-accent hover:text-accent">{% trans "DOWNLOAD CSV" %}</a>
     </form>
     <dl class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "ARTICLES READ" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ reads|local_digits }}</dd></div>
-        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "MEMBERS WHO READ" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ active_readers|local_digits }}</dd></div>
-        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "MEMBERS" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ member_count|local_digits }}</dd></div>
-        <div class="border border-border bg-card p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "SEATS LEFT" %}</dt><dd class="font-display text-3xl font-bold mt-1">{% if seats %}{{ seats_left|local_digits }} <span class="text-base text-muted-foreground">/ {{ seats|local_digits }}</span>{% else %}{% trans "No limit" %}{% endif %}</dd></div>
+        <div class="bg-secondary p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "ARTICLES READ" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ reads|local_digits }}</dd></div>
+        <div class="bg-secondary p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "MEMBERS WHO READ" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ active_readers|local_digits }}</dd></div>
+        <div class="bg-secondary p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "MEMBERS" %}</dt><dd class="font-display text-3xl font-bold mt-1">{{ member_count|local_digits }}</dd></div>
+        <div class="bg-secondary p-5"><dt class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "SEATS LEFT" %}</dt><dd class="font-display text-3xl font-bold mt-1">{% if seats %}{{ seats_left|local_digits }} <span class="text-base text-muted-foreground">/ {{ seats|local_digits }}</span>{% else %}{% trans "No limit" %}{% endif %}</dd></div>
     </dl>
 
     {# -- 12-month chart --------------------------------------------------- #}
     <section class="mt-10" aria-labelledby="trend-heading">
         <h2 id="trend-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "ARTICLES READ, LAST 12 MONTHS" %}</h2>
-        <div class="border border-border bg-card p-5">
+        <div class="bg-secondary p-5">
             <ol class="flex items-end gap-2 h-40" aria-label="{% trans 'Monthly reads' %}">
                 {% for point in series %}
                     <li class="flex-1 flex flex-col items-center justify-end h-full gap-1">
@@ -57,7 +57,7 @@
     <div class="mt-10 grid md:grid-cols-2 gap-8">
         <section aria-labelledby="top-heading">
             <h2 id="top-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "MOST-READ ARTICLES" %}</h2>
-            <ol class="divide-y divide-border border-y border-border text-sm">
+            <ol class="divide-y divide-border text-sm">
                 {% for row in top_articles %}
                     <li class="py-2.5 flex justify-between gap-4"><a href="{% url 'articles:article_detail' row.article__slug %}" class="hover:text-accent">{{ row.article__title }}</a><span class="text-muted-foreground whitespace-nowrap">{{ row.n }}</span></li>
                 {% empty %}<li class="py-3 text-muted-foreground">{% trans "No reading yet this month." %}</li>{% endfor %}
@@ -65,7 +65,7 @@
         </section>
         <section aria-labelledby="sections-heading">
             <h2 id="sections-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "TOPICS READ MOST" %}</h2>
-            <ol class="divide-y divide-border border-y border-border text-sm">
+            <ol class="divide-y divide-border text-sm">
                 {% for row in top_sections %}
                     <li class="py-2.5 flex justify-between gap-4"><span>{{ row.article__section__name }}</span><span class="text-muted-foreground">{{ row.n }}</span></li>
                 {% empty %}<li class="py-3 text-muted-foreground">—</li>{% endfor %}
@@ -77,7 +77,7 @@
     <section class="mt-10" aria-labelledby="members-heading">
         <h2 id="members-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1">{% trans "MEMBERS" %}</h2>
         <p class="text-xs text-muted-foreground mb-3">{% trans "You see how many articles each member read — never which ones." %}</p>
-        <div class="overflow-x-auto border border-border bg-card">
+        <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="text-left font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground border-b border-border">
                     <tr><th class="p-3">{% trans "NAME" %}</th><th class="p-3">{% trans "JOINED" %}</th><th class="p-3 text-right">{% trans "READ THIS PERIOD" %}</th><th class="p-3">{% trans "LAST READ" %}</th><th class="p-3"><span class="sr-only">{% trans "Actions" %}</span></th></tr>
@@ -106,7 +106,7 @@
         {% if removed_members %}
             <details class="mt-3 text-sm">
                 <summary class="cursor-pointer text-muted-foreground">{% blocktrans count n=removed_members|length asvar counted_label %}{{ n }} removed member{% plural %}{{ n }} removed members{% endblocktrans %}{{ counted_label|local_digits }}</summary>
-                <ul class="mt-2 divide-y divide-border border-y border-border">
+                <ul class="mt-2 divide-y divide-border">
                     {% for member in removed_members %}
                         <li class="py-2 flex justify-between gap-4">{{ member.user.get_full_name }} <span class="text-muted-foreground">{{ member.user.email }}</span>
                             <form method="post" action="{% url 'billing:org_member_restore' organization.pk member.pk %}">{% csrf_token %}<button type="submit" class="text-xs underline hover:text-accent">{% trans "Restore" %}</button></form></li>
@@ -119,7 +119,7 @@
     {# -- Invite ----------------------------------------------------------- #}
     <section class="mt-10" aria-labelledby="invite-heading">
         <h2 id="invite-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "INVITE COLLEAGUES" %}</h2>
-        <form method="post" action="{% url 'billing:org_invite' organization.pk %}" class="border border-border bg-card p-5 space-y-3">
+        <form method="post" action="{% url 'billing:org_invite' organization.pk %}" class="bg-secondary p-5 space-y-3">
             {% csrf_token %}
             <label for="invite-emails" class="block text-sm">{% blocktrans with domains=organization.domains|join:", " %}Work email addresses (at {{ domains }}), one per line — up to 20 at a time. Each gets an email explaining how to join.{% endblocktrans %}</label>
             <textarea id="invite-emails" name="emails" rows="3" class="w-full border border-border bg-background px-3 py-2 text-sm"></textarea>
@@ -131,7 +131,7 @@
     <div class="mt-10 grid md:grid-cols-2 gap-8">
         <section aria-labelledby="invoices-heading">
             <h2 id="invoices-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "INVOICES" %}</h2>
-            <ul class="divide-y divide-border border-y border-border text-sm">
+            <ul class="divide-y divide-border text-sm">
                 {% for payment in payments %}
                     <li class="py-2.5 flex justify-between gap-4"><span>{{ payment.completed_at|invoice_date }} · {{ payment.receipt_number }}{% if payment.status == 'refunded' %} <span class="text-accent">({% trans "refunded" %})</span>{% endif %}</span><span class="font-medium">{{ payment.amount|money }}</span></li>
                 {% empty %}<li class="py-3 text-muted-foreground">{% trans "No invoices on record yet." %}</li>{% endfor %}
@@ -140,7 +140,7 @@
         </section>
         <section aria-labelledby="contact-heading">
             <h2 id="contact-heading" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "YOUR ACCOUNT MANAGER" %}</h2>
-            <div class="border border-border bg-card p-5 text-sm">
+            <div class="bg-secondary p-5 text-sm">
                 {% if organization.account_manager %}
                     <p class="font-medium">{{ organization.account_manager.get_full_name }}</p>
                     <a href="mailto:{{ organization.account_manager.email }}" class="underline hover:text-accent">{{ organization.account_manager.email }}</a>

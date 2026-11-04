@@ -17,11 +17,11 @@
     {% include 'includes/page_hero.html' with title=issue.title lead=issue.editorial_note meta=hero_meta %}
 {% endif %}
 
-<div class="max-w-6xl mx-auto px-6 py-12">
-    <div class="flex items-end justify-between gap-4 pb-5 border-b-2 border-foreground">
+<div class="max-w-7xl mx-auto px-6 py-12">
+    <div class="flex items-end justify-between gap-4 pb-5 border-b border-border">
         <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "In this issue" %}</h2>
     </div>
-    <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
         {% for article in issue_articles %}
             {% include 'articles/includes/article_card.html' with show_summary=True %}
         {% empty %}

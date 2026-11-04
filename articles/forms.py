@@ -140,10 +140,12 @@ class ArticleForm(forms.ModelForm):
     )
 
     # Breaking news: how long the site-wide banner should run. "" leaves
-    # the current setting alone, "off" ends it early (see ArticleFormMixin).
+    # the current setting alone, "off" ends it early (see ArticleFormMixin) —
+    # only offered while this story's banner is actually running (__init__).
     BREAKING_CHOICES = [
         ('', '— No change —'), ('1', 'Breaking for 1 hour'), ('3', 'Breaking for 3 hours'), ('6', 'Breaking for 6 hours'),
-        ('12', 'Breaking for 12 hours'), ('24', 'Breaking for 24 hours'), ('off', 'Stop breaking-news banner'),
+        ('12', 'Breaking for 12 hours'), ('24', 'Breaking for 24 hours'), ('48', 'Breaking for 48 hours'),
+        ('off', 'End the banner now (before it expires)'),
     ]
     breaking_hours = forms.ChoiceField(choices=BREAKING_CHOICES, required=False, label='Breaking news')
 
@@ -227,6 +229,8 @@ class ArticleForm(forms.ModelForm):
         if self.instance.pk and self.instance.updated_at:
             self.fields['edit_token'].initial = edit_token_for(self.instance)
         self.fields['bylines'].initial = byline_utils.initial_json(self.instance)
+        if not self.instance.is_breaking:
+            self.fields['breaking_hours'].choices = [c for c in self.BREAKING_CHOICES if c[0] != 'off']
         self.created_authors = {}
         if self.instance.pk and self.instance.status == Article.Status.SCHEDULED and self.instance.published_at:
             self.fields['schedule_at'].initial = timezone.localtime(self.instance.published_at)

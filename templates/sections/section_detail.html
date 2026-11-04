@@ -13,7 +13,7 @@
 {% block content %}
 {# Header band — same shape as includes/page_hero.html, plus the follow button and sub-topic chips #}
 <section class="bg-foreground text-primary-foreground">
-    <div class="max-w-6xl mx-auto px-6 py-12 md:py-16">
+    <div class="max-w-7xl mx-auto px-6 py-12 md:py-16">
         <nav aria-label="{% trans 'Breadcrumb' %}" class="font-mono-editorial text-[0.65rem] tracking-widest opacity-70">
             <a href="{% url 'articles:home' %}" class="hover:text-accent">{% trans "HOME" %}</a>
             {% if section.parent %}
@@ -56,12 +56,12 @@
     </div>
 </section>
 
-<div class="max-w-6xl mx-auto px-6 py-12">
+<div class="max-w-7xl mx-auto px-6 py-12">
     {% for article in articles %}
         {% if forloop.first and not page_obj.has_previous %}
             {# Lead story — newest (or pinned) article as a wide banner #}
-            <article class="group relative grid md:grid-cols-2 border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow] mb-12">
-                <div class="relative aspect-video md:aspect-auto md:min-h-[300px] bg-secondary overflow-hidden [&>*]:absolute [&>*]:inset-0">
+            <article class="group relative grid md:grid-cols-2 md:gap-x-10 pb-10 mb-10 border-b border-border">
+                <div class="relative aspect-[3/2] bg-secondary overflow-hidden [&>*]:absolute [&>*]:inset-0">
                     {% if article.card_image_url %}
                         <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 768px) 50vw, 100vw" style="{{ article.card_image_style }}" alt="{{ article.title }}" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
                         {% include 'articles/includes/play_badge.html' with article=article %}
@@ -69,14 +69,14 @@
                         {% include 'articles/includes/press_plate.html' with article=article %}
                     {% endif %}
                 </div>
-                <div class="p-7 md:p-10 flex flex-col">
+                <div class="pt-5 md:pt-2 flex flex-col">
                     <span class="section-label text-accent">
                         {% if article.is_pinned %}{% trans "PINNED" %} · {% endif %}{{ article.get_article_type_display }}
                     </span>
                     <h2 class="font-display text-2xl md:text-3xl font-bold leading-tight mt-3 group-hover:underline decoration-1 underline-offset-[3px]" style="letter-spacing: -0.02em;">
                         <a href="{% url 'articles:article_detail' article.slug %}" class="after:absolute after:inset-0">{{ article.title }}</a>
                     </h2>
-                    {% with summary=article.summary %}{% if summary %}<p class="mt-3 text-muted-foreground leading-relaxed line-clamp-4">{{ summary }}</p>{% endif %}{% endwith %}
+                    {% with summary=article.summary %}{% if summary %}<p class="mt-3 max-w-[34em] text-muted-foreground leading-relaxed line-clamp-4">{{ summary }}</p>{% endif %}{% endwith %}
                     <p class="mt-auto pt-6 text-sm text-muted-foreground">
                         {% with a=article.articleauthor_set.all|first %}<span class="font-medium text-foreground">{% if a %}{{ a.display_name }}{% else %}{% trans "Editorial staff" %}{% endif %}</span>{% endwith %}
                         · {{ article.estimated_read_minutes|local_digits }} {% trans "min read" %}{% if article.published_at %} · {{ article.published_at|news_time }}{% endif %}
@@ -84,9 +84,9 @@
                 </div>
             </article>
             {% ad_slot 'section_banner' wrapper_class='mb-12 flex justify-center' %}
-            {% if not forloop.last %}<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">{% endif %}
+            {% if not forloop.last %}<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">{% endif %}
         {% else %}
-            {% if forloop.first %}{% ad_slot 'section_banner' wrapper_class='mb-12 flex justify-center' %}<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">{% endif %}
+            {% if forloop.first %}{% ad_slot 'section_banner' wrapper_class='mb-12 flex justify-center' %}<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">{% endif %}
             {% include 'articles/includes/article_card.html' with show_summary=True %}
             {% if forloop.last %}</div>{% endif %}
         {% endif %}

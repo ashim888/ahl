@@ -27,9 +27,9 @@ from .validators import (
 # defined here (not there) so Article.save() can invalidate it without
 # models.py importing from views.py.
 HOME_SECTIONS_CACHE_KEY = 'home:sections:v6'
-# The current breaking-news article (or None) for the site-wide banner —
+# The current breaking-news articles (a list) for the site-wide banner —
 # see ajna_health_lens/context_processors.py; cleared on every Article.save().
-BREAKING_CACHE_KEY = 'articles:breaking:v1'
+BREAKING_CACHE_KEY = 'articles:breaking:v2'
 
 # 5 lowercase-alphanumeric chars, e.g. "3f2a4" — short enough to be a usable
 # permalink (/articles/3f2a4/, see articles/converters.py + urls.py), long

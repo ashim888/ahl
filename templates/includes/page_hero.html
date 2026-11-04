@@ -10,7 +10,7 @@ Page-specific extras (search box, stats, follow button) go in the page's own
 markup right after the include, inside a matching band if needed.
 {% endcomment %}{% load text_filters %}
 <section class="bg-foreground text-primary-foreground">
-    <div class="max-w-6xl mx-auto px-6 py-12 md:py-16 {% if image_url %}grid md:grid-cols-12 gap-10 items-center{% endif %}">
+    <div class="max-w-7xl mx-auto px-6 py-12 md:py-16 {% if image_url %}grid md:grid-cols-12 gap-10 items-center{% endif %}">
         <div class="{% if image_url %}md:col-span-7{% endif %} max-w-3xl">
             {% if back_url %}
                 <a href="{{ back_url }}" class="inline-block mb-4 font-mono-editorial text-[0.65rem] tracking-widest opacity-70 hover:opacity-100 hover:text-accent">{{ back_label }}</a>

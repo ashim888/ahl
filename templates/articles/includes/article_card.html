@@ -1,12 +1,12 @@
 {% load news_time image_tags %}
 {% load i18n topic_tags %}
 {% comment %}
-Cover card for an article, matching the training course cards (cover on
-top, lift-on-hover). Used on issue, section and related-reading grids.
+Open card for an article, matching the training course cards: picture on
+top, text under it, no frame (hover underlines the headline). Used on issue, section and related-reading grids.
 Expects `article` with articleauthor_set prefetched (…__user) and, ideally,
 keyword_tags (the #topics line).
 {% endcomment %}
-<article class="group relative flex flex-col border border-border bg-card overflow-hidden hover:border-foreground hover:shadow-lg transition-[border-color,box-shadow]">
+<article class="group relative flex flex-col">
     <div class="relative aspect-video bg-secondary overflow-hidden">
         {% if article.card_image_url %}
             <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw" style="{{ article.card_image_style }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
@@ -16,7 +16,7 @@ keyword_tags (the #topics line).
             {% include 'articles/includes/press_plate.html' with article=article %}
         {% endif %}
     </div>
-    <div class="flex flex-col flex-1 p-5">
+    <div class="flex flex-col flex-1 pt-4">
         <div class="flex items-center gap-2 flex-wrap">
             <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
             {% include 'articles/includes/story_flags.html' with article=article %}
