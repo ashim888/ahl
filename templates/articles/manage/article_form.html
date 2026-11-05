@@ -985,9 +985,11 @@ document.addEventListener('DOMContentLoaded', function () {
             render();
         });
 
-        // Image description follows the slug (articles/slugs.py alt_from_slug)
+        // Image description follows the headline (Article.save does the same)
         // until an editor writes their own: it's only replaced while it's
-        // empty or still the last value filled in from the slug.
+        // empty or still the last value filled in automatically. A value that
+        // matches the old slug-based default (articles/slugs.py alt_from_slug)
+        // also counts as automatic, so older articles pick up the headline.
         var alt = document.getElementById('id_featured_image_alt');
         function altFromSlug(value) {
             var words = (value || '').split('-').filter(Boolean);
@@ -995,21 +997,20 @@ document.addEventListener('DOMContentLoaded', function () {
             var text = words.join(' ');
             return (text.charAt(0).toUpperCase() + text.slice(1)).slice(0, 250);
         }
+        function altFromTitle() { return (title ? title.value.trim() : '').slice(0, 250); }
         if (alt) {
             var lastAuto = alt.value.trim() ? null : '';
-            if (alt.value.trim() && alt.value === altFromSlug(slug.value.trim())) lastAuto = alt.value;
+            if (alt.value.trim() && (alt.value === altFromTitle() || alt.value === altFromSlug(slug.value.trim()))) lastAuto = alt.value;
             var syncAlt = function () {
                 if (lastAuto === null || alt.value !== lastAuto) return;  // the editor wrote their own
-                var current = slug.value.trim() || SlugQuality.suggest(title ? title.value : '', []);
-                alt.value = lastAuto = altFromSlug(current);
+                alt.value = lastAuto = altFromTitle();
             };
             alt.addEventListener('input', function () { lastAuto = alt.value.trim() ? null : ''; syncAlt(); });
-            [slug, title].forEach(function (el) { if (el) el.addEventListener('input', syncAlt); });
-            useButton.addEventListener('click', syncAlt);
+            if (title) title.addEventListener('input', syncAlt);
             syncAlt();
             var hint = document.createElement('p');
             hint.className = 'mt-1 text-xs text-gray-500';
-            hint.textContent = 'Filled from the slug. Type your own to describe the picture instead.';
+            hint.textContent = 'Filled from the headline. Type your own to describe the picture instead.';
             alt.insertAdjacentElement('afterend', hint);
         }
         [slug, title].forEach(function (el) { if (el) { el.addEventListener('input', render); el.addEventListener('change', render); } });

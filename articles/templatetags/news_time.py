@@ -30,6 +30,29 @@ def dateline(today=None) -> str:
     return f'{today:%A}, {today.day} {today:%B %Y} · {bs.day} {bs.strftime("%B %Y")} BS'
 
 
+@register.filter
+def dual_date(value, show_time=''):
+    """{{ article.published_at|dual_date:"time" }} — an article's date with
+    Bikram Sambat first, like the masthead's dateline, and AD after it:
+    "१६ कात्तिक २०८३ (नभम्वर १, २०२६)" on Nepali pages, "16 Kartik 2083 BS
+    (November 1, 2026)" in English. With "time", the clock time follows
+    ("· 3:48 PM") unless it's exactly midnight (a date-only stamp)."""
+    if not value:
+        return ''
+    local = timezone.localtime(value) if timezone.is_aware(value) else value
+    bs = to_bs(local)
+    ad = date_format(local, 'F j, Y')
+    if get_language() == 'ne':
+        text = f'{bs.day} {BS_MONTHS_NE[bs.month - 1]} {bs.year} ({ad})'
+    else:
+        text = f'{bs.day} {bs.strftime("%B")} {bs.year} BS ({ad})'
+    if show_time and (local.hour, local.minute) != (0, 0):
+        # Non-breaking, so a narrow column never strands "· 3:48" or "PM" on a line of its own.
+        clock = date_format(local, 'g:i A').replace(' ', ' ')
+        text = f'{text} · {clock}'
+    return local_digits(text)
+
+
 @register.filter(is_safe=True)  # swapping digits can't create markup, so safe input stays safe
 def local_digits(value):
     """{{ n|local_digits }} — Devanagari digits on Nepali pages, as Nepali

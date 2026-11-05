@@ -67,11 +67,13 @@ class ImageDescriptionTests(TestCase):
         self._publish(html_content='<p>Text</p><img src="/media/x.png" alt="Nurses at the Jumla clinic">')
         self.assertTrue(Article.objects.filter(slug='clinic-photos', status=Article.Status.PUBLISHED).exists())
 
-    def test_featured_image_description_defaults_to_the_slug(self):
-        self._publish(html_content='<p>Text</p>', featured_image=SimpleUploadedFile('f.png', png_bytes(), 'image/png'))
+    def test_featured_image_description_defaults_to_the_headline(self):
+        # Not the slug: a Nepali headline's slug is romanized, which reads aloud as noise.
+        self._publish(title='मोवेम्बर अभियान र पुरुष स्वास्थ्य', html_content='<p>Text</p>',
+                      featured_image=SimpleUploadedFile('f.png', png_bytes(), 'image/png'))
         article = Article.objects.get(slug='clinic-photos')
         self.assertEqual(article.status, Article.Status.PUBLISHED)
-        self.assertEqual(article.featured_image_alt, 'Clinic photos')
+        self.assertEqual(article.featured_image_alt, 'मोवेम्बर अभियान र पुरुष स्वास्थ्य')
 
     def test_an_editors_own_description_is_kept(self):
         self._publish(html_content='<p>Text</p>', featured_image=SimpleUploadedFile('f.png', png_bytes(), 'image/png'),

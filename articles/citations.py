@@ -36,3 +36,22 @@ def linkify_citations(html_content):
         result.append(code_block)
         result.append(next(linkified))
     return ''.join(result)
+
+
+def uncited_references_warning(article) -> str:
+    """The editor's after-save warning when an article lists references but
+    its text never cites one with [1], [2]… — the reference list then reads
+    as decoration, and a reader can't tell which claim rests on which
+    source. Empty when there's nothing to warn about. Code samples don't
+    count as citations (same rule as linkify_citations)."""
+    count = article.reference_count
+    if not count:
+        return ''
+    text = CODE_BLOCK_PATTERN.sub('', article.html_content or '')
+    if CITATION_PATTERN.search(text):
+        return ''
+    sources = f'{count} source{"s" if count > 1 else ""}'
+    return (
+        f'"{article.title}" lists {sources} but the text doesn\'t cite any. '
+        'Type [1], [2]… after each claim that comes from a source, so readers can check it.'
+    )

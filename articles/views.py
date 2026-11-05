@@ -41,7 +41,7 @@ from users.decorators import role_required
 from users.models import User
 
 from . import bylines as byline_utils
-from .citations import linkify_citations
+from .citations import linkify_citations, uncited_references_warning
 from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
 from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
@@ -1499,6 +1499,9 @@ class ArticleFormMixin:
         if action == 'ready':
             self._notify_publishers_ready()
         messages.success(self.request, f'"{self.object.title}" {self._message(previous_status, action, form)}.')
+        uncited = uncited_references_warning(self.object)
+        if uncited:
+            messages.warning(self.request, uncited)
         return response
 
     def _message(self, previous_status, action, form):

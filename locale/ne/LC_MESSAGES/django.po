@@ -4462,3 +4462,19 @@ msgstr "सदस्यता भुक्तानी गरेको %(days)s 
 #, python-format
 msgid "Stop sending our newsletter to %(email)s."
 msgstr "%(email)s मा हाम्रो न्युजलेटर पठाउन बन्द गर्नुहोस्।"
+
+#: templates/articles/article_detail.html
+msgid "All topics in this story"
+msgstr "यस सामग्रीका सबै विषयहरू"
+
+#: templates/articles/article_detail.html
+msgid "Link copied"
+msgstr "लिंक प्रतिलिपि भयो"
+
+#: templates/articles/article_detail.html
+msgid "Copied"
+msgstr "प्रतिलिपि भयो"
+
+#: templates/articles/article_detail.html
+msgid "COPIED"
+msgstr "प्रतिलिपि भयो"

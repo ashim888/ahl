@@ -7,8 +7,9 @@
 {% block title %}{{ article.meta_title }} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block extra_head %}
-    {% if show_full_text and article.html_content %}
-        <script src="https://d3js.org/d3.v7.min.js"></script>
+    {# Editors' chart code runs inline in the body (d3.select…), so d3 has to load before it — but only stories with a chart pay for it. Self-hosted, so readers' browsers don't call a third party. #}
+    {% if show_full_text and 'd3.' in article.html_content %}
+        <script src="{% static 'vendor/d3/d3.v7.9.0.min.js' %}"></script>
     {% endif %}
     {% if structured_data_json %}
         <script type="application/ld+json">{{ structured_data_json }}</script>
@@ -23,6 +24,15 @@
 <div id="reading-progress" class="fixed top-0 left-0 right-0 z-40 h-0.5 bg-transparent">
     <div id="reading-progress-bar" class="h-full bg-accent" style="width: 0%;"></div>
 </div>
+{# Copy buttons on this page say "Link copied" here, so screen readers hear it too. #}
+<p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
+<script>
+function announceCopied() {
+    var status = document.getElementById('copy-status');
+    status.textContent = '';
+    setTimeout(function () { status.textContent = '{{ _("Link copied")|escapejs }}'; }, 50);
+}
+</script>
 
 {% if preview_mode %}
     <div class="max-w-7xl mx-auto px-6 mt-4">
@@ -86,7 +96,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             <div class="flex items-center gap-3 mb-5">
                 {% if article.is_breaking %}<span class="font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-accent text-white px-2 py-0.5">{% trans "BREAKING" %}</span>{% endif %}
                 <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
-                {% include 'articles/includes/story_flags.html' with article=article %}
+                {% include 'articles/includes/story_flags.html' with article=article sources_href='#references' %}
                 {% if article.issue %}
                     <span class="text-border">·</span>
                     <a href="{% url 'issues:issue_detail' article.issue.slug %}" class="font-mono-editorial text-xs text-muted-foreground hover:text-accent">
@@ -99,20 +109,53 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 {{ article.title }}
             </h1>
 
-            {% if keyword_list %}
-                <ul class="flex flex-wrap items-center gap-2 mb-6" aria-label="{% trans 'Topics' %}">
-                    {% for kw in keyword_list|slice:":4" %}
-                        <li class="max-w-full">{% if preview_mode %}{% include 'articles/includes/topic_pill.html' with topic=kw %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=kw placement='header' %}{% endif %}</li>
-                    {% endfor %}
-                    {% if keyword_list|length > 4 %}<li><a href="#story-topics" class="inline-flex min-h-11 min-w-11 items-center justify-center font-mono-editorial text-xs text-muted-foreground hover:text-accent" aria-label="{% trans 'All topics in this story' %}">+{{ keyword_list|length|add:"-4"|local_digits }}</a></li>{% endif %}
-                </ul>
-            {% endif %}
-
             {% if article.abstract %}
-                <p class="max-w-[34em] leading-relaxed text-muted-foreground mb-8" style="font-size: calc(1.25rem * var(--reader-scale, 1)); text-wrap: pretty;">
+                <p class="max-w-[34em] leading-relaxed text-muted-foreground mb-6" style="font-size: calc(1.25rem * var(--reader-scale, 1)); text-wrap: pretty;">
                     {{ article.abstract }}
                 </p>
             {% endif %}
+
+            {# Who wrote it and when, before the picture: on a phone the image fills most of a screen, and the byline is what makes the story credible. #}
+            <div class="flex flex-wrap sm:flex-nowrap items-start gap-x-4 gap-y-3 py-5 border-y border-border mb-8">
+                {% if featured_author.author.display_photo %}
+                    <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-12 h-12 flex-shrink-0 object-cover">
+                {% else %}
+                    <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-secondary">
+                        <span class="font-display text-lg font-bold">
+                            {% if featured_author %}{{ featured_author.display_name|plate_initial }}{% else %}{{ JOURNAL_NAME|plate_initial }}{% endif %}
+                        </span>
+                    </div>
+                {% endif %}
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm">
+                        {% for aa in article_authors %}{% if aa.author.is_active and not preview_mode %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% if preview_mode %}{% trans "Editorial staff" %}{% else %}<a href="{% url 'editorial_board:public_list' %}" class="underline decoration-border underline-offset-[3px] hover:text-accent hover:decoration-current">{% trans "Editorial staff" %}</a>{% endif %}{% endfor %}
+                    </p>
+                    {% if featured_author %}
+                        <p class="text-xs text-muted-foreground">
+                            {{ featured_author.display_affiliation }}
+                        </p>
+                    {% endif %}
+                    {% if article.doi %}<p class="mt-1 font-mono-editorial text-xs text-muted-foreground">DOI <a href="https://doi.org/{{ article.doi }}" class="underline underline-offset-2 hover:text-accent">{{ article.doi }}</a></p>{% endif %}
+                </div>
+                <div class="basis-full pl-16 sm:basis-auto sm:pl-0 sm:text-right flex-shrink-0">
+                    <p class="font-mono-editorial text-xs text-muted-foreground">
+                        {% if article.published_at %}<time datetime="{{ article.published_at|date:'c' }}">{{ article.published_at|dual_date:"time" }}</time>{% endif %}
+                    </p>
+                    {% if article.last_updated_at %}
+                        <p class="font-mono-editorial text-xs text-foreground mt-0.5">
+                            {% trans "Updated" %} <time datetime="{{ article.last_updated_at|date:'c' }}">{{ article.last_updated_at|dual_date:"time" }}</time>
+                        </p>
+                    {% endif %}
+                    {% if corrections %}
+                        {% with latest=corrections|last %}
+                            <a href="#corrections" class="block font-mono-editorial text-xs text-accent underline underline-offset-2 mt-0.5">
+                                {% blocktrans with kind=latest.get_kind_display %}{{ kind }} appended ↓{% endblocktrans %}
+                            </a>
+                        {% endwith %}
+                    {% endif %}
+                    <p class="font-mono-editorial text-xs text-muted-foreground mt-0.5">{{ article.estimated_read_minutes|local_digits }} {% trans "min read" %}</p>
+                </div>
+            </div>
 
             {% if article.has_video %}
                 <figure class="-mx-6 sm:mx-0 mb-8">
@@ -130,7 +173,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                                      class="w-full h-full object-cover opacity-60">
                             {% endif %}
                             <span class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
-                                <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
+                                <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path stroke-linecap="round" d="M8 11V8a4 4 0 1 1 8 0v3"/></svg>
                                 <span class="font-mono-editorial text-xs tracking-widest bg-black/60 px-3 py-1.5 group-hover:bg-accent transition-colors">
                                     {% if article.access_type == 'pay_per_article' %}{% trans "BUY OR SUBSCRIBE TO WATCH" %}{% else %}{% trans "SUBSCRIBE TO WATCH" %}{% endif %}
                                 </span>
@@ -170,46 +213,15 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 </figure>
             {% endif %}
 
-            <div class="flex flex-wrap sm:flex-nowrap items-start gap-x-4 gap-y-3 py-5 border-y border-border mb-8">
-                {% if featured_author.author.display_photo %}
-                    <img src="{{ featured_author.author.display_photo.url }}" alt="" class="w-12 h-12 flex-shrink-0 object-cover">
-                {% else %}
-                    <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-secondary">
-                        <span class="font-display text-lg font-bold">
-                            {% if featured_author %}{{ featured_author.display_name|plate_initial }}{% else %}{{ JOURNAL_NAME|plate_initial }}{% endif %}
-                        </span>
-                    </div>
-                {% endif %}
-                <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm">
-                        {% for aa in article_authors %}{% if aa.author.is_active and not preview_mode %}<a href="{% url 'articles:author_detail' aa.author.slug %}" class="hover:text-accent">{{ aa.display_name }}</a>{% else %}{{ aa.display_name }}{% endif %}{% if forloop.revcounter == 2 %} {% trans "and" %} {% elif not forloop.last %}, {% endif %}{% empty %}{% trans "Editorial staff" %}{% endfor %}
-                    </p>
-                    {% if featured_author %}
-                        <p class="text-xs text-muted-foreground">
-                            {{ featured_author.display_affiliation }}
-                        </p>
-                    {% endif %}
-                    {% if article.doi %}<p class="mt-1 font-mono-editorial text-xs text-muted-foreground">DOI <a href="https://doi.org/{{ article.doi }}" class="underline underline-offset-2 hover:text-accent">{{ article.doi }}</a></p>{% endif %}
-                </div>
-                <div class="basis-full pl-16 sm:basis-auto sm:pl-0 sm:text-right flex-shrink-0">
-                    <p class="font-mono-editorial text-xs text-muted-foreground">
-                        {% if article.published_at %}<time datetime="{{ article.published_at|date:'c' }}">{% if article.published_at|date:"Hi" == "0000" %}{{ article.published_at|date:"F j, Y"|local_digits }}{% else %}{{ article.published_at|date:"F j, Y · g:i A"|local_digits }}{% endif %}</time>{% endif %}
-                    </p>
-                    {% if article.last_updated_at %}
-                        <p class="font-mono-editorial text-xs text-foreground mt-0.5">
-                            {% trans "Updated" %} <time datetime="{{ article.last_updated_at|date:'c' }}">{{ article.last_updated_at|date:"M j, g:i A"|local_digits }}</time>
-                        </p>
-                    {% endif %}
-                    {% if corrections %}
-                        {% with latest=corrections|last %}
-                            <a href="#corrections" class="block font-mono-editorial text-xs text-accent underline underline-offset-2 mt-0.5">
-                                {% blocktrans with kind=latest.get_kind_display %}{{ kind }} appended ↓{% endblocktrans %}
-                            </a>
-                        {% endwith %}
-                    {% endif %}
-                    <p class="font-mono-editorial text-xs text-muted-foreground mt-0.5">{{ article.estimated_read_minutes|local_digits }} {% trans "min read" %}</p>
-                </div>
-            </div>
+            {% if keyword_list %}
+                {# Phones skip this row: the same topics close the story (#story-topics), and here they'd push the first paragraph another line down. #}
+                <ul class="hidden sm:flex flex-wrap items-center gap-2 mb-6" aria-label="{% trans 'Topics' %}">
+                    {% for kw in keyword_list|slice:":4" %}
+                        <li class="max-w-full">{% if preview_mode %}{% include 'articles/includes/topic_pill.html' with topic=kw %}{% else %}{% include 'articles/includes/topic_pill.html' with topic=kw placement='header' %}{% endif %}</li>
+                    {% endfor %}
+                    {% if keyword_list|length > 4 %}<li><a href="#story-topics" class="inline-flex min-h-11 min-w-11 items-center justify-center font-mono-editorial text-xs text-muted-foreground hover:text-accent" aria-label="{% trans 'All topics in this story' %}">+{{ keyword_list|length|add:"-4"|local_digits }}</a></li>{% endif %}
+                </ul>
+            {% endif %}
 
             {% if not preview_mode %}
                 <div class="flex flex-wrap items-center gap-3 mb-10">
@@ -217,20 +229,20 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         <form method="post" action="{% url 'articles:article_bookmark_toggle' article.slug %}">
                             {% csrf_token %}
                             <button type="submit"
-                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 {% if is_bookmarked %}bg-foreground text-primary-foreground hover:bg-accent{% else %}bg-secondary hover:bg-foreground hover:text-primary-foreground{% endif %} transition-colors">
+                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 min-h-11 {% if is_bookmarked %}bg-foreground text-primary-foreground hover:bg-accent{% else %}bg-secondary hover:bg-foreground hover:text-primary-foreground{% endif %} transition-colors">
                                 {% if is_bookmarked %}{% trans "✓ SAVED" %}{% else %}{% trans "+ SAVE FOR LATER" %}{% endif %}
                             </button>
                         </form>
                     {% else %}
                         <a href="{% url 'users:login' %}?next={{ request.path }}"
-                           class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 bg-secondary hover:bg-foreground hover:text-primary-foreground transition-colors">
+                           class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 min-h-11 bg-secondary hover:bg-foreground hover:text-primary-foreground transition-colors">
                             {% trans "LOG IN TO SAVE" %}
                         </a>
                     {% endif %}
                     {% if article.pdf_file and show_full_text %}
                         <a href="{% url 'articles:article_download' article.slug %}" target="_blank" rel="noopener"
-                           class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-2.5 hover:bg-accent transition-colors">
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                           class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 min-h-11 hover:bg-accent transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" aria-hidden="true" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
                             </svg>
                             {% trans "DOWNLOAD PDF" %}
@@ -240,7 +252,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         <form method="post" action="{% url 'articles:article_gift_create' article.slug %}">
                             {% csrf_token %}
                             <button type="submit"
-                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 py-2.5 bg-secondary hover:bg-foreground hover:text-primary-foreground transition-colors">
+                                    class="inline-flex items-center gap-2 font-mono-editorial text-xs tracking-widest px-5 min-h-11 bg-secondary hover:bg-foreground hover:text-primary-foreground transition-colors">
                                 {% if gift_link %}{% trans "↻ REFRESH GIFT LINK" %}{% else %}<svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="12" height="3"/><path d="M3 9v5h10V9M8 6v8M8 6S6.5 2.5 4.8 3.4C3.4 4.2 5 6 8 6zm0 0s1.5-3.5 3.2-2.6C12.6 4.2 11 6 8 6z"/></svg>{% trans "GIFT THIS ARTICLE" %}{% endif %}
                             </button>
                         </form>
@@ -248,18 +260,24 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                     {% comment %}
                     Reader text size — scales the abstract and article body
                     (the --reader-scale CSS variable, see .prose-article in
-                    base.html) in steps; remembered per browser. Script at the
-                    bottom of this template.
+                    base.html) in steps; remembered per browser. One "Aa"
+                    control that opens the three steps, so the row offers one
+                    choice instead of three. Script at the bottom of this template.
                     {% endcomment %}
                     {% if show_full_text %}
-                    <div class="ml-auto inline-flex items-stretch bg-secondary" role="group" aria-label="{% trans 'Text size' %}" id="text-size-controls">
-                        <button type="button" data-text-size="down" title="{% trans 'Smaller text' %}"
-                                class="font-display font-bold px-3 py-1.5 text-sm hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A−</span><span class="sr-only">{% trans 'Decrease text size' %}</span></button>
-                        <button type="button" data-text-size="reset" title="{% trans 'Default text size' %}"
-                                class="font-display font-bold px-3 py-1.5 text-base hover:bg-foreground hover:text-primary-foreground transition-colors"><span aria-hidden="true">A</span><span class="sr-only">{% trans 'Default text size' %}</span></button>
-                        <button type="button" data-text-size="up" title="{% trans 'Larger text' %}"
-                                class="font-display font-bold px-3 py-1.5 text-lg hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A+</span><span class="sr-only">{% trans 'Increase text size' %}</span></button>
-                    </div>
+                    <details class="ml-auto relative" id="text-size-menu">
+                        <summary class="inline-flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center bg-secondary font-display text-base font-bold hover:bg-foreground hover:text-primary-foreground transition-colors [&::-webkit-details-marker]:hidden" title="{% trans 'Text size' %}">
+                            <span aria-hidden="true">Aa</span><span class="sr-only">{% trans 'Text size' %}</span>
+                        </summary>
+                        <div class="absolute right-0 top-full z-20 mt-1 inline-flex items-stretch border border-border bg-background" role="group" aria-label="{% trans 'Text size' %}" id="text-size-controls">
+                            <button type="button" data-text-size="down" title="{% trans 'Smaller text' %}"
+                                    class="min-h-11 min-w-11 font-display font-bold text-sm hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A−</span><span class="sr-only">{% trans 'Decrease text size' %}</span></button>
+                            <button type="button" data-text-size="reset" title="{% trans 'Default text size' %}"
+                                    class="min-h-11 min-w-11 font-display font-bold text-base hover:bg-foreground hover:text-primary-foreground transition-colors"><span aria-hidden="true">A</span><span class="sr-only">{% trans 'Default text size' %}</span></button>
+                            <button type="button" data-text-size="up" title="{% trans 'Larger text' %}"
+                                    class="min-h-11 min-w-11 font-display font-bold text-lg hover:bg-foreground hover:text-primary-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"><span aria-hidden="true">A+</span><span class="sr-only">{% trans 'Increase text size' %}</span></button>
+                        </div>
+                    </details>
                     {% endif %}
                 </div>
             {% endif %}
@@ -302,8 +320,9 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         copyBtn.addEventListener('click', function () {
                             input.select();
                             navigator.clipboard.writeText(input.value).then(function () {
-                                copyBtn.textContent = 'COPIED';
-                                setTimeout(function () { copyBtn.textContent = 'COPY'; }, 2000);
+                                copyBtn.textContent = '{{ _("COPIED")|escapejs }}';
+                                announceCopied();
+                                setTimeout(function () { copyBtn.textContent = '{{ _("COPY")|escapejs }}'; }, 2000);
                             });
                         });
                     })();
@@ -434,7 +453,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         {% for correction in corrections %}
                             <li>
                                 <span class="font-semibold">{{ correction.get_kind_display }}</span>
-                                <span class="font-mono-editorial text-xs text-muted-foreground"> · <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|date:"M j, Y, g:i A"|local_digits }}</time></span>
+                                <span class="font-mono-editorial text-xs text-muted-foreground"> · <time datetime="{{ correction.created_at|date:'c' }}">{{ correction.created_at|dual_date:"time" }}</time></span>
                                 <p class="mt-0.5 text-foreground">{{ correction.note }}</p>
                             </li>
                         {% endfor %}
@@ -444,14 +463,15 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             {% endif %}
 
             {% if references_list %}
-                <div class="mt-12 pt-8 border-t border-border">
-                    <h2 class="font-display text-xl font-bold mb-5" style="letter-spacing: -0.015em;">{% trans "References" %}</h2>
+                {# The "N sources" flag above the headline and each [n] in the text land here. #}
+                <section id="references" class="mt-12 pt-8 border-t border-border scroll-mt-24" aria-labelledby="references-heading">
+                    <h2 id="references-heading" class="font-display text-xl font-bold mb-5" style="letter-spacing: -0.015em;">{% trans "References" %} <span class="font-sans text-base font-normal text-muted-foreground">({{ references_list|length|local_digits }})</span></h2>
                     <ol class="prose-refs space-y-3 pl-6 list-decimal text-[0.9375rem] leading-relaxed text-foreground/80 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-accent">
                         {% for reference in references_list %}
-                            <li id="ref-{{ forloop.counter }}">{{ reference|urlize }}</li>
+                            <li id="ref-{{ forloop.counter }}" class="scroll-mt-24">{{ reference|urlize }}</li>
                         {% endfor %}
                     </ol>
-                </div>
+                </section>
             {% endif %}
 
             {% if keyword_list %}
@@ -666,6 +686,15 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
     function remember() {
         try { localStorage.setItem(STORAGE_KEY, String(STEPS[index])); } catch (e) { /* ignore */ }
     }
+    var menu = document.getElementById('text-size-menu');
+    if (menu) {
+        menu.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
+        });
+        document.addEventListener('click', function (e) {
+            if (menu.open && !menu.contains(e.target)) menu.open = false;
+        });
+    }
     if (controls) {
         controls.addEventListener('click', function (e) {
             var btn = e.target.closest('[data-text-size]');
@@ -764,11 +793,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
+    // Icon buttons swap to a tick (a word wouldn't fit a 36px square); text buttons say "Copied".
+    var TICK = '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
     function copyLink(btn) {
         var url = btn.getAttribute('data-copy-url') || pageUrl;
         navigator.clipboard.writeText(url).then(function () {
             var original = btn.innerHTML;
-            btn.textContent = 'Copied!';
+            if (btn.querySelector('svg')) btn.innerHTML = TICK;
+            else btn.textContent = '{{ _("Copied")|escapejs }}';
+            announceCopied();
             setTimeout(function () { btn.innerHTML = original; }, 1500);
         });
     }

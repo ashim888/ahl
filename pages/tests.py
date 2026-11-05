@@ -142,7 +142,7 @@ class NoAdsOnMoneyPagesTests(TestCase):
         )
         eic = make_user('eic-noads@example.com', User.Role.EDITOR_IN_CHIEF)
         self.client.force_login(eic)
-        self.assertContains(self.client.get(reverse('articles:home')), 'Sponsor (advertisement)')
+        self.assertContains(self.client.get(reverse('articles:home')), 'alt="Sponsor"')
         plan = SubscriptionPlan.objects.create(
             name='Monthly', plan_type=SubscriptionPlan.PlanType.INDIVIDUAL_MONTHLY, price=499, duration_days=30,
         )

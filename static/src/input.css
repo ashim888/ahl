@@ -85,6 +85,11 @@
   .story-flag + .story-flag::before { content: "\00B7"; margin-right: 0.2rem; color: theme('colors.border'); }
   .story-flag svg { width: 0.75rem; height: 0.75rem; flex-shrink: 0; }
   .story-flag--reviewed { color: theme('colors.foreground'); font-weight: 700; }
+  /* The source count on the article page: a jump to its references. Underlined on the inner span so the "·" separator isn't. */
+  .story-flag--link { color: theme('colors.foreground'); min-height: 1.5rem; }
+  .story-flag--link > span { text-decoration: underline; text-decoration-color: theme('colors.border'); text-underline-offset: 3px; }
+  .story-flag--link:hover { color: theme('colors.accent'); }
+  .story-flag--link:hover > span { text-decoration-color: currentColor; }
   .story-flags--on-ink .story-flag { color: rgb(250 250 248 / 0.8); }
   .story-flags--on-ink .story-flag + .story-flag::before { color: rgb(250 250 248 / 0.35); }
   .story-flags--on-ink .story-flag--reviewed { color: theme('colors.primary-foreground'); }
