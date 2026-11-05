@@ -41,15 +41,15 @@ def dual_date(value, show_time=''):
         return ''
     local = timezone.localtime(value) if timezone.is_aware(value) else value
     bs = to_bs(local)
-    ad = date_format(local, 'F j, Y')
+    ad = date_format(local, 'F j, Y').replace(' ', '\u00a0')  # one piece: a narrow column breaks before "(", not inside it
     if get_language() == 'ne':
         text = f'{bs.day} {BS_MONTHS_NE[bs.month - 1]} {bs.year} ({ad})'
     else:
         text = f'{bs.day} {bs.strftime("%B")} {bs.year} BS ({ad})'
     if show_time and (local.hour, local.minute) != (0, 0):
         # Non-breaking, so a narrow column never strands "· 3:48" or "PM" on a line of its own.
-        clock = date_format(local, 'g:i A').replace(' ', ' ')
-        text = f'{text} · {clock}'
+        clock = date_format(local, 'g:i A').replace(' ', '\u00a0')
+        text = f'{text}\u00a0·\u00a0{clock}'
     return local_digits(text)
 
 

@@ -128,6 +128,7 @@
 
                 <details class="group" {% if form.references.errors or form.instance.references %}open{% endif %}>
                     <summary class="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 select-none">References <span class="font-normal text-gray-400">(optional)</span></summary>
+                    {% if uncited_warning %}<p class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800" role="note">{{ uncited_warning }}</p>{% endif %}
                     <div class="mt-4">{% include 'admin_dashboard/includes/form_field.html' with field=form.references %}</div>
                 </details>
             </section>
@@ -1010,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', function () {
             syncAlt();
             var hint = document.createElement('p');
             hint.className = 'mt-1 text-xs text-gray-500';
-            hint.textContent = 'Filled from the headline. Type your own to describe the picture instead.';
+            hint.textContent = 'Filled from the headline, which marks the picture as decorative: screen readers skip it. If the picture shows something (a chart, a clinic, a person), describe that instead.';
             alt.insertAdjacentElement('afterend', hint);
         }
         [slug, title].forEach(function (el) { if (el) { el.addEventListener('input', render); el.addEventListener('change', render); } });

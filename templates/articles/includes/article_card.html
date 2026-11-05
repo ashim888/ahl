@@ -1,5 +1,5 @@
 {% load news_time image_tags %}
-{% load i18n topic_tags %}
+{% load i18n topic_tags text_filters %}
 {% comment %}
 Open card for an article, matching the training course cards: picture on
 top, text under it, no frame (hover underlines the headline). Used on issue, section and related-reading grids.
@@ -9,7 +9,7 @@ keyword_tags (the #topics line).
 <article class="group relative flex flex-col">
     <div class="relative aspect-video bg-secondary overflow-hidden">
         {% if article.card_image_url %}
-            <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw" style="{{ article.card_image_style }}" alt="{{ article.featured_image_alt|default:article.title }}" loading="lazy"
+            <img src="{{ article.card_image_url }}" srcset="{{ article.card_image_url|srcset }}" sizes="(min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw" style="{{ article.card_image_style }}" alt="{{ article|image_alt }}" loading="lazy"
                  class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300">
             {% include 'articles/includes/play_badge.html' with article=article %}
         {% else %}

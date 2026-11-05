@@ -44,7 +44,7 @@ from . import bylines as byline_utils
 from .citations import linkify_citations, uncited_references_warning
 from .content_ads import build_content_blocks
 from .content_templates import ARTICLE_TYPE_CONTENT_TEMPLATES
-from .toc import MIN_HEADINGS_FOR_TOC, extract_toc
+from .toc import MIN_HEADINGS_FOR_TOC, extract_toc, summary_repeated_in_body
 from .forms import (
     ArticleCorrectionForm, ArticleForm, ArticleNoteForm, DraftArticleForm, LenientArticleForm,
     PublishArticleForm, ScheduleArticleForm, edit_token_for,
@@ -68,6 +68,10 @@ from .seo import breadcrumb_list_structured_data, news_article_structured_data, 
 from .similarity import similar_articles
 
 OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_EDITOR]
+
+# What an article page answers for: archived articles stay reachable (behind
+# archive access), so their cite and save links have to work too.
+READABLE_STATUSES = [Article.Status.PUBLISHED, Article.Status.ARCHIVED]
 
 # Article CRUD (manage/ views below) is an editorial capability — ARCHITECTURE.md
 # §6.3 grants "Access admin: Yes" to Editor/EiC/Admin only. Single source of
@@ -571,7 +575,7 @@ class ArticleDetailView(DetailView):
         # its own permalink — full-text access is still gated (see
         # article_is_accessible's grants_full_archive check), just not a
         # blanket 404 the way it was before Session 7.
-        return Article.objects.filter(status__in=[Article.Status.PUBLISHED, Article.Status.ARCHIVED])
+        return Article.objects.filter(status__in=READABLE_STATUSES)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -610,6 +614,11 @@ class ArticleDetailView(DetailView):
                     'limit': FREE_SAMPLE_LIMIT_PER_MONTH,
                 }
         context['show_full_text'] = show_full_text
+        # The body opens with its own abstract that already holds the summary
+        # word for word: show it once, there (only when the body is shown).
+        context['summary_in_body'] = show_full_text and summary_repeated_in_body(
+            self.object.html_content, self.object.abstract,
+        )
         if not show_full_text:
             # The paywall says what reading costs: the cheapest monthly plan.
             context['cheapest_monthly_plan'] = SubscriptionPlan.objects.filter(
@@ -642,6 +651,7 @@ class ArticleDetailView(DetailView):
         # metered allowance has nothing of their own to give away.
         if (
             self.object.access_type in GIFTABLE_ACCESS_TYPES
+            and self.object.status == Article.Status.PUBLISHED  # archived ones aren't giftable (article_gift_create)
             and self.request.user.is_authenticated
             and article_is_accessible(self.request.user, self.object)
         ):
@@ -788,7 +798,8 @@ def article_citation(request, slug, citation_format):
     if citation_format not in CITATION_FORMATS:
         raise Http404
 
-    article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
+    # Archived articles stay citable: ArticleDetailView still shows them, with this link.
+    article = get_object_or_404(Article, slug=slug, status__in=READABLE_STATUSES)
     authors = [aa.display_name for aa in article.articleauthor_set.select_related('author__user').order_by('order')]
     year = article.publication_date.year if article.publication_date else ''
 
@@ -864,9 +875,10 @@ def article_bookmark_toggle(request, slug):
     state to decide which label to show). Deliberately not paywall-gated —
     an abstract-only, subscription-required article can still be saved for
     later; a reader shouldn't have to pass the paywall just to bookmark
-    something they intend to subscribe and come back to.
+    something they intend to subscribe and come back to. Archived articles
+    can be saved too: their page still offers the button.
     """
-    article = get_object_or_404(Article, slug=slug, status=Article.Status.PUBLISHED)
+    article = get_object_or_404(Article, slug=slug, status__in=READABLE_STATUSES)
     bookmark, created = Bookmark.objects.get_or_create(user=request.user, article=article)
     if not created:
         bookmark.delete()
@@ -1499,9 +1511,6 @@ class ArticleFormMixin:
         if action == 'ready':
             self._notify_publishers_ready()
         messages.success(self.request, f'"{self.object.title}" {self._message(previous_status, action, form)}.')
-        uncited = uncited_references_warning(self.object)
-        if uncited:
-            messages.warning(self.request, uncited)
         return response
 
     def _message(self, previous_status, action, form):
@@ -1609,6 +1618,9 @@ class ArticleUpdateView(ArticleFormMixin, UpdateView):
         context['note_form'] = ArticleNoteForm()
         context['notes'] = self.object.notes.select_related('author')
         context['revision_count'] = self.object.revisions.count()
+        # Shown beside the References field every time the article is open,
+        # not just once after a save: older articles never saw it otherwise.
+        context['uncited_warning'] = uncited_references_warning(getattr(self, '_previous', None) or self.object)
         return context
 
 

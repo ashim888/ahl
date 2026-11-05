@@ -52,6 +52,6 @@ def uncited_references_warning(article) -> str:
         return ''
     sources = f'{count} source{"s" if count > 1 else ""}'
     return (
-        f'"{article.title}" lists {sources} but the text doesn\'t cite any. '
+        f'This article lists {sources} but the text doesn\'t cite any. '
         'Type [1], [2]… after each claim that comes from a source, so readers can check it.'
     )

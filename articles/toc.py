@@ -114,3 +114,29 @@ def promote_bold_headings(html_content: str) -> str:
         return f'<{level}>{inner.replace("&nbsp;", " ").strip()}</{level}>'
 
     return BOLD_PARAGRAPH_RE.sub(promote, html_content)
+
+
+# How editors label an article's opening summary, as a heading or a bold
+# paragraph of its own ("<p><strong>संक्षेप</strong></p>").
+ABSTRACT_LABELS = {'संक्षेप', 'सारांश', 'सार', 'abstract', 'summary'}
+OPENING_BLOCK_PATTERN = re.compile(r'^\s*<(h[2-4]|p)\b[^>]*>(.*?)</\1>', re.IGNORECASE | re.DOTALL)
+PARAGRAPH_PATTERN = re.compile(r'<p\b[^>]*>(.*?)</p>', re.IGNORECASE | re.DOTALL)
+TAG_PATTERN = re.compile(r'<[^>]+>')
+
+
+def _plain(html: str) -> str:
+    """Tags stripped, entities decoded, every run of whitespace (nbsp too) one space."""
+    return ' '.join(unescape(TAG_PATTERN.sub(' ', html or '')).split())
+
+
+def summary_repeated_in_body(html_content: str, summary: str) -> bool:
+    """True when the body opens with its own abstract section (a "संक्षेप" /
+    "Abstract" label, then paragraphs) that already contains the article's
+    summary word for word — the article page then shows the summary once,
+    in the body, instead of under the headline and again below it."""
+    summary = _plain(summary)
+    match = OPENING_BLOCK_PATTERN.match(html_content or '')
+    if not summary or not match or _plain(match.group(2)).rstrip(':').strip().lower() not in ABSTRACT_LABELS:
+        return False
+    following = PARAGRAPH_PATTERN.findall(html_content[match.end():match.end() + 20000])[:3]
+    return summary in _plain(' '.join(following))

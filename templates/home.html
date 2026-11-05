@@ -193,7 +193,7 @@ beside it with small thumbnails. Stacks on phones.
             {# No picture: the plate shrinks to a 21:9 strip and the headline carries the lead. #}
             <div class="relative {% if lead.card_image_url %}aspect-[3/2]{% else %}aspect-[21/9]{% endif %} bg-secondary overflow-hidden">
                 {% if lead.card_image_url %}
-                    <img src="{{ lead.card_image_url }}" srcset="{{ lead.card_image_url|srcset }}" sizes="(min-width: 1024px) 58vw, 100vw" style="{{ lead.card_image_style }}" alt="{{ lead.featured_image_alt }}" loading="lazy"
+                    <img src="{{ lead.card_image_url }}" srcset="{{ lead.card_image_url|srcset }}" sizes="(min-width: 1024px) 58vw, 100vw" style="{{ lead.card_image_style }}" alt="{{ lead|image_alt }}" loading="lazy"
                          class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]">
                     {% include 'articles/includes/play_badge.html' with article=lead %}
                 {% else %}

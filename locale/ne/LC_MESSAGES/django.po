@@ -4478,3 +4478,23 @@ msgstr "प्रतिलिपि भयो"
 #: templates/articles/article_detail.html
 msgid "COPIED"
 msgstr "प्रतिलिपि भयो"
+
+#: templates/articles/article_detail.html
+msgid "incl. VAT"
+msgstr "भ्याट सहित"
+
+#: templates/articles/article_detail.html
+msgid "What's inside"
+msgstr "यसभित्र के छ"
+
+#: templates/articles/article_detail.html
+msgid "Gift link"
+msgstr "उपहार लिंक"
+
+#: templates/articles/article_detail.html
+msgid "Buy this article once and it's yours to read, or read it free with an active subscription."
+msgstr "यो लेख एक पटक किन्नुहोस्, त्यसपछि यो तपाईंकै हो। सक्रिय सदस्यता भए निःशुल्क पढ्न सक्नुहुन्छ।"
+
+#: templates/articles/article_detail.html
+msgid "This article is in our archive. Archive reading comes with some subscription plans — pick one that includes the archive to read it in full."
+msgstr "यो लेख हाम्रो अभिलेखमा छ। अभिलेख पढ्ने सुविधा केही सदस्यता योजनामा मात्र समावेश छ — पूरा पढ्न अभिलेख समावेश भएको योजना छान्नुहोस्।"

@@ -1,6 +1,38 @@
+import re
+
 from django import template
+from django.utils.html import urlize
+from django.utils.safestring import mark_safe
 
 register = template.Library()
+
+# A bare DOI in a reference ("doi:10.1000/xyz123" or just "10.1000/xyz123"),
+# not one already inside a doi.org URL. Trailing punctuation isn't part of it.
+DOI_PATTERN = re.compile(r'(?<![/\w.])(?:doi:\s*)?(10\.\d{4,9}/[^\s<>"]*[^\s<>".,;:)\]])', re.IGNORECASE)
+ANCHOR_PATTERN = re.compile(r'(<a\b[^>]*>.*?</a>)', re.IGNORECASE | re.DOTALL)
+
+
+@register.filter
+def image_alt(article):
+    """{{ article|image_alt }} — the featured image's description, or empty
+    when it's only the headline again (the default Article.save fills in):
+    the picture then sits beside the headline as decoration, and a screen
+    reader shouldn't read the headline twice."""
+    alt = (article.featured_image_alt or '').strip()
+    return '' if alt == (article.title or '').strip()[:250] else alt
+
+
+@register.filter(needs_autoescape=True)
+def reference_links(text, autoescape=True):
+    """{{ reference|reference_links }} — |urlize, plus a link to doi.org for
+    a bare DOI, so a reader can open the source behind a reference."""
+    html = urlize(text, nofollow=True, autoescape=autoescape)
+    parts = ANCHOR_PATTERN.split(html)  # odd items are links urlize already made
+    for i in range(0, len(parts), 2):
+        parts[i] = DOI_PATTERN.sub(
+            lambda m: f'<a href="https://doi.org/{m.group(1)}" rel="nofollow">{m.group(0)}</a>', parts[i],
+        )
+    return mark_safe(''.join(parts))
 
 
 @register.filter
