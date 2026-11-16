@@ -863,4 +863,10 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script src="{% static 'js/citations.js' %}" defer></script>
+{% if glossary_definitions %}
+    {# Glossary terms marked in the text (library/glossary_marking.py): their definitions for the tap-to-read cards. #}
+    {{ glossary_definitions|json_script:"glossary-data" }}
+    <div hidden id="glossary-labels" data-label="{% trans 'Glossary' %}" data-more="{% trans 'Read more in the glossary →' %}"></div>
+    <script src="{% static 'js/glossary.js' %}" defer></script>
+{% endif %}
 {% endblock %}

@@ -57,6 +57,15 @@
             {% for topic in matching_topics %}{% include 'articles/includes/topic_pill.html' with topic=topic count=topic.article_count %}{% endfor %}
         </div>
     {% endif %}
+    {% for term in glossary_terms %}
+        {# Glossary definition for a term the reader searched (library/queries.py glossary_for_search). #}
+        <aside class="mt-6 bg-secondary px-5 py-4" aria-label="{% trans 'Glossary' %}">
+            <p class="font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "GLOSSARY" %}</p>
+            <p class="mt-2 font-semibold">{{ term.display_name }}</p>
+            <p class="mt-1 text-sm leading-relaxed line-clamp-3">{{ term.shown_definition }}</p>
+            <a href="{{ term.get_absolute_url }}" class="mt-2 inline-block font-mono-editorial text-xs tracking-widest underline hover:text-accent">{% trans "READ MORE →" %}</a>
+        </aside>
+    {% endfor %}
     {% if library_results %}
         {# Health library matches (library/queries.py search), page one only. #}
         <section class="mt-6 border border-border px-5 py-4" aria-labelledby="search-library">

@@ -14,9 +14,14 @@ from articles.seo import breadcrumb_list_structured_data
 from users.decorators import role_required
 from users.models import User
 
-from .forms import ResourceForm
-from .models import Resource
-from .queries import matching
+import json
+
+from django.shortcuts import render
+from django.utils.translation import get_language
+
+from .forms import GlossaryTermForm, ResourceForm
+from .models import GlossaryTerm, Resource
+from .queries import glossary_matching, matching
 
 EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
@@ -114,6 +119,67 @@ def resource_download(request, slug):
     return redirect(target)
 
 
+# -- Glossary ----------------------------------------------------------------
+
+def glossary_list(request):
+    """/library/glossary/: every published term, A–Z (Devanagari first, then
+    Latin), with search across names, other names and definitions."""
+    terms = GlossaryTerm.objects.filter(is_published=True)
+    letters = sorted({t.index_letter for t in terms}, key=lambda c: (c.isascii(), c))
+    query = request.GET.get('q', '').strip()[:100]
+    letter = request.GET.get('letter', '')
+    if query:
+        terms = glossary_matching(terms, query)
+    terms = sorted(terms, key=lambda t: (t.index_letter.isascii(), t.primary_term.lower()))
+    if letter and not query:
+        terms = [t for t in terms if t.index_letter == letter]
+    groups = {}
+    for term in terms:
+        groups.setdefault(term.index_letter, []).append(term)
+    language = get_language() or 'ne'
+    for term in terms:
+        term.shown_definition = term.definition_for(language)
+    return render(request, 'library/glossary_list.html', {
+        'groups': list(groups.items()), 'letters': letters, 'selected_letter': letter if not query else '',
+        'query': query, 'result_count': len(terms),
+        'meta_title': f'{_("Health Glossary")} — {settings.JOURNAL_NAME}',
+        'meta_description': (f'Medical and public-health terms explained in plain Nepali and English, '
+                             f'from {settings.JOURNAL_NAME}.'),
+    })
+
+
+def glossary_detail(request, slug):
+    term = get_object_or_404(GlossaryTerm, slug=slug, is_published=True)
+    language = get_language() or 'ne'
+    # Definitions: the reader's language first, then the other one if written.
+    definitions = [(code, text) for code, text in (('ne', term.definition_ne), ('en', term.definition_en)) if text]
+    definitions.sort(key=lambda d: d[0] != language)
+    # Our articles that mention the term (site search, articles/search.py).
+    from articles.search import search_ids
+
+    published_articles = Article.objects.filter(status=Article.Status.PUBLISHED)
+    ids = []
+    for name in [term.term_ne, term.term_en]:
+        if name:
+            ids += [pk for pk in search_ids(published_articles, name, limit=6) if pk not in ids]
+    by_id = Article.objects.in_bulk(ids[:6])
+    mentions = [by_id[pk] for pk in ids[:6] if pk in by_id]
+    return render(request, 'library/glossary_detail.html', {
+        'term': term, 'definitions': definitions, 'mentions': mentions,
+        'related_terms': term.related_terms.filter(is_published=True),
+        'topics': term.keyword_tags.all(),
+        'meta_title': f'{term.display_name} — {_("Health Glossary")} — {settings.JOURNAL_NAME}',
+        'meta_description': term.definition_for(language)[:200],
+        'defined_term_json': json.dumps({
+            '@context': 'https://schema.org', '@type': 'DefinedTerm',
+            'name': term.primary_term, 'alternateName': [n for n in term.names if n != term.primary_term] or None,
+            'description': term.definition_for(language),
+            'url': request.build_absolute_uri(term.get_absolute_url()),
+            'inDefinedTermSet': request.build_absolute_uri(reverse('library:glossary_list')),
+        }, ensure_ascii=False).replace('<', '\\u003c'),  # safe inside <script>, whatever editors type
+    })
+
+
 # -- Editorial management ---------------------------------------------------
 
 @method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
@@ -180,6 +246,69 @@ class ResourceDeleteView(DeleteView):
     template_name = 'library/manage/resource_confirm_delete.html'
     context_object_name = 'resource'
     success_url = reverse_lazy('library:manage_resource_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{self.object}" deleted.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class GlossaryManageListView(ListView):
+    template_name = 'library/manage/glossary_list.html'
+    context_object_name = 'terms'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = GlossaryTerm.objects.order_by('term_ne', 'term_en')
+        if self.request.GET.get('q'):
+            queryset = glossary_matching(queryset, self.request.GET['q'], definitions=False)
+        if self.request.GET.get('published') == 'no':
+            queryset = queryset.filter(is_published=False)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(query=self.request.GET.get('q', ''),
+                                         selected_published=self.request.GET.get('published', ''), **kwargs)
+
+
+class GlossaryFormMixin:
+    model = GlossaryTerm
+    form_class = GlossaryTermForm
+    template_name = 'library/manage/glossary_form.html'
+
+    def get_success_url(self):
+        if '_addanother' in self.request.POST:
+            return reverse('library:manage_glossary_create')
+        return reverse('library:manage_glossary_list')
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class GlossaryCreateView(GlossaryFormMixin, CreateView):
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(is_create=True, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, f'"{form.instance}" added to the glossary.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class GlossaryUpdateView(GlossaryFormMixin, UpdateView):
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(is_create=False, **kwargs)
+
+    def form_valid(self, form):
+        messages.success(self.request, f'"{form.instance}" updated.')
+        return super().form_valid(form)
+
+
+@method_decorator(role_required(*EDITORIAL_ROLES), name='dispatch')
+class GlossaryDeleteView(DeleteView):
+    model = GlossaryTerm
+    template_name = 'library/manage/glossary_confirm_delete.html'
+    context_object_name = 'term'
+    success_url = reverse_lazy('library:manage_glossary_list')
 
     def form_valid(self, form):
         messages.success(self.request, f'"{self.object}" deleted.')

@@ -167,6 +167,167 @@ class LibraryManageTests(TestCase):
         self.assertContains(self.client.get(reverse('library:manage_resource_list')), 'Listed resource')
 
 
+class GlossaryTests(TestCase):
+    def setUp(self):
+        from .models import GlossaryTerm
+
+        self.diabetes = GlossaryTerm.objects.create(
+            term_ne='मधुमेह', term_en='Diabetes', also_called='Sugar disease, DM',
+            definition_ne='रगतमा चिनीको मात्रा लामो समयसम्म धेरै भइरहने रोग।',
+            definition_en='A long-term condition where blood sugar stays too high.', is_published=True)
+        self.hba1c = GlossaryTerm.objects.create(term_en='HbA1c', definition_en='A blood test of average sugar.',
+                                                 is_published=True)
+        self.hba1c.related_terms.add(self.diabetes)
+        self.draft = GlossaryTerm.objects.create(term_en='Draft term', definition_en='Not ready.')
+        self.editor = User.objects.create_user(email='g@example.com', password='pw', first_name='G', last_name='E',
+                                               role=User.Role.EDITOR)
+
+    def test_names_and_slug(self):
+        self.assertEqual(self.diabetes.display_name, 'मधुमेह (Diabetes)')
+        self.assertEqual(self.diabetes.slug, 'diabetes')
+        self.assertEqual(self.diabetes.names, ['मधुमेह', 'Diabetes', 'Sugar disease', 'DM'])
+        self.assertEqual(self.hba1c.index_letter, 'H')
+        self.assertEqual(self.diabetes.index_letter, 'म')
+
+    def test_list_groups_by_letter_and_hides_drafts(self):
+        response = self.client.get(reverse('library:glossary_list'))
+        groups = dict(response.context['groups'])
+        self.assertEqual(list(groups), ['म', 'H'])  # Devanagari first
+        self.assertNotContains(response, 'Draft term')
+
+    def found(self, query):
+        groups = self.client.get(reverse('library:glossary_list'), {'q': query}).context['groups']
+        return [term for _, terms in groups for term in terms]
+
+    def test_search_by_alias_and_definition(self):
+        self.assertEqual(self.found('sugar disease'), [self.diabetes])
+        self.assertEqual(self.found('average'), [self.hba1c])
+        self.assertEqual(self.found('मधुमेह'), [self.diabetes])
+
+    def test_detail_page(self):
+        response = self.client.get(self.diabetes.get_absolute_url())
+        self.assertContains(response, 'रगतमा चिनीको')
+        self.assertContains(response, 'HbA1c')  # related, symmetrical
+        self.assertContains(response, '"@type": "DefinedTerm"')
+        self.assertEqual(self.client.get(self.draft.get_absolute_url()).status_code, 404)
+
+    def test_json_ld_cannot_close_the_script_tag(self):
+        self.diabetes.definition_ne = 'Bad </script><script>alert(1)</script>'
+        self.diabetes.save()
+        response = self.client.get(self.diabetes.get_absolute_url())
+        self.assertNotContains(response, '</script><script>alert(1)')
+
+    def test_site_search_shows_matching_term(self):
+        response = self.client.get(reverse('articles:search'), {'q': 'मधुमेह'})
+        self.assertEqual(response.context['glossary_terms'], [self.diabetes])
+        response = self.client.get(reverse('articles:search'), {'q': 'average'})
+        self.assertEqual(response.context['glossary_terms'], [])  # names only, not definitions
+
+    def test_glossary_slug_reserved_for_documents(self):
+        self.assertEqual(make('Glossary').slug, 'glossary-document')
+        self.assertEqual(self.client.get('/library/glossary/').status_code, 200)
+
+    def test_editor_create_and_duplicate_check(self):
+        self.client.force_login(self.editor)
+        url = reverse('library:manage_glossary_create')
+        response = self.client.post(url, {'term_ne': 'उच्च रक्तचाप', 'term_en': 'Hypertension',
+                                          'definition_ne': 'रगतको चाप लगातार बढी हुनु।', 'is_published': 'on',
+                                          'keywords': json.dumps([{'value': 'Heart'}])})
+        self.assertRedirects(response, reverse('library:manage_glossary_list'))
+        from .models import GlossaryTerm
+
+        term = GlossaryTerm.objects.get(term_en='Hypertension')
+        self.assertEqual(term.created_by, self.editor)
+        self.assertEqual([k.name for k in term.keyword_tags.all()], ['Heart'])
+        response = self.client.post(url, {'term_en': 'diabetes', 'definition_en': 'Again.'})
+        self.assertContains(response, 'already in the glossary')
+        response = self.client.post(url, {'term_en': 'Something'})
+        self.assertContains(response, 'Write a definition')
+
+    def test_readers_refused(self):
+        reader = User.objects.create_user(email='rr@example.com', password='pw', first_name='R', last_name='R')
+        self.client.force_login(reader)
+        self.assertEqual(self.client.get(reverse('library:manage_glossary_list')).status_code, 403)
+
+
+class GlossaryMarkingTests(TestCase):
+    """Glossary terms marked in article text (glossary_marking.py)."""
+
+    def setUp(self):
+        from .glossary_marking import clear_cache
+        from .models import GlossaryTerm
+
+        clear_cache()  # test rollbacks don't send post_delete, so start clean
+        self.diabetes = GlossaryTerm.objects.create(
+            term_ne='मधुमेह', term_en='Diabetes', also_called='DM',
+            definition_ne='रगतमा चिनी धेरै हुने रोग।', definition_en='High blood sugar.', is_published=True)
+        self.vaccine = GlossaryTerm.objects.create(term_ne='खोप', term_en='Vaccine',
+                                                   definition_ne='रोगबाट जोगाउने औषधि।', is_published=True)
+        self.who = GlossaryTerm.objects.create(term_en='WHO', definition_en='World Health Organization.',
+                                               is_published=True)
+        GlossaryTerm.objects.create(term_en='Hidden', definition_en='Draft.')
+
+    def mark(self, html, **kwargs):
+        from .glossary_marking import mark_terms
+
+        return mark_terms(html, **kwargs)
+
+    def test_nepali_with_endings_marked_once(self):
+        html, used = self.mark('<p>मधुमेहको उपचार। मधुमेह फेरि।</p><p>खोपहरू लगाउनुहोस्।</p>')
+        self.assertEqual(used, ['diabetes', 'vaccine'])
+        self.assertIn('<a href="/library/glossary/diabetes/" class="glossary-term" data-glossary="diabetes">मधुमेह</a>को', html)
+        self.assertEqual(html.count('glossary-term'), 2)  # second मधुमेह left alone
+        self.assertIn('>खोप</a>हरू', html)
+
+    def test_never_inside_another_nepali_word(self):
+        html, used = self.mark('<p>खोपडीमा चोट लाग्यो।</p>')  # skull, not vaccine
+        self.assertEqual(used, [])
+
+    def test_english_whole_words_any_case_and_caps_exact(self):
+        html, used = self.mark('<p>diabetes rates rise; prediabetes too. People who smoke. The WHO says so.</p>')
+        self.assertEqual(used, ['diabetes', 'who'])
+        self.assertIn('>diabetes</a> rates', html)
+        self.assertIn('prediabetes too', html)  # not inside a longer word
+        self.assertNotIn('>who</a>', html)
+        self.assertIn('>WHO</a>', html)
+
+    def test_skips_links_headings_code_and_citations(self):
+        html, used = self.mark('<h2>Diabetes</h2><p><a href="/x">diabetes</a> <code>diabetes</code> '
+                               '<sup><a href="#ref-1">1</a></sup></p><figure><figcaption>Diabetes</figcaption></figure>')
+        self.assertEqual(used, [])
+        html, used = self.mark('<h2>Diabetes</h2><p>Living with diabetes.</p>')
+        self.assertIn('<h2>Diabetes</h2>', html)
+        self.assertIn('with <a', html)
+
+    def test_unpublished_ignored_and_limit(self):
+        html, used = self.mark('<p>Hidden diabetes vaccine WHO</p>', max_marks=2)
+        self.assertEqual(used, ['diabetes', 'vaccine'])
+
+    def test_cache_refreshes_when_a_term_changes(self):
+        self.assertEqual(self.mark('<p>Malaria</p>')[1], [])
+        from .models import GlossaryTerm
+
+        GlossaryTerm.objects.create(term_en='Malaria', definition_en='A mosquito-borne disease.', is_published=True)
+        self.assertEqual(self.mark('<p>Malaria</p>')[1], ['malaria'])
+
+    def test_article_page_marks_terms_and_ships_definitions(self):
+        article = Article.objects.create(title='Sugar story', status=Article.Status.PUBLISHED,
+                                         html_content='<p>मधुमेहका बिरामी बढे। The WHO warned.</p>')
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'class="glossary-term" data-glossary="diabetes"')
+        self.assertEqual(set(response.context['glossary_definitions']), {'diabetes', 'who'})
+        self.assertContains(response, 'id="glossary-data"')
+        self.assertContains(response, 'js/glossary.js')
+        # Stored text is untouched: marking happens at render time.
+        article.refresh_from_db()
+        self.assertNotIn('glossary-term', article.html_content)
+
+    def test_no_terms_no_script(self):
+        article = Article.objects.create(title='Plain', status=Article.Status.PUBLISHED, html_content='<p>Nothing here.</p>')
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(response, 'js/glossary.js')
+
+
 class LibraryAcrossTheSiteTests(TestCase):
     """The library on article pages, topic pages, site search and the menu."""
 

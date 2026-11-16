@@ -1,0 +1,66 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}{% if is_create %}Add term{% else %}Edit term{% endif %} — {{ JOURNAL_NAME }}{% endblock %}
+{% block page_title %}{% if is_create %}Add to the glossary{% else %}Edit term{% endif %}{% endblock %}
+
+{% block extra_head %}
+    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+    <style>
+        .tagify { width: 100%; --tags-border-color: #e5e7eb; --tags-focus-border-color: #6366f1; --tag-bg: #eef2ff;
+                  --tag-hover: #e0e7ff; --tag-text-color: #3730a3; --tag-remove-btn-color: #6366f1; border-radius: 0.875rem; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-10">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="mb-6 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <p class="mb-6 text-sm text-gray-500">Fill in the term in either language or both, and at least one definition. Write for someone with no medical training.</p>
+
+        <div class="space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.term_ne %}
+                {% include 'admin_dashboard/includes/form_field.html' with field=form.term_en %}
+            </div>
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.also_called %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.definition_ne %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.definition_en %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.keywords %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.related_terms %}
+            {% include 'admin_dashboard/includes/form_field.html' with field=form.is_published %}
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
+            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white hover:bg-gray-800 transition-colors">
+                {% if is_create %}Add term{% else %}Save changes{% endif %}
+            </button>
+            {% if is_create %}
+                <button type="submit" name="_addanother" value="1" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Add and write another</button>
+            {% endif %}
+            <a href="{% url 'library:manage_glossary_list' %}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var input = document.getElementById('id_keywords');
+    if (!input || !window.Tagify) return;
+    var tagify = new Tagify(input, {enforceWhitelist: false, dropdown: {enabled: 1, maxItems: 20}});
+    var controller = null;
+    tagify.on('input', function (e) {
+        var query = e.detail.value;
+        if (controller) controller.abort();
+        controller = new AbortController();
+        fetch('{% url "articles:keyword_autocomplete" %}?q=' + encodeURIComponent(query), {signal: controller.signal})
+            .then(function (r) { return r.json(); })
+            .then(function (items) { tagify.whitelist = items; tagify.dropdown.show.call(tagify, query); })
+            .catch(function (error) { if (error.name !== 'AbortError') throw error; });
+    });
+});
+</script>
+{% endblock %}

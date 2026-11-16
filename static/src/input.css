@@ -269,6 +269,17 @@ input::placeholder, textarea::placeholder { color: theme('colors.muted-foregroun
   .cite-card { animation-name: cite-card-fade; } .cite-card--out { animation-name: cite-card-fade-out; }
   @keyframes cite-card-fade { from { opacity: 0; } } @keyframes cite-card-fade-out { to { opacity: 0; } }
 }
+/* Health-glossary terms in article text (library/glossary_marking.py, static/js/glossary.js):
+   ordinary ink with a dotted accent underline, so they read as "tap for meaning", not as
+   links that leave the page. The definition opens in the citation card above. */
+.prose-article a.glossary-term {
+  color: inherit; font-weight: inherit; text-decoration: underline dotted theme('colors.accent');
+  text-decoration-thickness: 1.5px; text-underline-offset: 0.22em; cursor: help;
+}
+.prose-article a.glossary-term:hover,
+.prose-article a.glossary-term[aria-expanded="true"] { background: theme('colors.secondary'); text-decoration-style: solid; }
+.glossary-card .glossary-card__name { margin: 0.35rem 0 0; font-weight: 700; font-size: 1rem; color: theme('colors.foreground'); }
+
 /* Jumping to a source (no script, or "All references") lands on it visibly, clear of the sticky header. */
 li[id^="ref-"] { scroll-margin-top: 7rem; }
 li[id^="ref-"]:target { background: theme('colors.secondary'); outline: 6px solid theme('colors.secondary'); color: theme('colors.foreground'); }

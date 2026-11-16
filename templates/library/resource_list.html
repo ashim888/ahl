@@ -19,6 +19,7 @@
                class="flex-1 min-w-0 border border-border px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-foreground">
         <button type="submit" class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors whitespace-nowrap">{% trans "SEARCH" %}</button>
     </form>
+    <p class="mt-3 text-sm text-muted-foreground">{% trans "Stuck on a medical word?" %} <a href="{% url 'library:glossary_list' %}" class="font-semibold text-foreground underline underline-offset-4 hover:text-accent">{% trans "Look it up in the health glossary →" %}</a></p>
 
     <nav class="mt-6 flex flex-wrap gap-2" aria-label="{% trans 'Resource type' %}">
         <a href="?{% if selected_language %}lang={{ selected_language }}&{% endif %}{% if topic %}topic={{ topic.slug }}&{% endif %}{% if query %}q={{ query|urlencode }}{% endif %}"

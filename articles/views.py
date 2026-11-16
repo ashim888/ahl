@@ -675,6 +675,7 @@ class ArticleDetailView(DetailView):
             _record_keyword_impressions(self.request, self.object, context['keyword_list'])
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
         context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
+        html_with_ids, context['glossary_definitions'] = _mark_glossary_terms(html_with_ids)
         context['content_blocks'] = build_content_blocks(html_with_ids)
         if self.object.references:
             context['references_list'] = [
@@ -948,6 +949,18 @@ class ReadingListView(ListView):
         return context
 
 
+def _mark_glossary_terms(html):
+    """Health-glossary terms in the article text become tappable
+    (library/glossary_marking.py, static/js/glossary.js). Returns the marked
+    HTML and the definitions the popovers need."""
+    from django.utils.translation import get_language
+
+    from library.glossary_marking import definitions_for, mark_terms
+
+    marked, slugs = mark_terms(html)
+    return marked, definitions_for(slugs, get_language() or 'ne')
+
+
 SEARCH_WHEN = {'week': 7, 'month': 31, 'year': 366}
 
 
@@ -1014,9 +1027,16 @@ class SearchView(ListView):
             context['matching_topics'] = list(
                 public_topics().filter(name__icontains=self.query.strip()).order_by('-article_count')[:6])
             # Health library matches (library app), shown above the article results.
-            from library.queries import search as library_search
+            from library.queries import glossary_for_search, search as library_search
 
             context['library_results'], context['library_total'] = library_search(self.query)
+            # Glossary terms whose name matches: what the word means, before the articles.
+            context['glossary_terms'] = glossary_for_search(self.query)
+            from django.utils.translation import get_language
+
+            language = get_language() or 'ne'
+            for term in context['glossary_terms']:
+                term.shown_definition = term.definition_for(language)
         context['sections'] = Section.objects.filter(parent__isnull=True).order_by('order')
         context['types'] = Article.ArticleType.choices
         context['meta_title'] = (
@@ -1744,6 +1764,7 @@ def article_preview(request):
     }
     _html_with_ids, _toc_entries = extract_toc(linkify_citations(article.html_content))
     context['toc_entries'] = _toc_entries if len(_toc_entries) > MIN_HEADINGS_FOR_TOC else []
+    _html_with_ids, context['glossary_definitions'] = _mark_glossary_terms(_html_with_ids)
     context['content_blocks'] = build_content_blocks(_html_with_ids)
     if article.references:
         context['references_list'] = [

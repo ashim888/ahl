@@ -21,6 +21,9 @@ from django.utils.translation import gettext_lazy as _
 from .validators import library_file_extension_validator, validate_library_file_size
 from ajna_health_lens.validators import validate_document_content
 
+# Paths under /library/ that aren't documents.
+RESERVED_SLUGS = {'glossary'}
+
 
 class Resource(models.Model):
     class ResourceType(models.TextChoices):
@@ -91,6 +94,8 @@ class Resource(models.Model):
             from articles.slugs import suggest_slug
 
             base = suggest_slug(self.title) or 'resource'
+            if base in RESERVED_SLUGS:  # /library/glossary/ is the glossary, not a document
+                base = f'{base}-document'
             slug, n = base, 2
             while Resource.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 slug, n = f'{base}-{n}', n + 1
@@ -125,3 +130,92 @@ class Resource(models.Model):
 
         host = urlparse(self.external_url).netloc.lower() if self.external_url else ''
         return host.removeprefix('www.')
+
+
+class GlossaryTerm(models.Model):
+    """A medical or public-health term explained in plain language (vision
+    Objective 7, "reference resources and glossaries"; Pillar 3, simple and
+    actionable language). Bilingual by nature: a term usually has a Nepali
+    and an English name, and readers search by either."""
+
+    term_ne = models.CharField('Term (Nepali)', max_length=150, blank=True)
+    term_en = models.CharField('Term (English)', max_length=150, blank=True)
+    slug = models.SlugField(max_length=160, unique=True, blank=True)
+    also_called = models.CharField(
+        max_length=255, blank=True,
+        help_text='Other names and abbreviations, separated by commas, e.g. "Sugar disease, DM".',
+    )
+    definition_ne = models.TextField(
+        'Definition (Nepali)', blank=True,
+        help_text='Plain language a non-specialist understands: what it is, and why it matters. 1–3 sentences.',
+    )
+    definition_en = models.TextField('Definition (English)', blank=True)
+    keyword_tags = models.ManyToManyField('articles.Keyword', blank=True, related_name='glossary_terms')
+    related_terms = models.ManyToManyField('self', blank=True, symmetrical=True)
+    is_published = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['term_ne', 'term_en']
+
+    def __str__(self):
+        return self.display_name
+
+    def clean(self):
+        if not self.term_ne.strip() and not self.term_en.strip():
+            raise ValidationError(_('Give the term in Nepali, English or both.'))
+        if not self.definition_ne.strip() and not self.definition_en.strip():
+            raise ValidationError(_('Write a definition in Nepali, English or both.'))
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from articles.slugs import suggest_slug
+
+            from django.utils.text import slugify
+
+            # suggest_slug drops filler words, so "WHO" alone would come out empty.
+            base = suggest_slug(self.term_en or self.term_ne) or slugify(self.term_en) or 'term'
+            slug, n = base, 2
+            while GlossaryTerm.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug, n = f'{base}-{n}', n + 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse('library:glossary_detail', args=[self.slug])
+
+    @property
+    def display_name(self):
+        """'मधुमेह (Diabetes)', or whichever name there is."""
+        if self.term_ne and self.term_en:
+            return f'{self.term_ne} ({self.term_en})'
+        return self.term_ne or self.term_en
+
+    @property
+    def primary_term(self):
+        return self.term_ne or self.term_en
+
+    @property
+    def aliases(self):
+        return [a.strip() for a in self.also_called.split(',') if a.strip()]
+
+    @property
+    def names(self):
+        """Every name the term goes by: for search and for finding articles."""
+        return [n for n in [self.term_ne, self.term_en, *self.aliases] if n]
+
+    def definition_for(self, language_code):
+        """The definition in the reader's language, else the other one."""
+        if language_code == 'en':
+            return self.definition_en or self.definition_ne
+        return self.definition_ne or self.definition_en
+
+    @property
+    def index_letter(self):
+        """First letter for the A–Z index: Devanagari consonant/vowel or A–Z."""
+        first = (self.primary_term or '#')[:1].upper()
+        return first if first.isalpha() else '#'

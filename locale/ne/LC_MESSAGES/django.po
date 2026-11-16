@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-16 14:34+0545\n"
+"POT-Creation-Date: 2026-11-16 22:42+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -244,7 +244,7 @@ msgstr ""
 
 #: articles/views.py:393 editorial_board/views.py:89
 #: templates/articles/correction_list.html:4
-#: templates/articles/correction_list.html:7 templates/base.html:636
+#: templates/articles/correction_list.html:7 templates/base.html:637
 msgid "Corrections"
 msgstr "सच्याइहरू"
 
@@ -266,33 +266,33 @@ msgstr "अभिलेख"
 msgid "For You"
 msgstr "तपाईंका लागि"
 
-#: articles/views.py:892
+#: articles/views.py:893
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:894
+#: articles/views.py:895
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:911
+#: articles/views.py:912
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:913
+#: articles/views.py:914
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:946 templates/articles/reading_list.html:9
+#: articles/views.py:947 templates/articles/reading_list.html:9
 #: templates/base.html:390 templates/base.html:467
 msgid "Reading List"
 msgstr "पठन सूची"
 
-#: articles/views.py:1164 sections/views.py:87
+#: articles/views.py:1184 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:1169 sections/views.py:89
+#: articles/views.py:1189 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -819,7 +819,7 @@ msgstr "प्रकाशक"
 msgid "Languages"
 msgstr "भाषाहरू"
 
-#: editorial_board/views.py:204 library/models.py:39
+#: editorial_board/views.py:204 library/models.py:42
 msgid "Nepali and English"
 msgstr "नेपाली र अंग्रेजी"
 
@@ -848,7 +848,7 @@ msgstr ""
 msgid "About"
 msgstr "बारेमा"
 
-#: editorial_board/views.py:212 templates/base.html:302 templates/base.html:630
+#: editorial_board/views.py:212 templates/base.html:302 templates/base.html:631
 msgid "Editorial Board"
 msgstr "सम्पादकीय बोर्ड"
 
@@ -863,58 +863,71 @@ msgid_plural "%(count)d ARTICLES"
 msgstr[0] "%(count)d लेख"
 msgstr[1] "%(count)d लेख"
 
-#: library/models.py:27
+#: library/models.py:30
 msgid "Research paper"
 msgstr "अनुसन्धान पत्र"
 
-#: library/models.py:28
+#: library/models.py:31
 msgid "Policy document"
 msgstr "नीति दस्तावेज"
 
-#: library/models.py:29
+#: library/models.py:32
 msgid "Government report"
 msgstr "सरकारी प्रतिवेदन"
 
-#: library/models.py:30
+#: library/models.py:33
 msgid "Guideline or protocol"
 msgstr "निर्देशिका वा प्रोटोकल"
 
-#: library/models.py:31
+#: library/models.py:34
 msgid "Training material"
 msgstr "तालिम सामग्री"
 
-#: library/models.py:32
+#: library/models.py:35
 msgid "Presentation"
 msgstr "प्रस्तुति"
 
-#: library/models.py:33
+#: library/models.py:36
 msgid "Data"
 msgstr "तथ्यांक"
 
-#: library/models.py:34
+#: library/models.py:37
 msgid "Reference resource"
 msgstr "सन्दर्भ सामग्री"
 
-#: library/models.py:37
+#: library/models.py:40
 msgid "Nepali"
 msgstr "नेपाली"
 
-#: library/models.py:38
+#: library/models.py:41
 msgid "English"
 msgstr "अंग्रेजी"
 
-#: library/models.py:85
+#: library/models.py:88
 msgid "Upload a file or give a link to where it is published."
 msgstr "फाइल अपलोड गर्नुहोस् वा यो प्रकाशित भएको ठाउँको लिंक दिनुहोस्।"
 
-#: library/models.py:87
+#: library/models.py:90
 msgid "Use either an uploaded file or a link, not both."
 msgstr "अपलोड गरिएको फाइल वा लिंकमध्ये एउटा मात्र प्रयोग गर्नुहोस्, दुवै होइन।"
 
-#: library/views.py:65 library/views.py:95 templates/base.html:624
+#: library/models.py:170
+msgid "Give the term in Nepali, English or both."
+msgstr "शब्द नेपाली, अंग्रेजी वा दुवैमा दिनुहोस्।"
+
+#: library/models.py:172
+msgid "Write a definition in Nepali, English or both."
+msgstr "परिभाषा नेपाली, अंग्रेजी वा दुवैमा लेख्नुहोस्।"
+
+#: library/views.py:70 library/views.py:100 templates/base.html:624
 #: templates/library/resource_list.html:9
 msgid "Health Library"
 msgstr "स्वास्थ्य पुस्तकालय"
+
+#: library/views.py:145 library/views.py:171 templates/base.html:625
+#: templates/library/glossary_list.html:9
+msgid "Health Glossary"
+msgstr "स्वास्थ्य शब्दावली"
 
 #: newsletter/views.py:48
 msgid "You're already subscribed."
@@ -1098,6 +1111,7 @@ msgstr "लेख खोज्नुहोस्…"
 
 #: templates/404.html:16 templates/articles/article_list.html:32
 #: templates/articles/search_results.html:17
+#: templates/library/glossary_list.html:18
 #: templates/library/resource_list.html:21
 #: templates/training/course_list.html:24
 msgid "SEARCH"
@@ -1199,7 +1213,7 @@ msgstr ""
 #: templates/articles/article_list.html:105 templates/articles/for_you.html:37
 #: templates/articles/includes/article_card.html:31
 #: templates/articles/reading_list.html:45
-#: templates/articles/search_results.html:86 templates/home.html:83
+#: templates/articles/search_results.html:95 templates/home.html:83
 #: templates/home.html:213 templates/home.html:233 templates/home.html:278
 #: templates/home.html:340 templates/sections/section_detail.html:81
 msgid "Editorial staff"
@@ -1445,7 +1459,7 @@ msgstr "अभिलेख पहुँच आवश्यक"
 #: templates/articles/includes/video_card.html:16
 #: templates/articles/includes/video_showcase.html:34
 #: templates/articles/includes/video_showcase.html:93
-#: templates/articles/search_results.html:89
+#: templates/articles/search_results.html:98
 msgid "Single purchase"
 msgstr "एकल खरिद"
 
@@ -1567,7 +1581,9 @@ msgstr "यस सामग्रीका आधार दस्तावेज
 msgid ""
 "The reports, guidelines and data this story draws on, free in our health "
 "library."
-msgstr "यो सामग्रीले आधार लिएका प्रतिवेदन, निर्देशिका र तथ्यांक, हाम्रो स्वास्थ्य पुस्तकालयमा निःशुल्क।"
+msgstr ""
+"यो सामग्रीले आधार लिएका प्रतिवेदन, निर्देशिका र तथ्यांक, हाम्रो स्वास्थ्य पुस्तकालयमा "
+"निःशुल्क।"
 
 #: templates/articles/article_detail.html:505
 msgid "TOPICS IN THIS STORY"
@@ -1677,6 +1693,15 @@ msgstr "आफ्नो टिप्पणी हेर्नुहोस् ↓
 msgid "Copied"
 msgstr "प्रतिलिपि भयो"
 
+#: templates/articles/article_detail.html:873
+#: templates/articles/search_results.html:62
+msgid "Glossary"
+msgstr "शब्दावली"
+
+#: templates/articles/article_detail.html:873
+msgid "Read more in the glossary →"
+msgstr "शब्दावलीमा थप पढ्नुहोस् →"
+
 #: templates/articles/article_list.html:23
 msgid "Articles"
 msgstr "लेखहरू"
@@ -1690,7 +1715,8 @@ msgid "Tagged"
 msgstr "ट्याग गरिएको"
 
 #: templates/articles/article_list.html:39
-#: templates/library/resource_list.html:44
+#: templates/library/glossary_list.html:35
+#: templates/library/resource_list.html:45
 msgid "Clear"
 msgstr "हटाउनुहोस्"
 
@@ -1720,7 +1746,8 @@ msgstr "समाचारको प्रकार"
 #: templates/articles/article_list.html:62
 #: templates/articles/article_list.html:66
 #: templates/articles/correction_list.html:12
-#: templates/library/resource_list.html:27 templates/pitches/my_pitches.html:20
+#: templates/library/glossary_list.html:24
+#: templates/library/resource_list.html:28 templates/pitches/my_pitches.html:20
 msgid "ALL"
 msgstr "सबै"
 
@@ -1759,7 +1786,7 @@ msgid "WEBSITE"
 msgstr "वेबसाइट"
 
 #: templates/articles/author_detail.html:47 templates/base.html:456
-#: templates/base.html:629 templates/editorial_board/public_page.html:9
+#: templates/base.html:630 templates/editorial_board/public_page.html:9
 #: templates/training/course_detail.html:94
 msgid "ABOUT"
 msgstr "बारेमा"
@@ -1872,7 +1899,7 @@ msgstr "स्रोतहरू लेखको अन्त्यमा सू
 #: templates/articles/includes/video_card.html:16
 #: templates/articles/includes/video_showcase.html:34
 #: templates/articles/includes/video_showcase.html:93
-#: templates/articles/search_results.html:89
+#: templates/articles/search_results.html:98
 msgid "Subscribers only"
 msgstr "सदस्यहरूका लागि मात्र"
 
@@ -2008,29 +2035,39 @@ msgstr[1] "\"%(query)s\" का लागि %(n)s नतिजाहरू"
 
 #: templates/articles/search_results.html:56
 #: templates/articles/topic_detail.html:9
+#: templates/library/glossary_detail.html:55
 #: templates/library/resource_detail.html:41
 msgid "TOPICS"
 msgstr "विषयहरू"
 
-#: templates/articles/search_results.html:64
+#: templates/articles/search_results.html:63
+#: templates/library/glossary_detail.html:16
+msgid "GLOSSARY"
+msgstr "शब्दावली"
+
+#: templates/articles/search_results.html:66
+msgid "READ MORE →"
+msgstr "थप पढ्नुहोस् →"
+
+#: templates/articles/search_results.html:73
 msgid "FROM THE HEALTH LIBRARY"
 msgstr "स्वास्थ्य पुस्तकालयबाट"
 
-#: templates/articles/search_results.html:66
+#: templates/articles/search_results.html:75
 #: templates/articles/topic_detail.html:67
 #, python-format
 msgid "ALL %(n)s DOCUMENTS →"
 msgstr "सबै %(n)s दस्तावेज →"
 
-#: templates/articles/search_results.html:96
+#: templates/articles/search_results.html:105
 msgid "No articles matched your search."
 msgstr "तपाईंको खोजसँग मिल्ने कुनै लेख भेटिएन।"
 
-#: templates/articles/search_results.html:98
+#: templates/articles/search_results.html:107
 msgid "Did you mean"
 msgstr "के तपाईंले यो भन्न खोज्नुभएको हो"
 
-#: templates/articles/search_results.html:100
+#: templates/articles/search_results.html:109
 msgid "Try fewer or different words, or remove a filter."
 msgstr "थोरै वा फरक शब्दहरू प्रयोग गर्नुहोस्, वा कुनै फिल्टर हटाउनुहोस्।"
 
@@ -2182,7 +2219,7 @@ msgstr "कथा प्रस्ताव गर्नुहोस्"
 msgid "Login"
 msgstr "लग इन"
 
-#: templates/base.html:475 templates/base.html:632
+#: templates/base.html:475 templates/base.html:633
 msgid "Register"
 msgstr "दर्ता गर्नुहोस्"
 
@@ -2242,28 +2279,28 @@ msgstr "अंक अभिलेख"
 msgid "Article Archive"
 msgstr "लेख अभिलेख"
 
-#: templates/base.html:625
+#: templates/base.html:626
 msgid "Research"
 msgstr "अनुसन्धान"
 
-#: templates/base.html:626
+#: templates/base.html:627
 msgid "Editorial Policy"
 msgstr "सम्पादकीय नीति"
 
-#: templates/base.html:631 templates/training/course_detail.html:97
+#: templates/base.html:632 templates/training/course_detail.html:97
 msgid "FAQ"
 msgstr "बारम्बार सोधिने प्रश्न"
 
-#: templates/base.html:637
+#: templates/base.html:638
 msgid "Cookie settings"
 msgstr "कुकी सेटिङ"
 
-#: templates/base.html:638 templates/users/privacy.html:4
+#: templates/base.html:639 templates/users/privacy.html:4
 #: templates/users/privacy.html:11
 msgid "Privacy & your data"
 msgstr "गोपनीयता र तपाईंको डाटा"
 
-#: templates/base.html:643
+#: templates/base.html:644
 msgid "All rights reserved."
 msgstr "सर्वाधिकार सुरक्षित।"
 
@@ -3650,14 +3687,76 @@ msgstr "थप अंकहरू"
 msgid "No issues published yet."
 msgstr "अहिलेसम्म कुनै अंक प्रकाशित भएको छैन।"
 
+#: templates/library/glossary_detail.html:12
+msgid "← HEALTH GLOSSARY"
+msgstr "← स्वास्थ्य शब्दावली"
+
+#: templates/library/glossary_detail.html:22
+msgid "Also called"
+msgstr "अर्को नाम"
+
+#: templates/library/glossary_detail.html:34
+msgid "In our reporting"
+msgstr "हाम्रो रिपोर्टिङमा"
+
+#: templates/library/glossary_detail.html:47
+msgid "RELATED TERMS"
+msgstr "सम्बन्धित शब्द"
+
+#: templates/library/glossary_detail.html:61
+msgid ""
+"Definitions are for general understanding, not medical advice. Ask a "
+"qualified health worker about your own health."
+msgstr ""
+"परिभाषाहरू सामान्य बुझाइका लागि हुन्, चिकित्सकीय सल्लाह होइनन्। आफ्नो स्वास्थ्यबारे योग्य "
+"स्वास्थ्यकर्मीसँग सोध्नुहोस्।"
+
+#: templates/library/glossary_list.html:9
+msgid ""
+"Medical and public-health terms explained in plain language, in Nepali and "
+"English."
+msgstr "चिकित्सा र जनस्वास्थ्यका शब्दहरू सरल भाषामा, नेपाली र अंग्रेजीमा।"
+
+#: templates/library/glossary_list.html:10
+#: templates/library/resource_detail.html:14
+msgid "← HEALTH LIBRARY"
+msgstr "← स्वास्थ्य पुस्तकालय"
+
+#: templates/library/glossary_list.html:15
+msgid "Search the glossary"
+msgstr "शब्दावलीमा खोज्नुहोस्"
+
+#: templates/library/glossary_list.html:16
+msgid "A term in Nepali or English…"
+msgstr "नेपाली वा अंग्रेजीमा शब्द…"
+
+#: templates/library/glossary_list.html:22
+msgid "Glossary by letter"
+msgstr "अक्षरअनुसार शब्दावली"
+
+#: templates/library/glossary_list.html:34
+#, python-format
+msgid "%(n)s TERM FOR \"%(query)s\""
+msgid_plural "%(n)s TERMS FOR \"%(query)s\""
+msgstr[0] "\"%(query)s\" का लागि %(n)s शब्द"
+msgstr[1] "\"%(query)s\" का लागि %(n)s शब्द"
+
+#: templates/library/glossary_list.html:54
+msgid "No terms match."
+msgstr "कुनै शब्द मिलेन।"
+
+#: templates/library/glossary_list.html:55
+msgid "Show all terms"
+msgstr "सबै शब्द देखाउनुहोस्"
+
+#: templates/library/glossary_list.html:57
+msgid "The glossary is being written. Check back soon."
+msgstr "शब्दावली लेखिँदैछ। केही समयपछि फेरि हेर्नुहोस्।"
+
 #: templates/library/includes/resource_compact.html:7
 #: templates/library/includes/resource_row.html:17
 msgid "LINK"
 msgstr "लिंक"
-
-#: templates/library/resource_detail.html:14
-msgid "← HEALTH LIBRARY"
-msgstr "← स्वास्थ्य पुस्तकालय"
 
 #: templates/library/resource_detail.html:29
 #, python-format
@@ -3730,29 +3829,37 @@ msgstr "पुस्तकालयमा खोज्नुहोस्"
 msgid "Search titles, topics or publishers…"
 msgstr "शीर्षक, विषय वा प्रकाशक खोज्नुहोस्…"
 
-#: templates/library/resource_list.html:24
+#: templates/library/resource_list.html:23
+msgid "Stuck on a medical word?"
+msgstr "कुनै चिकित्सकीय शब्द बुझिएन?"
+
+#: templates/library/resource_list.html:23
+msgid "Look it up in the health glossary →"
+msgstr "स्वास्थ्य शब्दावलीमा हेर्नुहोस् →"
+
+#: templates/library/resource_list.html:25
 msgid "Resource type"
 msgstr "सामग्रीको प्रकार"
 
-#: templates/library/resource_list.html:36
+#: templates/library/resource_list.html:37
 #: templates/training/course_detail.html:77
 msgid "LANGUAGE"
 msgstr "भाषा"
 
-#: templates/library/resource_list.html:43
+#: templates/library/resource_list.html:44
 #: templates/training/course_list.html:89
 msgid "Topic"
 msgstr "विषय"
 
-#: templates/library/resource_list.html:54
+#: templates/library/resource_list.html:55
 msgid "Nothing in the library matches these filters."
 msgstr "यी फिल्टरसँग मिल्ने केही पनि पुस्तकालयमा छैन।"
 
-#: templates/library/resource_list.html:55
+#: templates/library/resource_list.html:56
 msgid "Show everything"
 msgstr "सबै देखाउनुहोस्"
 
-#: templates/library/resource_list.html:57
+#: templates/library/resource_list.html:58
 msgid "The library is being built. Check back soon."
 msgstr "पुस्तकालय तयार हुँदैछ। केही समयपछि फेरि हेर्नुहोस्।"
 
@@ -5431,9 +5538,6 @@ msgstr "खाता मेटाइएन: पासवर्डले पु�
 
 #~ msgid "Read more →"
 #~ msgstr "थप पढ्नुहोस् →"
-
-#~ msgid "READ →"
-#~ msgstr "पढ्नुहोस् →"
 
 #~ msgid "EDITORIAL POLICY →"
 #~ msgstr "सम्पादकीय नीति →"

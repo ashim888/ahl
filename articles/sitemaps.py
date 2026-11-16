@@ -72,7 +72,7 @@ class StaticViewSitemap(Sitemap):
     priority = 0.6
 
     def items(self):
-        return ['articles:home', 'articles:article_list', 'articles:correction_list', 'articles:topic_list', 'issues:issue_list', 'library:resource_list', 'training:course_list', 'billing:plan_browse']
+        return ['articles:home', 'articles:article_list', 'articles:correction_list', 'articles:topic_list', 'issues:issue_list', 'library:resource_list', 'library:glossary_list', 'training:course_list', 'billing:plan_browse']
 
     def location(self, item):
         return reverse(item)
@@ -105,6 +105,21 @@ class LibrarySitemap(Sitemap):
         return item.updated_at
 
 
+class GlossarySitemap(Sitemap):
+    """Published health glossary terms (library app)."""
+
+    changefreq = 'monthly'
+    priority = 0.4
+
+    def items(self):
+        from library.models import GlossaryTerm
+
+        return GlossaryTerm.objects.filter(is_published=True).order_by('slug')
+
+    def lastmod(self, item):
+        return item.updated_at
+
+
 class SitePageSitemap(Sitemap):
     """Published Terms, Privacy, Refund policy and FAQ (pages app)."""
 
@@ -128,4 +143,5 @@ sitemaps = {
     'site-pages': SitePageSitemap,
     'topics': TopicSitemap,
     'library': LibrarySitemap,
+    'glossary': GlossarySitemap,
 }

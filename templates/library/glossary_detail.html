@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load i18n text_filters %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block extra_head %}
+    <script type="application/ld+json">{{ defined_term_json|safe }}</script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-12">
+    <a href="{% url 'library:glossary_list' %}" class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent">{% trans "← HEALTH GLOSSARY" %}</a>
+
+    <div class="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <article class="lg:col-span-8">
+            <p class="section-label text-accent">{% trans "GLOSSARY" %}</p>
+            <h1 class="mt-3 font-display text-4xl md:text-5xl font-bold leading-tight" style="letter-spacing: -0.025em;">
+                {% if term.term_ne %}<span lang="ne">{{ term.term_ne }}</span>{% endif %}
+                {% if term.term_ne and term.term_en %}<span class="block mt-2 text-2xl md:text-3xl font-normal text-muted-foreground" lang="en">{{ term.term_en }}</span>{% elif term.term_en %}<span lang="en">{{ term.term_en }}</span>{% endif %}
+            </h1>
+            {% if term.aliases %}
+                <p class="mt-4 text-sm text-muted-foreground">{% trans "Also called" %}: {{ term.aliases|join:", " }}</p>
+            {% endif %}
+
+            {% for code, text in definitions %}
+                <div class="{% if forloop.first %}mt-8{% else %}mt-6 pt-6 border-t border-border{% endif %}" lang="{{ code }}">
+                    {% if definitions|length > 1 %}<p class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-2">{% if code == 'ne' %}नेपाली{% else %}ENGLISH{% endif %}</p>{% endif %}
+                    <p class="{% if forloop.first %}text-lg{% else %}text-base text-foreground/80{% endif %} leading-relaxed whitespace-pre-line" style="font-family: Georgia, serif; line-height: 1.8;">{{ text }}</p>
+                </div>
+            {% endfor %}
+
+            {% if mentions %}
+                <section class="mt-12" aria-labelledby="term-mentions">
+                    <h2 id="term-mentions" class="font-display text-xl font-bold mb-3">{% trans "In our reporting" %}</h2>
+                    <ul class="border-t border-border divide-y divide-border">
+                        {% for article in mentions %}
+                            <li class="py-3"><a href="{% url 'articles:article_detail' article.slug %}" lang="{{ article.title|content_lang }}" class="font-semibold hover:underline underline-offset-4">{{ article.title }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+        </article>
+
+        <aside class="lg:col-span-4 space-y-8">
+            {% if related_terms %}
+                <div>
+                    <h2 class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "RELATED TERMS" %}</h2>
+                    <ul class="space-y-2">
+                        {% for other in related_terms %}<li><a href="{{ other.get_absolute_url }}" class="hover:underline underline-offset-4">{{ other.display_name }}</a></li>{% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            {% if topics %}
+                <div>
+                    <h2 class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "TOPICS" %}</h2>
+                    <div class="flex flex-wrap gap-2">
+                        {% for topic in topics %}<a href="{% url 'library:resource_list' %}?topic={{ topic.slug }}" class="text-sm border border-border px-3 py-1 hover:border-foreground">{{ topic.name }}</a>{% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+            <p class="text-xs text-muted-foreground leading-relaxed">{% trans "Definitions are for general understanding, not medical advice. Ask a qualified health worker about your own health." %}</p>
+        </aside>
+    </div>
+</div>
+{% endblock %}

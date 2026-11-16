@@ -53,6 +53,32 @@ def for_article(article, limit: int = 4):
     return list(published().filter(related_articles=article).order_by('-created_at')[:limit])
 
 
+def glossary_matching(queryset, query: str, *, definitions: bool = True):
+    """Glossary terms where every word of `query` is in a name, an alias or
+    (with `definitions`) a definition."""
+    from articles.search import normalize, terms
+
+    for word in terms(query) or [normalize(query)]:
+        if not word:
+            continue
+        hit = Q(term_ne__icontains=word) | Q(term_en__icontains=word) | Q(also_called__icontains=word)
+        if definitions:
+            hit |= Q(definition_ne__icontains=word) | Q(definition_en__icontains=word)
+        queryset = queryset.filter(hit)
+    return queryset
+
+
+def glossary_for_search(query: str, limit: int = 2):
+    """Terms whose *name* matches, for the site search page: someone typing
+    "HbA1c" or "मधुमेह" should see what it means before the articles."""
+    from .models import GlossaryTerm
+
+    query = query.strip()
+    if len(query) < 2:
+        return []
+    return list(glossary_matching(GlossaryTerm.objects.filter(is_published=True), query, definitions=False)[:limit])
+
+
 def for_topic(keyword, limit: int = 4):
     """(newest documents tagged with this topic, total)."""
     tagged = published().filter(keyword_tags=keyword)
