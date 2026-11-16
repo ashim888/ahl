@@ -486,6 +486,17 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                 </section>
             {% endif %}
 
+            {% if library_resources %}
+                {# Documents linked to this story from the health library (library app). #}
+                <section class="mt-12 pt-8 border-t border-border" aria-labelledby="story-documents">
+                    <h2 id="story-documents" class="font-display text-xl font-bold" style="letter-spacing: -0.015em;">{% trans "Documents behind this story" %}</h2>
+                    <p class="mt-1 text-sm text-muted-foreground">{% trans "The reports, guidelines and data this story draws on, free in our health library." %}</p>
+                    <ul class="mt-3 divide-y divide-border">
+                        {% for resource in library_resources %}{% include 'library/includes/resource_compact.html' %}{% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+
             {% if keyword_list %}
                 <section class="mt-12" aria-labelledby="story-topics">
                     <h2 id="story-topics" class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "TOPICS IN THIS STORY" %}</h2>

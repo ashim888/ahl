@@ -361,7 +361,10 @@ class HomeView(TemplateView):
             ).order_by('-is_featured', 'start_date', 'title')[:3],
         )
 
-        context['meta_description'] = f'{settings.JOURNAL_TAGLINE} — health news, research highlights, and commentary from {settings.JOURNAL_NAME}.'
+        context['meta_description'] = (
+            f'{settings.JOURNAL_NAME}: evidence-based health news, research explained in plain language, '
+            'and papers from our peer-reviewed journal, in Nepali and English.'
+        )
         return context
 
 
@@ -679,6 +682,10 @@ class ArticleDetailView(DetailView):
             ]
         context['related_articles'] = related_articles_for(self.object)
         prefetch_related_objects(context['related_articles'], 'articleauthor_set__author__user', 'keyword_tags')
+        # Health library documents an editor linked to this story (library app).
+        from library.queries import for_article as library_for_article
+
+        context['library_resources'] = library_for_article(self.object)
 
         # Fetch one extra and trim, so excluding the article being viewed
         # (it'd be a strange thing to see "trending" on its own page) still
@@ -1006,6 +1013,10 @@ class SearchView(ListView):
 
             context['matching_topics'] = list(
                 public_topics().filter(name__icontains=self.query.strip()).order_by('-article_count')[:6])
+            # Health library matches (library app), shown above the article results.
+            from library.queries import search as library_search
+
+            context['library_results'], context['library_total'] = library_search(self.query)
         context['sections'] = Section.objects.filter(parent__isnull=True).order_by('order')
         context['types'] = Article.ArticleType.choices
         context['meta_title'] = (

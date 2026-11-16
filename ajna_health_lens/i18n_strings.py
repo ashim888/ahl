@@ -26,5 +26,6 @@ EXTRA_STRINGS = [
     gettext_noop('mail address'),
     gettext_noop('Your comment'),
     # settings.JOURNAL_TAGLINE default
-    gettext_noop('Illuminating Health Research'),
+    gettext_noop('Evidence-based health news and knowledge'),
+    gettext_noop('Illuminating Health Research'),  # the previous tagline, for servers whose env still sets it
 ]

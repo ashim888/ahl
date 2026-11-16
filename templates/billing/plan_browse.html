@@ -5,8 +5,8 @@
 {% block title %}{% trans "Subscribe" %} — {{ JOURNAL_NAME }}{% endblock %}
 
 {% block content %}
-{% comment %} The pitch is the positioning (PRODUCT.md): journal-backed, referenced, board-reviewed. The meta line holds only facts the checkout keeps (SUBSCRIPTION_CANCEL_DAYS, no auto-renewal). {% endcomment %}
-{% trans "Read every story, evidence included" as title %}{% trans "Subscriber articles and special reports from the newsroom of a peer-reviewed journal, with numbered references, citation export and a named editorial board." as lead %}
+{% comment %} The pitch is the positioning (PRODUCT.md): evidence-based, referenced, board-reviewed, journal included. The meta line holds only facts the checkout keeps (SUBSCRIPTION_CANCEL_DAYS, no auto-renewal). {% endcomment %}
+{% trans "Read every story, evidence included" as title %}{% trans "Evidence-based health reporting, research explained in plain language and papers from our peer-reviewed journal, with numbered references, citation export and a named editorial board." as lead %}
 {% blocktrans with days=cancel_days|local_digits asvar meta %}NO AUTOMATIC RENEWAL · FULL REFUND IF YOU CANCEL WITHIN {{ days }} DAYS{% endblocktrans %}
 {% include 'includes/page_hero.html' %}
 

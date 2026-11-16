@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load i18n news_time %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block content %}
+{% comment %}Health library (library app; vision Objective 7): free research papers, policy documents, reports, guidelines, training material, slides and data, filtered by type, language and topic.{% endcomment %}
+{% trans "Health Library" as title %}{% trans "Research papers, policy documents, government reports, guidelines, training material and data on health in Nepal, in one place. Free to read and download." as lead %}
+{% blocktrans count counter=total_count asvar meta %}{{ counter }} RESOURCE{% plural %}{{ counter }} RESOURCES{% endblocktrans %}
+{% with meta=meta|local_digits %}{% include 'includes/page_hero.html' %}{% endwith %}
+
+<div class="max-w-7xl mx-auto px-6 py-12">
+    <form method="get" role="search" class="flex items-center gap-2 max-w-xl">
+        {% if selected_type %}<input type="hidden" name="type" value="{{ selected_type }}">{% endif %}
+        {% if selected_language %}<input type="hidden" name="lang" value="{{ selected_language }}">{% endif %}
+        {% if topic %}<input type="hidden" name="topic" value="{{ topic.slug }}">{% endif %}
+        <label for="library-q" class="sr-only">{% trans "Search the library" %}</label>
+        <input type="search" id="library-q" name="q" value="{{ query }}" placeholder="{% trans 'Search titles, topics or publishers…' %}"
+               class="flex-1 min-w-0 border border-border px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-foreground">
+        <button type="submit" class="font-mono-editorial text-xs tracking-widest px-4 py-2 border border-foreground hover:bg-foreground hover:text-primary-foreground transition-colors whitespace-nowrap">{% trans "SEARCH" %}</button>
+    </form>
+
+    <nav class="mt-6 flex flex-wrap gap-2" aria-label="{% trans 'Resource type' %}">
+        <a href="?{% if selected_language %}lang={{ selected_language }}&{% endif %}{% if topic %}topic={{ topic.slug }}&{% endif %}{% if query %}q={{ query|urlencode }}{% endif %}"
+           class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if not selected_type %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}"
+           {% if not selected_type %}aria-current="true"{% endif %}>{% trans "ALL" %}</a>
+        {% for value, label, count in type_choices %}{% if count %}
+            <a href="?type={{ value }}{% if selected_language %}&lang={{ selected_language }}{% endif %}{% if topic %}&topic={{ topic.slug }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}"
+               class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if value == selected_type %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}"
+               {% if value == selected_type %}aria-current="true"{% endif %}>{{ label|upper }} <span class="opacity-60">{{ count|local_digits }}</span></a>
+        {% endif %}{% endfor %}
+    </nav>
+
+    <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+        <span class="font-mono-editorial text-xs tracking-widest">{% trans "LANGUAGE" %}:</span>
+        {% for value, label in language_choices %}
+            <a href="?lang={% if value != selected_language %}{{ value }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if topic %}&topic={{ topic.slug }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}"
+               class="{% if value == selected_language %}text-foreground font-semibold underline underline-offset-4{% else %}hover:text-foreground{% endif %}"
+               {% if value == selected_language %}aria-current="true"{% endif %}>{{ label }}</a>
+        {% endfor %}
+        {% if topic %}
+            <span class="ml-auto">{% trans "Topic" %}: <span class="font-semibold text-foreground">{{ topic.name }}</span>
+                <a href="?{% if selected_type %}type={{ selected_type }}&{% endif %}{% if selected_language %}lang={{ selected_language }}&{% endif %}{% if query %}q={{ query|urlencode }}{% endif %}" class="ml-1 underline hover:text-accent">{% trans "Clear" %}</a></span>
+        {% endif %}
+    </div>
+
+    <div class="mt-8 border-t border-border divide-y divide-border">
+        {% for resource in resources %}
+            {% include 'library/includes/resource_row.html' %}
+        {% empty %}
+            <div class="py-14 text-center text-muted-foreground">
+                {% if is_filtered %}
+                    <p>{% trans "Nothing in the library matches these filters." %}</p>
+                    <a href="{% url 'library:resource_list' %}" class="mt-3 inline-block underline hover:text-accent">{% trans "Show everything" %}</a>
+                {% else %}
+                    <p>{% trans "The library is being built. Check back soon." %}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    {% include 'includes/pagination_editorial.html' %}
+</div>
+{% endblock %}

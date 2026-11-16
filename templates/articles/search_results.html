@@ -57,6 +57,20 @@
             {% for topic in matching_topics %}{% include 'articles/includes/topic_pill.html' with topic=topic count=topic.article_count %}{% endfor %}
         </div>
     {% endif %}
+    {% if library_results %}
+        {# Health library matches (library/queries.py search), page one only. #}
+        <section class="mt-6 border border-border px-5 py-4" aria-labelledby="search-library">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 id="search-library" class="font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "FROM THE HEALTH LIBRARY" %}</h2>
+                {% if library_total > library_results|length %}
+                    <a href="{% url 'library:resource_list' %}?q={{ query|urlencode }}" class="font-mono-editorial text-xs tracking-widest underline hover:text-accent">{% blocktrans with n=library_total|local_digits %}ALL {{ n }} DOCUMENTS →{% endblocktrans %}</a>
+                {% endif %}
+            </div>
+            <ul class="mt-1 divide-y divide-border">
+                {% for resource in library_results %}{% include 'library/includes/resource_compact.html' %}{% endfor %}
+            </ul>
+        </section>
+    {% endif %}
 
     <div class="mt-8 divide-y divide-border">
         {% for article in articles %}

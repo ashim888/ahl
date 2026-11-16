@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
@@ -21,80 +22,163 @@ EDITORIAL_ROLES = User.EDITORIAL_ROLES
 
 ABOUT_TABS = ('about', 'board', 'policies')
 
-# Policy content is honest about the OJS pivot (see ARCHITECTURE.md §1.1) —
-# this platform doesn't claim to run its own peer review or accreditation
-# memberships it doesn't actually hold.
+# Policies follow the platform's vision (Ajna_vision.docx, Nov 2026): an
+# evidence-based health news and knowledge platform, with a peer-reviewed
+# journal as one part of it. Still honest about the OJS pivot (see
+# ARCHITECTURE.md §1.1): this site doesn't run its own peer review, and the
+# text claims no registrations or memberships it doesn't hold — it states
+# the standards and frameworks we work to. Nepali in locale/ne (gettext_lazy).
 POLICIES = [
     {
-        'title': 'Peer Review Process',
+        'title': gettext_lazy('Editorial Standards & Fact-Checking'),
         'sections': [
             {
-                'heading': 'External Review via OJS',
-                'body': 'Formal peer review for original research, review articles, case reports, and '
-                        'methodology papers is conducted through OJS (Open Journal Systems), a dedicated '
-                        'scholarly publishing platform. This site does not run its own submission or review '
-                        'workflow for academic manuscripts.',
+                'heading': gettext_lazy('Sources We Rely On'),
+                'body': gettext_lazy('Our reporting starts from peer-reviewed research and authoritative institutions: the '
+                              'World Health Organization (WHO), Nepal Health Research Council (NHRC), Ministry of Health '
+                              'and Population (MoHP), Medical Education Commission (MEC), PubMed/MEDLINE, and journals '
+                              'such as The Lancet, BMJ and NEJM. A single study, a press release or a social media post '
+                              'is not treated as settled evidence on its own.'),
             },
             {
-                'heading': 'After Acceptance',
-                'body': 'Once a manuscript is accepted on OJS, the editorial team creates a brand-showcase '
-                        'article here summarizing the accepted work, alongside our original health news and '
-                        'commentary content.',
+                'heading': gettext_lazy('Fact-Checking'),
+                'body': gettext_lazy('Every story is checked by an editor before publication: figures against their source, '
+                              'quotes against the speaker, and medical claims against the evidence. Stories that need '
+                              'specialist judgement are read by someone with that expertise.'),
+            },
+            {
+                'heading': gettext_lazy('Citation & Attribution'),
+                'body': gettext_lazy('We say where information comes from. Articles list their references, and readers can '
+                              'follow each one back to the original study, report or dataset.'),
+            },
+            {
+                'heading': gettext_lazy('Plain Language'),
+                'body': gettext_lazy('We translate technical evidence into clear, practical language, in Nepali and English, '
+                              'without overstating what a study shows. Where the evidence is uncertain or still '
+                              'developing, we say so.'),
             },
         ],
     },
     {
-        'title': 'Publication Ethics',
+        'title': gettext_lazy('Independence & Ethics'),
         'sections': [
             {
-                'heading': 'Authorship',
-                'body': 'All listed authors must have made a substantial contribution to the work and have '
-                        'approved the final version published. Guest and ghost authorship are not permitted.',
+                'heading': gettext_lazy('Editorial Independence'),
+                'body': gettext_lazy('Editorial decisions are made by the editorial team alone. Advertisers, sponsors, '
+                              'partners and funders have no say over what we cover or how. Advertising is always '
+                              'labelled as such.'),
             },
             {
-                'heading': 'Conflicts of Interest',
-                'body': 'Authors and editorial staff are expected to disclose financial relationships or '
-                        'affiliations that could reasonably be seen to influence published content.',
+                'heading': gettext_lazy('Conflicts of Interest'),
+                'body': gettext_lazy('Authors, editors and editorial board members disclose financial relationships or '
+                              'affiliations that could reasonably be seen to influence what they write or review.'),
             },
             {
-                'heading': 'Corrections',
-                'body': 'Errors identified after publication are corrected promptly, with a note on the '
-                        'article indicating what changed and when.',
+                'heading': gettext_lazy('Authorship'),
+                'body': gettext_lazy('Everyone listed as an author has made a substantial contribution to the work and '
+                              'approved the published version. Guest and ghost authorship are not permitted.'),
+            },
+            {
+                'heading': gettext_lazy('Health Information'),
+                'body': gettext_lazy('Our content is for information and education. It does not replace advice from a '
+                              'qualified health professional about your own health.'),
             },
         ],
     },
     {
-        'title': 'Open Access Policy',
+        'title': gettext_lazy('Corrections'),
         'sections': [
             {
-                'heading': 'Access Model',
-                'body': 'Content is hybrid: news, commentary, editorials, letters, case reports, and short '
-                        'communications are open access. Original research, review articles, and methodology '
-                        'papers are subscription content by default, unless the editorial team marks an '
-                        'individual article open access (e.g. an APC-funded article from OJS).',
+                'heading': gettext_lazy('How We Correct'),
+                'body': gettext_lazy('Errors found after publication are corrected promptly, with a note on the article '
+                              'saying what changed and when. All corrections are listed on our Corrections page.'),
             },
             {
-                'heading': 'Subscriptions & APC',
-                'body': 'Subscription and Article Processing Charge (APC) payment handling are planned for a '
-                        'later phase of this platform and are not yet live — see the project roadmap for status.',
+                'heading': gettext_lazy('Reporting an Error'),
+                'body': gettext_lazy('If you spot a mistake, write to the editorial team at the contact address on the '
+                              'About tab.'),
             },
         ],
     },
     {
-        'title': 'Submission Guidelines',
+        'title': gettext_lazy('Peer-Reviewed Journal'),
         'sections': [
             {
-                'heading': 'Academic Manuscripts',
-                'body': 'Original research and other peer-reviewed manuscript types are submitted through OJS, '
-                        'not this site. Contact the editorial team for the current OJS submission link.',
+                'heading': gettext_lazy('The Journal'),
+                'body': gettext_lazy('Alongside our news and explainers we publish a peer-reviewed scientific journal, '
+                              'prioritising research on Nepal\'s healthcare and medical education systems, in Nepali '
+                              'and English.'),
             },
             {
-                'heading': 'News, Commentary & Opinion',
-                'body': 'News tips, commentary, and opinion pitches can be sent to the editorial team at the '
-                        'contact address on the About tab. These are reviewed editorially, not peer reviewed.',
+                'heading': gettext_lazy('Peer Review via OJS'),
+                'body': gettext_lazy('Submission and peer review for original research, review articles, case reports and '
+                              'methodology papers take place on OJS (Open Journal Systems), a dedicated scholarly '
+                              'publishing platform, not on this site. Independent experts review each manuscript '
+                              'before it is accepted.'),
+            },
+            {
+                'heading': gettext_lazy('After Acceptance'),
+                'body': gettext_lazy('Accepted papers are published here with a plain-language summary, so their findings '
+                              'reach health workers, policymakers and the public, not only researchers.'),
             },
         ],
     },
+    {
+        'title': gettext_lazy('Access'),
+        'sections': [
+            {
+                'heading': gettext_lazy('What Is Free'),
+                'body': gettext_lazy('News, commentary, editorials, letters, case reports and short communications are free '
+                              'to read. The summary of every article is always free.'),
+            },
+            {
+                'heading': gettext_lazy('Subscriber Content'),
+                'body': gettext_lazy('Original research, review articles and methodology papers are for subscribers by '
+                              'default, unless the editorial team makes an individual article free. Some special '
+                              'reports can also be bought one at a time.'),
+            },
+        ],
+    },
+    {
+        'title': gettext_lazy('Contributing'),
+        'sections': [
+            {
+                'heading': gettext_lazy('Research Manuscripts'),
+                'body': gettext_lazy('Original research and other peer-reviewed manuscript types are submitted through OJS. '
+                              'Contact the editorial team for the current submission link. Students and early-career '
+                              'researchers are welcome to submit.'),
+            },
+            {
+                'heading': gettext_lazy('Story Ideas & Opinion'),
+                'body': gettext_lazy('Health professionals, researchers, students and readers can pitch news tips, '
+                              'explainers and opinion pieces. These are reviewed by our editors, not peer reviewed.'),
+            },
+        ],
+    },
+    {
+        'title': gettext_lazy('Governance & Compliance'),
+        'sections': [
+            {
+                'heading': gettext_lazy('Frameworks We Work Within'),
+                'body': gettext_lazy('We aim to operate in line with the Department of Information and Broadcasting, Press '
+                              'Council Nepal and its code of conduct, the Ministry of Health and Population, Nepal '
+                              'Health Research Council, Medical Education Commission, the Right to Information Act '
+                              '2064, the Electronic Transactions Act 2063, and Nepal\'s other media and digital '
+                              'governance frameworks.'),
+            },
+        ],
+    },
+]
+
+
+# The vision's public health priorities (Objective 4), plus medical
+# education and research (Objective 5), for the About tab.
+FOCUS_AREAS = [
+    gettext_lazy('Maternal and child health'), gettext_lazy('Mental health'), gettext_lazy('Nutrition'),
+    gettext_lazy('Communicable diseases'), gettext_lazy('Non-communicable diseases'),
+    gettext_lazy('Medicines and pharmaceutical awareness'), gettext_lazy('Adolescent health'),
+    gettext_lazy('Emergency health information'), gettext_lazy('Health policy and health system governance'),
+    gettext_lazy('Medical education and research'),
 ]
 
 
@@ -110,12 +194,15 @@ class EditorialBoardPublicView(TemplateView):
         context['members'] = EditorialBoardMember.objects.filter(is_active=True).select_related('user')
         context['article_types'] = Article.ArticleType.choices
         context['policies'] = POLICIES
+        context['focus_areas'] = FOCUS_AREAS
 
         latest_issue = Issue.objects.filter(is_published=True).order_by('-created_at').first()
         facts = [
             (_('Latest issue'), latest_issue.title if latest_issue else _('Not yet published')),
             ('ISSN', settings.JOURNAL_ISSN),
             (_('Publisher'), settings.JOURNAL_PUBLISHER if settings.JOURNAL_PUBLISHER_CONFIRMED else ''),
+            (_('Languages'), _('Nepali and English')),
+            (_('Journal'), _('Peer-reviewed, published quarterly')),
             (_('Peer review'), _('Done independently, through our journal system (OJS)')),
             (_('Access'), _('Free, subscribers only, or a single purchase: decided story by story')),
         ]
@@ -124,7 +211,10 @@ class EditorialBoardPublicView(TemplateView):
 
         tab_titles = {'about': _('About'), 'board': _('Editorial Board'), 'policies': _('Policies')}
         context['meta_title'] = f'{tab_titles[context["active_tab"]]} — {settings.JOURNAL_NAME}'
-        context['meta_description'] = f'About {settings.JOURNAL_NAME} — editorial board, publication policies, and how to reach us.'
+        context['meta_description'] = (
+            f'About {settings.JOURNAL_NAME}: an evidence-based health news and knowledge platform for Nepal. '
+            'Our vision, mission, editorial board, policies, and how to reach us.'
+        )
         return context
 
 

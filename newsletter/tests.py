@@ -1,6 +1,7 @@
 import datetime
 from unittest.mock import patch
 
+from django.conf import settings
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
@@ -429,7 +430,7 @@ class IssuePreviewViewTests(TestCase):
             'audience': NewsletterIssue.Audience.ALL,
         })
         self.assertContains(response, 'AJNA HEALTH LENS')
-        self.assertContains(response, 'Illuminating Health Research')
+        self.assertContains(response, settings.JOURNAL_TAGLINE)
         self.assertContains(response, 'Unsubscribe')
 
 

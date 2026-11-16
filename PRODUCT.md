@@ -14,20 +14,25 @@ The editorial team is the second user group. Editors, the Editor-in-Chief and ad
 
 ## Product Purpose
 
-Ajna Health Lens is the news and brand side of a peer-reviewed health journal. It has two parts:
+Ajna Health Lens is an **evidence-based health and medical news and knowledge platform for Nepal** (vision: `Ajna_vision.docx`, adopted November 2026). It fights health misinformation by turning medical evidence into accurate, accessible, actionable information, in Nepali and English. The peer-reviewed journal is one part of the platform, not its identity.
 
-1. **Public health news site:** news, commentary, editorials and brand-showcase pieces such as case reports and research briefs, browsable by section and issue.
+- **Vision:** to become Nepal's most trusted evidence-based health and medical knowledge platform, advancing medical education, healthcare, science communication and public health awareness through research-driven information, credible journalism and academic publishing.
+- **Mission:** to reduce misinformation in healthcare and medical education by turning scientific evidence, health research and medical knowledge into accurate, accessible content for the Nepali public, health professionals, students, researchers and policymakers.
+
+It has two parts:
+
+1. **Public site:** health news, explainers, research summaries, commentary, and papers from the peer-reviewed journal (quarterly, bilingual), browsable by section, topic and issue.
 2. **Editorial workspace:** the team's day-to-day tool for running everything above.
 
 Formal manuscript submission and peer review happen on OJS (Open Journal Systems), outside this platform. This product must never rebuild them.
 
-Success means professionals trust the site as a source, readers subscribe or buy articles, health workers enroll in training and pitch stories, and editors can run the site without developer help.
+Success means the public and professionals trust the site as a source, readers subscribe or buy articles, health workers enroll in training and pitch stories, and editors can run the site without developer help.
 
 ## Positioning
 
 Three things together, which neither a general Nepali news outlet nor a journal website offers on its own:
 
-- **Journal-backed rigor:** linked to a peer-reviewed journal, with evidence-grounded reporting, numbered references and citation export, and a named editorial board of experts.
+- **Evidence first:** reporting grounded in peer-reviewed research and authoritative sources (WHO, NHRC, MoHP, MEC, PubMed, The Lancet, BMJ, NEJM), with fact-checking, numbered references and citation export, a named editorial board, and a peer-reviewed journal of its own.
 - **Depth over speed:** explainers and analysis with full-text articles, data charts and structured article types, not just breaking news.
 - **A practitioner community:** training courses, reader story pitches and verified-author profiles, so health workers learn from the site and contribute to it as well as read it.
 
@@ -50,7 +55,7 @@ Three things together, which neither a general Nepali news outlet nor a journal 
 ## Brand Commitments
 
 - Name: **Ajna Health Lens**.
-- Tagline (confirmed): **"Illuminating Health Research"**.
+- Tagline (confirmed November 2026): **"Evidence-based health news and knowledge"** (Nepali: "प्रमाणमा आधारित स्वास्थ्य समाचार र ज्ञान"). It replaced "Illuminating Health Research", which framed the site as a journal. Set by the `JOURNAL_TAGLINE` env var.
 - Logo (confirmed, final): `static/images/logo.png`. Note that `templates/base.html` currently has the logo `<img>` commented out, so the masthead shows text only. Future work must use this asset and must not draw a replacement.
 - Not confirmed: the ISSN (`0000-0000`) and the publisher name ("Health Lens Publishing") are settings defaults. Treat them as unverified until confirmed, and never present them as fact.
 - The Figma Make prototype in `frontend/` (and its `z_*.png` screenshots) was only a starting sketch. The shipped Django templates have replaced it as the incumbent interface, so it is not a design reference. The goal now is a better design than the current templates.

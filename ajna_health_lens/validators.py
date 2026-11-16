@@ -3,7 +3,7 @@ users/articles/editorial_board/issues/ads validators.py) only
 ever looks at the filename — a file renamed from `payload.html` to
 `resume.pdf` sails through it untouched. This adds a lightweight magic-byte
 check for the document types this project actually accepts uploads of
-(PDF/DOC/DOCX). Deliberately not python-magic/libmagic — that's a native
+(PDF/DOC/DOCX; the health library adds PPT(X), XLS(X) and CSV). Deliberately not python-magic/libmagic — that's a native
 system dependency, and this project has already hit real install friction
 with one native dependency (mysqlclient, see ROADMAP.md Risk Register);
 these three signatures cover the actual accepted extensions without adding
@@ -36,3 +36,16 @@ def validate_document_content(file):
     elif name.endswith('.doc'):
         if header != _DOC_MAGIC:
             raise ValidationError("This file doesn't look like a real Word document — its content doesn't match a .doc file.")
+    # The health library (library/) also takes slides, spreadsheets and CSV.
+    elif name.endswith(('.pptx', '.xlsx')):
+        if not header.startswith(_DOCX_MAGIC):  # also a zip archive
+            raise ValidationError("This file doesn't look like a real Office file — its content doesn't match its extension.")
+    elif name.endswith(('.ppt', '.xls')):
+        if header != _DOC_MAGIC:  # also an OLE compound file
+            raise ValidationError("This file doesn't look like a real Office file — its content doesn't match its extension.")
+    elif name.endswith('.csv'):
+        file.seek(0)
+        sample = file.read(4096)
+        file.seek(0)
+        if isinstance(sample, bytes) and b'\x00' in sample:
+            raise ValidationError("This file doesn't look like a real CSV — it contains binary data.")

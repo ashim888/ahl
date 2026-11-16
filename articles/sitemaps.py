@@ -72,7 +72,7 @@ class StaticViewSitemap(Sitemap):
     priority = 0.6
 
     def items(self):
-        return ['articles:home', 'articles:article_list', 'articles:correction_list', 'articles:topic_list', 'issues:issue_list', 'training:course_list', 'billing:plan_browse']
+        return ['articles:home', 'articles:article_list', 'articles:correction_list', 'articles:topic_list', 'issues:issue_list', 'library:resource_list', 'training:course_list', 'billing:plan_browse']
 
     def location(self, item):
         return reverse(item)
@@ -88,6 +88,21 @@ class TopicSitemap(Sitemap):
         from .topics import INDEX_MIN_ARTICLES, public_topics
 
         return public_topics().filter(article_count__gte=INDEX_MIN_ARTICLES).order_by('slug')
+
+
+class LibrarySitemap(Sitemap):
+    """Published health library resources (library app)."""
+
+    changefreq = 'monthly'
+    priority = 0.5
+
+    def items(self):
+        from library.models import Resource
+
+        return Resource.objects.filter(is_published=True).order_by('-created_at')
+
+    def lastmod(self, item):
+        return item.updated_at
 
 
 class SitePageSitemap(Sitemap):
@@ -112,4 +127,5 @@ sitemaps = {
     'pages': StaticViewSitemap,
     'site-pages': SitePageSitemap,
     'topics': TopicSitemap,
+    'library': LibrarySitemap,
 }

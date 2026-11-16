@@ -1,6 +1,19 @@
 from django import forms
+from django.urls import NoReverseMatch, reverse
 
 from .models import Section
+
+# Feature pages a top-level menu entry can point to (Section.link_url_name).
+# A dropdown, not free text: the menu renders on every page, so a mistyped
+# route name would break the whole site.
+LINK_TARGETS = [
+    ('', '— None: a normal content section —'),
+    ('library:resource_list', 'Health Library'),
+    ('training:course_list', 'Training'),
+    ('issues:issue_list', 'Issues'),
+    ('articles:video_list', 'Videos'),
+    ('articles:topic_list', 'Topics'),
+]
 
 
 class SectionForm(forms.ModelForm):
@@ -34,6 +47,24 @@ class SectionForm(forms.ModelForm):
         self.fields['parent'].queryset = queryset
         self.fields['parent'].required = False
         self.fields['parent'].empty_label = '— Top-level —'
+        choices = list(LINK_TARGETS)
+        current = self.instance.link_url_name
+        if current and current not in dict(choices):
+            choices.append((current, current))  # keep an existing value editable
+        self.fields['link_url_name'] = forms.ChoiceField(
+            choices=choices, required=False, label='Link to a feature page',
+            help_text='Only for a top-level entry that should open a feature page (e.g. the Health Library) '
+                      'instead of a section landing page.',
+        )
+
+    def clean_link_url_name(self):
+        value = self.cleaned_data.get('link_url_name', '')
+        if value:
+            try:
+                reverse(value)
+            except NoReverseMatch:
+                raise forms.ValidationError('That page no longer exists. Pick another one.')
+        return value
 
     # No custom clean() needed — ModelForm._post_clean() already calls
     # Section.clean() via full_clean(), so the two-level/link-override

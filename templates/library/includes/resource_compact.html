@@ -1,0 +1,11 @@
+{% load i18n news_time text_filters %}{% comment %}
+A library resource in a short list: the article page's "Documents behind
+this story", the topic page sidebar and site search. Expects `resource`.
+{% endcomment %}
+<li class="py-3">
+    <p class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">
+        <span class="text-accent">{{ resource.get_resource_type_display|upper }}</span>{% if resource.year %} · {{ resource.year|local_digits }}{% endif %} · {% if resource.is_link %}{% trans "LINK" %}{% else %}{{ resource.file_format }}{% endif %}
+    </p>
+    <a href="{{ resource.get_absolute_url }}" lang="{{ resource.title|content_lang }}" class="mt-1 block font-semibold leading-snug hover:underline underline-offset-4">{{ resource.title }}</a>
+    {% if resource.source %}<p class="mt-0.5 text-xs text-muted-foreground">{{ resource.source }}</p>{% endif %}
+</li>

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-12 15:46+0545\n"
+"POT-Creation-Date: 2026-11-16 14:34+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -62,11 +62,11 @@ msgstr ""
 "के गलत छ र कहाँ। प्रतिलिपि अधिकारको दाबीका लागि: कुन काम तपाईंको हो, पहिले कहाँ "
 "प्रकाशित भयो, र त्यो तपाईंको हो वा तपाईं मालिकका तर्फबाट हुनुहुन्छ भनी पुष्टि गर्नुहोस्।"
 
-#: admin_custom/reports.py:38
+#: admin_custom/reports.py:38 pitches/forms.py:36
 msgid "Your name"
 msgstr "तपाईंको नाम"
 
-#: admin_custom/reports.py:39
+#: admin_custom/reports.py:39 pitches/forms.py:37
 msgid "Your email"
 msgstr "तपाईंको इमेल"
 
@@ -126,6 +126,10 @@ msgid "Your comment"
 msgstr "तपाईंको टिप्पणी"
 
 #: ajna_health_lens/i18n_strings.py:29
+msgid "Evidence-based health news and knowledge"
+msgstr "प्रमाणमा आधारित स्वास्थ्य समाचार र ज्ञान"
+
+#: ajna_health_lens/i18n_strings.py:30
 msgid "Illuminating Health Research"
 msgstr "स्वास्थ्य अनुसन्धानलाई उज्यालोमा ल्याउँदै"
 
@@ -149,7 +153,7 @@ msgstr "संक्षिप्त सञ्चार"
 msgid "Methodology Paper"
 msgstr "विधि पत्र"
 
-#: articles/models.py:105 templates/home.html:352
+#: articles/models.py:105
 msgid "Editorial"
 msgstr "सम्पादकीय"
 
@@ -162,8 +166,8 @@ msgid "Letter to Editor"
 msgstr "सम्पादकलाई पत्र"
 
 #: articles/models.py:109 templates/articles/includes/video_card.html:19
-#: templates/articles/includes/video_showcase.html:52
-#: templates/articles/includes/video_showcase.html:92
+#: templates/articles/includes/video_showcase.html:49
+#: templates/articles/includes/video_showcase.html:89
 msgid "Video"
 msgstr "भिडियो"
 
@@ -181,30 +185,30 @@ msgstr "सदस्यता"
 msgid "Pay-per-article (special)"
 msgstr "प्रति लेख भुक्तानी (विशेष)"
 
-#: articles/models.py:689
+#: articles/models.py:704
 msgid "Correction"
 msgstr "सच्याइ"
 
-#: articles/models.py:690
+#: articles/models.py:705
 msgid "Clarification"
 msgstr "स्पष्टीकरण"
 
-#: articles/models.py:691
+#: articles/models.py:706
 msgid "Update"
 msgstr "अद्यावधिक"
 
-#: articles/templatetags/news_time.py:25
+#: articles/templatetags/news_time.py:79
 msgid "Just now"
 msgstr "भर्खरै"
 
-#: articles/templatetags/news_time.py:28
+#: articles/templatetags/news_time.py:82
 #, python-format
 msgid "%(count)d min ago"
 msgid_plural "%(count)d min ago"
 msgstr[0] "%(count)d मिनेटअघि"
 msgstr[1] "%(count)d मिनेटअघि"
 
-#: articles/templatetags/news_time.py:31
+#: articles/templatetags/news_time.py:85
 #, python-format
 msgid "%(count)d hour ago"
 msgid_plural "%(count)d hours ago"
@@ -225,12 +229,12 @@ msgstr ""
 "%(site)s लाई विषयअनुसार हेर्नुहोस्: डेंगुदेखि मानसिक स्वास्थ्यसम्म हामीले समेट्ने हरेक स्वास्थ्य "
 "विषय।"
 
-#: articles/topic_views.py:47
+#: articles/topic_views.py:51
 #, python-format
 msgid "%(tag)s — %(name)s news — %(site)s"
 msgstr "%(tag)s — %(name)s सम्बन्धी समाचार — %(site)s"
 
-#: articles/topic_views.py:49
+#: articles/topic_views.py:53
 #, python-format
 msgid ""
 "%(count)s stories about %(name)s from %(site)s — the latest news, research "
@@ -238,33 +242,74 @@ msgid ""
 msgstr ""
 "%(site)s बाट %(name)s बारे %(count)s सामग्री — ताजा समाचार, अनुसन्धान र व्याख्या।"
 
-#: articles/views.py:850
+#: articles/views.py:393 editorial_board/views.py:89
+#: templates/articles/correction_list.html:4
+#: templates/articles/correction_list.html:7 templates/base.html:636
+msgid "Corrections"
+msgstr "सच्याइहरू"
+
+#: articles/views.py:484
+#, python-format
+msgid "Articles tagged \"%(keyword)s\""
+msgstr "\"%(keyword)s\" मुख्य शब्द भएका लेखहरू"
+
+#: articles/views.py:491
+msgid "All Articles"
+msgstr "सबै लेखहरू"
+
+#: articles/views.py:517 templates/articles/archive_list.html:9
+msgid "Archive"
+msgstr "अभिलेख"
+
+#: articles/views.py:560 templates/articles/for_you.html:9
+#: templates/base.html:387 templates/base.html:466
+msgid "For You"
+msgstr "तपाईंका लागि"
+
+#: articles/views.py:892
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:852
+#: articles/views.py:894
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:869
+#: articles/views.py:911
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:871
+#: articles/views.py:913
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:1099 sections/views.py:87
+#: articles/views.py:946 templates/articles/reading_list.html:9
+#: templates/base.html:390 templates/base.html:467
+msgid "Reading List"
+msgstr "पठन सूची"
+
+#: articles/views.py:1164 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:1104 sections/views.py:89
+#: articles/views.py:1169 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
 "digest."
 msgstr "\"%(name)s\" पछ्याउँदै — नयाँ लेखहरू तपाईंको फिड र साप्ताहिक सारांशमा देखिनेछन्।"
+
+#: billing/models.py:44
+msgid "Individual — Monthly"
+msgstr "व्यक्तिगत — मासिक"
+
+#: billing/models.py:45
+msgid "Individual — Annual"
+msgstr "व्यक्तिगत — वार्षिक"
+
+#: billing/models.py:46
+msgid "Institutional"
+msgstr "संस्थागत"
 
 #: billing/org_views.py:93
 #, python-format
@@ -313,7 +358,12 @@ msgstr "%(n)s सहकर्मीलाई निमन्त्रणा प�
 msgid "Not sent (not an address at %(domains)s): %(list)s"
 msgstr "पठाइएन (%(domains)s को ठेगाना होइन): %(list)s"
 
-#: billing/promo_views.py:33 billing/views.py:108
+#: billing/payments.py:311
+#, python-format
+msgid "Subscriptions can only be cancelled within %(days)s days of paying."
+msgstr "सदस्यता भुक्तानी गरेको %(days)s दिनभित्र मात्र रद्द गर्न सकिन्छ।"
+
+#: billing/promo_views.py:33 billing/views.py:110
 msgid "We don’t recognise that code — check the spelling."
 msgstr "हामीले त्यो कोड चिनेनौं — हिज्जे जाँच्नुहोस्।"
 
@@ -401,22 +451,470 @@ msgstr "यो कोड यो कोर्समा प्रयोग गर�
 msgid "This is a discount code — enter it at checkout when you subscribe."
 msgstr "यो छुट कोड हो — सदस्यता लिँदा भुक्तानीमा यसलाई लेख्नुहोस्।"
 
-#: billing/views.py:122
+#: billing/views.py:124
 #, python-format
 msgid "Code %(code)s applied."
 msgstr "कोड %(code)s लागू भयो।"
 
-#: billing/views.py:138
+#: billing/views.py:140
 #, python-format
 msgid "Done — code %(code)s covered the full price."
 msgstr "सम्पन्न — कोड %(code)s ले पूरा मूल्य बेहोर्‍यो।"
 
-#: issues/views.py:63
+#: billing/views.py:258
+#, python-format
+msgid ""
+"Institutional plans are set up with your organization — email %(email)s."
+msgstr "संस्थागत योजना तपाईंको संस्थासँग मिलेर मिलाइन्छ — %(email)s मा इमेल गर्नुहोस्।"
+
+#: billing/views.py:276
+#, python-format
+msgid "Subscribed to \"%(plan)s\" — active until %(date)s."
+msgstr "\"%(plan)s\" को सदस्यता लिइयो — %(date)s सम्म सक्रिय।"
+
+#: billing/views.py:309
+#, python-format
+msgid "Purchased \"%(title)s\"."
+msgstr "\"%(title)s\" किनियो।"
+
+#: billing/views.py:327
+msgid ""
+"We couldn’t start the payment with Fonepay right now. Please try again in a "
+"moment."
+msgstr "अहिले Fonepay मार्फत भुक्तानी सुरु गर्न सकिएन। केही बेरपछि फेरि प्रयास गर्नुहोस्।"
+
+#: billing/views.py:394
+#, python-format
+msgid "Cancelled. Your refund of %(amount)s is on its way — we’ve emailed you."
+msgstr "रद्द गरियो। तपाईंको %(amount)s फिर्ता हुँदै छ — हामीले इमेल पठाएका छौँ।"
+
+#: billing/views.py:425
+#, python-format
+msgid "Payment received — %(item)s."
+msgstr "भुक्तानी प्राप्त भयो — %(item)s।"
+
+#: editorial_board/views.py:33
+msgid "Editorial Standards & Fact-Checking"
+msgstr "सम्पादकीय मापदण्ड र तथ्य जाँच"
+
+#: editorial_board/views.py:36
+msgid "Sources We Rely On"
+msgstr "हामीले भर पर्ने स्रोतहरू"
+
+#: editorial_board/views.py:37
+msgid ""
+"Our reporting starts from peer-reviewed research and authoritative "
+"institutions: the World Health Organization (WHO), Nepal Health Research "
+"Council (NHRC), Ministry of Health and Population (MoHP), Medical Education "
+"Commission (MEC), PubMed/MEDLINE, and journals such as The Lancet, BMJ and "
+"NEJM. A single study, a press release or a social media post is not treated "
+"as settled evidence on its own."
+msgstr ""
+"हाम्रो रिपोर्टिङ समकक्षी-समीक्षित अनुसन्धान र आधिकारिक संस्थाहरूबाट सुरु हुन्छ: विश्व "
+"स्वास्थ्य संगठन (WHO), नेपाल स्वास्थ्य अनुसन्धान परिषद् (NHRC), स्वास्थ्य तथा जनसंख्या "
+"मन्त्रालय (MoHP), चिकित्सा शिक्षा आयोग (MEC), PubMed/MEDLINE, र The Lancet, BMJ "
+"तथा NEJM जस्ता जर्नलहरू। एउटा मात्र अध्ययन, प्रेस विज्ञप्ति वा सामाजिक सञ्जालको "
+"पोस्टलाई आफैँमा पक्का प्रमाण मानिँदैन।"
+
+#: editorial_board/views.py:44
+msgid "Fact-Checking"
+msgstr "तथ्य जाँच"
+
+#: editorial_board/views.py:45
+msgid ""
+"Every story is checked by an editor before publication: figures against "
+"their source, quotes against the speaker, and medical claims against the "
+"evidence. Stories that need specialist judgement are read by someone with "
+"that expertise."
+msgstr ""
+"प्रकाशनअघि हरेक सामग्री सम्पादकले जाँच्छन्: तथ्यांक तिनको स्रोतसँग, उद्धरण बोल्ने व्यक्तिसँग, "
+"र चिकित्सकीय दाबी प्रमाणसँग। विशेषज्ञ निर्णय चाहिने सामग्री सम्बन्धित विषयका जानकारले "
+"पढ्छन्।"
+
+#: editorial_board/views.py:50
+msgid "Citation & Attribution"
+msgstr "उद्धरण र स्रोत उल्लेख"
+
+#: editorial_board/views.py:51
+msgid ""
+"We say where information comes from. Articles list their references, and "
+"readers can follow each one back to the original study, report or dataset."
+msgstr ""
+"जानकारी कहाँबाट आयो, हामी खुलाउँछौँ। लेखहरूमा सन्दर्भ सूची हुन्छ, र पाठकले हरेक सन्दर्भबाट "
+"मूल अध्ययन, प्रतिवेदन वा तथ्यांकसम्म पुग्न सक्छन्।"
+
+#: editorial_board/views.py:55
+msgid "Plain Language"
+msgstr "सरल भाषा"
+
+#: editorial_board/views.py:56
+msgid ""
+"We translate technical evidence into clear, practical language, in Nepali "
+"and English, without overstating what a study shows. Where the evidence is "
+"uncertain or still developing, we say so."
+msgstr ""
+"अध्ययनले देखाएभन्दा बढाइचढाइ नगरी हामी प्राविधिक प्रमाणलाई नेपाली र अंग्रेजीमा स्पष्ट, "
+"व्यावहारिक भाषामा ल्याउँछौँ। प्रमाण अनिश्चित वा विकसित हुँदै गरेको भए, त्यो पनि भन्छौँ।"
+
+#: editorial_board/views.py:63
+msgid "Independence & Ethics"
+msgstr "स्वतन्त्रता र नैतिकता"
+
+#: editorial_board/views.py:66
+msgid "Editorial Independence"
+msgstr "सम्पादकीय स्वतन्त्रता"
+
+#: editorial_board/views.py:67
+msgid ""
+"Editorial decisions are made by the editorial team alone. Advertisers, "
+"sponsors, partners and funders have no say over what we cover or how. "
+"Advertising is always labelled as such."
+msgstr ""
+"सम्पादकीय निर्णय सम्पादकीय टोलीले मात्र गर्छ। हामी के र कसरी समेट्छौँ भन्नेमा "
+"विज्ञापनदाता, प्रायोजक, साझेदार वा अनुदानदाताको कुनै भूमिका हुँदैन। विज्ञापनलाई सधैँ "
+"विज्ञापन भनेर चिनाइन्छ।"
+
+#: editorial_board/views.py:72
+msgid "Conflicts of Interest"
+msgstr "स्वार्थको द्वन्द्व"
+
+#: editorial_board/views.py:73
+msgid ""
+"Authors, editors and editorial board members disclose financial "
+"relationships or affiliations that could reasonably be seen to influence "
+"what they write or review."
+msgstr ""
+"लेखक, सम्पादक र सम्पादकीय बोर्डका सदस्यहरूले आफूले लेख्ने वा समीक्षा गर्ने सामग्रीमा प्रभाव "
+"पार्न सक्ने देखिने आर्थिक सम्बन्ध वा आबद्धता खुलाउँछन्।"
+
+#: editorial_board/views.py:77
+msgid "Authorship"
+msgstr "लेखकत्व"
+
+#: editorial_board/views.py:78
+msgid ""
+"Everyone listed as an author has made a substantial contribution to the work "
+"and approved the published version. Guest and ghost authorship are not "
+"permitted."
+msgstr ""
+"लेखकका रूपमा नाम उल्लेख भएका सबैले कार्यमा उल्लेखनीय योगदान गरेका र प्रकाशित संस्करण "
+"स्वीकृत गरेका हुन्छन्। अतिथि वा अदृश्य (घोस्ट) लेखकत्वलाई अनुमति छैन।"
+
+#: editorial_board/views.py:82
+msgid "Health Information"
+msgstr "स्वास्थ्य जानकारी"
+
+#: editorial_board/views.py:83
+msgid ""
+"Our content is for information and education. It does not replace advice "
+"from a qualified health professional about your own health."
+msgstr ""
+"हाम्रा सामग्री जानकारी र शिक्षाका लागि हुन्। तपाईंको आफ्नै स्वास्थ्यबारे योग्य "
+"स्वास्थ्यकर्मीको सल्लाहको विकल्प यिनले दिँदैनन्।"
+
+#: editorial_board/views.py:92
+msgid "How We Correct"
+msgstr "हामी कसरी सच्याउँछौँ"
+
+#: editorial_board/views.py:93
+msgid ""
+"Errors found after publication are corrected promptly, with a note on the "
+"article saying what changed and when. All corrections are listed on our "
+"Corrections page."
+msgstr ""
+"प्रकाशनपछि भेटिएका त्रुटि तुरुन्तै सच्याइन्छन्, र के र कहिले परिवर्तन भयो भन्ने टिप्पणी लेखमै "
+"राखिन्छ। सबै सच्याइहरू हाम्रो सच्याइ पृष्ठमा सूचीबद्ध हुन्छन्।"
+
+#: editorial_board/views.py:97
+msgid "Reporting an Error"
+msgstr "त्रुटि जानकारी गराउने"
+
+#: editorial_board/views.py:98
+msgid ""
+"If you spot a mistake, write to the editorial team at the contact address on "
+"the About tab."
+msgstr ""
+"कुनै गल्ती देख्नुभयो भने 'बारेमा' ट्याबमा दिइएको ठेगानामा सम्पादकीय टोलीलाई लेख्नुहोस्।"
+
+#: editorial_board/views.py:104
+msgid "Peer-Reviewed Journal"
+msgstr "समकक्षी-समीक्षित जर्नल"
+
+#: editorial_board/views.py:107
+msgid "The Journal"
+msgstr "जर्नल"
+
+#: editorial_board/views.py:108
+msgid ""
+"Alongside our news and explainers we publish a peer-reviewed scientific "
+"journal, prioritising research on Nepal's healthcare and medical education "
+"systems, in Nepali and English."
+msgstr ""
+"समाचार र व्याख्यात्मक सामग्रीसँगै हामी नेपालको स्वास्थ्य सेवा र चिकित्सा शिक्षा "
+"प्रणालीसम्बन्धी अनुसन्धानलाई प्राथमिकता दिँदै नेपाली र अंग्रेजीमा समकक्षी-समीक्षित वैज्ञानिक "
+"जर्नल प्रकाशित गर्छौँ।"
+
+#: editorial_board/views.py:113
+msgid "Peer Review via OJS"
+msgstr "OJS मार्फत समकक्षी समीक्षा"
+
+#: editorial_board/views.py:114
+msgid ""
+"Submission and peer review for original research, review articles, case "
+"reports and methodology papers take place on OJS (Open Journal Systems), a "
+"dedicated scholarly publishing platform, not on this site. Independent "
+"experts review each manuscript before it is accepted."
+msgstr ""
+"मौलिक अनुसन्धान, समीक्षा लेख, केस रिपोर्ट र विधि-पत्रको पेस र समकक्षी समीक्षा यो "
+"साइटमा होइन, विद्वत् प्रकाशनका लागि बनेको OJS (Open Journal Systems) प्लेटफर्ममा "
+"हुन्छ। स्वीकृत हुनुअघि हरेक पाण्डुलिपि स्वतन्त्र विज्ञहरूले समीक्षा गर्छन्।"
+
+#: editorial_board/views.py:120
+msgid "After Acceptance"
+msgstr "स्वीकृतिपछि"
+
+#: editorial_board/views.py:121
+msgid ""
+"Accepted papers are published here with a plain-language summary, so their "
+"findings reach health workers, policymakers and the public, not only "
+"researchers."
+msgstr ""
+"स्वीकृत लेखहरू यहाँ सरल भाषाको सारांशसहित प्रकाशित हुन्छन्, ताकि तिनका निष्कर्ष "
+"अनुसन्धानकर्तामा मात्र होइन, स्वास्थ्यकर्मी, नीति निर्माता र आम जनतासम्म पुगून्।"
+
+#: editorial_board/views.py:127 editorial_board/views.py:207
+msgid "Access"
+msgstr "पहुँच"
+
+#: editorial_board/views.py:130
+msgid "What Is Free"
+msgstr "निःशुल्क के हो"
+
+#: editorial_board/views.py:131
+msgid ""
+"News, commentary, editorials, letters, case reports and short communications "
+"are free to read. The summary of every article is always free."
+msgstr ""
+"समाचार, टिप्पणी, सम्पादकीय, पत्र, केस रिपोर्ट र छोटा सञ्चार निःशुल्क पढ्न सकिन्छ। हरेक "
+"लेखको सारांश सधैँ निःशुल्क हुन्छ।"
+
+#: editorial_board/views.py:135
+msgid "Subscriber Content"
+msgstr "सदस्यहरूका लागि सामग्री"
+
+#: editorial_board/views.py:136
+msgid ""
+"Original research, review articles and methodology papers are for "
+"subscribers by default, unless the editorial team makes an individual "
+"article free. Some special reports can also be bought one at a time."
+msgstr ""
+"सम्पादकीय टोलीले कुनै लेख निःशुल्क नबनाएसम्म मौलिक अनुसन्धान, समीक्षा लेख र विधि-पत्र "
+"सदस्यहरूका लागि हुन्छन्। केही विशेष रिपोर्ट एक-एक गरी किन्न पनि सकिन्छ।"
+
+#: editorial_board/views.py:143
+msgid "Contributing"
+msgstr "योगदान"
+
+#: editorial_board/views.py:146
+msgid "Research Manuscripts"
+msgstr "अनुसन्धान पाण्डुलिपि"
+
+#: editorial_board/views.py:147
+msgid ""
+"Original research and other peer-reviewed manuscript types are submitted "
+"through OJS. Contact the editorial team for the current submission link. "
+"Students and early-career researchers are welcome to submit."
+msgstr ""
+"मौलिक अनुसन्धान र समकक्षी समीक्षा हुने अन्य पाण्डुलिपि OJS मार्फत पेस गरिन्छ। हालको पेस "
+"गर्ने लिंकका लागि सम्पादकीय टोलीलाई सम्पर्क गर्नुहोस्। विद्यार्थी र नवप्रवेशी "
+"अनुसन्धानकर्ताहरूलाई पनि स्वागत छ।"
+
+#: editorial_board/views.py:152
+msgid "Story Ideas & Opinion"
+msgstr "समाचारका विचार र दृष्टिकोण"
+
+#: editorial_board/views.py:153
+msgid ""
+"Health professionals, researchers, students and readers can pitch news tips, "
+"explainers and opinion pieces. These are reviewed by our editors, not peer "
+"reviewed."
+msgstr ""
+"स्वास्थ्यकर्मी, अनुसन्धानकर्ता, विद्यार्थी र पाठकले समाचारको सुराक, व्याख्यात्मक सामग्री र "
+"विचार लेख प्रस्ताव गर्न सक्छन्। यी हाम्रा सम्पादकले हेर्छन्, समकक्षी समीक्षा हुँदैन।"
+
+#: editorial_board/views.py:159
+msgid "Governance & Compliance"
+msgstr "सुशासन र अनुपालन"
+
+#: editorial_board/views.py:162
+msgid "Frameworks We Work Within"
+msgstr "हामीले पालना गर्ने ढाँचाहरू"
+
+#: editorial_board/views.py:163
+msgid ""
+"We aim to operate in line with the Department of Information and "
+"Broadcasting, Press Council Nepal and its code of conduct, the Ministry of "
+"Health and Population, Nepal Health Research Council, Medical Education "
+"Commission, the Right to Information Act 2064, the Electronic Transactions "
+"Act 2063, and Nepal's other media and digital governance frameworks."
+msgstr ""
+"हामी सूचना तथा प्रसारण विभाग, प्रेस काउन्सिल नेपाल र यसको आचारसंहिता, स्वास्थ्य तथा "
+"जनसंख्या मन्त्रालय, नेपाल स्वास्थ्य अनुसन्धान परिषद्, चिकित्सा शिक्षा आयोग, सूचनाको हक "
+"सम्बन्धी ऐन, २०६४, विद्युतीय कारोबार ऐन, २०६३ र नेपालका अन्य सञ्चार तथा डिजिटल "
+"सुशासन ढाँचाअनुरूप सञ्चालन हुने लक्ष्य राख्छौँ।"
+
+#: editorial_board/views.py:177
+msgid "Maternal and child health"
+msgstr "मातृ तथा बाल स्वास्थ्य"
+
+#: editorial_board/views.py:177
+msgid "Mental health"
+msgstr "मानसिक स्वास्थ्य"
+
+#: editorial_board/views.py:177
+msgid "Nutrition"
+msgstr "पोषण"
+
+#: editorial_board/views.py:178
+msgid "Communicable diseases"
+msgstr "सरुवा रोग"
+
+#: editorial_board/views.py:178
+msgid "Non-communicable diseases"
+msgstr "नसर्ने रोग"
+
+#: editorial_board/views.py:179
+msgid "Medicines and pharmaceutical awareness"
+msgstr "औषधि र औषधिसम्बन्धी चेतना"
+
+#: editorial_board/views.py:179
+msgid "Adolescent health"
+msgstr "किशोरकिशोरी स्वास्थ्य"
+
+#: editorial_board/views.py:180
+msgid "Emergency health information"
+msgstr "आपत्कालीन स्वास्थ्य जानकारी"
+
+#: editorial_board/views.py:180
+msgid "Health policy and health system governance"
+msgstr "स्वास्थ्य नीति र स्वास्थ्य प्रणालीको सुशासन"
+
+#: editorial_board/views.py:181
+msgid "Medical education and research"
+msgstr "चिकित्सा शिक्षा र अनुसन्धान"
+
+#: editorial_board/views.py:201 templates/base.html:287
+msgid "Latest issue"
+msgstr "नयाँ अंक"
+
+#: editorial_board/views.py:201
+msgid "Not yet published"
+msgstr "अझै प्रकाशित भएको छैन"
+
+#: editorial_board/views.py:203
+msgid "Publisher"
+msgstr "प्रकाशक"
+
+#: editorial_board/views.py:204
+msgid "Languages"
+msgstr "भाषाहरू"
+
+#: editorial_board/views.py:204 library/models.py:39
+msgid "Nepali and English"
+msgstr "नेपाली र अंग्रेजी"
+
+#: editorial_board/views.py:205
+msgid "Journal"
+msgstr "जर्नल"
+
+#: editorial_board/views.py:205
+msgid "Peer-reviewed, published quarterly"
+msgstr "समकक्षी-समीक्षित, त्रैमासिक प्रकाशन"
+
+#: editorial_board/views.py:206
+msgid "Peer review"
+msgstr "समकक्षी समीक्षा"
+
+#: editorial_board/views.py:206
+msgid "Done independently, through our journal system (OJS)"
+msgstr "हाम्रो जर्नल प्रणाली (OJS) मार्फत स्वतन्त्र रूपमा गरिन्छ"
+
+#: editorial_board/views.py:207
+msgid "Free, subscribers only, or a single purchase: decided story by story"
+msgstr ""
+"निःशुल्क, सदस्यहरूका लागि मात्र, वा एकल खरिद: हरेक समाचारका लागि छुट्टै तय गरिन्छ"
+
+#: editorial_board/views.py:212
+msgid "About"
+msgstr "बारेमा"
+
+#: editorial_board/views.py:212 templates/base.html:302 templates/base.html:630
+msgid "Editorial Board"
+msgstr "सम्पादकीय बोर्ड"
+
+#: editorial_board/views.py:212
+msgid "Policies"
+msgstr "नीतिहरू"
+
+#: issues/views.py:64
 #, python-format
 msgid "%(count)d ARTICLE"
 msgid_plural "%(count)d ARTICLES"
 msgstr[0] "%(count)d लेख"
 msgstr[1] "%(count)d लेख"
+
+#: library/models.py:27
+msgid "Research paper"
+msgstr "अनुसन्धान पत्र"
+
+#: library/models.py:28
+msgid "Policy document"
+msgstr "नीति दस्तावेज"
+
+#: library/models.py:29
+msgid "Government report"
+msgstr "सरकारी प्रतिवेदन"
+
+#: library/models.py:30
+msgid "Guideline or protocol"
+msgstr "निर्देशिका वा प्रोटोकल"
+
+#: library/models.py:31
+msgid "Training material"
+msgstr "तालिम सामग्री"
+
+#: library/models.py:32
+msgid "Presentation"
+msgstr "प्रस्तुति"
+
+#: library/models.py:33
+msgid "Data"
+msgstr "तथ्यांक"
+
+#: library/models.py:34
+msgid "Reference resource"
+msgstr "सन्दर्भ सामग्री"
+
+#: library/models.py:37
+msgid "Nepali"
+msgstr "नेपाली"
+
+#: library/models.py:38
+msgid "English"
+msgstr "अंग्रेजी"
+
+#: library/models.py:85
+msgid "Upload a file or give a link to where it is published."
+msgstr "फाइल अपलोड गर्नुहोस् वा यो प्रकाशित भएको ठाउँको लिंक दिनुहोस्।"
+
+#: library/models.py:87
+msgid "Use either an uploaded file or a link, not both."
+msgstr "अपलोड गरिएको फाइल वा लिंकमध्ये एउटा मात्र प्रयोग गर्नुहोस्, दुवै होइन।"
+
+#: library/views.py:65 library/views.py:95 templates/base.html:624
+#: templates/library/resource_list.html:9
+msgid "Health Library"
+msgstr "स्वास्थ्य पुस्तकालय"
 
 #: newsletter/views.py:48
 msgid "You're already subscribed."
@@ -454,6 +952,94 @@ msgid ""
 "pitching stories and your account."
 msgstr ""
 "सदस्यता, भुक्तानी, निःशुल्क लेख, संस्थागत पहुँच, समाचार प्रस्ताव र तपाईंको खाताबारे जवाफहरू।"
+
+#: pitches/forms.py:33
+msgid "Title"
+msgstr "शीर्षक"
+
+#: pitches/forms.py:34
+msgid "Summary"
+msgstr "सारांश"
+
+#: pitches/forms.py:35
+msgid "Draft (optional)"
+msgstr "मस्यौदा (ऐच्छिक)"
+
+#: pitches/forms.py:40
+msgid "The pitch itself: what the story is and why it matters now."
+msgstr "प्रस्ताव आफैँ: कथा के हो र अहिले किन महत्त्वपूर्ण छ।"
+
+#: pitches/forms.py:41
+msgid "If you already have a draft, paste it here. Not required."
+msgstr "मस्यौदा तयार छ भने यहाँ टाँस्नुहोस्। अनिवार्य होइन।"
+
+#: pitches/forms.py:60
+msgid "So we can follow up if we'd like to run your story."
+msgstr "तपाईंको कथा प्रकाशित गर्न चाहेमा हामी सम्पर्क गर्न सकौँ भनेर।"
+
+#: pitches/models.py:17
+msgid "Submitted"
+msgstr "पठाइएको"
+
+#: pitches/models.py:18
+msgid "In Review"
+msgstr "समीक्षामा"
+
+#: pitches/models.py:19
+msgid "Accepted"
+msgstr "स्वीकृत"
+
+#: pitches/models.py:20 users/models.py:69
+msgid "Rejected"
+msgstr "अस्वीकृत"
+
+#: pitches/models.py:21 templates/articles/search_results.html:33
+msgid "Published"
+msgstr "प्रकाशित"
+
+#: templates/403.html:4
+msgid "Access denied"
+msgstr "पहुँच छैन"
+
+#: templates/403.html:8
+msgid "403 — ACCESS DENIED"
+msgstr "४०३ — पहुँच छैन"
+
+#: templates/403.html:10
+msgid "You don't have access to this page"
+msgstr "यो पेजमा तपाईंको पहुँच छैन"
+
+#: templates/403.html:14
+#, python-format
+msgid ""
+"You're logged in as <span class=\"font-semibold text-foreground\">%(name)s</"
+"span> (%(role)s), and this page needs a different role. If you think this is "
+"a mistake, or you need wider access for your work, contact an editor."
+msgstr ""
+"तपाईं <span class=\"font-semibold text-foreground\">%(name)s</span> "
+"(%(role)s) को रूपमा लग इन हुनुहुन्छ, तर यो पेजका लागि अर्को भूमिका चाहिन्छ। यो गल्ती "
+"हो जस्तो लागे, वा कामका लागि थप पहुँच चाहिए, सम्पादकलाई सम्पर्क गर्नुहोस्।"
+
+#: templates/403.html:19 templates/403.html:39
+msgid "BACK TO HOME"
+msgstr "गृहपृष्ठमा फर्कनुहोस्"
+
+#: templates/403.html:24
+msgid "REQUEST ACCESS"
+msgstr "पहुँच अनुरोध गर्नुहोस्"
+
+#: templates/403.html:30
+msgid ""
+"This page needs an account with access you don't have yet, or you're not "
+"logged in."
+msgstr ""
+"यो पेजका लागि तपाईंसँग अहिले नभएको पहुँचसहितको खाता चाहिन्छ, वा तपाईं लग इन हुनुहुन्न।"
+
+#: templates/403.html:35 templates/billing/redeem.html:33
+#: templates/users/login.html:42
+#: templates/users/password_reset_complete.html:11
+msgid "LOG IN"
+msgstr "लग इन"
 
 #: templates/403_csrf.html:3
 msgid "Please try again"
@@ -502,7 +1088,7 @@ msgid "Search for the page"
 msgstr "पेज खोज्नुहोस्"
 
 #: templates/404.html:14 templates/articles/search_results.html:10
-#: templates/base.html:331
+#: templates/base.html:352
 msgid "Search"
 msgstr "खोज्नुहोस्"
 
@@ -512,6 +1098,7 @@ msgstr "लेख खोज्नुहोस्…"
 
 #: templates/404.html:16 templates/articles/article_list.html:32
 #: templates/articles/search_results.html:17
+#: templates/library/resource_list.html:21
 #: templates/training/course_list.html:24
 msgid "SEARCH"
 msgstr "खोज्नुहोस्"
@@ -524,8 +1111,7 @@ msgstr "गृहपृष्ठ"
 msgid "LATEST ARTICLES"
 msgstr "ताजा लेखहरू"
 
-#: templates/404.html:21 templates/articles/includes/video_showcase.html:21
-#: templates/articles/video_list.html:8
+#: templates/404.html:21
 msgid "VIDEOS"
 msgstr "भिडियो"
 
@@ -564,7 +1150,7 @@ msgstr ""
 "दिँदैनौं।"
 
 #: templates/admin_custom/report_form.html:38
-#: templates/pitches/pitch_form.html:47
+#: templates/pitches/pitch_form.html:51
 msgid "SENDING…"
 msgstr "पठाइँदै…"
 
@@ -601,157 +1187,188 @@ msgstr "लेखमा फर्कनुहोस्"
 msgid "Advertisement"
 msgstr "विज्ञापन"
 
-#: templates/articles/article_detail.html:30
+#: templates/articles/archive_list.html:11
+msgid ""
+"Older articles, kept for the record. Reading them in full needs a "
+"subscription plan that includes the archive."
+msgstr ""
+"अभिलेखका लागि राखिएका पुराना लेखहरू। पूरा पढ्न अभिलेखसहितको सदस्यता योजना चाहिन्छ।"
+
+#: templates/articles/archive_list.html:39
+#: templates/articles/article_detail.html:132
+#: templates/articles/article_list.html:105 templates/articles/for_you.html:37
+#: templates/articles/includes/article_card.html:31
+#: templates/articles/reading_list.html:45
+#: templates/articles/search_results.html:86 templates/home.html:83
+#: templates/home.html:213 templates/home.html:233 templates/home.html:278
+#: templates/home.html:340 templates/sections/section_detail.html:81
+msgid "Editorial staff"
+msgstr "सम्पादकीय टोली"
+
+#: templates/articles/archive_list.html:51
+msgid "Nothing in the archive yet."
+msgstr "अभिलेखमा अहिलेसम्म केही छैन।"
+
+#: templates/articles/article_detail.html:34
+msgid "Link copied"
+msgstr "लिंक प्रतिलिपि भयो"
+
+#: templates/articles/article_detail.html:41
 msgid "PREVIEW MODE — nothing has been saved. Close this tab to keep editing."
 msgstr ""
 "पूर्वावलोकन मोड — केही पनि सुरक्षित गरिएको छैन। सम्पादन जारी राख्न यो ट्याब बन्द "
 "गर्नुहोस्।"
 
-#: templates/articles/article_detail.html:59
-#: templates/articles/includes/video_showcase.html:62
-#: templates/articles/includes/video_showcase.html:97
-msgid "BUY OR SUBSCRIBE TO WATCH"
-msgstr "हेर्न किन्नुहोस् वा सदस्यता लिनुहोस्"
-
-#: templates/articles/article_detail.html:59
-#: templates/articles/includes/video_showcase.html:62
-#: templates/articles/includes/video_showcase.html:97
-msgid "SUBSCRIBE TO WATCH"
-msgstr "हेर्न सदस्यता लिनुहोस्"
-
-#: templates/articles/article_detail.html:66
-#, python-format
-msgid "Video: %(credit)s"
-msgstr "भिडियो: %(credit)s"
-
-#: templates/articles/article_detail.html:90
-#, python-format
-msgid "Photo: %(credit)s"
-msgstr "तस्बिर: %(credit)s"
-
-#: templates/articles/article_detail.html:99
+#: templates/articles/article_detail.html:57
+#: templates/articles/article_detail.html:532
 msgid "Share"
 msgstr "सेयर"
 
-#: templates/articles/article_detail.html:102
-#: templates/articles/article_detail.html:103
+#: templates/articles/article_detail.html:60
+#: templates/articles/article_detail.html:61
 msgid "Share on Facebook"
 msgstr "Facebook मा सेयर गर्नुहोस्"
 
-#: templates/articles/article_detail.html:106
-#: templates/articles/article_detail.html:107
+#: templates/articles/article_detail.html:64
+#: templates/articles/article_detail.html:65
 msgid "Share on WhatsApp"
 msgstr "WhatsApp मा सेयर गर्नुहोस्"
 
-#: templates/articles/article_detail.html:110
-#: templates/articles/article_detail.html:111
+#: templates/articles/article_detail.html:68
+#: templates/articles/article_detail.html:69
 msgid "Share on X"
 msgstr "X मा साझा गर्नुहोस्"
 
-#: templates/articles/article_detail.html:114
-#: templates/articles/article_detail.html:115
+#: templates/articles/article_detail.html:72
+#: templates/articles/article_detail.html:73
 msgid "Share on LinkedIn"
 msgstr "LinkedIn मा साझा गर्नुहोस्"
 
-#: templates/articles/article_detail.html:118
-#: templates/articles/article_detail.html:448
+#: templates/articles/article_detail.html:76
+#: templates/articles/article_detail.html:537
 msgid "Copy link"
 msgstr "लिंक प्रतिलिपि गर्नुहोस्"
 
-#: templates/articles/article_detail.html:125
+#: templates/articles/article_detail.html:83
 msgid "Copy short link"
 msgstr "छोटो लिंक प्रतिलिपि गर्नुहोस्"
 
-#: templates/articles/article_detail.html:140 templates/base.html:471
+#: templates/articles/article_detail.html:98 templates/base.html:495
 msgid "BREAKING"
 msgstr "ताजा खबर"
 
-#: templates/articles/article_detail.html:155
-#: templates/articles/topic_list.html:9 templates/base.html:562
-#: templates/home.html:68
-msgid "Topics"
-msgstr "विषयहरू"
-
-#: templates/articles/article_detail.html:181
-#: templates/billing/includes/agree_terms.html:7 templates/home.html:88
-#: templates/home.html:278 templates/users/register.html:50
+#: templates/articles/article_detail.html:132
+#: templates/billing/includes/agree_terms.html:7 templates/home.html:83
+#: templates/home.html:278 templates/users/register.html:52
 msgid "and"
 msgstr "र"
 
-#: templates/articles/article_detail.html:181
-#: templates/articles/article_list.html:100
-#: templates/articles/includes/article_card.html:35
-#: templates/articles/search_results.html:68 templates/home.html:88
-#: templates/home.html:237 templates/home.html:278
-#: templates/sections/section_detail.html:81
-msgid "Editorial staff"
-msgstr "सम्पादकीय टोली"
-
-#: templates/articles/article_detail.html:195
+#: templates/articles/article_detail.html:147
 msgid "Updated"
 msgstr "अद्यावधिक"
 
-#: templates/articles/article_detail.html:201
+#: templates/articles/article_detail.html:153
 #, python-format
 msgid "%(kind)s appended ↓"
 msgstr "%(kind)s तल थपिएको छ ↓"
 
-#: templates/articles/article_detail.html:205
-#: templates/articles/includes/article_card.html:38 templates/home.html:90
-#: templates/sections/section_detail.html:82
+#: templates/articles/article_detail.html:157
+#: templates/articles/includes/article_card.html:34 templates/home.html:85
+#: templates/home.html:214 templates/sections/section_detail.html:82
 msgid "min read"
 msgstr "मिनेट पढाइ"
 
-#: templates/articles/article_detail.html:216
+#: templates/articles/article_detail.html:179
+#: templates/articles/includes/video_showcase.html:59
+#: templates/articles/includes/video_showcase.html:94
+msgid "BUY OR SUBSCRIBE TO WATCH"
+msgstr "हेर्न किन्नुहोस् वा सदस्यता लिनुहोस्"
+
+#: templates/articles/article_detail.html:179
+#: templates/articles/includes/video_showcase.html:59
+#: templates/articles/includes/video_showcase.html:94
+msgid "SUBSCRIBE TO WATCH"
+msgstr "हेर्न सदस्यता लिनुहोस्"
+
+#: templates/articles/article_detail.html:186
+#, python-format
+msgid "Video: %(credit)s"
+msgstr "भिडियो: %(credit)s"
+
+#: templates/articles/article_detail.html:211
+#, python-format
+msgid "Photo: %(credit)s"
+msgstr "तस्बिर: %(credit)s"
+
+#: templates/articles/article_detail.html:219
+#: templates/articles/includes/hashtags.html:2
+#: templates/articles/topic_list.html:9 templates/base.html:623
+#: templates/home.html:65
+msgid "Topics"
+msgstr "विषयहरू"
+
+#: templates/articles/article_detail.html:223
+msgid "All topics in this story"
+msgstr "यस सामग्रीका सबै विषयहरू"
+
+#: templates/articles/article_detail.html:234
 msgid "✓ SAVED"
 msgstr "✓ सुरक्षित"
 
-#: templates/articles/article_detail.html:216
+#: templates/articles/article_detail.html:234
+#: templates/users/includes/account_side.html:25
 msgid "+ SAVE FOR LATER"
 msgstr "+ पछि पढ्न राख्नुहोस्"
 
-#: templates/articles/article_detail.html:222
+#: templates/articles/article_detail.html:240
 msgid "LOG IN TO SAVE"
 msgstr "सुरक्षित गर्न लग इन गर्नुहोस्"
 
-#: templates/articles/article_detail.html:231
+#: templates/articles/article_detail.html:249
 msgid "DOWNLOAD PDF"
 msgstr "PDF डाउनलोड गर्नुहोस्"
 
-#: templates/articles/article_detail.html:239
+#: templates/articles/article_detail.html:257
 msgid "↻ REFRESH GIFT LINK"
 msgstr "↻ उपहार लिंक नवीकरण गर्नुहोस्"
 
-#: templates/articles/article_detail.html:239
-msgid "🎁 GIFT THIS ARTICLE"
-msgstr "🎁 यो लेख उपहार दिनुहोस्"
+#: templates/articles/article_detail.html:257
+msgid "GIFT THIS ARTICLE"
+msgstr "यो लेख उपहार दिनुहोस्"
 
-#: templates/articles/article_detail.html:250
+#: templates/articles/article_detail.html:271
+#: templates/articles/article_detail.html:272
+#: templates/articles/article_detail.html:274
 msgid "Text size"
 msgstr "अक्षरको आकार"
 
-#: templates/articles/article_detail.html:251
+#: templates/articles/article_detail.html:275
 msgid "Smaller text"
 msgstr "सानो अक्षर"
 
-#: templates/articles/article_detail.html:252
+#: templates/articles/article_detail.html:276
 msgid "Decrease text size"
 msgstr "अक्षर सानो बनाउनुहोस्"
 
-#: templates/articles/article_detail.html:253
-#: templates/articles/article_detail.html:254
+#: templates/articles/article_detail.html:277
+#: templates/articles/article_detail.html:278
 msgid "Default text size"
 msgstr "सामान्य अक्षर आकार"
 
-#: templates/articles/article_detail.html:255
+#: templates/articles/article_detail.html:279
 msgid "Larger text"
 msgstr "ठूलो अक्षर"
 
-#: templates/articles/article_detail.html:256
+#: templates/articles/article_detail.html:280
 msgid "Increase text size"
 msgstr "अक्षर ठूलो बनाउनुहोस्"
 
-#: templates/articles/article_detail.html:264
+#: templates/articles/article_detail.html:291
+#: templates/articles/article_detail.html:554
+msgid "In this article"
+msgstr "यस लेखमा"
+
+#: templates/articles/article_detail.html:305
 msgid ""
 "Share this link — anyone who opens it reads the full article free, no "
 "account or subscription needed, for 14 days."
@@ -759,31 +1376,40 @@ msgstr ""
 "यो लिंक साझा गर्नुहोस् — यसलाई खोल्ने जो कोहीले खाता वा सदस्यता बिना नै १४ दिनसम्म पूरा "
 "लेख निःशुल्क पढ्न सक्छन्।"
 
-#: templates/articles/article_detail.html:265
+#: templates/articles/article_detail.html:306
 msgid "You've used all your gifts for this month."
 msgstr "तपाईंले यस महिनाका सबै उपहार प्रयोग गरिसक्नुभयो।"
 
-#: templates/articles/article_detail.html:265
+#: templates/articles/article_detail.html:306
 #, python-format
 msgid "You have %(counter)s gift left this month."
 msgid_plural "You have %(counter)s gifts left this month."
 msgstr[0] "यस महिना तपाईंसँग %(counter)s उपहार बाँकी छ।"
 msgstr[1] "यस महिना तपाईंसँग %(counter)s उपहार बाँकी छन्।"
 
-#: templates/articles/article_detail.html:272
+#: templates/articles/article_detail.html:309
+msgid "Gift link"
+msgstr "उपहार लिंक"
+
+#: templates/articles/article_detail.html:313
+#: templates/articles/article_detail.html:327
 msgid "COPY"
 msgstr "प्रतिलिपि"
 
-#: templates/articles/article_detail.html:295
+#: templates/articles/article_detail.html:325
+msgid "COPIED"
+msgstr "प्रतिलिपि भयो"
+
+#: templates/articles/article_detail.html:337
 #, python-format
 msgid ""
-"🎁 This article was gifted to you by <strong class=\"text-"
+"This article was gifted to you by <strong class=\"text-"
 "foreground\">%(gifter)s</strong> — free to read, no subscription needed."
 msgstr ""
-"🎁 यो लेख <strong class=\"text-foreground\">%(gifter)s</strong> ले तपाईंलाई "
-"उपहार दिनुभएको हो — सदस्यता बिना निःशुल्क पढ्नुहोस्।"
+"यो लेख <strong class=\"text-foreground\">%(gifter)s</strong> ले तपाईंलाई उपहार "
+"दिनुभएको हो — सदस्यता बिना निःशुल्क पढ्नुहोस्।"
 
-#: templates/articles/article_detail.html:305
+#: templates/articles/article_detail.html:347
 #, python-format
 msgid ""
 "You've read <strong class=\"text-foreground\">%(used)s</strong> of your "
@@ -793,53 +1419,85 @@ msgstr ""
 "तपाईंले यस महिनाका <strong class=\"text-foreground\">%(limit)s</strong> निःशुल्क "
 "सदस्यता-लेखमध्ये <strong class=\"text-foreground\">%(used)s</strong> पढिसक्नुभयो।"
 
-#: templates/articles/article_detail.html:309
+#: templates/articles/article_detail.html:351
 msgid "SUBSCRIBE FOR UNLIMITED"
 msgstr "असीमित पढ्न सदस्यता लिनुहोस्"
 
-#: templates/articles/article_detail.html:325
+#: templates/articles/article_detail.html:358
+msgid "Source"
+msgstr "स्रोत"
+
+#: templates/articles/article_detail.html:358
+msgid "All references ↓"
+msgstr "सबै सन्दर्भ ↓"
+
+#: templates/articles/article_detail.html:367
+#: templates/articles/article_detail.html:371
 msgid "Full text has not been added for this article yet."
 msgstr "यो लेखको पूर्ण पाठ अझै थपिएको छैन।"
 
-#: templates/articles/article_detail.html:333
+#: templates/articles/article_detail.html:384
 msgid "Archive Access Required"
 msgstr "अभिलेख पहुँच आवश्यक"
 
-#: templates/articles/article_detail.html:333
-msgid "Special Article"
-msgstr "विशेष लेख"
+#: templates/articles/article_detail.html:384
+#: templates/articles/includes/story_flags.html:12
+#: templates/articles/includes/video_card.html:16
+#: templates/articles/includes/video_showcase.html:34
+#: templates/articles/includes/video_showcase.html:93
+#: templates/articles/search_results.html:89
+msgid "Single purchase"
+msgstr "एकल खरिद"
 
-#: templates/articles/article_detail.html:333
+#: templates/articles/article_detail.html:384
 msgid "Subscription Required"
 msgstr "सदस्यता आवश्यक"
 
-#: templates/articles/article_detail.html:339
+#: templates/articles/article_detail.html:388
 msgid ""
-"This is an archived article — full-text access requires a subscription plan "
-"with archive access, regardless of this article's original access tier."
+"This article is in our archive. Archive reading comes with some subscription "
+"plans — pick one that includes the archive to read it in full."
 msgstr ""
-"यो अभिलेखमा रहेको लेख हो — लेखको मूल पहुँच तह जे भए पनि, पूर्ण पाठ पढ्न अभिलेख पहुँचसहितको "
-"सदस्यता योजना आवश्यक छ।"
+"यो लेख हाम्रो अभिलेखमा छ। अभिलेख पढ्ने सुविधा केही सदस्यता योजनामा मात्र समावेश छ — पूरा "
+"पढ्न अभिलेख समावेश भएको योजना छान्नुहोस्।"
 
-#: templates/articles/article_detail.html:342
-#: templates/training/includes/course_price.html:1
-msgid "VAT"
-msgstr "भ्याट"
+#: templates/articles/article_detail.html:393
+msgid "incl. VAT"
+msgstr "भ्याट सहित"
 
-#: templates/articles/article_detail.html:344
-#, python-format
+#: templates/articles/article_detail.html:395
 msgid ""
-"This is a one-time-purchase special article — %(price)s for full access, or "
-"read it free with an active subscription."
+"Buy this article once and it's yours to read, or read it free with an active "
+"subscription."
 msgstr ""
-"यो एक पटक किनेर पढ्ने विशेष लेख हो — पूर्ण पहुँचका लागि %(price)s, वा सक्रिय सदस्यतामा "
-"निःशुल्क पढ्नुहोस्।"
+"यो लेख एक पटक किन्नुहोस्, त्यसपछि यो तपाईंकै हो। सक्रिय सदस्यता भए निःशुल्क पढ्न सक्नुहुन्छ।"
 
-#: templates/articles/article_detail.html:348
+#: templates/articles/article_detail.html:399
 msgid "This article requires an active subscription for full-text access."
 msgstr "यो लेखको पूर्ण पाठ पढ्न सक्रिय सदस्यता आवश्यक छ।"
 
-#: templates/articles/article_detail.html:353
+#: templates/articles/article_detail.html:405
+#, python-format
+msgid "The full article: %(minutes)s min read"
+msgstr "पूरा लेख: %(minutes)s मिनेट पढाइ"
+
+#: templates/articles/article_detail.html:405
+#, python-format
+msgid "%(n)s reference"
+msgid_plural "%(n)s references"
+msgstr[0] "%(n)s सन्दर्भ"
+msgstr[1] "%(n)s सन्दर्भ"
+
+#: templates/articles/article_detail.html:410
+msgid "What's inside"
+msgstr "यसभित्र के छ"
+
+#: templates/articles/article_detail.html:418
+#, python-format
+msgid "Subscriptions from %(price)s a month"
+msgstr "सदस्यता मासिक %(price)s देखि"
+
+#: templates/articles/article_detail.html:423
 #, python-format
 msgid ""
 "<strong>%(org)s</strong> has a subscription. Confirm <strong>%(email)s</"
@@ -848,102 +1506,143 @@ msgstr ""
 "<strong>%(org)s</strong> को सदस्यता छ। <strong>%(email)s</strong> तपाईंकै ठेगाना "
 "हो भनी पुष्टि गर्नुहोस् र यो तुरुन्तै पढ्नुहोस्।"
 
-#: templates/articles/article_detail.html:357 templates/billing/account.html:69
+#: templates/articles/article_detail.html:427 templates/billing/account.html:69
 msgid "EMAIL ME A CONFIRMATION LINK"
 msgstr "पुष्टि लिङ्क इमेल गर्नुहोस्"
 
-#: templates/articles/article_detail.html:366
+#: templates/articles/article_detail.html:435
 #, python-format
 msgid "BUY FOR %(price)s"
 msgstr "%(price)s मा किन्नुहोस्"
 
-#: templates/articles/article_detail.html:370
-#: templates/articles/article_detail.html:375 templates/base.html:542
+#: templates/articles/article_detail.html:439
+#: templates/articles/article_detail.html:444 templates/base.html:358
 #: templates/billing/includes/plan_cta.html:18
-#: templates/billing/plan_browse.html:8
 #: templates/includes/mobile_subscribe_bar.html:5
 #: templates/users/privacy.html:37
 msgid "SUBSCRIBE"
 msgstr "सदस्यता लिनुहोस्"
 
-#: templates/articles/article_detail.html:381
-#: templates/billing/purchase_checkout.html:32 templates/users/register.html:62
+#: templates/articles/article_detail.html:450
+msgid ""
+"One payment, yours to keep: the article stays in your account, and the "
+"receipt comes by email."
+msgstr ""
+"एक पटकको भुक्तानी, सधैँका लागि तपाईंको: लेख तपाईंको खातामा रहन्छ, र रसिद इमेलमा आउँछ।"
+
+#: templates/articles/article_detail.html:451
+#, python-format
+msgid ""
+"Subscriptions don't renew automatically, and you get a full refund if you "
+"cancel within %(days)s days."
+msgstr "सदस्यता आफैँ नवीकरण हुँदैन, र %(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता पाउनुहुन्छ।"
+
+#: templates/articles/article_detail.html:456
+msgid "Already a subscriber?"
+msgstr "पहिल्यै सदस्य हुनुहुन्छ?"
+
+#: templates/articles/article_detail.html:456
+#: templates/billing/purchase_checkout.html:32 templates/users/login.html:4
+#: templates/users/login.html:11 templates/users/register.html:64
 msgid "Log in"
 msgstr "लग इन"
 
-#: templates/articles/article_detail.html:382
-msgid "to subscribe or purchase this article."
-msgstr "गरेर सदस्यता लिनुहोस् वा यो लेख किन्नुहोस्।"
-
-#: templates/articles/article_detail.html:393
+#: templates/articles/article_detail.html:466
 msgid "CORRECTIONS & UPDATES"
 msgstr "सच्याइ र अद्यावधिक"
 
-#: templates/articles/article_detail.html:403
+#: templates/articles/article_detail.html:476
 msgid "All our corrections →"
 msgstr "हाम्रा सबै सच्याइहरू →"
 
-#: templates/articles/article_detail.html:409
+#: templates/articles/article_detail.html:483
 msgid "References"
 msgstr "सन्दर्भ सामग्री"
 
-#: templates/articles/article_detail.html:420
+#: templates/articles/article_detail.html:495
+msgid "Documents behind this story"
+msgstr "यस सामग्रीका आधार दस्तावेज"
+
+#: templates/articles/article_detail.html:496
+msgid ""
+"The reports, guidelines and data this story draws on, free in our health "
+"library."
+msgstr "यो सामग्रीले आधार लिएका प्रतिवेदन, निर्देशिका र तथ्यांक, हाम्रो स्वास्थ्य पुस्तकालयमा निःशुल्क।"
+
+#: templates/articles/article_detail.html:505
 msgid "TOPICS IN THIS STORY"
 msgstr "यस सामग्रीका विषयहरू"
 
-#: templates/articles/article_detail.html:426
+#: templates/articles/article_detail.html:511
 msgid "EXPLORE ALL TOPICS →"
 msgstr "सबै विषयहरू हेर्नुहोस् →"
 
-#: templates/articles/article_detail.html:432
+#: templates/articles/article_detail.html:519
 msgid "Cite this article"
 msgstr "यो लेख उद्धृत गर्नुहोस्"
 
-#: templates/articles/article_detail.html:436
+#: templates/articles/article_detail.html:525
 msgid "Plain text"
 msgstr "सादा पाठ"
 
-#: templates/articles/article_detail.html:442
-msgid "Share:"
-msgstr "साझा गर्नुहोस्:"
-
-#: templates/articles/article_detail.html:443
-msgid "Share…"
-msgstr "सेयर…"
-
-#: templates/articles/article_detail.html:444
-msgid "Facebook"
-msgstr "Facebook"
-
-#: templates/articles/article_detail.html:445
+#: templates/articles/article_detail.html:535
 msgid "WhatsApp"
 msgstr "WhatsApp"
 
-#: templates/articles/article_detail.html:447
-msgid "LinkedIn"
-msgstr "LinkedIn"
+#: templates/articles/article_detail.html:536
+msgid "Facebook"
+msgstr "Facebook"
 
-#: templates/articles/article_detail.html:449
-msgid "Short link"
-msgstr "छोटो लिंक"
-
-#: templates/articles/article_detail.html:456
+#: templates/articles/article_detail.html:544
 msgid "Spotted an error, or something that shouldn’t be here?"
 msgstr "त्रुटि वा यहाँ हुनु नहुने केही देख्नुभयो?"
 
-#: templates/articles/article_detail.html:457
+#: templates/articles/article_detail.html:545
 msgid "Report it"
 msgstr "रिपोर्ट गर्नुहोस्"
 
-#: templates/articles/article_detail.html:462
+#: templates/articles/article_detail.html:550
+msgid "More from us"
+msgstr "हाम्रा थप सामग्री"
+
+#: templates/articles/article_detail.html:555
+msgid "IN THIS ARTICLE"
+msgstr "यस लेखमा"
+
+#: templates/articles/article_detail.html:571
+msgid "ABOUT THE AUTHOR"
+msgstr "लेखकबारे"
+
+#: templates/articles/article_detail.html:595
+msgid "MORE BY THIS AUTHOR →"
+msgstr "यी लेखकका थप लेख →"
+
+#: templates/articles/article_detail.html:603
+msgid "TRENDING THIS WEEK"
+msgstr "यो हप्ता चर्चामा"
+
+#: templates/articles/article_detail.html:622
+msgid "Download full-text PDF →"
+msgstr "पूर्ण पाठ PDF डाउनलोड गर्नुहोस् →"
+
+#: templates/articles/article_detail.html:635
+msgid "KEEP READING"
+msgstr "थप पढ्नुहोस्"
+
+#: templates/articles/article_detail.html:635
+msgid "Related reading"
+msgstr "सम्बन्धित सामग्री"
+
+#: templates/articles/article_detail.html:652
+#: templates/users/includes/account_side.html:33
 msgid "Comments"
 msgstr "टिप्पणीहरू"
 
-#: templates/articles/article_detail.html:474
+#: templates/articles/article_detail.html:664
 msgid "Almost there — please confirm your email."
 msgstr "लगभग भयो — कृपया आफ्नो इमेल पुष्टि गर्नुहोस्।"
 
-#: templates/articles/article_detail.html:476
+#: templates/articles/article_detail.html:666
 #, python-format
 msgid ""
 "We've sent a confirmation link to <span class=\"font-medium text-"
@@ -952,63 +1651,31 @@ msgstr ""
 "हामीले <span class=\"font-medium text-foreground\">%(email)s</span> मा पुष्टि "
 "लिंक पठाएका छौं।"
 
-#: templates/articles/article_detail.html:476
+#: templates/articles/article_detail.html:666
 msgid "We've sent a confirmation link to your email address."
 msgstr "हामीले तपाईंको इमेल ठेगानामा पुष्टि लिंक पठाएका छौं।"
 
-#: templates/articles/article_detail.html:477
+#: templates/articles/article_detail.html:667
 msgid ""
 "Your comment will appear here once you click it. Can't find it? Check your "
 "spam folder."
 msgstr "त्यसमा क्लिक गरेपछि तपाईंको टिप्पणी यहाँ देखिनेछ। भेटिएन? स्प्याम फोल्डर हेर्नुहोस्।"
 
-#: templates/articles/article_detail.html:481
+#: templates/articles/article_detail.html:671
 msgid "Thanks for confirming — your comment is now live."
 msgstr "पुष्टि गर्नुभएकोमा धन्यवाद — तपाईंको टिप्पणी अब प्रकाशित भयो।"
 
-#: templates/articles/article_detail.html:481
+#: templates/articles/article_detail.html:671
 msgid "Your comment has been posted."
 msgstr "तपाईंको टिप्पणी प्रकाशित भयो।"
 
-#: templates/articles/article_detail.html:484
+#: templates/articles/article_detail.html:674
 msgid "View your comment ↓"
 msgstr "आफ्नो टिप्पणी हेर्नुहोस् ↓"
 
-#: templates/articles/article_detail.html:497
-msgid "More from us"
-msgstr "हाम्रा थप सामग्री"
-
-#: templates/articles/article_detail.html:501
-msgid "In this article"
-msgstr "यस लेखमा"
-
-#: templates/articles/article_detail.html:502
-msgid "IN THIS ARTICLE"
-msgstr "यस लेखमा"
-
-#: templates/articles/article_detail.html:518
-msgid "ABOUT THE AUTHOR"
-msgstr "लेखकबारे"
-
-#: templates/articles/article_detail.html:543
-msgid "MORE BY THIS AUTHOR →"
-msgstr "यी लेखकका थप लेख →"
-
-#: templates/articles/article_detail.html:551 templates/home.html:137
-msgid "TRENDING THIS WEEK"
-msgstr "यो हप्ता चर्चामा"
-
-#: templates/articles/article_detail.html:577
-msgid "Download full-text PDF →"
-msgstr "पूर्ण पाठ PDF डाउनलोड गर्नुहोस् →"
-
-#: templates/articles/article_detail.html:590
-msgid "KEEP READING"
-msgstr "थप पढ्नुहोस्"
-
-#: templates/articles/article_detail.html:590
-msgid "Related reading"
-msgstr "सम्बन्धित सामग्री"
+#: templates/articles/article_detail.html:830
+msgid "Copied"
+msgstr "प्रतिलिपि भयो"
 
 #: templates/articles/article_list.html:23
 msgid "Articles"
@@ -1023,6 +1690,7 @@ msgid "Tagged"
 msgstr "ट्याग गरिएको"
 
 #: templates/articles/article_list.html:39
+#: templates/library/resource_list.html:44
 msgid "Clear"
 msgstr "हटाउनुहोस्"
 
@@ -1035,6 +1703,7 @@ msgstr "पछ्याउँदै ✓"
 #: templates/articles/article_list.html:47
 #: templates/articles/topic_detail.html:24
 #: templates/sections/section_detail.html:36
+#: templates/users/includes/account_side.html:29
 msgid "+ FOLLOW"
 msgstr "+ पछ्याउनुहोस्"
 
@@ -1044,28 +1713,34 @@ msgstr "+ पछ्याउनुहोस्"
 msgid "LOG IN TO FOLLOW"
 msgstr "पछ्याउन लग इन गर्नुहोस्"
 
-#: templates/articles/article_list.html:63
+#: templates/articles/article_list.html:62
+msgid "STORY TYPE"
+msgstr "समाचारको प्रकार"
+
+#: templates/articles/article_list.html:62
+#: templates/articles/article_list.html:66
 #: templates/articles/correction_list.html:12
+#: templates/library/resource_list.html:27 templates/pitches/my_pitches.html:20
 msgid "ALL"
 msgstr "सबै"
 
-#: templates/articles/article_list.html:87
+#: templates/articles/article_list.html:91
 msgid "PINNED ·"
 msgstr "पिन गरिएको ·"
 
-#: templates/articles/article_list.html:108
+#: templates/articles/article_list.html:113
 msgid "min"
 msgstr "मिनेट"
 
-#: templates/articles/article_list.html:114
+#: templates/articles/article_list.html:119
 msgid "No articles published yet."
 msgstr "अहिलेसम्म कुनै लेख प्रकाशित भएको छैन।"
 
-#: templates/articles/author_detail.html:22
+#: templates/articles/author_detail.html:21
 msgid "AUTHOR"
 msgstr "लेखक"
 
-#: templates/articles/author_detail.html:28 templates/issues/issue_list.html:24
+#: templates/articles/author_detail.html:27 templates/issues/issue_list.html:24
 #: templates/issues/issue_list.html:45
 #: templates/sections/section_detail.html:28
 #, python-format
@@ -1074,36 +1749,33 @@ msgid_plural "%(counter)s ARTICLES"
 msgstr[0] "%(counter)s लेख"
 msgstr[1] "%(counter)s लेख"
 
-#: templates/articles/author_detail.html:31
+#: templates/articles/author_detail.html:30
+#: templates/editorial_board/public_page.html:18
 msgid "EDITORIAL BOARD"
 msgstr "सम्पादक मण्डल"
 
-#: templates/articles/author_detail.html:37
+#: templates/articles/author_detail.html:36
 msgid "WEBSITE"
 msgstr "वेबसाइट"
 
-#: templates/articles/author_detail.html:48 templates/base.html:432
-#: templates/base.html:567 templates/training/course_detail.html:94
+#: templates/articles/author_detail.html:47 templates/base.html:456
+#: templates/base.html:629 templates/editorial_board/public_page.html:9
+#: templates/training/course_detail.html:94
 msgid "ABOUT"
 msgstr "बारेमा"
 
-#: templates/articles/author_detail.html:54
+#: templates/articles/author_detail.html:53
 msgid "RESEARCH INTERESTS"
 msgstr "अनुसन्धान रुचि"
 
-#: templates/articles/author_detail.html:61
+#: templates/articles/author_detail.html:60
 #, python-format
 msgid "Articles by %(name)s"
 msgstr "%(name)s का लेखहरू"
 
-#: templates/articles/author_detail.html:67
+#: templates/articles/author_detail.html:66
 msgid "No published articles yet."
 msgstr "अहिलेसम्म कुनै लेख प्रकाशित भएको छैन।"
-
-#: templates/articles/correction_list.html:4
-#: templates/articles/correction_list.html:7 templates/base.html:575
-msgid "Corrections"
-msgstr "सच्याइहरू"
 
 #: templates/articles/correction_list.html:7
 msgid "STANDARDS"
@@ -1133,21 +1805,26 @@ msgstr ""
 "हाम्रो कुनै गल्ती देख्नुभयो? लेखमा रहेको “रिपोर्ट गर्नुहोस्” लिंक प्रयोग गर्नुहोस्, वा यसमा "
 "लेख्नुहोस्:"
 
-#: templates/articles/includes/article_card.html:25
-#: templates/articles/includes/video_card.html:16
-#: templates/articles/includes/video_showcase.html:36
-#: templates/articles/includes/video_showcase.html:96
-#: templates/articles/search_results.html:71
-msgid "Special"
-msgstr "विशेष"
+#: templates/articles/for_you.html:10
+msgid "Latest articles from the sections and keywords you follow."
+msgstr "तपाईंले पछ्याएका खण्ड र मुख्य शब्दका पछिल्ला लेखहरू।"
 
-#: templates/articles/includes/article_card.html:25
-#: templates/articles/includes/video_card.html:16
-#: templates/articles/includes/video_showcase.html:36
-#: templates/articles/includes/video_showcase.html:96
-#: templates/articles/search_results.html:71
-msgid "Subscribers"
-msgstr "सदस्यहरूका लागि"
+#: templates/articles/for_you.html:49
+msgid "Nothing new from what you follow yet. Check back soon."
+msgstr "तपाईंले पछ्याएकामा अहिलेसम्म नयाँ केही छैन। केही समयपछि फेरि हेर्नुहोस्।"
+
+#: templates/articles/for_you.html:52
+msgid "You're not following any sections or keywords yet."
+msgstr "तपाईंले अहिलेसम्म कुनै खण्ड वा मुख्य शब्द पछ्याउनुभएको छैन।"
+
+#: templates/articles/for_you.html:54
+msgid ""
+"Open a section from the menu above, or a keyword on any article, and press "
+"<strong>+ FOLLOW</strong> to build your feed. You'll also get a weekly "
+"digest email."
+msgstr ""
+"माथिको मेनुबाट कुनै खण्ड, वा कुनै लेखको मुख्य शब्द खोलेर <strong>+ पछ्याउनुहोस्</strong> "
+"थिच्नुहोस्, तपाईंको फिड बन्छ। साप्ताहिक सारांश इमेल पनि आउँछ।"
 
 #: templates/articles/includes/health_disclaimer.html:2
 msgid "Health information notice"
@@ -1172,50 +1849,101 @@ msgstr ""
 msgid "Terms of use"
 msgstr "प्रयोगका सर्तहरू"
 
-#: templates/articles/includes/video_showcase.html:22
-#: templates/articles/video_list.html:8
-msgid "Watch"
-msgstr "हेर्नुहोस्"
+#: templates/articles/includes/story_flags.html:12
+msgid "Reviewed by independent experts through the journal before publication"
+msgstr "प्रकाशनअघि जर्नलमार्फत स्वतन्त्र विज्ञहरूले समीक्षा गरेको"
 
-#: templates/articles/includes/video_showcase.html:24
+#: templates/articles/includes/story_flags.html:12
+msgid "Peer-reviewed"
+msgstr "समकक्षी-समीक्षित"
+
+#: templates/articles/includes/story_flags.html:12
+#, python-format
+msgid "%(counter)s source"
+msgid_plural "%(counter)s sources"
+msgstr[0] "%(counter)s स्रोत"
+msgstr[1] "%(counter)s स्रोत"
+
+#: templates/articles/includes/story_flags.html:12
+msgid "Sources listed at the end of the story"
+msgstr "स्रोतहरू लेखको अन्त्यमा सूचीबद्ध छन्"
+
+#: templates/articles/includes/story_flags.html:12
+#: templates/articles/includes/video_card.html:16
+#: templates/articles/includes/video_showcase.html:34
+#: templates/articles/includes/video_showcase.html:93
+#: templates/articles/search_results.html:89
+msgid "Subscribers only"
+msgstr "सदस्यहरूका लागि मात्र"
+
+#: templates/articles/includes/topic_pill.html:12
+msgid "story"
+msgid_plural "stories"
+msgstr[0] "लेख"
+msgstr[1] "लेखहरू"
+
+#: templates/articles/includes/video_showcase.html:20
+#: templates/articles/video_list.html:4 templates/articles/video_list.html:8
+msgid "Videos"
+msgstr "भिडियोहरू"
+
+#: templates/articles/includes/video_showcase.html:22
 msgid "ALL VIDEOS →"
 msgstr "सबै भिडियो →"
 
-#: templates/articles/includes/video_showcase.html:38
+#: templates/articles/includes/video_showcase.html:36
 msgid "Play video"
 msgstr "भिडियो चलाउनुहोस्"
 
-#: templates/articles/includes/video_showcase.html:51
+#: templates/articles/includes/video_showcase.html:48
 msgid "Now showing"
 msgstr "अहिले देखाइँदै"
 
-#: templates/articles/includes/video_showcase.html:62
-#: templates/articles/includes/video_showcase.html:97 templates/home.html:115
+#: templates/articles/includes/video_showcase.html:59
+#: templates/articles/includes/video_showcase.html:94
 msgid "PLAY"
 msgstr "चलाउनुहोस्"
 
-#: templates/articles/includes/video_showcase.html:65
+#: templates/articles/includes/video_showcase.html:62
 msgid "READ THE STORY →"
 msgstr "समाचार पढ्नुहोस् →"
 
-#: templates/articles/includes/video_showcase.html:73
+#: templates/articles/includes/video_showcase.html:70
 msgid "Up next"
 msgstr "अर्को"
 
-#: templates/articles/includes/video_showcase.html:75
+#: templates/articles/includes/video_showcase.html:72
 msgid "Previous videos"
 msgstr "अघिल्ला भिडियोहरू"
 
-#: templates/articles/includes/video_showcase.html:79
+#: templates/articles/includes/video_showcase.html:76
 msgid "More videos"
 msgstr "थप भिडियोहरू"
+
+#: templates/articles/reading_list.html:10
+msgid "Articles you've saved for later."
+msgstr "पछि पढ्न तपाईंले राखेका लेखहरू।"
+
+#: templates/articles/reading_list.html:32
+#: templates/billing/includes/promo_field.html:9
+#: templates/billing/org_dashboard.html:96 templates/users/profile.html:159
+msgid "Remove"
+msgstr "हटाउनुहोस्"
+
+#: templates/articles/reading_list.html:57
+msgid "Nothing saved yet."
+msgstr "अहिलेसम्म केही सुरक्षित छैन।"
+
+#: templates/articles/reading_list.html:59
+msgid "Press <strong>+ SAVE FOR LATER</strong> on any article to add it here."
+msgstr "कुनै पनि लेखमा <strong>+ पछि पढ्न राख्नुहोस्</strong> थिचेर यहाँ थप्नुहोस्।"
 
 #: templates/articles/search_results.html:12
 msgid "Search and filter articles"
 msgstr "लेख खोज्नुहोस् र छान्नुहोस्"
 
-#: templates/articles/search_results.html:14 templates/base.html:305
-#: templates/base.html:425
+#: templates/articles/search_results.html:14 templates/base.html:324
+#: templates/base.html:449
 msgid "Search articles"
 msgstr "लेख खोज्नुहोस्"
 
@@ -1223,75 +1951,86 @@ msgstr "लेख खोज्नुहोस्"
 msgid "Words from the title, text, an author or a topic"
 msgstr "शीर्षक, सामग्री, लेखक वा विषयका शब्दहरू"
 
-#: templates/articles/search_results.html:20
+#: templates/articles/search_results.html:21
+msgid "FILTERS"
+msgstr "फिल्टर"
+
+#: templates/articles/search_results.html:23
 msgid "Section"
 msgstr "खण्ड"
 
-#: templates/articles/search_results.html:22
+#: templates/articles/search_results.html:25
 msgid "All sections"
 msgstr "सबै खण्ड"
 
-#: templates/articles/search_results.html:25
+#: templates/articles/search_results.html:28
 msgid "Story type"
 msgstr "समाचारको प्रकार"
 
-#: templates/articles/search_results.html:27
+#: templates/articles/search_results.html:30
 msgid "All story types"
 msgstr "सबै प्रकारका समाचार"
 
-#: templates/articles/search_results.html:30
-msgid "Published"
-msgstr "प्रकाशित"
-
-#: templates/articles/search_results.html:32
+#: templates/articles/search_results.html:35
 msgid "Any time"
 msgstr "जुनसुकै समय"
 
-#: templates/articles/search_results.html:33
+#: templates/articles/search_results.html:36
 msgid "Past week"
 msgstr "पछिल्लो हप्ता"
 
-#: templates/articles/search_results.html:34
+#: templates/articles/search_results.html:37
 msgid "Past month"
 msgstr "पछिल्लो महिना"
 
-#: templates/articles/search_results.html:35
+#: templates/articles/search_results.html:38
 msgid "Past year"
 msgstr "पछिल्लो वर्ष"
 
-#: templates/articles/search_results.html:37
+#: templates/articles/search_results.html:40
 msgid "Sort by"
 msgstr "क्रम मिलाउनुहोस्"
 
-#: templates/articles/search_results.html:39
+#: templates/articles/search_results.html:42
 msgid "Most relevant"
 msgstr "सबैभन्दा सान्दर्भिक"
 
-#: templates/articles/search_results.html:40
+#: templates/articles/search_results.html:43
 msgid "Newest first"
 msgstr "नयाँ पहिले"
 
-#: templates/articles/search_results.html:47
+#: templates/articles/search_results.html:51
 #, python-format
-msgid "%(counter)s RESULT FOR \"%(query)s\""
-msgid_plural "%(counter)s RESULTS FOR \"%(query)s\""
-msgstr[0] "\"%(query)s\" का लागि %(counter)s नतिजा"
-msgstr[1] "\"%(query)s\" का लागि %(counter)s नतिजाहरू"
+msgid "%(n)s RESULT FOR \"%(query)s\""
+msgid_plural "%(n)s RESULTS FOR \"%(query)s\""
+msgstr[0] "\"%(query)s\" का लागि %(n)s नतिजा"
+msgstr[1] "\"%(query)s\" का लागि %(n)s नतिजाहरू"
 
-#: templates/articles/search_results.html:52
+#: templates/articles/search_results.html:56
 #: templates/articles/topic_detail.html:9
+#: templates/library/resource_detail.html:41
 msgid "TOPICS"
 msgstr "विषयहरू"
 
-#: templates/articles/search_results.html:78
+#: templates/articles/search_results.html:64
+msgid "FROM THE HEALTH LIBRARY"
+msgstr "स्वास्थ्य पुस्तकालयबाट"
+
+#: templates/articles/search_results.html:66
+#: templates/articles/topic_detail.html:67
+#, python-format
+msgid "ALL %(n)s DOCUMENTS →"
+msgstr "सबै %(n)s दस्तावेज →"
+
+#: templates/articles/search_results.html:96
 msgid "No articles matched your search."
 msgstr "तपाईंको खोजसँग मिल्ने कुनै लेख भेटिएन।"
 
-#: templates/articles/search_results.html:80
+#: templates/articles/search_results.html:98
 msgid "Did you mean"
 msgstr "के तपाईंले यो भन्न खोज्नुभएको हो"
 
-#: templates/articles/search_results.html:82
+#: templates/articles/search_results.html:100
 msgid "Try fewer or different words, or remove a filter."
 msgstr "थोरै वा फरक शब्दहरू प्रयोग गर्नुहोस्, वा कुनै फिल्टर हटाउनुहोस्।"
 
@@ -1313,6 +2052,7 @@ msgid "Stories"
 msgstr "सामग्रीहरू"
 
 #: templates/articles/topic_detail.html:42
+#: templates/includes/pagination_editorial.html:4
 msgid "Pages"
 msgstr "पृष्ठहरू"
 
@@ -1328,9 +2068,13 @@ msgstr "पुराना"
 msgid "RELATED TOPICS"
 msgstr "सम्बन्धित विषयहरू"
 
-#: templates/articles/topic_detail.html:58 templates/home.html:161
+#: templates/articles/topic_detail.html:58 templates/home.html:152
 msgid "ALL TOPICS →"
 msgstr "सबै विषयहरू →"
+
+#: templates/articles/topic_detail.html:62
+msgid "IN THE HEALTH LIBRARY"
+msgstr "स्वास्थ्य पुस्तकालयमा"
 
 #: templates/articles/topic_list.html:10
 #, python-format
@@ -1359,179 +2103,167 @@ msgstr "अक्षरमा जानुहोस्"
 msgid "No topics yet."
 msgstr "अहिलेसम्म कुनै विषय छैन।"
 
-#: templates/articles/video_list.html:4
-msgid "Videos"
-msgstr "भिडियोहरू"
-
 #: templates/articles/video_list.html:29
 msgid "No videos yet — check back soon."
 msgstr "अहिलेसम्म कुनै भिडियो छैन — केही समयपछि फेरि हेर्नुहोस्।"
 
-#: templates/base.html:276
+#: templates/base.html:286
 msgid "SKIP TO CONTENT"
 msgstr "सामग्रीमा जानुहोस्"
 
-#: templates/base.html:277
-msgid "Latest issue"
-msgstr "नयाँ अंक"
-
-#: templates/base.html:281 templates/issues/issue_list.html:20
+#: templates/base.html:293 templates/issues/issue_list.html:20
 msgid "LATEST ISSUE"
 msgstr "पछिल्लो अंक"
 
-#: templates/base.html:296
+#: templates/base.html:311
 msgid "Menu"
 msgstr "मेनु"
 
-#: templates/base.html:304 templates/base.html:424
+#: templates/base.html:323 templates/base.html:448
 msgid "Site search"
 msgstr "साइट खोज"
 
-#: templates/base.html:305 templates/base.html:425
+#: templates/base.html:324 templates/base.html:449
 msgid "Search…"
 msgstr "खोज्नुहोस्…"
 
-#: templates/base.html:325 templates/base.html:456
+#: templates/base.html:346 templates/base.html:480
+#: templates/library/resource_detail.html:77
 msgid "Language"
 msgstr "भाषा"
 
-#: templates/base.html:338
+#: templates/base.html:362
 msgid "Account menu"
 msgstr "खाता मेनु"
 
-#: templates/base.html:359 templates/base.html:440
+#: templates/base.html:383 templates/base.html:464
 msgid "Dashboard"
 msgstr "ड्यासबोर्ड"
 
-#: templates/base.html:363 templates/base.html:442
-msgid "For You"
-msgstr "तपाईंका लागि"
-
-#: templates/base.html:366 templates/base.html:443
-msgid "Reading List"
-msgstr "पठन सूची"
-
-#: templates/base.html:369 templates/base.html:379 templates/base.html:444
+#: templates/base.html:393 templates/base.html:403 templates/base.html:468
 msgid "Profile"
 msgstr "प्रोफाइल"
 
-#: templates/base.html:374 templates/base.html:447
+#: templates/base.html:398 templates/base.html:471
+#: templates/users/two_step_verify.html:21
 msgid "Log out"
 msgstr "लग आउट"
 
-#: templates/base.html:390
+#: templates/base.html:414
 msgid "LOGIN"
 msgstr "लग इन"
 
-#: templates/base.html:394
+#: templates/base.html:418
 msgid "REGISTER"
 msgstr "दर्ता"
 
-#: templates/base.html:401
+#: templates/base.html:425
 msgid "Main"
 msgstr "मुख्य"
 
-#: templates/base.html:404 templates/base.html:429
+#: templates/base.html:428 templates/base.html:453
 #: templates/sections/section_detail.html:18
 msgid "HOME"
 msgstr "गृहपृष्ठ"
 
-#: templates/base.html:428
+#: templates/base.html:452
 msgid "Main menu"
 msgstr "मुख्य मेनु"
 
-#: templates/base.html:431
+#: templates/base.html:455
 msgid "ARTICLES"
 msgstr "लेखहरू"
 
-#: templates/base.html:433
+#: templates/base.html:457 templates/users/includes/account_side.html:37
 msgid "PITCH A STORY"
 msgstr "कथा प्रस्ताव गर्नुहोस्"
 
-#: templates/base.html:450
+#: templates/base.html:474
 msgid "Login"
 msgstr "लग इन"
 
-#: templates/base.html:451 templates/base.html:571
+#: templates/base.html:475 templates/base.html:632
 msgid "Register"
 msgstr "दर्ता गर्नुहोस्"
 
-#: templates/base.html:468
+#: templates/base.html:492
 msgid "Breaking news"
 msgstr "ताजा समाचार"
 
-#: templates/base.html:474
+#: templates/base.html:502
 msgid "Dismiss"
 msgstr "बन्द गर्नुहोस्"
 
-#: templates/base.html:527
-msgid "NEWSLETTER"
-msgstr "न्यूजलेटर"
+#: templates/base.html:583 templates/newsletter/confirmed.html:8
+#: templates/newsletter/unsubscribed.html:4
+#: templates/newsletter/unsubscribed.html:8 templates/users/privacy.html:24
+msgid "Newsletter"
+msgstr "न्युजलेटर"
 
-#: templates/base.html:528
+#: templates/base.html:584
 msgid "Free — the latest articles and news, straight to your inbox."
 msgstr "निःशुल्क — ताजा लेख र समाचार, सिधै तपाईंको इमेलमा।"
 
-#: templates/base.html:531
+#: templates/base.html:587
 msgid "You’re subscribed — thank you."
 msgstr "तपाईं न्यूजलेटरमा जोडिनुभएको छ — धन्यवाद।"
 
-#: templates/base.html:551
+#: templates/base.html:594
+msgid "Your email address"
+msgstr "तपाईंको इमेल ठेगाना"
+
+#: templates/base.html:599
+msgid "SIGN UP FREE"
+msgstr "निःशुल्क पाउनुहोस्"
+
+#: templates/base.html:612
 msgid "SECTIONS"
 msgstr "विभागहरू"
 
-#: templates/base.html:552
+#: templates/base.html:613
 msgid "Home"
 msgstr "गृहपृष्ठ"
 
-#: templates/base.html:556 templates/billing/plan_browse.html:5
+#: templates/base.html:617 templates/billing/plan_browse.html:5
 #: templates/billing/plan_detail.html:5
 #: templates/includes/mobile_subscribe_bar.html:2
 msgid "Subscribe"
 msgstr "सदस्यता लिनुहोस्"
 
-#: templates/base.html:559
-msgid "JOURNAL"
-msgstr "जर्नल"
+#: templates/base.html:620
+msgid "EXPLORE"
+msgstr "थप हेर्नुहोस्"
 
-#: templates/base.html:560
+#: templates/base.html:621
 msgid "Issue Archive"
 msgstr "अंक अभिलेख"
 
-#: templates/base.html:561
+#: templates/base.html:622
 msgid "Article Archive"
 msgstr "लेख अभिलेख"
 
-#: templates/base.html:563
+#: templates/base.html:625
 msgid "Research"
 msgstr "अनुसन्धान"
 
-#: templates/base.html:564
+#: templates/base.html:626
 msgid "Editorial Policy"
 msgstr "सम्पादकीय नीति"
 
-#: templates/base.html:568
-msgid "Editorial Board"
-msgstr "सम्पादकीय बोर्ड"
-
-#: templates/base.html:569 templates/training/course_detail.html:97
+#: templates/base.html:631 templates/training/course_detail.html:97
 msgid "FAQ"
 msgstr "बारम्बार सोधिने प्रश्न"
 
-#: templates/base.html:570
-msgid "Policies"
-msgstr "नीतिहरू"
-
-#: templates/base.html:576
+#: templates/base.html:637
 msgid "Cookie settings"
 msgstr "कुकी सेटिङ"
 
-#: templates/base.html:577 templates/users/privacy.html:4
+#: templates/base.html:638 templates/users/privacy.html:4
 #: templates/users/privacy.html:11
 msgid "Privacy & your data"
 msgstr "गोपनीयता र तपाईंको डाटा"
 
-#: templates/base.html:587
+#: templates/base.html:643
 msgid "All rights reserved."
 msgstr "सर्वाधिकार सुरक्षित।"
 
@@ -1757,6 +2489,24 @@ msgstr "मन बदलियो? %(date)s सम्म रद्द गरे�
 msgid "CANCEL & REFUND"
 msgstr "रद्द र फिर्ता"
 
+#: templates/billing/includes/comparison_table.html:12
+msgid "WHAT'S INCLUDED"
+msgstr "के-के समावेश छ"
+
+#: templates/billing/includes/comparison_table.html:17
+#: templates/billing/plan_browse.html:43 templates/billing/plan_detail.html:41
+msgid "OUR PICK"
+msgstr "हाम्रो सिफारिस"
+
+#: templates/billing/includes/comparison_table.html:32
+msgid "Included"
+msgstr "समावेश छ"
+
+#: templates/billing/includes/comparison_table.html:36
+#: templates/training/course_detail.html:82
+msgid "Not included"
+msgstr "समावेश छैन"
+
 #: templates/billing/includes/plan_cta.html:12
 msgid "ASK ABOUT YOUR ORGANIZATION →"
 msgstr "आफ्नो संस्थाका लागि सोध्नुहोस् →"
@@ -1781,11 +2531,6 @@ msgstr "हालको सदस्यता सकिएपछि %(date)s द
 #, python-format
 msgid "You already read with %(org)s’s subscription."
 msgstr "तपाईं पहिले नै %(org)s को सदस्यतामा पढ्दै हुनुहुन्छ।"
-
-#: templates/billing/includes/promo_field.html:9
-#: templates/billing/org_dashboard.html:96
-msgid "Remove"
-msgstr "हटाउनुहोस्"
 
 #: templates/billing/includes/promo_field.html:13
 msgid "Have a promo, student or partner code?"
@@ -2052,15 +2797,26 @@ msgstr "भुक्तानी पुष्टि भयो — अगाड�
 msgid "QR scanned — approve the payment in your app…"
 msgstr "QR स्क्यान भयो — आफ्नो एपमा भुक्तानी स्वीकृत गर्नुहोस्…"
 
-#: templates/billing/plan_browse.html:8
-msgid "Read without limits"
-msgstr "बिना सीमा पढ्नुहोस्"
+#: templates/billing/plan_browse.html:10
+msgid "Read every story, evidence included"
+msgstr "हरेक समाचार पूरा पढ्नुहोस्, प्रमाणसहित"
 
-#: templates/billing/plan_browse.html:8
-msgid "Full access to subscriber-only and special articles."
-msgstr "सदस्यहरूका लागि मात्र र विशेष लेखहरूमा पूर्ण पहुँच।"
+#: templates/billing/plan_browse.html:10
+msgid ""
+"Evidence-based health reporting, research explained in plain language and "
+"papers from our peer-reviewed journal, with numbered references, citation "
+"export and a named editorial board."
+msgstr ""
+"प्रमाणमा आधारित स्वास्थ्य रिपोर्टिङ, सरल भाषामा व्याख्या गरिएको अनुसन्धान र हाम्रो "
+"समकक्षी-समीक्षित जर्नलका लेखहरू: क्रमांकित सन्दर्भ, उद्धरण निर्यात र नाम खुलेको सम्पादकीय "
+"बोर्डसहित।"
 
-#: templates/billing/plan_browse.html:16
+#: templates/billing/plan_browse.html:11
+#, python-format
+msgid "NO AUTOMATIC RENEWAL · FULL REFUND IF YOU CANCEL WITHIN %(days)s DAYS"
+msgstr "स्वतः नवीकरण हुँदैन · %(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता"
+
+#: templates/billing/plan_browse.html:19
 #, python-format
 msgid ""
 "You’re subscribed until %(date)s. Renew now and the new period starts when "
@@ -2069,38 +2825,30 @@ msgstr ""
 "तपाईंको सदस्यता %(date)s सम्म छ। अहिले नवीकरण गर्नुभयो भने नयाँ अवधि यो सकिएपछि सुरु "
 "हुन्छ।"
 
-#: templates/billing/plan_browse.html:17
+#: templates/billing/plan_browse.html:20
 #, python-format
 msgid "You read with %(org)s’s subscription."
 msgstr "तपाईं %(org)s को सदस्यतामा पढ्नुहुन्छ।"
 
-#: templates/billing/plan_browse.html:19
+#: templates/billing/plan_browse.html:22
 msgid "MY BILLING →"
 msgstr "मेरो बिलिङ →"
 
-#: templates/billing/plan_browse.html:27 templates/billing/plan_detail.html:41
-msgid "MOST POPULAR"
-msgstr "सबैभन्दा लोकप्रिय"
-
-#: templates/billing/plan_browse.html:35
+#: templates/billing/plan_browse.html:50
 #, python-format
-msgid "+ %(rate)s%% VAT · every %(days)s days"
-msgstr "+ %(rate)s%% भ्याट · हरेक %(days)s दिन"
+msgid "%(total)s with VAT · every %(days)s days"
+msgstr "भ्याटसहित %(total)s · हरेक %(days)s दिन"
 
-#: templates/billing/plan_browse.html:48
+#: templates/billing/plan_browse.html:51
 #, python-format
-msgid "+ %(count)s more"
-msgstr "+ थप %(count)s"
+msgid "%(read)s months for the price of %(paid)s"
+msgstr "%(paid)s महिनाको मूल्यमा %(read)s महिना"
 
-#: templates/billing/plan_browse.html:55
-msgid "SEE PLAN DETAILS →"
-msgstr "योजनाको विवरण हेर्नुहोस् →"
-
-#: templates/billing/plan_browse.html:60
+#: templates/billing/plan_browse.html:56
 msgid "No plans available right now — check back soon."
 msgstr "अहिले कुनै योजना उपलब्ध छैन — केही समयपछि फेरि हेर्नुहोस्।"
 
-#: templates/billing/plan_browse.html:64
+#: templates/billing/plan_browse.html:60
 #, python-format
 msgid ""
 "Code <strong class=\"font-mono-editorial text-foreground\">%(code)s</strong> "
@@ -2109,19 +2857,15 @@ msgstr ""
 "भुक्तानी गर्दा कोड <strong class=\"font-mono-editorial text-"
 "foreground\">%(code)s</strong> लागू हुनेछ।"
 
-#: templates/billing/plan_browse.html:65
+#: templates/billing/plan_browse.html:61
 msgid "Have a launch, student, partner or free-trial code?"
 msgstr "लन्च, विद्यार्थी, साझेदार वा निःशुल्क परीक्षण कोड छ?"
 
-#: templates/billing/plan_browse.html:65
+#: templates/billing/plan_browse.html:61
 msgid "Redeem it"
 msgstr "प्रयोग गर्नुहोस्"
 
-#: templates/billing/plan_browse.html:70 templates/billing/plan_detail.html:30
-msgid "COMPARE PLANS"
-msgstr "योजनाहरू तुलना गर्नुहोस्"
-
-#: templates/billing/plan_browse.html:71
+#: templates/billing/plan_browse.html:66
 msgid "Full feature comparison"
 msgstr "सुविधाहरूको पूर्ण तुलना"
 
@@ -2136,6 +2880,10 @@ msgstr "के-के समावेश छ"
 #: templates/billing/plan_detail.html:23
 msgid "Full details coming soon."
 msgstr "पूर्ण विवरण छिट्टै आउँदैछ।"
+
+#: templates/billing/plan_detail.html:30
+msgid "COMPARE PLANS"
+msgstr "योजनाहरू तुलना गर्नुहोस्"
 
 #: templates/billing/plan_detail.html:31
 #, python-format
@@ -2169,6 +2917,11 @@ msgstr ""
 msgid ""
 "Subscriptions don’t renew automatically — we’ll email you before yours ends."
 msgstr "सदस्यता आफैं नवीकरण हुँदैन — सकिनुअघि हामी तपाईंलाई इमेल गर्नेछौं।"
+
+#: templates/billing/plan_detail.html:54
+#, python-format
+msgid "Full refund if you cancel within %(days)s days."
+msgstr "%(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता।"
 
 #: templates/billing/purchase_checkout.html:5
 #: templates/billing/purchase_checkout.html:11
@@ -2353,10 +3106,6 @@ msgstr "%(domains)s का पुष्टि गरिएका इमेल �
 msgid "CREATE A FREE ACCOUNT"
 msgstr "निःशुल्क खाता बनाउनुहोस्"
 
-#: templates/billing/redeem.html:33
-msgid "LOG IN"
-msgstr "लग इन"
-
 #: templates/billing/redeem.html:35
 msgid "You’ll come straight back here to start the trial."
 msgstr "परीक्षण सुरु गर्न तपाईं सिधै यहीँ फर्कनुहुनेछ।"
@@ -2470,6 +3219,169 @@ msgstr "हटाउनुहोस्"
 msgid "Reply to comment"
 msgstr "टिप्पणीको जवाफ दिनुहोस्"
 
+#: templates/editorial_board/public_page.html:14
+msgid "ABOUT US"
+msgstr "हाम्रो बारेमा"
+
+#: templates/editorial_board/public_page.html:22
+msgid "POLICIES"
+msgstr "नीतिहरू"
+
+#: templates/editorial_board/public_page.html:36
+msgid "Evidence-based health news and knowledge for Nepal."
+msgstr "नेपालका लागि प्रमाणमा आधारित स्वास्थ्य समाचार र ज्ञान।"
+
+#: templates/editorial_board/public_page.html:39
+#, python-format
+msgid ""
+"Much of the health information people in Nepal see online has never been "
+"checked against the evidence, while important research stays locked in "
+"technical language. %(JOURNAL_NAME)s exists to close that gap: we turn "
+"medical evidence into accurate, clear and practical information, without "
+"lowering the standards of journalism, research ethics or professional "
+"accountability."
+msgstr ""
+"नेपालमा मानिसहरूले अनलाइन देख्ने धेरैजसो स्वास्थ्य जानकारी कहिल्यै प्रमाणसँग जाँचिएको हुँदैन, "
+"अर्कोतर्फ महत्त्वपूर्ण अनुसन्धान प्राविधिक भाषामै सीमित रहन्छ। यही खाडल पुर्न "
+"%(JOURNAL_NAME)s स्थापना भएको हो: पत्रकारिता, अनुसन्धान नैतिकता र पेसागत "
+"जवाफदेहिताको मापदण्ड नघटाई हामी चिकित्सकीय प्रमाणलाई सही, स्पष्ट र व्यावहारिक "
+"जानकारीमा बदल्छौँ।"
+
+#: templates/editorial_board/public_page.html:42
+msgid ""
+"We publish health news, explainers, research summaries and analysis in "
+"Nepali and English, alongside a peer-reviewed scientific journal. Formal "
+"submission and peer review for the journal take place on OJS (Open Journal "
+"Systems), a dedicated scholarly publishing platform; accepted papers are "
+"published here with plain-language summaries."
+msgstr ""
+"हामी नेपाली र अंग्रेजीमा स्वास्थ्य समाचार, व्याख्यात्मक सामग्री, अनुसन्धान सारांश र विश्लेषण "
+"प्रकाशित गर्छौँ, साथै एउटा समकक्षी-समीक्षित वैज्ञानिक जर्नल पनि। जर्नलका लागि औपचारिक "
+"पेस र समकक्षी समीक्षा विद्वत् प्रकाशनका लागि बनेको OJS (Open Journal Systems) "
+"प्लेटफर्ममा हुन्छ; स्वीकृत लेखहरू यहाँ सरल भाषाको सारांशसहित प्रकाशित हुन्छन्।"
+
+#: templates/editorial_board/public_page.html:47
+msgid "OUR VISION"
+msgstr "हाम्रो दृष्टि"
+
+#: templates/editorial_board/public_page.html:48
+msgid ""
+"To become Nepal's most trusted evidence-based health and medical knowledge "
+"platform, advancing medical education, healthcare, science communication and "
+"public health awareness through research-driven information, credible "
+"journalism and academic publishing."
+msgstr ""
+"अनुसन्धानमा आधारित जानकारी, विश्वसनीय पत्रकारिता र प्राज्ञिक प्रकाशनमार्फत चिकित्सा "
+"शिक्षा, स्वास्थ्य सेवा, विज्ञान सञ्चार र जनस्वास्थ्य चेतनालाई अघि बढाउँदै नेपालको सबैभन्दा "
+"भरपर्दो प्रमाणमा आधारित स्वास्थ्य तथा चिकित्सा ज्ञान प्लेटफर्म बन्ने।"
+
+#: templates/editorial_board/public_page.html:51
+msgid "OUR MISSION"
+msgstr "हाम्रो ध्येय"
+
+#: templates/editorial_board/public_page.html:52
+msgid ""
+"To reduce misinformation in healthcare and medical education by turning "
+"scientific evidence, health research and medical knowledge into accurate, "
+"accessible content for the Nepali public, health professionals, students, "
+"researchers and policymakers."
+msgstr ""
+"वैज्ञानिक प्रमाण, स्वास्थ्य अनुसन्धान र चिकित्सा ज्ञानलाई नेपाली जनता, स्वास्थ्यकर्मी, "
+"विद्यार्थी, अनुसन्धानकर्ता र नीति निर्माताका लागि सही र सहज सामग्रीमा बदलेर स्वास्थ्य "
+"सेवा र चिकित्सा शिक्षामा फैलिने भ्रामक सूचना घटाउने।"
+
+#: templates/editorial_board/public_page.html:57
+msgid "How we work"
+msgstr "हामी कसरी काम गर्छौँ"
+
+#: templates/editorial_board/public_page.html:59
+msgid "Evidence first."
+msgstr "प्रमाण पहिले।"
+
+#: templates/editorial_board/public_page.html:59
+msgid ""
+"We rely on peer-reviewed research and authoritative sources such as WHO, "
+"NHRC, MoHP, MEC, PubMed, The Lancet, BMJ and NEJM, and we cite them."
+msgstr ""
+"हामी समकक्षी-समीक्षित अनुसन्धान र WHO, NHRC, MoHP, MEC, PubMed, The Lancet, BMJ "
+"र NEJM जस्ता आधिकारिक स्रोतमा भर पर्छौँ, र तिनको उल्लेख गर्छौँ।"
+
+#: templates/editorial_board/public_page.html:60
+msgid "Checked before it's published."
+msgstr "प्रकाशनअघि जाँच।"
+
+#: templates/editorial_board/public_page.html:60
+msgid ""
+"Editorial review, fact-checking and source verification, with corrections "
+"made openly."
+msgstr "सम्पादकीय समीक्षा, तथ्य जाँच र स्रोत प्रमाणीकरण, अनि खुला रूपमा सच्याइ।"
+
+#: templates/editorial_board/public_page.html:61
+msgid "Clear and local."
+msgstr "स्पष्ट र स्थानीय।"
+
+#: templates/editorial_board/public_page.html:61
+msgid ""
+"Technical findings in simple, practical language, focused on Nepal's own "
+"health priorities."
+msgstr ""
+"नेपालकै स्वास्थ्य प्राथमिकतामा केन्द्रित रहेर प्राविधिक निष्कर्षहरू सरल, व्यावहारिक भाषामा।"
+
+#: templates/editorial_board/public_page.html:62
+msgid "Independent."
+msgstr "स्वतन्त्र।"
+
+#: templates/editorial_board/public_page.html:62
+msgid ""
+"Editorial decisions are ours alone; advertisers and partners have no say in "
+"what we cover."
+msgstr ""
+"सम्पादकीय निर्णय हाम्रो मात्र हो; हामी के समेट्छौँ भन्नेमा विज्ञापनदाता र साझेदारको "
+"भूमिका हुँदैन।"
+
+#: templates/editorial_board/public_page.html:67
+msgid "Areas we focus on"
+msgstr "हाम्रा मुख्य विषयक्षेत्र"
+
+#: templates/editorial_board/public_page.html:79
+msgid "Who it's for"
+msgstr "कसका लागि"
+
+#: templates/editorial_board/public_page.html:80
+msgid ""
+"Health professionals, researchers, students, educators, policymakers and the "
+"public: one place where people who usually work in separate information "
+"worlds can share and use the same evidence."
+msgstr ""
+"स्वास्थ्यकर्मी, अनुसन्धानकर्ता, विद्यार्थी, शिक्षक, नीति निर्माता र आम जनता: प्रायः "
+"छुट्टाछुट्टै सूचना संसारमा काम गर्ने मानिसहरूले एउटै प्रमाण साझा गर्न र प्रयोग गर्न सक्ने एउटै "
+"ठाउँ।"
+
+#: templates/editorial_board/public_page.html:84
+msgid "What we publish"
+msgstr "हामी के प्रकाशित गर्छौँ"
+
+#: templates/editorial_board/public_page.html:157
+#, python-format
+msgid ""
+"%(JOURNAL_NAME)s is committed to evidence, transparency and accountability. "
+"These policies set out how we choose and check what we publish, how we stay "
+"independent, how we correct mistakes, and how our peer-reviewed journal "
+"works."
+msgstr ""
+"%(JOURNAL_NAME)s प्रमाण, पारदर्शिता र जवाफदेहिताप्रति प्रतिबद्ध छ। हामी प्रकाशित "
+"गर्ने सामग्री कसरी छान्छौँ र जाँच्छौँ, कसरी स्वतन्त्र रहन्छौँ, गल्ती कसरी सच्याउँछौँ, र हाम्रो "
+"समकक्षी-समीक्षित जर्नल कसरी चल्छ भन्ने कुरा यी नीतिहरूले बताउँछन्।"
+
+#: templates/editorial_board/public_page.html:162
+#: templates/editorial_board/public_page.html:167
+msgid "+ EXPAND"
+msgstr "+ खोल्नुहोस्"
+
+#: templates/editorial_board/public_page.html:162
+msgid "− COLLAPSE"
+msgstr "− बन्द गर्नुहोस्"
+
 #
 #: templates/home.html:19
 msgid "Top stories"
@@ -2480,162 +3392,91 @@ msgstr "मुख्य समाचार"
 msgid "%(n)s of %(total)s"
 msgstr "%(total)s मध्ये %(n)s"
 
-#
-#: templates/home.html:56
-msgid "Cover Story"
-msgstr "आवरण कथा"
-
-#: templates/home.html:81
+#: templates/home.html:78
 msgid "Read the full story"
 msgstr "पूरा लेख पढ्नुहोस्"
 
-#
-#: templates/home.html:102
-msgid "Previous story"
-msgstr "अघिल्लो सामग्री"
-
-#: templates/home.html:105
+#: templates/home.html:100
 msgid "Choose a story"
 msgstr "शीर्ष समाचार छान्नुहोस्"
 
-#: templates/home.html:108
-#, python-format
-msgid "Story %(n)s: %(title)s"
-msgstr "सामग्री %(n)s: %(title)s"
-
-#: templates/home.html:111
-msgid "Next story"
-msgstr "अर्को सामग्री"
-
-#: templates/home.html:115
+#: templates/home.html:110
 msgid "PAUSE"
 msgstr "रोक्नुहोस्"
 
-#: templates/home.html:127
+#: templates/home.html:110
+msgid "RESUME"
+msgstr "फेरि चलाउनुहोस्"
+
+#: templates/home.html:121
 msgid "No articles published yet — check back soon."
 msgstr "अहिलेसम्म कुनै लेख प्रकाशित भएको छैन — केही समयपछि फेरि हेर्नुहोस्।"
 
-#: templates/home.html:157
-msgid "TRENDING TOPICS"
+#: templates/home.html:122 templates/home.html:295
+msgid "MEET THE BOARD →"
+msgstr "सम्पादकीय बोर्ड हेर्नुहोस् →"
+
+#: templates/home.html:135
+msgid "Trending This Week"
+msgstr "यो हप्ता चर्चामा"
+
+#: templates/home.html:152
+msgid "Trending Topics"
 msgstr "चर्चित विषयहरू"
 
-#: templates/home.html:158
-msgid "What readers are following this month"
-msgstr "यो महिना पाठकहरूले पछ्याइरहेका विषयहरू"
+#: templates/home.html:152
+msgid "Most-covered topics this month"
+msgstr "यस महिना सबैभन्दा बढी समेटिएका विषयहरू"
 
-#: templates/home.html:168
+#: templates/home.html:160
 msgid "All topics →"
 msgstr "सबै विषयहरू →"
 
-#: templates/home.html:177
-msgid "GOT A STORY?"
-msgstr "कुनै कथा छ?"
-
-#: templates/home.html:179
-msgid "Pitch a health story to our editors."
-msgstr "हाम्रा सम्पादकलाई स्वास्थ्य कथा प्रस्ताव गर्नुहोस्।"
-
-#: templates/home.html:181
-msgid "No account, no manuscript — just the idea."
-msgstr "खाता चाहिँदैन, पाण्डुलिपि चाहिँदैन — केवल विचार।"
-
-#: templates/home.html:185
-msgid "PITCH A STORY →"
-msgstr "कथा प्रस्ताव गर्नुहोस् →"
-
-#: templates/home.html:206
-msgid "NEWS"
-msgstr "समाचार"
-
-#: templates/home.html:206
+#: templates/home.html:188
 msgid "Latest News"
 msgstr "ताजा समाचार"
 
-#: templates/home.html:206
+#: templates/home.html:188
 msgid "ALL NEWS →"
 msgstr "सबै समाचार →"
 
-#: templates/home.html:222
-msgid "OPINION"
-msgstr "विचार"
+#: templates/home.html:188
+msgid ""
+"Every summary is free to read. A lock marks stories that need a subscription "
+"or a single purchase."
+msgstr ""
+"हरेक लेखको सारांश निःशुल्क पढ्न सकिन्छ। ताल्चा चिन्ह भएका लेखका लागि सदस्यता वा एकल "
+"खरिद चाहिन्छ।"
 
-#: templates/home.html:222
-msgid "Opinion &amp; Commentary"
-msgstr "विचार तथा टिप्पणी"
-
-#: templates/home.html:222
-msgid "ALL OPINION →"
-msgstr "सबै विचार →"
-
-#: templates/home.html:260
-msgid "PEER-REVIEWED RESEARCH"
-msgstr "समकक्षी-समीक्षित अनुसन्धान"
-
-#: templates/home.html:260
+#: templates/home.html:262
 msgid "From the Journal"
 msgstr "जर्नलबाट"
 
-#: templates/home.html:260
-msgid "BROWSE ARCHIVE →"
-msgstr "अभिलेख हेर्नुहोस् →"
-
-#: templates/home.html:269
-msgid "Online first"
-msgstr "अनलाइन पहिले"
-
-#: templates/home.html:284
-msgid "DOI"
-msgstr "DOI"
-
-#: templates/home.html:284
-msgid "Read more →"
-msgstr "थप पढ्नुहोस् →"
-
-#: templates/home.html:299 templates/issues/issue_list.html:7
-msgid "STORY TRAILS"
-msgstr "कथा शृङ्खला"
-
-#: templates/home.html:299
-msgid "Special Issues"
-msgstr "विशेष अंकहरू"
-
-#: templates/home.html:299
+#: templates/home.html:262 templates/home.html:364
 msgid "ALL ISSUES →"
 msgstr "सबै अंक →"
 
-#: templates/home.html:311
-msgid "Available Now"
-msgstr "अहिले उपलब्ध"
+#: templates/home.html:262
+msgid ""
+"Papers from our journal. Peer-reviewed means independent experts checked "
+"each one before publication."
+msgstr ""
+"हाम्रो जर्नलका अनुसन्धानपत्रहरू। समकक्षी-समीक्षित भन्नाले प्रकाशनअघि स्वतन्त्र विज्ञहरूले जाँच "
+"गरेको भन्ने बुझिन्छ।"
 
-#: templates/home.html:311
-msgid "READ →"
-msgstr "पढ्नुहोस् →"
+#: templates/home.html:271
+msgid "Online first"
+msgstr "अनलाइन पहिले"
 
-#: templates/home.html:318
-msgid "FORTHCOMING"
-msgstr "आगामी"
+#: templates/home.html:281
+msgid "DOI"
+msgstr "DOI"
 
-#: templates/home.html:322
-msgid "In production"
-msgstr "तयारीमा"
-
-#: templates/home.html:336 templates/training/course_detail.html:22
-msgid "TRAINING"
-msgstr "तालिम"
-
-#: templates/home.html:336
-msgid "Learn with us"
-msgstr "हामीसँग सिक्नुहोस्"
-
-#: templates/home.html:336 templates/training/course_detail.html:252
-msgid "ALL COURSES →"
-msgstr "सबै कोर्सहरू →"
-
-#: templates/home.html:353
+#: templates/home.html:295
 msgid "Board &amp; Policies"
 msgstr "बोर्ड तथा नीतिहरू"
 
-#: templates/home.html:355
+#: templates/home.html:296
 #, python-format
 msgid ""
 "%(journal)s is governed by an independent editorial board. Peer review for "
@@ -2644,9 +3485,53 @@ msgstr ""
 "%(journal)s स्वतन्त्र सम्पादकीय बोर्डद्वारा सञ्चालित छ। मौलिक अनुसन्धानको समकक्षी "
 "समीक्षा OJS मार्फत बाहिरी रूपमा गरिन्छ।"
 
-#: templates/home.html:359
-msgid "EDITORIAL POLICY →"
-msgstr "सम्पादकीय नीति →"
+#: templates/home.html:325
+msgid "Opinion &amp; Commentary"
+msgstr "विचार तथा टिप्पणी"
+
+#: templates/home.html:325
+msgid "ALL OPINION →"
+msgstr "सबै विचार →"
+
+#: templates/home.html:364
+msgid "Special Issues"
+msgstr "विशेष अंकहरू"
+
+#: templates/home.html:376
+msgid "Available Now"
+msgstr "अहिले उपलब्ध"
+
+#: templates/home.html:376
+msgid "READ THE ISSUE →"
+msgstr "अंक पढ्नुहोस् →"
+
+#: templates/home.html:383
+msgid "FORTHCOMING"
+msgstr "आगामी"
+
+#: templates/home.html:387
+msgid "In production"
+msgstr "तयारीमा"
+
+#: templates/home.html:401
+msgid "Learn with us"
+msgstr "हामीसँग सिक्नुहोस्"
+
+#: templates/home.html:401 templates/training/course_detail.html:252
+msgid "ALL COURSES →"
+msgstr "सबै कोर्सहरू →"
+
+#: templates/home.html:422
+msgid "Pitch a health story to our editors."
+msgstr "हाम्रा सम्पादकलाई स्वास्थ्य कथा प्रस्ताव गर्नुहोस्।"
+
+#: templates/home.html:424
+msgid "No account, no manuscript — just the idea."
+msgstr "खाता चाहिँदैन, पाण्डुलिपि चाहिँदैन — केवल विचार।"
+
+#: templates/home.html:428 templates/users/profile.html:203
+msgid "PITCH A STORY →"
+msgstr "कथा प्रस्ताव गर्नुहोस् →"
 
 #: templates/includes/cookie_consent.html:14
 msgid "Cookies on this site"
@@ -2688,6 +3573,19 @@ msgstr "भरोसा गर्न सकिने स्वास्थ्य
 #: templates/includes/mobile_subscribe_bar.html:6
 msgid "Close"
 msgstr "बन्द गर्नुहोस्"
+
+#: templates/includes/pagination_editorial.html:8
+msgid "← PREVIOUS"
+msgstr "← अघिल्लो"
+
+#: templates/includes/pagination_editorial.html:15
+#, python-format
+msgid "PAGE %(n)s OF %(total)s"
+msgstr "पृष्ठ %(n)s / %(total)s"
+
+#: templates/includes/pagination_editorial.html:21
+msgid "NEXT →"
+msgstr "अर्को →"
 
 #: templates/includes/privacy_notice.html:3
 msgid ""
@@ -2733,6 +3631,10 @@ msgid "No articles assigned to this issue yet."
 msgstr "यस अंकमा अहिलेसम्म कुनै लेख राखिएको छैन।"
 
 #: templates/issues/issue_list.html:7
+msgid "STORY TRAILS"
+msgstr "कथा शृङ्खला"
+
+#: templates/issues/issue_list.html:7
 msgid "Issues"
 msgstr "अंकहरू"
 
@@ -2748,14 +3650,115 @@ msgstr "थप अंकहरू"
 msgid "No issues published yet."
 msgstr "अहिलेसम्म कुनै अंक प्रकाशित भएको छैन।"
 
+#: templates/library/includes/resource_compact.html:7
+#: templates/library/includes/resource_row.html:17
+msgid "LINK"
+msgstr "लिंक"
+
+#: templates/library/resource_detail.html:14
+msgid "← HEALTH LIBRARY"
+msgstr "← स्वास्थ्य पुस्तकालय"
+
+#: templates/library/resource_detail.html:29
+#, python-format
+msgid "OPEN ON %(host)s ↗"
+msgstr "%(host)s मा खोल्नुहोस् ↗"
+
+#: templates/library/resource_detail.html:31
+#, python-format
+msgid "DOWNLOAD %(format)s"
+msgstr "%(format)s डाउनलोड गर्नुहोस्"
+
+#: templates/library/resource_detail.html:35
+msgid "This opens the document where its publisher hosts it."
+msgstr "यसले प्रकाशकले राखेकै ठाउँमा दस्तावेज खोल्छ।"
+
+#: templates/library/resource_detail.html:52
+msgid "Our reporting on this"
+msgstr "यसबारे हाम्रो रिपोर्टिङ"
+
+#: templates/library/resource_detail.html:66
+msgid "Published by"
+msgstr "प्रकाशक"
+
+#: templates/library/resource_detail.html:72
+msgid "Year"
+msgstr "वर्ष"
+
+#: templates/library/resource_detail.html:81
+#: templates/training/course_list.html:100
+msgid "Format"
+msgstr "ढाँचा"
+
+#: templates/library/resource_detail.html:82
+msgid "Link"
+msgstr "लिंक"
+
+#: templates/library/resource_detail.html:85
+msgid ""
+"Documents in the library belong to their publishers. We collect them so they "
+"are easy to find; check the publisher for the latest version."
+msgstr ""
+"पुस्तकालयका दस्तावेज तिनका प्रकाशकका हुन्। सजिलै भेटियोस् भनेर हामी यिनलाई एकै ठाउँमा "
+"राख्छौँ; पछिल्लो संस्करणका लागि प्रकाशकलाई हेर्नुहोस्।"
+
+#: templates/library/resource_detail.html:91
+msgid "More from the library"
+msgstr "पुस्तकालयबाट थप"
+
+#: templates/library/resource_list.html:9
+msgid ""
+"Research papers, policy documents, government reports, guidelines, training "
+"material and data on health in Nepal, in one place. Free to read and "
+"download."
+msgstr ""
+"नेपालको स्वास्थ्यसम्बन्धी अनुसन्धान पत्र, नीति दस्तावेज, सरकारी प्रतिवेदन, निर्देशिका, "
+"तालिम सामग्री र तथ्यांक एकै ठाउँमा। पढ्न र डाउनलोड गर्न निःशुल्क।"
+
+#: templates/library/resource_list.html:10
+#, python-format
+msgid "%(counter)s RESOURCE"
+msgid_plural "%(counter)s RESOURCES"
+msgstr[0] "%(counter)s सामग्री"
+msgstr[1] "%(counter)s सामग्री"
+
+#: templates/library/resource_list.html:18
+msgid "Search the library"
+msgstr "पुस्तकालयमा खोज्नुहोस्"
+
+#: templates/library/resource_list.html:19
+msgid "Search titles, topics or publishers…"
+msgstr "शीर्षक, विषय वा प्रकाशक खोज्नुहोस्…"
+
+#: templates/library/resource_list.html:24
+msgid "Resource type"
+msgstr "सामग्रीको प्रकार"
+
+#: templates/library/resource_list.html:36
+#: templates/training/course_detail.html:77
+msgid "LANGUAGE"
+msgstr "भाषा"
+
+#: templates/library/resource_list.html:43
+#: templates/training/course_list.html:89
+msgid "Topic"
+msgstr "विषय"
+
+#: templates/library/resource_list.html:54
+msgid "Nothing in the library matches these filters."
+msgstr "यी फिल्टरसँग मिल्ने केही पनि पुस्तकालयमा छैन।"
+
+#: templates/library/resource_list.html:55
+msgid "Show everything"
+msgstr "सबै देखाउनुहोस्"
+
+#: templates/library/resource_list.html:57
+msgid "The library is being built. Check back soon."
+msgstr "पुस्तकालय तयार हुँदैछ। केही समयपछि फेरि हेर्नुहोस्।"
+
 #: templates/newsletter/confirmed.html:4
 msgid "Subscription Confirmed"
 msgstr "सदस्यता पुष्टि भयो"
-
-#: templates/newsletter/confirmed.html:8
-#: templates/newsletter/unsubscribed.html:8 templates/users/privacy.html:24
-msgid "Newsletter"
-msgstr "न्युजलेटर"
 
 #: templates/newsletter/confirmed.html:9
 msgid "You're confirmed"
@@ -2771,19 +3774,15 @@ msgstr ""
 "सदस्यता हटाउन सकिन्छ।"
 
 #: templates/newsletter/confirmed.html:14
-#: templates/newsletter/unsubscribed.html:14
+#: templates/newsletter/unsubscribed.html:25
 msgid "BACK TO HOME →"
 msgstr "गृहपृष्ठमा फर्कनुहोस् →"
 
-#: templates/newsletter/unsubscribed.html:4
-msgid "Unsubscribed"
-msgstr "सदस्यता हटाइयो"
-
-#: templates/newsletter/unsubscribed.html:9
+#: templates/newsletter/unsubscribed.html:10
 msgid "You're unsubscribed"
 msgstr "तपाईंको सदस्यता हटाइयो"
 
-#: templates/newsletter/unsubscribed.html:11
+#: templates/newsletter/unsubscribed.html:12
 #, python-format
 msgid ""
 "%(email)s will no longer receive our newsletter. Changed your mind? You can "
@@ -2791,6 +3790,21 @@ msgid ""
 msgstr ""
 "%(email)s ले अब हाम्रो न्युजलेटर प्राप्त गर्ने छैन। मन बदलियो? जुनसुकै बेला फेरि सदस्यता लिन "
 "सक्नुहुन्छ।"
+
+#: templates/newsletter/unsubscribed.html:16
+#: templates/users/email_unsubscribe.html:15
+msgid "Unsubscribe?"
+msgstr "सदस्यता हटाउने?"
+
+#: templates/newsletter/unsubscribed.html:18
+#, python-format
+msgid "Stop sending our newsletter to %(email)s."
+msgstr "%(email)s मा हाम्रो न्युजलेटर पठाउन बन्द गर्नुहोस्।"
+
+#: templates/newsletter/unsubscribed.html:21
+#: templates/users/email_unsubscribe.html:18 templates/users/privacy.html:30
+msgid "UNSUBSCRIBE"
+msgstr "सदस्यता हटाउनुहोस्"
 
 #: templates/pages/page.html:11
 msgid ""
@@ -2803,7 +3817,106 @@ msgstr "मस्यौदा — प्रकाशित नभएसम्म
 msgid "Last updated %(date)s"
 msgstr "पछिल्लो अद्यावधिक %(date)s"
 
-#: templates/pitches/pitch_form.html:48
+#: templates/pitches/includes/pitch_side.html:7
+msgid "How pitching works"
+msgstr "कथा प्रस्ताव कसरी काम गर्छ"
+
+#: templates/pitches/includes/pitch_side.html:8
+msgid "A good pitch says"
+msgstr "राम्रो प्रस्तावले भन्छ"
+
+#: templates/pitches/includes/pitch_side.html:10
+msgid "What happened, to whom, and where in Nepal."
+msgstr "के भयो, कसलाई, र नेपालको कहाँ।"
+
+#: templates/pitches/includes/pitch_side.html:11
+msgid ""
+"Why it matters now: a new figure, a policy change, a pattern you've noticed."
+msgstr ""
+"अहिले किन महत्त्वपूर्ण छ: नयाँ तथ्याङ्क, नीतिगत परिवर्तन, वा तपाईंले देख्नुभएको ढाँचा।"
+
+#: templates/pitches/includes/pitch_side.html:12
+msgid "How you know: documents, data, or people we can talk to."
+msgstr "तपाईंलाई कसरी थाहा भयो: कागजात, तथ्याङ्क, वा हामीले कुरा गर्न सक्ने व्यक्ति।"
+
+#: templates/pitches/includes/pitch_side.html:15
+msgid "What happens next"
+msgstr "त्यसपछि के हुन्छ"
+
+#: templates/pitches/includes/pitch_side.html:17
+#: templates/pitches/pitch_thanks.html:14
+msgid "An editor reads every pitch, usually within a week."
+msgstr "सम्पादकले हरेक प्रस्ताव पढ्छन्, प्रायः एक हप्ताभित्र।"
+
+#: templates/pitches/includes/pitch_side.html:17
+#: templates/pitches/pitch_thanks.html:17
+msgid ""
+"We’ll email you when it’s accepted, needs more from you, or isn’t right for "
+"us."
+msgstr ""
+"स्वीकृत भएमा, तपाईंबाट थप जानकारी चाहिएमा, वा हाम्रा लागि उपयुक्त नभएमा हामी "
+"तपाईंलाई इमेल गर्नेछौं।"
+
+#: templates/pitches/includes/pitch_side.html:17
+#: templates/pitches/pitch_thanks.html:19
+msgid "If it’s accepted, an editor works with you to turn it into an article."
+msgstr "स्वीकृत भएमा, सम्पादकले तपाईंसँग मिलेर यसलाई लेखमा बदल्छन्।"
+
+#: templates/pitches/my_pitches.html:4 templates/pitches/my_pitches.html:10
+msgid "My pitches"
+msgstr "मेरा प्रस्तावहरू"
+
+#: templates/pitches/my_pitches.html:13
+msgid "+ NEW PITCH"
+msgstr "+ नयाँ प्रस्ताव"
+
+#: templates/pitches/my_pitches.html:42
+msgid "EDITOR'S NOTE"
+msgstr "सम्पादकको टिप्पणी"
+
+#: templates/pitches/my_pitches.html:49
+msgid "Read the published article →"
+msgstr "प्रकाशित लेख पढ्नुहोस् →"
+
+#: templates/pitches/my_pitches.html:51
+msgid "Turned into a draft article. Our editors are finishing it."
+msgstr "मस्यौदा लेख बनिसकेको छ। हाम्रा सम्पादकहरू यसलाई पूरा गर्दै छन्।"
+
+#: templates/pitches/my_pitches.html:55
+#, python-format
+msgid "Submitted %(date)s"
+msgstr "%(date)s मा पठाइएको"
+
+#: templates/pitches/my_pitches.html:59 templates/users/profile.html:220
+#, python-format
+msgid ""
+"No pitches yet. <a href=\"%(pitch_url)s\" class=\"underline hover:text-"
+"accent\">Send us your first one</a>."
+msgstr ""
+"अहिलेसम्म कुनै प्रस्ताव छैन। <a href=\"%(pitch_url)s\" class=\"underline hover:text-"
+"accent\">पहिलो प्रस्ताव पठाउनुहोस्</a>।"
+
+#: templates/pitches/pitch_form.html:3 templates/pitches/pitch_form.html:17
+msgid "Pitch a story"
+msgstr "कथा प्रस्ताव गर्नुहोस्"
+
+#: templates/pitches/pitch_form.html:19
+msgid ""
+"Have a health story you think we should cover? Send us the pitch: no "
+"account, manuscript or file needed."
+msgstr ""
+"हामीले लेख्नुपर्ने स्वास्थ्य कथा छ? प्रस्ताव पठाउनुहोस्: खाता, पाण्डुलिपि वा फाइल चाहिँदैन।"
+
+#: templates/pitches/pitch_form.html:21
+#, python-format
+msgid ""
+"See your past pitches and their status on <a href=\"%(my_pitches_url)s\" "
+"class=\"underline hover:text-accent\">My pitches</a>."
+msgstr ""
+"तपाईंका पुराना प्रस्ताव र तिनको स्थिति <a href=\"%(my_pitches_url)s\" "
+"class=\"underline hover:text-accent\">मेरा प्रस्तावहरू</a> मा हेर्नुहोस्।"
+
+#: templates/pitches/pitch_form.html:52
 msgid "SUBMIT PITCH"
 msgstr "प्रस्ताव पठाउनुहोस्"
 
@@ -2819,10 +3932,6 @@ msgstr "प्रस्ताव प्राप्त भयो"
 msgid "Thank you — we’ve got your story idea"
 msgstr "धन्यवाद — तपाईंको समाचारको विचार हामीले पायौं"
 
-#: templates/pitches/pitch_thanks.html:14
-msgid "An editor reads every pitch, usually within a week."
-msgstr "सम्पादकले हरेक प्रस्ताव पढ्छन्, प्रायः एक हप्ताभित्र।"
-
 #: templates/pitches/pitch_thanks.html:16
 #, python-format
 msgid ""
@@ -2831,18 +3940,6 @@ msgid ""
 msgstr ""
 "स्वीकृत भएमा, तपाईंबाट थप जानकारी चाहिएमा, वा हाम्रा लागि उपयुक्त नभएमा हामी "
 "<strong>%(email)s</strong> मा इमेल गर्नेछौं।"
-
-#: templates/pitches/pitch_thanks.html:17
-msgid ""
-"We’ll email you when it’s accepted, needs more from you, or isn’t right for "
-"us."
-msgstr ""
-"स्वीकृत भएमा, तपाईंबाट थप जानकारी चाहिएमा, वा हाम्रा लागि उपयुक्त नभएमा हामी "
-"तपाईंलाई इमेल गर्नेछौं।"
-
-#: templates/pitches/pitch_thanks.html:19
-msgid "If it’s accepted, an editor works with you to turn it into an article."
-msgstr "स्वीकृत भएमा, सम्पादकले तपाईंसँग मिलेर यसलाई लेखमा बदल्छन्।"
 
 #: templates/pitches/pitch_thanks.html:23
 msgid "FOLLOW YOUR PITCHES"
@@ -2864,9 +3961,13 @@ msgstr[1] "%(counter)s जना पछ्याउँदै"
 msgid "PINNED"
 msgstr "पिन गरिएको"
 
-#: templates/sections/section_detail.html:94
+#: templates/sections/section_detail.html:96
 msgid "No articles in this section yet."
 msgstr "यस खण्डमा अहिलेसम्म कुनै लेख छैन।"
+
+#: templates/sections/section_detail.html:97
+msgid "READ THE LATEST STORIES →"
+msgstr "पछिल्ला समाचार पढ्नुहोस् →"
 
 #: templates/training/course_checkout.html:9
 msgid "← BACK TO COURSE"
@@ -2896,6 +3997,10 @@ msgstr ""
 #: templates/training/course_checkout.html:52
 msgid "CONFIRM & ENROLL"
 msgstr "पुष्टि गरी भर्ना हुनुहोस्"
+
+#: templates/training/course_detail.html:22
+msgid "TRAINING"
+msgstr "तालिम"
 
 #: templates/training/course_detail.html:40
 #: templates/training/course_list.html:58
@@ -2932,10 +4037,6 @@ msgstr "समय आवश्यकता"
 msgid "FORMAT"
 msgstr "ढाँचा"
 
-#: templates/training/course_detail.html:77
-msgid "LANGUAGE"
-msgstr "भाषा"
-
 #: templates/training/course_detail.html:81
 msgid "CERTIFICATE"
 msgstr "प्रमाणपत्र"
@@ -2943,10 +4044,6 @@ msgstr "प्रमाणपत्र"
 #: templates/training/course_detail.html:82
 msgid "Yes, on completion"
 msgstr "हो, पूरा गरेपछि"
-
-#: templates/training/course_detail.html:82
-msgid "Not included"
-msgstr "समावेश छैन"
 
 #: templates/training/course_detail.html:92
 msgid "Course sections"
@@ -3101,10 +4198,6 @@ msgid_plural "%(counter)s courses"
 msgstr[0] "%(counter)s कोर्स"
 msgstr[1] "%(counter)s कोर्स"
 
-#: templates/training/course_list.html:89
-msgid "Topic"
-msgstr "विषय"
-
 #: templates/training/course_list.html:91
 msgid "All topics"
 msgstr "सबै विषय"
@@ -3116,10 +4209,6 @@ msgstr "तह"
 #: templates/training/course_list.html:97
 msgid "Any level"
 msgstr "कुनै पनि तह"
-
-#: templates/training/course_list.html:100
-msgid "Format"
-msgstr "ढाँचा"
 
 #: templates/training/course_list.html:102
 msgid "Any format"
@@ -3133,19 +4222,15 @@ msgstr "लागू गर्नुहोस्"
 msgid "Clear filters"
 msgstr "फिल्टर हटाउनुहोस्"
 
-#: templates/training/course_list.html:116
-msgid "All"
-msgstr "सबै"
-
-#: templates/training/course_list.html:130
+#: templates/training/course_list.html:119
 msgid "No courses match those filters."
 msgstr "यी फिल्टरसँग मिल्ने कुनै कोर्स छैन।"
 
-#: templates/training/course_list.html:131
+#: templates/training/course_list.html:120
 msgid "See all courses"
 msgstr "सबै कोर्स हेर्नुहोस्"
 
-#: templates/training/course_list.html:133
+#: templates/training/course_list.html:122
 msgid "No training programs open right now — check back soon."
 msgstr "अहिले कुनै तालिम खुला छैन — केही समयपछि फेरि हेर्नुहोस्।"
 
@@ -3161,6 +4246,10 @@ msgstr "%(date)s देखि सुरु"
 #: templates/training/includes/course_card.html:31
 msgid "ENROLL ANYTIME"
 msgstr "जुनसुकै बेला भर्ना"
+
+#: templates/training/includes/course_price.html:1
+msgid "VAT"
+msgstr "भ्याट"
 
 #: templates/training/includes/enroll_action.html:9
 msgid "You've completed this course"
@@ -3203,6 +4292,7 @@ msgstr ""
 "अन्तिम पुष्टि पठाएका छौं।"
 
 #: templates/users/confirm_email_invalid.html:3
+#: templates/users/password_reset_confirm.html:19
 msgid "Link expired"
 msgstr "लिङ्कको म्याद सकियो"
 
@@ -3254,18 +4344,216 @@ msgid ""
 msgstr ""
 "अबदेखि तपाईंले %(label)s पाउनुहुने छैन। गोपनीयता र डाटा पृष्ठबाट फेरि खोल्न सक्नुहुन्छ।"
 
-#: templates/users/email_unsubscribe.html:15
-msgid "Unsubscribe?"
-msgstr "सदस्यता हटाउने?"
-
 #: templates/users/email_unsubscribe.html:16
 #, python-format
 msgid "Stop getting %(label)s."
 msgstr "%(label)s पाउन बन्द गर्नुहोस्।"
 
-#: templates/users/email_unsubscribe.html:18 templates/users/privacy.html:30
-msgid "UNSUBSCRIBE"
-msgstr "सदस्यता हटाउनुहोस्"
+#: templates/users/includes/account_side.html:10
+msgid "The story you were reading"
+msgstr "तपाईंले पढ्दै गरेको लेख"
+
+#: templates/users/includes/account_side.html:10
+msgid "What a free account gives you"
+msgstr "निःशुल्क खाताले दिने सुविधा"
+
+#: templates/users/includes/account_side.html:12
+msgid "YOU'LL RETURN TO"
+msgstr "तपाईं फर्कनुहुनेछ"
+
+#: templates/users/includes/account_side.html:18
+msgid "Create your account and you'll go straight back to this story."
+msgstr "खाता बनाउनुहोस्, तपाईं सिधै यही लेखमा फर्कनुहुनेछ।"
+
+#: templates/users/includes/account_side.html:18
+msgid "Log in and you'll go straight back to this story."
+msgstr "लग इन गर्नुहोस्, तपाईं सिधै यही लेखमा फर्कनुहुनेछ।"
+
+#: templates/users/includes/account_side.html:21
+msgid "One free account"
+msgstr "एउटा निःशुल्क खाता"
+
+#: templates/users/includes/account_side.html:22
+msgid "No subscription needed for any of this."
+msgstr "यी कुनै पनि कुराका लागि सदस्यता चाहिँदैन।"
+
+#: templates/users/includes/account_side.html:26
+msgid "Keep stories in your reading list and pick them up on any device."
+msgstr "लेखहरू पठन सूचीमा राख्नुहोस् र जुनसुकै उपकरणमा पढ्नुहोस्।"
+
+#: templates/users/includes/account_side.html:30
+msgid "Follow sections and topics for your own feed and a weekly digest email."
+msgstr "खण्ड र विषयहरू पछ्याउनुहोस्: आफ्नै फिड र साप्ताहिक सारांश इमेल पाउनुहोस्।"
+
+#: templates/users/includes/account_side.html:34
+msgid "Join the conversation under any story."
+msgstr "जुनसुकै लेखमुनि छलफलमा सहभागी हुनुहोस्।"
+
+#: templates/users/includes/account_side.html:38
+msgid "Send our editors a health story and follow its progress."
+msgstr "हाम्रा सम्पादकलाई स्वास्थ्य कथा पठाउनुहोस् र त्यसको प्रगति हेर्नुहोस्।"
+
+#: templates/users/login.html:14
+msgid "Log in to carry on where you left off."
+msgstr "जहाँ छाड्नुभएको थियो, त्यहीँबाट जारी राख्न लग इन गर्नुहोस्।"
+
+#: templates/users/login.html:27 templates/users/register.html:38
+msgid "EMAIL"
+msgstr "इमेल"
+
+#: templates/users/login.html:35 templates/users/register.html:38
+msgid "PASSWORD"
+msgstr "पासवर्ड"
+
+#: templates/users/login.html:46
+msgid "Forgot password?"
+msgstr "पासवर्ड बिर्सनुभयो?"
+
+#: templates/users/login.html:50
+msgid "New here?"
+msgstr "नयाँ हुनुहुन्छ?"
+
+#: templates/users/login.html:53
+msgid "CREATE AN ACCOUNT"
+msgstr "खाता बनाउनुहोस्"
+
+#: templates/users/password_reset_complete.html:4
+#: templates/users/password_reset_complete.html:9
+msgid "Password updated"
+msgstr "पासवर्ड परिवर्तन भयो"
+
+#: templates/users/password_reset_complete.html:10
+msgid "Your new password is set. Use it the next time you log in."
+msgstr "तपाईंको नयाँ पासवर्ड राखियो। अर्को पटक लगइन गर्दा यही प्रयोग गर्नुहोस्।"
+
+#: templates/users/password_reset_confirm.html:4
+#: templates/users/password_reset_confirm.html:10
+msgid "Set a new password"
+msgstr "नयाँ पासवर्ड राख्नुहोस्"
+
+#: templates/users/password_reset_confirm.html:15
+msgid "SET PASSWORD"
+msgstr "पासवर्ड राख्नुहोस्"
+
+#: templates/users/password_reset_confirm.html:20
+msgid ""
+"This reset link no longer works, usually because it has already been used. "
+"Ask for a new one."
+msgstr ""
+"यो रिसेट लिंकले अब काम गर्दैन, प्रायः यो पहिल्यै प्रयोग भइसकेकाले। नयाँ लिंक माग्नुहोस्।"
+
+#: templates/users/password_reset_confirm.html:21
+msgid "SEND A NEW LINK"
+msgstr "नयाँ लिंक पठाउनुहोस्"
+
+#: templates/users/password_reset_done.html:4
+#: templates/users/password_reset_done.html:9
+msgid "Check your email"
+msgstr "आफ्नो इमेल हेर्नुहोस्"
+
+#: templates/users/password_reset_done.html:10
+msgid ""
+"If an account exists for that address, we've sent a link to reset your "
+"password. It can take a few minutes; check your spam folder too."
+msgstr ""
+"यो ठेगानामा खाता छ भने, हामीले पासवर्ड रिसेट गर्ने लिंक पठाएका छौँ। आइपुग्न केही मिनेट "
+"लाग्न सक्छ; स्प्याम फोल्डर पनि हेर्नुहोस्।"
+
+#: templates/users/password_reset_done.html:11
+#: templates/users/password_reset_form.html:20
+msgid "← Back to log in"
+msgstr "← लगइनमा फर्कनुहोस्"
+
+#: templates/users/password_reset_form.html:4
+msgid "Reset password"
+msgstr "पासवर्ड रिसेट"
+
+#: templates/users/password_reset_form.html:9
+msgid "Reset your password"
+msgstr "पासवर्ड रिसेट गर्नुहोस्"
+
+#: templates/users/password_reset_form.html:10
+msgid "Enter your email and we'll send you a reset link."
+msgstr "आफ्नो इमेल लेख्नुहोस्, हामी पासवर्ड रिसेट गर्ने लिंक पठाउँछौँ।"
+
+#: templates/users/password_reset_form.html:16
+msgid "SEND RESET LINK"
+msgstr "रिसेट लिंक पठाउनुहोस्"
+
+#: templates/users/pending_verification.html:4
+msgid "Verification"
+msgstr "प्रमाणीकरण"
+
+#: templates/users/pending_verification.html:10
+msgid "Become a verified contributor"
+msgstr "प्रमाणित योगदानकर्ता बन्नुहोस्"
+
+#: templates/users/pending_verification.html:12
+msgid ""
+"You don't need verification to read, subscribe, comment or pitch a story. "
+"It's for health professionals and researchers who write for us and want "
+"their credentials shown. An editor checks your affiliation, ORCID and "
+"publications, so fill those in on your profile first."
+msgstr ""
+"पढ्न, सदस्यता लिन, टिप्पणी गर्न वा कथा प्रस्ताव गर्न प्रमाणीकरण चाहिँदैन। यो हाम्रा "
+"लागि लेख्ने र आफ्नो योग्यता देखाउन चाहने स्वास्थ्यकर्मी तथा अनुसन्धानकर्ताका लागि हो। "
+"सम्पादकले तपाईंको आबद्ध संस्था, ORCID र प्रकाशनहरू जाँच्छन्, त्यसैले पहिले प्रोफाइलमा ती "
+"भर्नुहोस्।"
+
+#: templates/users/pending_verification.html:17
+msgid "REQUEST VERIFICATION"
+msgstr "प्रमाणीकरण अनुरोध गर्नुहोस्"
+
+#: templates/users/pending_verification.html:21
+#: templates/users/pending_verification.html:46
+msgid "Update your profile first"
+msgstr "पहिले प्रोफाइल अद्यावधिक गर्नुहोस्"
+
+#: templates/users/pending_verification.html:24
+msgid "Your account is pending verification"
+msgstr "तपाईंको खाता प्रमाणीकरणको पर्खाइमा छ"
+
+#: templates/users/pending_verification.html:26
+msgid ""
+"An editor reviews your affiliation, ORCID and publication history before "
+"your profile is verified. This usually takes under 48 hours. You can keep "
+"reading free articles in the meantime."
+msgstr ""
+"प्रोफाइल प्रमाणित गर्नुअघि सम्पादकले तपाईंको आबद्ध संस्था, ORCID र प्रकाशन इतिहास हेर्छन्। "
+"यसमा प्रायः ४८ घण्टाभन्दा कम लाग्छ। त्यतिन्जेल तपाईं निःशुल्क लेखहरू पढ्न सक्नुहुन्छ।"
+
+#: templates/users/pending_verification.html:29
+msgid "Verification was not approved"
+msgstr "प्रमाणीकरण स्वीकृत भएन"
+
+#: templates/users/pending_verification.html:32
+msgid ""
+"Your last verification request wasn't approved. You can update your profile "
+"and reapply now."
+msgstr ""
+"तपाईंको पछिल्लो प्रमाणीकरण अनुरोध स्वीकृत भएन। प्रोफाइल अद्यावधिक गरेर अहिले नै फेरि "
+"आवेदन दिन सक्नुहुन्छ।"
+
+#: templates/users/pending_verification.html:34
+#, python-format
+msgid ""
+"Your last verification request wasn't approved. You can update your profile "
+"and reapply on %(date)s."
+msgstr ""
+"तपाईंको पछिल्लो प्रमाणीकरण अनुरोध स्वीकृत भएन। प्रोफाइल अद्यावधिक गरेर %(date)s मा "
+"फेरि आवेदन दिन सक्नुहुन्छ।"
+
+#: templates/users/pending_verification.html:41
+msgid "REAPPLY FOR VERIFICATION"
+msgstr "प्रमाणीकरणका लागि फेरि आवेदन दिनुहोस्"
+
+#: templates/users/pending_verification.html:49
+msgid "You're verified"
+msgstr "तपाईं प्रमाणित हुनुभयो"
+
+#: templates/users/pending_verification.html:51
+msgid "Go to your profile"
+msgstr "आफ्नो प्रोफाइलमा जानुहोस्"
 
 #: templates/users/privacy.html:13
 msgid ""
@@ -3429,11 +4717,195 @@ msgstr ""
 "अरू केही — डाटा सच्याउन, वा हामीले यसलाई कसरी प्रयोग गर्छौं भन्ने प्रश्न? %(email)s मा "
 "लेख्नुहोस्।"
 
-#: templates/users/register.html:4 templates/users/register.html:9
+#: templates/users/profile.html:4
+msgid "Your profile"
+msgstr "तपाईंको प्रोफाइल"
+
+#: templates/users/profile.html:14
+msgid "EDIT PROFILE"
+msgstr "प्रोफाइल सम्पादन गर्नुहोस्"
+
+#: templates/users/profile.html:20
+msgid "Role"
+msgstr "भूमिका"
+
+#: templates/users/profile.html:24
+msgid "Verification status"
+msgstr "प्रमाणीकरणको स्थिति"
+
+#: templates/users/profile.html:28
+msgid "Request verification"
+msgstr "प्रमाणीकरण अनुरोध गर्नुहोस्"
+
+#: templates/users/profile.html:30
+msgid "Details"
+msgstr "विवरण"
+
+#: templates/users/profile.html:35 users/forms.py:70
+msgid "Affiliation"
+msgstr "आबद्ध संस्था"
+
+#: templates/users/profile.html:39 users/forms.py:71
+msgid "Department"
+msgstr "विभाग"
+
+#: templates/users/profile.html:47 users/forms.py:75
+msgid "Research interests"
+msgstr "अनुसन्धान रुचि"
+
+#: templates/users/profile.html:54
+msgid "SUBSCRIPTION"
+msgstr "सदस्यता"
+
+#: templates/users/profile.html:56
+#, python-format
+msgid "until %(date)s"
+msgstr "%(date)s सम्म"
+
+#: templates/users/profile.html:57
+#, python-format
+msgid "Through %(name)s"
+msgstr "%(name)s मार्फत"
+
+#: templates/users/profile.html:58
+msgid "No active subscription"
+msgstr "सक्रिय सदस्यता छैन"
+
+#: templates/users/profile.html:62
+msgid "BILLING & RECEIPTS →"
+msgstr "बिलिङ र रसिद →"
+
+#: templates/users/profile.html:63
+#, python-format
+msgid "%(name)s DASHBOARD →"
+msgstr "%(name)s ड्यासबोर्ड →"
+
+#: templates/users/profile.html:64
+msgid "PRIVACY & YOUR DATA →"
+msgstr "गोपनीयता र तपाईंको डाटा →"
+
+#: templates/users/profile.html:70
+msgid "BIO"
+msgstr "परिचय"
+
+#: templates/users/profile.html:77
+msgid "FOLLOWED SECTIONS"
+msgstr "पछ्याइएका खण्डहरू"
+
+#: templates/users/profile.html:80 templates/users/profile.html:113
+msgid "VIEW YOUR FEED →"
+msgstr "तपाईंको फिड हेर्नुहोस् →"
+
+#: templates/users/profile.html:92 templates/users/profile.html:127
+msgid "Unfollow"
+msgstr "पछ्याउन छाड्नुहोस्"
+
+#: templates/users/profile.html:99
+#, python-format
+msgid ""
+"New articles from these sections appear in your <a href=\"%(for_you_url)s\" "
+"class=\"underline hover:text-accent\">For You feed</a> and a weekly digest "
+"email."
+msgstr ""
+"यी खण्डका नयाँ लेखहरू तपाईंको <a href=\"%(for_you_url)s\" class=\"underline "
+"hover:text-accent\">तपाईंका लागि फिड</a> र साप्ताहिक सारांश इमेलमा आउँछन्।"
+
+#: templates/users/profile.html:103
+msgid ""
+"Not following any sections yet. Open a section's page and press <strong>+ "
+"FOLLOW</strong> to build your own feed and get a weekly digest."
+msgstr ""
+"अहिलेसम्म कुनै खण्ड पछ्याइएको छैन। कुनै खण्डको पेज खोलेर <strong>+ पछ्याउनुहोस्</strong> "
+"थिच्नुहोस्, तपाईंको आफ्नै फिड बन्छ र साप्ताहिक सारांश पनि आउँछ।"
+
+#: templates/users/profile.html:110
+msgid "FOLLOWED KEYWORDS"
+msgstr "पछ्याइएका मुख्य शब्दहरू"
+
+#: templates/users/profile.html:135
+msgid ""
+"Not following any keywords yet. On an article, press <strong>+ FOLLOW</"
+"strong> next to a keyword."
+msgstr ""
+"अहिलेसम्म कुनै मुख्य शब्द पछ्याइएको छैन। लेखमा कुनै मुख्य शब्दको छेउमा <strong>+ पछ्याउनुहोस्</"
+"strong> थिच्नुहोस्।"
+
+#: templates/users/profile.html:142
+msgid "SAVED ARTICLES"
+msgstr "सुरक्षित लेखहरू"
+
+#: templates/users/profile.html:145
+msgid "VIEW READING LIST →"
+msgstr "पठन सूची हेर्नुहोस् →"
+
+#: templates/users/profile.html:167
+msgid ""
+"Nothing saved yet. Press <strong>+ SAVE FOR LATER</strong> on any article to "
+"add it here."
+msgstr ""
+"अहिलेसम्म केही सुरक्षित छैन। कुनै पनि लेखमा <strong>+ पछि पढ्न राख्नुहोस्</strong> थिचेर "
+"यहाँ थप्नुहोस्।"
+
+#: templates/users/profile.html:174
+msgid "GIFTED ARTICLES"
+msgstr "उपहार दिइएका लेखहरू"
+
+#: templates/users/profile.html:184
+#, python-format
+msgid "Expires %(date)s"
+msgstr "%(date)s मा म्याद सकिन्छ"
+
+#: templates/users/profile.html:190
+msgid ""
+"To get a link again, open the article and press <strong>GIFT THIS ARTICLE</"
+"strong>."
+msgstr "लिंक फेरि चाहिए लेख खोलेर <strong>यो लेख उपहार दिनुहोस्</strong> थिच्नुहोस्।"
+
+#: templates/users/profile.html:194
+msgid ""
+"No active gift links. On a subscriber article you can read, press "
+"<strong>GIFT THIS ARTICLE</strong> to share it free with someone."
+msgstr ""
+"सक्रिय उपहार लिंक छैन। तपाईंले पढ्न सक्ने सदस्य-लेखमा <strong>यो लेख उपहार दिनुहोस्</"
+"strong> थिचेर कसैलाई निःशुल्क पढ्न दिनुहोस्।"
+
+#: templates/users/profile.html:201
+msgid "STORY PITCHES"
+msgstr "कथा प्रस्तावहरू"
+
+#: templates/users/profile.html:216
+msgid "View all my pitches →"
+msgstr "मेरा सबै प्रस्ताव हेर्नुहोस् →"
+
+#: templates/users/profile.html:227
+msgid "TRAINING ENROLLMENTS"
+msgstr "तालिम भर्नाहरू"
+
+#: templates/users/profile.html:229
+msgid "BROWSE COURSES →"
+msgstr "कोर्सहरू हेर्नुहोस् →"
+
+#: templates/users/profile.html:246
+msgid "Not enrolled in any training courses yet."
+msgstr "अहिलेसम्म कुनै तालिम कोर्समा भर्ना हुनुभएको छैन।"
+
+#: templates/users/profile_edit.html:4 templates/users/profile_edit.html:9
+msgid "Edit profile"
+msgstr "प्रोफाइल सम्पादन"
+
+#: templates/users/profile_edit.html:30
+msgid "SAVE"
+msgstr "सेभ गर्नुहोस्"
+
+#: templates/users/profile_edit.html:33
+msgid "CANCEL"
+msgstr "रद्द गर्नुहोस्"
+
+#: templates/users/register.html:4 templates/users/register.html:11
 msgid "Create an account"
 msgstr "खाता बनाउनुहोस्"
 
-#: templates/users/register.html:11
+#: templates/users/register.html:13
 msgid ""
 "Subscribe, save stories, follow topics and join the conversation. It takes "
 "less than a minute."
@@ -3441,48 +4913,40 @@ msgstr ""
 "सदस्यता लिनुहोस्, समाचार सुरक्षित गर्नुहोस्, विषयहरू पछ्याउनुहोस् र छलफलमा सहभागी हुनुहोस्। "
 "यसमा एक मिनेटभन्दा कम समय लाग्छ।"
 
-#: templates/users/register.html:25
+#: templates/users/register.html:27
 msgid "FIRST NAME"
 msgstr "पहिलो नाम"
 
-#: templates/users/register.html:25
+#: templates/users/register.html:27
 msgid "LAST NAME"
 msgstr "थर"
 
-#: templates/users/register.html:36
-msgid "EMAIL"
-msgstr "इमेल"
-
-#: templates/users/register.html:36
-msgid "PASSWORD"
-msgstr "पासवर्ड"
-
-#: templates/users/register.html:36
+#: templates/users/register.html:38
 msgid "CONFIRM PASSWORD"
 msgstr "पासवर्ड पुष्टि गर्नुहोस्"
 
-#: templates/users/register.html:40
+#: templates/users/register.html:42
 msgid "At least 8 characters. Avoid common words and all-number passwords."
 msgstr "कम्तीमा ८ अक्षर। सामान्य शब्द र अंक मात्रको पासवर्ड नराख्नुहोस्।"
 
-#: templates/users/register.html:50
+#: templates/users/register.html:52
 msgid "I agree to the"
 msgstr "म यी कुरामा सहमत छु:"
 
-#: templates/users/register.html:50
+#: templates/users/register.html:52
 msgctxt "end of: I agree to the Terms and Privacy policy"
 msgid "."
 msgstr "।"
 
-#: templates/users/register.html:56
+#: templates/users/register.html:58
 msgid "CREATING YOUR ACCOUNT…"
 msgstr "तपाईंको खाता बनाइँदै…"
 
-#: templates/users/register.html:57
+#: templates/users/register.html:59
 msgid "CREATE ACCOUNT"
 msgstr "खाता बनाउनुहोस्"
 
-#: templates/users/register.html:62
+#: templates/users/register.html:64
 msgid "Already have an account?"
 msgstr "पहिले नै खाता छ?"
 
@@ -3565,8 +5029,8 @@ msgid "TURN ON"
 msgstr "सक्रिय गर्नुहोस्"
 
 #: templates/users/two_step_setup.html:35
-msgid "Sign out instead"
-msgstr "बरु साइन आउट गर्नुहोस्"
+msgid "Log out instead"
+msgstr "बरु लग आउट गर्नुहोस्"
 
 #: templates/users/two_step_verify.html:3
 #: templates/users/two_step_verify.html:9
@@ -3592,10 +5056,6 @@ msgid ""
 msgstr ""
 "फोन हराउनुभयो? बरु आफ्नो कुनै ब्याकअप कोड टाइप गर्नुहोस्, वा प्रधान सम्पादक वा एडमिनलाई "
 "तपाईंको दुई-चरण साइन इन रिसेट गर्न भन्नुहोस्।"
-
-#: templates/users/two_step_verify.html:21
-msgid "Sign out"
-msgstr "साइन आउट"
 
 #: training/models.py:33
 msgid "Beginner"
@@ -3625,9 +5085,131 @@ msgstr "प्रत्यक्ष (कक्षामा)"
 msgid "Hybrid"
 msgstr "मिश्रित (अनलाइन र प्रत्यक्ष)"
 
+#: training/models.py:162
+msgid "Active"
+msgstr "सक्रिय"
+
+#: training/models.py:163
+msgid "Completed"
+msgstr "पूरा भएको"
+
+#: training/models.py:164
+msgid "Cancelled"
+msgstr "रद्द गरिएको"
+
+#: training/models.py:167
+msgctxt "payment status"
+msgid "Pending"
+msgstr "भुक्तानी बाँकी"
+
+#: training/models.py:168
+msgid "Paid"
+msgstr "भुक्तानी भएको"
+
+#: training/models.py:169
+msgid "Refunded"
+msgstr "रकम फिर्ता भएको"
+
+#: training/views.py:150
+msgid "You're already enrolled in this course."
+msgstr "तपाईं यो कोर्समा पहिले नै भर्ना हुनुहुन्छ।"
+
+#: training/views.py:156 training/views.py:185
+msgid "This course is full."
+msgstr "यो कोर्स भरिइसकेको छ।"
+
+#: training/views.py:175 training/views.py:192
+#, python-format
+msgid "Enrolled in \"%(title)s\"."
+msgstr "\"%(title)s\" मा भर्ना भइयो।"
+
 #: users/forms.py:38
 msgid "Please agree to the terms to create an account."
 msgstr "खाता बनाउन सर्तहरूमा सहमति जनाउनुहोस्।"
+
+#: users/forms.py:67
+msgid "First name"
+msgstr "पहिलो नाम"
+
+#: users/forms.py:68
+msgid "Last name"
+msgstr "थर"
+
+#: users/forms.py:72
+msgid "Bio"
+msgstr "परिचय"
+
+#: users/forms.py:73
+msgid "Photo"
+msgstr "फोटो"
+
+#: users/forms.py:74
+msgid "CV file"
+msgstr "सीभी फाइल"
+
+#: users/forms.py:76
+msgid "LinkedIn URL"
+msgstr "LinkedIn लिंक"
+
+#: users/forms.py:77
+msgid "ResearchGate URL"
+msgstr "ResearchGate लिंक"
+
+#: users/forms.py:78
+msgid "Publications"
+msgstr "प्रकाशनहरू"
+
+#: users/forms.py:81
+msgid "ORCID iD, e.g. 0000-0002-1825-0097."
+msgstr "ORCID iD, जस्तै 0000-0002-1825-0097।"
+
+#: users/forms.py:82
+msgid "JPG or PNG, up to 5 MB."
+msgstr "JPG वा PNG, ५ MB सम्म।"
+
+#: users/forms.py:83
+msgid "PDF, DOC or DOCX, up to 10 MB."
+msgstr "PDF, DOC वा DOCX, १० MB सम्म।"
+
+#: users/forms.py:84
+msgid "Prior publication history, reviewed by an editor during verification."
+msgstr "पहिलेका प्रकाशनहरू, जुन प्रमाणीकरणका बेला सम्पादकले हेर्छन्।"
+
+#: users/models.py:55
+msgid "Unverified"
+msgstr "अप्रमाणित"
+
+#: users/models.py:56
+msgid "Verified Author"
+msgstr "प्रमाणित लेखक"
+
+#: users/models.py:57
+msgid "Reviewer"
+msgstr "समीक्षक"
+
+#: users/models.py:58
+msgid "Editor"
+msgstr "सम्पादक"
+
+#: users/models.py:59
+msgid "Editor-in-Chief"
+msgstr "प्रधान सम्पादक"
+
+#: users/models.py:60
+msgid "Admin"
+msgstr "प्रशासक"
+
+#: users/models.py:66
+msgid "Not requested"
+msgstr "अनुरोध गरिएको छैन"
+
+#: users/models.py:67
+msgid "Pending"
+msgstr "विचाराधीन"
+
+#: users/models.py:68
+msgid "Approved"
+msgstr "स्वीकृत"
 
 #: users/privacy.py:254
 msgid "the weekly digest of topics you follow"
@@ -3662,12 +5244,12 @@ msgid ""
 msgstr ""
 "त्यो कोडले काम गरेन। एपको सबैभन्दा नयाँ कोड, वा आफ्नो कुनै ब्याकअप कोड प्रयोग गर्नुहोस्।"
 
-#: users/views.py:80
+#: users/views.py:96
 #, python-format
 msgid "Welcome, %(name)s — your account is ready."
 msgstr "स्वागत छ, %(name)s — तपाईंको खाता तयार छ।"
 
-#: users/views.py:96
+#: users/views.py:112
 #, python-format
 msgid ""
 "%(org)s has a subscription. We’ve emailed you a link — confirm your address "
@@ -3676,7 +5258,15 @@ msgstr ""
 "%(org)s को सदस्यता छ। हामीले तपाईंलाई लिङ्क इमेल गरेका छौं — त्यससँग पढ्न आफ्नो ठेगाना "
 "पुष्टि गर्नुहोस्।"
 
-#: users/views.py:735
+#: users/views.py:259
+msgid "Your verification request has been sent to the editors."
+msgstr "तपाईंको प्रमाणीकरण अनुरोध सम्पादकहरूलाई पठाइयो।"
+
+#: users/views.py:260
+msgid "Your verification request has been resubmitted."
+msgstr "तपाईंको प्रमाणीकरण अनुरोध फेरि पठाइयो।"
+
+#: users/views.py:756
 msgid ""
 "We’ve sent a few links already — check your inbox (and spam), or try again "
 "in an hour."
@@ -3684,817 +5274,227 @@ msgstr ""
 "हामीले केही लिङ्क पठाइसकेका छौं — इनबक्स (र स्प्याम) हेर्नुहोस्, वा एक घण्टापछि फेरि प्रयास "
 "गर्नुहोस्।"
 
-#: users/views.py:737
+#: users/views.py:758
 msgid "Your email address is already confirmed."
 msgstr "तपाईंको इमेल ठेगाना पहिले नै पुष्टि भइसकेको छ।"
 
-#: users/views.py:739
+#: users/views.py:760
 #, python-format
 msgid "We’ve emailed a confirmation link to %(email)s."
 msgstr "हामीले %(email)s मा पुष्टि लिङ्क इमेल गरेका छौं।"
 
-#: users/views.py:741
+#: users/views.py:762
 msgid "We couldn’t send the email just now. Please try again in a few minutes."
 msgstr "अहिले इमेल पठाउन सकिएन। केही मिनेटपछि फेरि प्रयास गर्नुहोस्।"
 
-#: users/views.py:758
+#: users/views.py:779
 #, python-format
 msgid "Email confirmed — you now read with %(org)s’s subscription."
 msgstr "इमेल पुष्टि भयो — अब तपाईं %(org)s को सदस्यतामा पढ्नुहुन्छ।"
 
-#: users/views.py:760
+#: users/views.py:781
 msgid "Email confirmed. Thank you!"
 msgstr "इमेल पुष्टि भयो। धन्यवाद!"
 
-#: users/views.py:777
+#: users/views.py:798
 msgid "Email preferences saved."
 msgstr "इमेल प्राथमिकता सेभ भयो।"
 
-#: users/views.py:798
+#: users/views.py:819
 msgid ""
 "You’ve downloaded your data several times this hour — please try again later."
 msgstr "तपाईंले यो घण्टा धेरै पटक डाटा डाउनलोड गर्नुभयो — पछि फेरि प्रयास गर्नुहोस्।"
 
-#: users/views.py:824
+#: users/views.py:845
 msgid ""
 "Your account was not deleted: confirm with your password and tick the box."
 msgstr "खाता मेटाइएन: पासवर्डले पुष्टि गरी बाकसमा चिन्ह लगाउनुहोस्।"
 
-msgid "Peer-reviewed"
-msgstr "समकक्षी-समीक्षित"
-
-msgid "Single purchase"
-msgstr "एकल खरिद"
-
-msgid "SIGN UP FREE"
-msgstr "निःशुल्क पाउनुहोस्"
-
-msgid "Every abstract is free to read. Marked stories need a subscription or a single purchase."
-msgstr "हरेक सारांश निःशुल्क पढ्न सकिन्छ। चिन्ह लगाइएका लेखका लागि सदस्यता वा एकल खरिद चाहिन्छ।"
-
-msgid "Most-covered topics this month"
-msgstr "यस महिना सबैभन्दा बढी समेटिएका विषयहरू"
-
-msgid "stories"
-msgstr "लेखहरू"
-
-#: templates/home.html
-msgid "MEET THE BOARD →"
-msgstr "सम्पादकीय बोर्ड हेर्नुहोस् →"
-
-#: templates/home.html
-msgid "Trending This Week"
-msgstr "यो हप्ता चर्चामा"
-
-#: templates/home.html
-msgid "Trending Topics"
-msgstr "चर्चित विषयहरू"
-
-#: templates/articles/includes/story_flags.html
-msgid "Reviewed by independent experts through the journal before publication"
-msgstr "प्रकाशनअघि जर्नलमार्फत स्वतन्त्र विज्ञहरूले समीक्षा गरेको"
-
-#: templates/articles/includes/topic_pill.html
-msgid "story"
-msgid_plural "stories"
-msgstr[0] "लेख"
-msgstr[1] "लेखहरू"
-
-#: templates/home.html
-msgid "Every summary is free to read. A lock marks stories that need a subscription or a single purchase."
-msgstr "हरेक लेखको सारांश निःशुल्क पढ्न सकिन्छ। ताल्चा चिन्ह भएका लेखका लागि सदस्यता वा एकल खरिद चाहिन्छ।"
-
-#: templates/home.html
-msgid "Peer-reviewed papers from our journal, alongside the news."
-msgstr "समाचारसँगै हाम्रो जर्नलका समकक्षी-समीक्षित अनुसन्धानपत्रहरू।"
-
-#: templates/home.html
-msgid "RESUME"
-msgstr "फेरि चलाउनुहोस्"
-
-#: templates/home.html
-msgid "READ THE ISSUE →"
-msgstr "अंक पढ्नुहोस् →"
-
-#: templates/articles/includes/story_flags.html
-msgid "Subscribers only"
-msgstr "सदस्यहरूका लागि मात्र"
-
-#: templates/home.html
-msgid "Papers from our journal. Peer-reviewed means independent experts checked each one before publication."
-msgstr "हाम्रो जर्नलका अनुसन्धानपत्रहरू। समकक्षी-समीक्षित भन्नाले प्रकाशनअघि स्वतन्त्र विज्ञहरूले जाँच गरेको भन्ने बुझिन्छ।"
-
-#: templates/includes/pagination_editorial.html
-msgid "← PREVIOUS"
-msgstr "← अघिल्लो"
-
-#: templates/includes/pagination_editorial.html
-#, python-format
-msgid "PAGE %(n)s OF %(total)s"
-msgstr "पृष्ठ %(n)s / %(total)s"
-
-#: templates/includes/pagination_editorial.html
-msgid "NEXT →"
-msgstr "अर्को →"
-
-#: templates/users/login.html
-msgid "Forgot password?"
-msgstr "पासवर्ड बिर्सनुभयो?"
-
-#: templates/users/login.html
-msgid "Log in to carry on where you left off."
-msgstr "जहाँ छाड्नुभएको थियो, त्यहीँबाट जारी राख्न लग इन गर्नुहोस्।"
-
-#: templates/users/login.html
-msgid "New here? An account is free and keeps your saved stories and subscriptions in one place."
-msgstr "नयाँ हुनुहुन्छ? खाता निःशुल्क छ, र यसले तपाईंका सुरक्षित लेख र सदस्यता एकै ठाउँमा राख्छ।"
-
-#: templates/users/login.html
-msgid "CREATE AN ACCOUNT"
-msgstr "खाता बनाउनुहोस्"
-
-#: templates/articles/article_detail.html
-#, python-format
-msgid "Subscriptions from %(price)s a month"
-msgstr "सदस्यता मासिक %(price)s देखि"
-
-#: templates/articles/article_detail.html
-msgid "Already a subscriber?"
-msgstr "पहिल्यै सदस्य हुनुहुन्छ?"
-
-msgid "AM"
-msgstr "पूर्वाह्न"
-
-msgid "PM"
-msgstr "अपराह्न"
-
-msgid "WHAT'S INCLUDED"
-msgstr "के-के समावेश छ"
-
-msgid "Included"
-msgstr "समावेश छ"
-
-msgid "Reset password"
-msgstr "पासवर्ड रिसेट"
-
-msgid "Reset your password"
-msgstr "पासवर्ड रिसेट गर्नुहोस्"
-
-msgid "Enter your email and we'll send you a reset link."
-msgstr "आफ्नो इमेल लेख्नुहोस्, हामी पासवर्ड रिसेट गर्ने लिंक पठाउँछौँ।"
-
-msgid "SEND RESET LINK"
-msgstr "रिसेट लिंक पठाउनुहोस्"
-
-msgid "← Back to log in"
-msgstr "← लगइनमा फर्कनुहोस्"
-
-msgid "Set a new password"
-msgstr "नयाँ पासवर्ड राख्नुहोस्"
-
-msgid "SET PASSWORD"
-msgstr "पासवर्ड राख्नुहोस्"
-
-msgid "This reset link no longer works, usually because it has already been used. Ask for a new one."
-msgstr "यो रिसेट लिंकले अब काम गर्दैन, प्रायः यो पहिल्यै प्रयोग भइसकेकाले। नयाँ लिंक माग्नुहोस्।"
-
-msgid "SEND A NEW LINK"
-msgstr "नयाँ लिंक पठाउनुहोस्"
-
-msgid "Check your email"
-msgstr "आफ्नो इमेल हेर्नुहोस्"
-
-msgid "If an account exists for that address, we've sent a link to reset your password. It can take a few minutes; check your spam folder too."
-msgstr "यो ठेगानामा खाता छ भने, हामीले पासवर्ड रिसेट गर्ने लिंक पठाएका छौँ। आइपुग्न केही मिनेट लाग्न सक्छ; स्प्याम फोल्डर पनि हेर्नुहोस्।"
-
-msgid "Password updated"
-msgstr "पासवर्ड परिवर्तन भयो"
-
-msgid "Your new password is set. Use it the next time you log in."
-msgstr "तपाईंको नयाँ पासवर्ड राखियो। अर्को पटक लगइन गर्दा यही प्रयोग गर्नुहोस्।"
-
-msgid "OUR PICK"
-msgstr "हाम्रो सिफारिस"
-
-msgid "Individual — Monthly"
-msgstr "व्यक्तिगत — मासिक"
-
-msgid "Individual — Annual"
-msgstr "व्यक्तिगत — वार्षिक"
-
-msgid "Institutional"
-msgstr "संस्थागत"
-
-msgid "Read every story, evidence included"
-msgstr "हरेक समाचार पूरा पढ्नुहोस्, प्रमाणसहित"
-
-msgid "Subscriber articles and special reports from the newsroom of a peer-reviewed journal, with numbered references, citation export and a named editorial board."
-msgstr "समकक्षी-समीक्षित जर्नलको समाचार कक्षबाट सदस्य-लेख र विशेष रिपोर्टहरू — क्रमबद्ध सन्दर्भ, उद्धरण निर्यात र नाम खुलाइएको सम्पादकीय बोर्डसहित।"
-
-msgid "NO AUTOMATIC RENEWAL · FULL REFUND IF YOU CANCEL WITHIN %(days)s DAYS"
-msgstr "स्वतः नवीकरण हुँदैन · %(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता"
-
-msgid "%(read)s months for the price of %(paid)s"
-msgstr "%(paid)s महिनाको मूल्यमा %(read)s महिना"
-
-msgid "The full article: %(minutes)s min read"
-msgstr "पूरा लेख: %(minutes)s मिनेट पढाइ"
-
-msgid "%(n)s reference"
-msgid_plural "%(n)s references"
-msgstr[0] "%(n)s सन्दर्भ"
-msgstr[1] "%(n)s सन्दर्भ"
-
-msgid "One payment, yours to keep: the article stays in your account, and the receipt comes by email."
-msgstr "एक पटकको भुक्तानी, सधैँका लागि तपाईंको: लेख तपाईंको खातामा रहन्छ, र रसिद इमेलमा आउँछ।"
-
-msgid "Subscriptions don't renew automatically, and you get a full refund if you cancel within %(days)s days."
-msgstr "सदस्यता आफैँ नवीकरण हुँदैन, र %(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता पाउनुहुन्छ।"
-
-msgid "Your email address"
-msgstr "तपाईंको इमेल ठेगाना"
-
-msgid "%(total)s with VAT · every %(days)s days"
-msgstr "भ्याटसहित %(total)s · हरेक %(days)s दिन"
-
-msgid "Full refund if you cancel within %(days)s days."
-msgstr "%(days)s दिनभित्र रद्द गरे पूरै रकम फिर्ता।"
-
-msgid "ABOUT THE JOURNAL"
-msgstr "जर्नलको बारेमा"
-
-msgid "POLICIES"
-msgstr "नीतिहरू"
-
-msgid "Pitch a story"
-msgstr "कथा प्रस्ताव गर्नुहोस्"
-
-msgid "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed. An editor reads every pitch and replies either way."
-msgstr "हामीले लेख्नुपर्ने स्वास्थ्य कथा छ? प्रस्ताव पठाउनुहोस्: खाता, पाण्डुलिपि वा फाइल चाहिँदैन। सम्पादकले हरेक प्रस्ताव पढ्छन् र जे निर्णय भए पनि जवाफ दिन्छन्।"
+#~ msgid "🎁 GIFT THIS ARTICLE"
+#~ msgstr "🎁 यो लेख उपहार दिनुहोस्"
 
 #, python-format
-msgid "See your past pitches and their status on <a href=\"%(my_pitches_url)s\" class=\"underline hover:text-accent\">My pitches</a>."
-msgstr "तपाईंका पुराना प्रस्ताव र तिनको स्थिति <a href=\"%(my_pitches_url)s\" class=\"underline hover:text-accent\">मेरा प्रस्तावहरू</a> मा हेर्नुहोस्।"
+#~ msgid ""
+#~ "🎁 This article was gifted to you by <strong class=\"text-"
+#~ "foreground\">%(gifter)s</strong> — free to read, no subscription needed."
+#~ msgstr ""
+#~ "🎁 यो लेख <strong class=\"text-foreground\">%(gifter)s</strong> ले तपाईंलाई "
+#~ "उपहार दिनुभएको हो — सदस्यता बिना निःशुल्क पढ्नुहोस्।"
 
-msgid "Title"
-msgstr "शीर्षक"
+#~ msgid "Special Article"
+#~ msgstr "विशेष लेख"
 
-msgid "Summary"
-msgstr "सारांश"
-
-msgid "Draft (optional)"
-msgstr "मस्यौदा (ऐच्छिक)"
-
-msgid "The pitch itself: what the story is and why it matters now."
-msgstr "प्रस्ताव आफैँ: कथा के हो र अहिले किन महत्त्वपूर्ण छ।"
-
-msgid "If you already have a draft, paste it here. Not required."
-msgstr "मस्यौदा तयार छ भने यहाँ टाँस्नुहोस्। अनिवार्य होइन।"
-
-msgid "So we can follow up if we'd like to run your story."
-msgstr "तपाईंको कथा प्रकाशित गर्न चाहेमा हामी सम्पर्क गर्न सकौँ भनेर।"
-
-msgid "Unverified"
-msgstr "अप्रमाणित"
-
-msgid "Verified Author"
-msgstr "प्रमाणित लेखक"
-
-msgid "Reviewer"
-msgstr "समीक्षक"
-
-msgid "Editor"
-msgstr "सम्पादक"
-
-msgid "Editor-in-Chief"
-msgstr "प्रधान सम्पादक"
-
-msgid "Admin"
-msgstr "प्रशासक"
-
-msgid "Not requested"
-msgstr "अनुरोध गरिएको छैन"
-
-msgid "Pending"
-msgstr "विचाराधीन"
-
-msgid "Approved"
-msgstr "स्वीकृत"
-
-msgid "Rejected"
-msgstr "अस्वीकृत"
-
-msgid "Submitted"
-msgstr "पठाइएको"
-
-msgid "In Review"
-msgstr "समीक्षामा"
-
-msgid "Accepted"
-msgstr "स्वीकृत"
-
-msgid "Active"
-msgstr "सक्रिय"
-
-msgid "Completed"
-msgstr "पूरा भएको"
-
-msgid "Cancelled"
-msgstr "रद्द गरिएको"
-
-msgid "Paid"
-msgstr "भुक्तानी भएको"
-
-msgid "Refunded"
-msgstr "रकम फिर्ता भएको"
+#~ msgid ""
+#~ "This is an archived article — full-text access requires a subscription "
+#~ "plan with archive access, regardless of this article's original access "
+#~ "tier."
+#~ msgstr ""
+#~ "यो अभिलेखमा रहेको लेख हो — लेखको मूल पहुँच तह जे भए पनि, पूर्ण पाठ पढ्न अभिलेख "
+#~ "पहुँचसहितको सदस्यता योजना आवश्यक छ।"
 
 #, python-format
-msgid "Articles tagged \"%(keyword)s\""
-msgstr "\"%(keyword)s\" मुख्य शब्द भएका लेखहरू"
+#~ msgid ""
+#~ "This is a one-time-purchase special article — %(price)s for full access, "
+#~ "or read it free with an active subscription."
+#~ msgstr ""
+#~ "यो एक पटक किनेर पढ्ने विशेष लेख हो — पूर्ण पहुँचका लागि %(price)s, वा सक्रिय "
+#~ "सदस्यतामा निःशुल्क पढ्नुहोस्।"
 
-msgid "All Articles"
-msgstr "सबै लेखहरू"
+#~ msgid "to subscribe or purchase this article."
+#~ msgstr "गरेर सदस्यता लिनुहोस् वा यो लेख किन्नुहोस्।"
 
-msgid "Archive"
-msgstr "अभिलेख"
+#~ msgid "Share:"
+#~ msgstr "साझा गर्नुहोस्:"
 
-msgid "Your profile"
-msgstr "तपाईंको प्रोफाइल"
+#~ msgid "Share…"
+#~ msgstr "सेयर…"
 
-msgid "EDIT PROFILE"
-msgstr "प्रोफाइल सम्पादन गर्नुहोस्"
+#~ msgid "Short link"
+#~ msgstr "छोटो लिंक"
 
-msgid "Role"
-msgstr "भूमिका"
+#~ msgid "Special"
+#~ msgstr "विशेष"
 
-msgid "Verification status"
-msgstr "प्रमाणीकरणको स्थिति"
+#~ msgid "Subscribers"
+#~ msgstr "सदस्यहरूका लागि"
 
-msgid "Request verification"
-msgstr "प्रमाणीकरण अनुरोध गर्नुहोस्"
-
-msgid "Details"
-msgstr "विवरण"
-
-msgid "Affiliation"
-msgstr "आबद्ध संस्था"
-
-msgid "Department"
-msgstr "विभाग"
-
-msgid "Research interests"
-msgstr "अनुसन्धान रुचि"
-
-msgid "SUBSCRIPTION"
-msgstr "सदस्यता"
+#~ msgid "Watch"
+#~ msgstr "हेर्नुहोस्"
 
 #, python-format
-msgid "until %(date)s"
-msgstr "%(date)s सम्म"
+#~ msgid "%(counter)s RESULT FOR \"%(query)s\""
+#~ msgid_plural "%(counter)s RESULTS FOR \"%(query)s\""
+#~ msgstr[0] "\"%(query)s\" का लागि %(counter)s नतिजा"
+#~ msgstr[1] "\"%(query)s\" का लागि %(counter)s नतिजाहरू"
+
+#~ msgid "NEWSLETTER"
+#~ msgstr "न्यूजलेटर"
+
+#~ msgid "JOURNAL"
+#~ msgstr "जर्नल"
+
+#~ msgid "Read without limits"
+#~ msgstr "बिना सीमा पढ्नुहोस्"
+
+#~ msgid "Full access to subscriber-only and special articles."
+#~ msgstr "सदस्यहरूका लागि मात्र र विशेष लेखहरूमा पूर्ण पहुँच।"
+
+#~ msgid "MOST POPULAR"
+#~ msgstr "सबैभन्दा लोकप्रिय"
 
 #, python-format
-msgid "Through %(name)s"
-msgstr "%(name)s मार्फत"
-
-msgid "No active subscription"
-msgstr "सक्रिय सदस्यता छैन"
-
-msgid "BILLING & RECEIPTS →"
-msgstr "बिलिङ र रसिद →"
+#~ msgid "+ %(rate)s%% VAT · every %(days)s days"
+#~ msgstr "+ %(rate)s%% भ्याट · हरेक %(days)s दिन"
 
 #, python-format
-msgid "%(name)s DASHBOARD →"
-msgstr "%(name)s ड्यासबोर्ड →"
+#~ msgid "+ %(count)s more"
+#~ msgstr "+ थप %(count)s"
 
-msgid "PRIVACY & YOUR DATA →"
-msgstr "गोपनीयता र तपाईंको डाटा →"
+#~ msgid "SEE PLAN DETAILS →"
+#~ msgstr "योजनाको विवरण हेर्नुहोस् →"
 
-msgid "BIO"
-msgstr "परिचय"
+#
+#~ msgid "Cover Story"
+#~ msgstr "आवरण कथा"
 
-msgid "FOLLOWED SECTIONS"
-msgstr "पछ्याइएका खण्डहरू"
-
-msgid "VIEW YOUR FEED →"
-msgstr "तपाईंको फिड हेर्नुहोस् →"
-
-msgid "Unfollow"
-msgstr "पछ्याउन छाड्नुहोस्"
+#
+#~ msgid "Previous story"
+#~ msgstr "अघिल्लो सामग्री"
 
 #, python-format
-msgid "New articles from these sections appear in your <a href=\"%(for_you_url)s\" class=\"underline hover:text-accent\">For You feed</a> and a weekly digest email."
-msgstr "यी खण्डका नयाँ लेखहरू तपाईंको <a href=\"%(for_you_url)s\" class=\"underline hover:text-accent\">तपाईंका लागि फिड</a> र साप्ताहिक सारांश इमेलमा आउँछन्।"
+#~ msgid "Story %(n)s: %(title)s"
+#~ msgstr "सामग्री %(n)s: %(title)s"
 
-msgid "Not following any sections yet. Open a section's page and press <strong>+ FOLLOW</strong> to build your own feed and get a weekly digest."
-msgstr "अहिलेसम्म कुनै खण्ड पछ्याइएको छैन। कुनै खण्डको पेज खोलेर <strong>+ पछ्याउनुहोस्</strong> थिच्नुहोस्, तपाईंको आफ्नै फिड बन्छ र साप्ताहिक सारांश पनि आउँछ।"
+#~ msgid "Next story"
+#~ msgstr "अर्को सामग्री"
 
-msgid "FOLLOWED KEYWORDS"
-msgstr "पछ्याइएका मुख्य शब्दहरू"
+#~ msgid "TRENDING TOPICS"
+#~ msgstr "चर्चित विषयहरू"
 
-msgid "Not following any keywords yet. On an article, press <strong>+ FOLLOW</strong> next to a keyword."
-msgstr "अहिलेसम्म कुनै मुख्य शब्द पछ्याइएको छैन। लेखमा कुनै मुख्य शब्दको छेउमा <strong>+ पछ्याउनुहोस्</strong> थिच्नुहोस्।"
+#~ msgid "What readers are following this month"
+#~ msgstr "यो महिना पाठकहरूले पछ्याइरहेका विषयहरू"
 
-msgid "SAVED ARTICLES"
-msgstr "सुरक्षित लेखहरू"
+#~ msgid "GOT A STORY?"
+#~ msgstr "कुनै कथा छ?"
 
-msgid "VIEW READING LIST →"
-msgstr "पठन सूची हेर्नुहोस् →"
+#~ msgid "NEWS"
+#~ msgstr "समाचार"
 
-msgid "Nothing saved yet. Press <strong>+ SAVE FOR LATER</strong> on any article to add it here."
-msgstr "अहिलेसम्म केही सुरक्षित छैन। कुनै पनि लेखमा <strong>+ पछि पढ्न राख्नुहोस्</strong> थिचेर यहाँ थप्नुहोस्।"
+#~ msgid "OPINION"
+#~ msgstr "विचार"
 
-msgid "GIFTED ARTICLES"
-msgstr "उपहार दिइएका लेखहरू"
+#~ msgid "PEER-REVIEWED RESEARCH"
+#~ msgstr "समकक्षी-समीक्षित अनुसन्धान"
 
-#, python-format
-msgid "Expires %(date)s"
-msgstr "%(date)s मा म्याद सकिन्छ"
+#~ msgid "BROWSE ARCHIVE →"
+#~ msgstr "अभिलेख हेर्नुहोस् →"
 
-msgid "To get a link again, open the article and press <strong>🎁 GIFT THIS ARTICLE</strong>."
-msgstr "लिंक फेरि चाहिए लेख खोलेर <strong>🎁 यो लेख उपहार दिनुहोस्</strong> थिच्नुहोस्।"
+#~ msgid "Read more →"
+#~ msgstr "थप पढ्नुहोस् →"
 
-msgid "No active gift links. On a subscriber article you can read, press <strong>🎁 GIFT THIS ARTICLE</strong> to share it free with someone."
-msgstr "सक्रिय उपहार लिंक छैन। तपाईंले पढ्न सक्ने सदस्य-लेखमा <strong>🎁 यो लेख उपहार दिनुहोस्</strong> थिचेर कसैलाई निःशुल्क पढ्न दिनुहोस्।"
+#~ msgid "READ →"
+#~ msgstr "पढ्नुहोस् →"
 
-msgid "STORY PITCHES"
-msgstr "कथा प्रस्तावहरू"
+#~ msgid "EDITORIAL POLICY →"
+#~ msgstr "सम्पादकीय नीति →"
 
-msgid "View all my pitches →"
-msgstr "मेरा सबै प्रस्ताव हेर्नुहोस् →"
+#~ msgid "Unsubscribed"
+#~ msgstr "सदस्यता हटाइयो"
 
-#, python-format
-msgid "No pitches yet. <a href=\"%(pitch_url)s\" class=\"underline hover:text-accent\">Send us your first one</a>."
-msgstr "अहिलेसम्म कुनै प्रस्ताव छैन। <a href=\"%(pitch_url)s\" class=\"underline hover:text-accent\">पहिलो प्रस्ताव पठाउनुहोस्</a>।"
+#~ msgid "All"
+#~ msgstr "सबै"
 
-msgid "TRAINING ENROLLMENTS"
-msgstr "तालिम भर्नाहरू"
+#~ msgid "Sign out instead"
+#~ msgstr "बरु साइन आउट गर्नुहोस्"
 
-msgid "BROWSE COURSES →"
-msgstr "कोर्सहरू हेर्नुहोस् →"
+#~ msgid "Sign out"
+#~ msgstr "साइन आउट"
 
-msgid "Not enrolled in any training courses yet."
-msgstr "अहिलेसम्म कुनै तालिम कोर्समा भर्ना हुनुभएको छैन।"
+#~ msgid ""
+#~ "Every abstract is free to read. Marked stories need a subscription or a "
+#~ "single purchase."
+#~ msgstr ""
+#~ "हरेक सारांश निःशुल्क पढ्न सकिन्छ। चिन्ह लगाइएका लेखका लागि सदस्यता वा एकल खरिद "
+#~ "चाहिन्छ।"
 
-msgid "Edit profile"
-msgstr "प्रोफाइल सम्पादन"
+#~ msgid "stories"
+#~ msgstr "लेखहरू"
 
-msgid "SAVE"
-msgstr "सेभ गर्नुहोस्"
+#~ msgid "Peer-reviewed papers from our journal, alongside the news."
+#~ msgstr "समाचारसँगै हाम्रो जर्नलका समकक्षी-समीक्षित अनुसन्धानपत्रहरू।"
 
-msgid "CANCEL"
-msgstr "रद्द गर्नुहोस्"
+#~ msgid ""
+#~ "New here? An account is free and keeps your saved stories and "
+#~ "subscriptions in one place."
+#~ msgstr ""
+#~ "नयाँ हुनुहुन्छ? खाता निःशुल्क छ, र यसले तपाईंका सुरक्षित लेख र सदस्यता एकै ठाउँमा राख्छ।"
 
-msgid "Latest articles from the sections and keywords you follow."
-msgstr "तपाईंले पछ्याएका खण्ड र मुख्य शब्दका पछिल्ला लेखहरू।"
+#~ msgid "AM"
+#~ msgstr "पूर्वाह्न"
 
-msgid "Nothing new from what you follow yet. Check back soon."
-msgstr "तपाईंले पछ्याएकामा अहिलेसम्म नयाँ केही छैन। केही समयपछि फेरि हेर्नुहोस्।"
+#~ msgid "PM"
+#~ msgstr "अपराह्न"
 
-msgid "You're not following any sections or keywords yet."
-msgstr "तपाईंले अहिलेसम्म कुनै खण्ड वा मुख्य शब्द पछ्याउनुभएको छैन।"
+#~ msgid "ABOUT THE JOURNAL"
+#~ msgstr "जर्नलको बारेमा"
 
-msgid "Open a section from the menu above, or a keyword on any article, and press <strong>+ FOLLOW</strong> to build your feed. You'll also get a weekly digest email."
-msgstr "माथिको मेनुबाट कुनै खण्ड, वा कुनै लेखको मुख्य शब्द खोलेर <strong>+ पछ्याउनुहोस्</strong> थिच्नुहोस्, तपाईंको फिड बन्छ। साप्ताहिक सारांश इमेल पनि आउँछ।"
+#~ msgid ""
+#~ "Have a health story you think we should cover? Send us the pitch: no "
+#~ "account, manuscript or file needed. An editor reads every pitch and "
+#~ "replies either way."
+#~ msgstr ""
+#~ "हामीले लेख्नुपर्ने स्वास्थ्य कथा छ? प्रस्ताव पठाउनुहोस्: खाता, पाण्डुलिपि वा फाइल "
+#~ "चाहिँदैन। सम्पादकले हरेक प्रस्ताव पढ्छन् र जे निर्णय भए पनि जवाफ दिन्छन्।"
 
-msgid "Articles you've saved for later."
-msgstr "पछि पढ्न तपाईंले राखेका लेखहरू।"
+#~ msgid ""
+#~ "To get a link again, open the article and press <strong>🎁 GIFT THIS "
+#~ "ARTICLE</strong>."
+#~ msgstr ""
+#~ "लिंक फेरि चाहिए लेख खोलेर <strong>🎁 यो लेख उपहार दिनुहोस्</strong> थिच्नुहोस्।"
 
-msgid "Nothing saved yet."
-msgstr "अहिलेसम्म केही सुरक्षित छैन।"
-
-msgid "Press <strong>+ SAVE FOR LATER</strong> on any article to add it here."
-msgstr "कुनै पनि लेखमा <strong>+ पछि पढ्न राख्नुहोस्</strong> थिचेर यहाँ थप्नुहोस्।"
-
-msgid "My pitches"
-msgstr "मेरा प्रस्तावहरू"
-
-msgid "+ NEW PITCH"
-msgstr "+ नयाँ प्रस्ताव"
-
-msgid "EDITOR'S NOTE"
-msgstr "सम्पादकको टिप्पणी"
-
-msgid "Read the published article →"
-msgstr "प्रकाशित लेख पढ्नुहोस् →"
-
-msgid "Turned into a draft article. Our editors are finishing it."
-msgstr "मस्यौदा लेख बनिसकेको छ। हाम्रा सम्पादकहरू यसलाई पूरा गर्दै छन्।"
-
-#, python-format
-msgid "Submitted %(date)s"
-msgstr "%(date)s मा पठाइएको"
-
-msgid "Verification"
-msgstr "प्रमाणीकरण"
-
-msgid "Become a verified contributor"
-msgstr "प्रमाणित योगदानकर्ता बन्नुहोस्"
-
-msgid "You don't need verification to read, subscribe, comment or pitch a story. It's for health professionals and researchers who write for us and want their credentials shown. An editor checks your affiliation, ORCID and publications, so fill those in on your profile first."
-msgstr "पढ्न, सदस्यता लिन, टिप्पणी गर्न वा कथा प्रस्ताव गर्न प्रमाणीकरण चाहिँदैन। यो हाम्रा लागि लेख्ने र आफ्नो योग्यता देखाउन चाहने स्वास्थ्यकर्मी तथा अनुसन्धानकर्ताका लागि हो। सम्पादकले तपाईंको आबद्ध संस्था, ORCID र प्रकाशनहरू जाँच्छन्, त्यसैले पहिले प्रोफाइलमा ती भर्नुहोस्।"
-
-msgid "REQUEST VERIFICATION"
-msgstr "प्रमाणीकरण अनुरोध गर्नुहोस्"
-
-msgid "Update your profile first"
-msgstr "पहिले प्रोफाइल अद्यावधिक गर्नुहोस्"
-
-msgid "Your account is pending verification"
-msgstr "तपाईंको खाता प्रमाणीकरणको पर्खाइमा छ"
-
-msgid "An editor reviews your affiliation, ORCID and publication history before your profile is verified. This usually takes under 48 hours. You can keep reading free articles in the meantime."
-msgstr "प्रोफाइल प्रमाणित गर्नुअघि सम्पादकले तपाईंको आबद्ध संस्था, ORCID र प्रकाशन इतिहास हेर्छन्। यसमा प्रायः ४८ घण्टाभन्दा कम लाग्छ। त्यतिन्जेल तपाईं निःशुल्क लेखहरू पढ्न सक्नुहुन्छ।"
-
-msgid "Verification was not approved"
-msgstr "प्रमाणीकरण स्वीकृत भएन"
-
-msgid "Your last verification request wasn't approved. You can update your profile and reapply now."
-msgstr "तपाईंको पछिल्लो प्रमाणीकरण अनुरोध स्वीकृत भएन। प्रोफाइल अद्यावधिक गरेर अहिले नै फेरि आवेदन दिन सक्नुहुन्छ।"
-
-#, python-format
-msgid "Your last verification request wasn't approved. You can update your profile and reapply on %(date)s."
-msgstr "तपाईंको पछिल्लो प्रमाणीकरण अनुरोध स्वीकृत भएन। प्रोफाइल अद्यावधिक गरेर %(date)s मा फेरि आवेदन दिन सक्नुहुन्छ।"
-
-msgid "REAPPLY FOR VERIFICATION"
-msgstr "प्रमाणीकरणका लागि फेरि आवेदन दिनुहोस्"
-
-msgid "You're verified"
-msgstr "तपाईं प्रमाणित हुनुभयो"
-
-msgid "Go to your profile"
-msgstr "आफ्नो प्रोफाइलमा जानुहोस्"
-
-msgid "Older articles, kept for the record. Reading them in full needs a subscription plan that includes the archive."
-msgstr "अभिलेखका लागि राखिएका पुराना लेखहरू। पूरा पढ्न अभिलेखसहितको सदस्यता योजना चाहिन्छ।"
-
-msgid "Nothing in the archive yet."
-msgstr "अभिलेखमा अहिलेसम्म केही छैन।"
-
-msgid "Access denied"
-msgstr "पहुँच छैन"
-
-msgid "403 — ACCESS DENIED"
-msgstr "४०३ — पहुँच छैन"
-
-msgid "You don't have access to this page"
-msgstr "यो पेजमा तपाईंको पहुँच छैन"
-
-#, python-format
-msgid "You're logged in as <span class=\"font-semibold text-foreground\">%(name)s</span> (%(role)s), and this page needs a different role. If you think this is a mistake, or you need wider access for your work, contact an editor."
-msgstr "तपाईं <span class=\"font-semibold text-foreground\">%(name)s</span> (%(role)s) को रूपमा लग इन हुनुहुन्छ, तर यो पेजका लागि अर्को भूमिका चाहिन्छ। यो गल्ती हो जस्तो लागे, वा कामका लागि थप पहुँच चाहिए, सम्पादकलाई सम्पर्क गर्नुहोस्।"
-
-msgid "BACK TO HOME"
-msgstr "गृहपृष्ठमा फर्कनुहोस्"
-
-msgid "REQUEST ACCESS"
-msgstr "पहुँच अनुरोध गर्नुहोस्"
-
-msgid "This page needs an account with access you don't have yet, or you're not logged in."
-msgstr "यो पेजका लागि तपाईंसँग अहिले नभएको पहुँचसहितको खाता चाहिन्छ, वा तपाईं लग इन हुनुहुन्न।"
-
-msgid "Log out instead"
-msgstr "बरु लग आउट गर्नुहोस्"
-
-msgctxt "payment status"
-msgid "Pending"
-msgstr "भुक्तानी बाँकी"
-
-msgid "Bio"
-msgstr "परिचय"
-
-msgid "Photo"
-msgstr "फोटो"
-
-msgid "CV file"
-msgstr "सीभी फाइल"
-
-msgid "LinkedIn URL"
-msgstr "LinkedIn लिंक"
-
-msgid "ResearchGate URL"
-msgstr "ResearchGate लिंक"
-
-msgid "Publications"
-msgstr "प्रकाशनहरू"
-
-msgid "ORCID iD, e.g. 0000-0002-1825-0097."
-msgstr "ORCID iD, जस्तै 0000-0002-1825-0097।"
-
-msgid "JPG or PNG, up to 5 MB."
-msgstr "JPG वा PNG, ५ MB सम्म।"
-
-msgid "PDF, DOC or DOCX, up to 10 MB."
-msgstr "PDF, DOC वा DOCX, १० MB सम्म।"
-
-msgid "Prior publication history, reviewed by an editor during verification."
-msgstr "पहिलेका प्रकाशनहरू, जुन प्रमाणीकरणका बेला सम्पादकले हेर्छन्।"
-
-msgid "First name"
-msgstr "पहिलो नाम"
-
-msgid "Last name"
-msgstr "थर"
-
-msgid "Source"
-msgstr "स्रोत"
-
-msgid "All references ↓"
-msgstr "सबै सन्दर्भ ↓"
-
-msgid "Sources listed at the end of the story"
-msgstr "स्रोतहरू लेखको अन्त्यमा सूचीबद्ध छन्"
-
-#, python-format
-msgid "%(counter)s source"
-msgid_plural "%(counter)s sources"
-msgstr[0] "%(counter)s स्रोत"
-msgstr[1] "%(counter)s स्रोत"
-
-msgid "GIFT THIS ARTICLE"
-msgstr "यो लेख उपहार दिनुहोस्"
-
-#, python-format
-msgid "This article was gifted to you by <strong class=\"text-foreground\">%(gifter)s</strong> — free to read, no subscription needed."
-msgstr "यो लेख <strong class=\"text-foreground\">%(gifter)s</strong> ले तपाईंलाई उपहार दिनुभएको हो — सदस्यता बिना निःशुल्क पढ्नुहोस्।"
-
-msgid "To get a link again, open the article and press <strong>GIFT THIS ARTICLE</strong>."
-msgstr "लिंक फेरि चाहिए लेख खोलेर <strong>यो लेख उपहार दिनुहोस्</strong> थिच्नुहोस्।"
-
-msgid "No active gift links. On a subscriber article you can read, press <strong>GIFT THIS ARTICLE</strong> to share it free with someone."
-msgstr "सक्रिय उपहार लिंक छैन। तपाईंले पढ्न सक्ने सदस्य-लेखमा <strong>यो लेख उपहार दिनुहोस्</strong> थिचेर कसैलाई निःशुल्क पढ्न दिनुहोस्।"
-
-msgid "The story you were reading"
-msgstr "तपाईंले पढ्दै गरेको लेख"
-
-msgid "What a free account gives you"
-msgstr "निःशुल्क खाताले दिने सुविधा"
-
-msgid "YOU'LL RETURN TO"
-msgstr "तपाईं फर्कनुहुनेछ"
-
-msgid "Create your account and you'll go straight back to this story."
-msgstr "खाता बनाउनुहोस्, तपाईं सिधै यही लेखमा फर्कनुहुनेछ।"
-
-msgid "Log in and you'll go straight back to this story."
-msgstr "लग इन गर्नुहोस्, तपाईं सिधै यही लेखमा फर्कनुहुनेछ।"
-
-msgid "One free account"
-msgstr "एउटा निःशुल्क खाता"
-
-msgid "No subscription needed for any of this."
-msgstr "यी कुनै पनि कुराका लागि सदस्यता चाहिँदैन।"
-
-msgid "Keep stories in your reading list and pick them up on any device."
-msgstr "लेखहरू पठन सूचीमा राख्नुहोस् र जुनसुकै उपकरणमा पढ्नुहोस्।"
-
-msgid "Follow sections and topics for your own feed and a weekly digest email."
-msgstr "खण्ड र विषयहरू पछ्याउनुहोस्: आफ्नै फिड र साप्ताहिक सारांश इमेल पाउनुहोस्।"
-
-msgid "Join the conversation under any story."
-msgstr "जुनसुकै लेखमुनि छलफलमा सहभागी हुनुहोस्।"
-
-msgid "Send our editors a health story and follow its progress."
-msgstr "हाम्रा सम्पादकलाई स्वास्थ्य कथा पठाउनुहोस् र त्यसको प्रगति हेर्नुहोस्।"
-
-msgid "New here?"
-msgstr "नयाँ हुनुहुन्छ?"
-
-msgid "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed."
-msgstr "हामीले लेख्नुपर्ने स्वास्थ्य कथा छ? प्रस्ताव पठाउनुहोस्: खाता, पाण्डुलिपि वा फाइल चाहिँदैन।"
-
-msgid "How pitching works"
-msgstr "कथा प्रस्ताव कसरी काम गर्छ"
-
-msgid "A good pitch says"
-msgstr "राम्रो प्रस्तावले भन्छ"
-
-msgid "What happened, to whom, and where in Nepal."
-msgstr "के भयो, कसलाई, र नेपालको कहाँ।"
-
-msgid "Why it matters now: a new figure, a policy change, a pattern you've noticed."
-msgstr "अहिले किन महत्त्वपूर्ण छ: नयाँ तथ्याङ्क, नीतिगत परिवर्तन, वा तपाईंले देख्नुभएको ढाँचा।"
-
-msgid "How you know: documents, data, or people we can talk to."
-msgstr "तपाईंलाई कसरी थाहा भयो: कागजात, तथ्याङ्क, वा हामीले कुरा गर्न सक्ने व्यक्ति।"
-
-msgid "What happens next"
-msgstr "त्यसपछि के हुन्छ"
-
-#, python-format
-msgid "%(n)s RESULT FOR \"%(query)s\""
-msgid_plural "%(n)s RESULTS FOR \"%(query)s\""
-msgstr[0] "\"%(query)s\" का लागि %(n)s नतिजा"
-msgstr[1] "\"%(query)s\" का लागि %(n)s नतिजाहरू"
-
-msgid "STORY TYPE"
-msgstr "समाचारको प्रकार"
-
-msgid "FILTERS"
-msgstr "फिल्टर"
-
-msgid "READ THE LATEST STORIES →"
-msgstr "पछिल्ला समाचार पढ्नुहोस् →"
-
-msgid "Not yet published"
-msgstr "अझै प्रकाशित भएको छैन"
-
-msgid "Publisher"
-msgstr "प्रकाशक"
-
-msgid "Peer review"
-msgstr "समकक्षी समीक्षा"
-
-msgid "Done independently, through our journal system (OJS)"
-msgstr "हाम्रो जर्नल प्रणाली (OJS) मार्फत स्वतन्त्र रूपमा गरिन्छ"
-
-msgid "Access"
-msgstr "पहुँच"
-
-msgid "Free, subscribers only, or a single purchase: decided story by story"
-msgstr "निःशुल्क, सदस्यहरूका लागि मात्र, वा एकल खरिद: हरेक समाचारका लागि छुट्टै तय गरिन्छ"
-
-msgid "About"
-msgstr "बारेमा"
-
-#, python-format
-msgid "Institutional plans are set up with your organization — email %(email)s."
-msgstr "संस्थागत योजना तपाईंको संस्थासँग मिलेर मिलाइन्छ — %(email)s मा इमेल गर्नुहोस्।"
-
-#, python-format
-msgid "Subscribed to \"%(plan)s\" — active until %(date)s."
-msgstr "\"%(plan)s\" को सदस्यता लिइयो — %(date)s सम्म सक्रिय।"
-
-#, python-format
-msgid "Purchased \"%(title)s\"."
-msgstr "\"%(title)s\" किनियो।"
-
-msgid "We couldn’t start the payment with Fonepay right now. Please try again in a moment."
-msgstr "अहिले Fonepay मार्फत भुक्तानी सुरु गर्न सकिएन। केही बेरपछि फेरि प्रयास गर्नुहोस्।"
-
-#, python-format
-msgid "Cancelled. Your refund of %(amount)s is on its way — we’ve emailed you."
-msgstr "रद्द गरियो। तपाईंको %(amount)s फिर्ता हुँदै छ — हामीले इमेल पठाएका छौँ।"
-
-#, python-format
-msgid "Payment received — %(item)s."
-msgstr "भुक्तानी प्राप्त भयो — %(item)s।"
-
-msgid "Your verification request has been sent to the editors."
-msgstr "तपाईंको प्रमाणीकरण अनुरोध सम्पादकहरूलाई पठाइयो।"
-
-msgid "Your verification request has been resubmitted."
-msgstr "तपाईंको प्रमाणीकरण अनुरोध फेरि पठाइयो।"
-
-msgid "You're already enrolled in this course."
-msgstr "तपाईं यो कोर्समा पहिले नै भर्ना हुनुहुन्छ।"
-
-msgid "This course is full."
-msgstr "यो कोर्स भरिइसकेको छ।"
-
-#, python-format
-msgid "Enrolled in \"%(title)s\"."
-msgstr "\"%(title)s\" मा भर्ना भइयो।"
-
-#, python-format
-msgid "Subscriptions can only be cancelled within %(days)s days of paying."
-msgstr "सदस्यता भुक्तानी गरेको %(days)s दिनभित्र मात्र रद्द गर्न सकिन्छ।"
-
-#, python-format
-msgid "Stop sending our newsletter to %(email)s."
-msgstr "%(email)s मा हाम्रो न्युजलेटर पठाउन बन्द गर्नुहोस्।"
-
-#: templates/articles/article_detail.html
-msgid "All topics in this story"
-msgstr "यस सामग्रीका सबै विषयहरू"
-
-#: templates/articles/article_detail.html
-msgid "Link copied"
-msgstr "लिंक प्रतिलिपि भयो"
-
-#: templates/articles/article_detail.html
-msgid "Copied"
-msgstr "प्रतिलिपि भयो"
-
-#: templates/articles/article_detail.html
-msgid "COPIED"
-msgstr "प्रतिलिपि भयो"
-
-#: templates/articles/article_detail.html
-msgid "incl. VAT"
-msgstr "भ्याट सहित"
-
-#: templates/articles/article_detail.html
-msgid "What's inside"
-msgstr "यसभित्र के छ"
-
-#: templates/articles/article_detail.html
-msgid "Gift link"
-msgstr "उपहार लिंक"
-
-#: templates/articles/article_detail.html
-msgid "Buy this article once and it's yours to read, or read it free with an active subscription."
-msgstr "यो लेख एक पटक किन्नुहोस्, त्यसपछि यो तपाईंकै हो। सक्रिय सदस्यता भए निःशुल्क पढ्न सक्नुहुन्छ।"
-
-#: templates/articles/article_detail.html
-msgid "This article is in our archive. Archive reading comes with some subscription plans — pick one that includes the archive to read it in full."
-msgstr "यो लेख हाम्रो अभिलेखमा छ। अभिलेख पढ्ने सुविधा केही सदस्यता योजनामा मात्र समावेश छ — पूरा पढ्न अभिलेख समावेश भएको योजना छान्नुहोस्।"
+#~ msgid ""
+#~ "No active gift links. On a subscriber article you can read, press <strong>"
+#~ "🎁 GIFT THIS ARTICLE</strong> to share it free with someone."
+#~ msgstr ""
+#~ "सक्रिय उपहार लिंक छैन। तपाईंले पढ्न सक्ने सदस्य-लेखमा <strong>🎁 यो लेख उपहार "
+#~ "दिनुहोस्</strong> थिचेर कसैलाई निःशुल्क पढ्न दिनुहोस्।"

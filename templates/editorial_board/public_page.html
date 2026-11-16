@@ -11,7 +11,7 @@
         <div class="flex gap-0 -mb-px">
             <a href="?tab=about"
                class="font-mono-editorial text-xs tracking-widest px-6 py-4 border-b-2 {% if active_tab == 'about' %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground{% endif %}">
-                {% trans "ABOUT THE JOURNAL" %}
+                {% trans "ABOUT US" %}
             </a>
             <a href="?tab=board"
                class="font-mono-editorial text-xs tracking-widest px-6 py-4 border-b-2 {% if active_tab == 'board' %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground{% endif %}">
@@ -30,28 +30,57 @@
     {% if active_tab == 'about' %}
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <div class="lg:col-span-7">
+                {% comment %}Copy follows the platform vision (Ajna_vision.docx, Nov 2026): an evidence-based health news and knowledge platform; the peer-reviewed journal is one part of it.{% endcomment %}
                 <h2 class="font-display text-3xl font-bold mb-6 leading-tight" style="letter-spacing: -0.02em;">
-                    A health news platform and editorial workspace.
+                    {% trans "Evidence-based health news and knowledge for Nepal." %}
                 </h2>
                 <p class="text-base leading-relaxed mb-5" style="font-family: Georgia, serif; line-height: 1.85;">
-                    {{ JOURNAL_NAME }} publishes curated health news, commentary, editorials, and
-                    brand-showcase research content for a general and professional readership. Our
-                    editorial team manages the news pipeline, the editorial board, training programs,
-                    and author verification directly from this site.
+                    {% blocktrans trimmed %}Much of the health information people in Nepal see online has never been checked against the evidence, while important research stays locked in technical language. {{ JOURNAL_NAME }} exists to close that gap: we turn medical evidence into accurate, clear and practical information, without lowering the standards of journalism, research ethics or professional accountability.{% endblocktrans %}
                 </p>
                 <p class="text-base leading-relaxed mb-5" style="font-family: Georgia, serif; line-height: 1.85;">
-                    Formal manuscript submission and peer review for academic research is conducted
-                    through OJS (Open Journal Systems), a dedicated scholarly publishing platform. Accepted
-                    research is subsequently featured here as brand content, alongside our original health
-                    news coverage.
-                </p>
-                <p class="text-base leading-relaxed mb-10" style="font-family: Georgia, serif; line-height: 1.85;">
-                    We publish across the ideological spectrum, provided the work is honest, careful, and
-                    properly evidenced.
+                    {% blocktrans trimmed %}We publish health news, explainers, research summaries and analysis in Nepali and English, alongside a peer-reviewed scientific journal. Formal submission and peer review for the journal take place on OJS (Open Journal Systems), a dedicated scholarly publishing platform; accepted papers are published here with plain-language summaries.{% endblocktrans %}
                 </p>
 
+                <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div>
+                        <p class="section-label text-accent mb-3">{% trans "OUR VISION" %}</p>
+                        <p class="text-sm leading-relaxed">{% trans "To become Nepal's most trusted evidence-based health and medical knowledge platform, advancing medical education, healthcare, science communication and public health awareness through research-driven information, credible journalism and academic publishing." %}</p>
+                    </div>
+                    <div>
+                        <p class="section-label text-accent mb-3">{% trans "OUR MISSION" %}</p>
+                        <p class="text-sm leading-relaxed">{% trans "To reduce misinformation in healthcare and medical education by turning scientific evidence, health research and medical knowledge into accurate, accessible content for the Nepali public, health professionals, students, researchers and policymakers." %}</p>
+                    </div>
+                </div>
+
                 <div class="mt-12">
-                    <h3 class="font-display text-xl font-bold mb-5">Content Categories</h3>
+                    <h3 class="font-display text-xl font-bold mb-4">{% trans "How we work" %}</h3>
+                    <ul class="space-y-3 text-sm leading-relaxed">
+                        <li class="flex gap-3"><span class="text-accent" aria-hidden="true">—</span><span><strong>{% trans "Evidence first." %}</strong> {% trans "We rely on peer-reviewed research and authoritative sources such as WHO, NHRC, MoHP, MEC, PubMed, The Lancet, BMJ and NEJM, and we cite them." %}</span></li>
+                        <li class="flex gap-3"><span class="text-accent" aria-hidden="true">—</span><span><strong>{% trans "Checked before it's published." %}</strong> {% trans "Editorial review, fact-checking and source verification, with corrections made openly." %}</span></li>
+                        <li class="flex gap-3"><span class="text-accent" aria-hidden="true">—</span><span><strong>{% trans "Clear and local." %}</strong> {% trans "Technical findings in simple, practical language, focused on Nepal's own health priorities." %}</span></li>
+                        <li class="flex gap-3"><span class="text-accent" aria-hidden="true">—</span><span><strong>{% trans "Independent." %}</strong> {% trans "Editorial decisions are ours alone; advertisers and partners have no say in what we cover." %}</span></li>
+                    </ul>
+                </div>
+
+                <div class="mt-12">
+                    <h3 class="font-display text-xl font-bold mb-4">{% trans "Areas we focus on" %}</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                        {% for area in focus_areas %}
+                            <div class="flex items-center gap-2">
+                                <span class="text-accent text-xs">—</span>
+                                <span class="text-sm">{{ area }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mt-12">
+                    <h3 class="font-display text-xl font-bold mb-4">{% trans "Who it's for" %}</h3>
+                    <p class="text-sm leading-relaxed">{% trans "Health professionals, researchers, students, educators, policymakers and the public: one place where people who usually work in separate information worlds can share and use the same evidence." %}</p>
+                </div>
+
+                <div class="mt-12">
+                    <h3 class="font-display text-xl font-bold mb-4">{% trans "What we publish" %}</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
                         {% for value, label in article_types %}
                             <div class="flex items-center gap-2">
@@ -124,20 +153,17 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-12">
                 <div class="lg:col-span-9">
                     <p class="text-base leading-relaxed text-muted-foreground" style="font-family: Georgia, serif; line-height: 1.85;">
-                        {{ JOURNAL_NAME }} is committed to editorial transparency and sound publication
-                        practice. Formal peer review for academic manuscripts is conducted externally via
-                        OJS — the policies below describe how content moves from acceptance to publication
-                        on this platform, and the standards we hold ourselves to along the way.
+                        {% blocktrans trimmed %}{{ JOURNAL_NAME }} is committed to evidence, transparency and accountability. These policies set out how we choose and check what we publish, how we stay independent, how we correct mistakes, and how our peer-reviewed journal works.{% endblocktrans %}
                     </p>
                 </div>
             </div>
 
-            <div class="divide-y divide-border border-y border-border" id="policy-accordion">
+            <div class="divide-y divide-border border-y border-border" id="policy-accordion" data-expand="{% trans "+ EXPAND" %}" data-collapse="{% trans "− COLLAPSE" %}">
                 {% for policy in policies %}
                     <div class="policy-panel">
                         <button type="button" class="policy-toggle w-full flex items-center justify-between px-4 sm:px-6 py-5 text-left hover:bg-secondary transition-colors">
                             <span class="font-display text-lg font-bold" style="letter-spacing: -0.01em;">{{ policy.title }}</span>
-                            <span class="font-mono-editorial text-xs text-muted-foreground policy-toggle-label">+ EXPAND</span>
+                            <span class="font-mono-editorial text-xs text-muted-foreground policy-toggle-label">{% trans "+ EXPAND" %}</span>
                         </button>
                         <div class="policy-body hidden pb-4">
                             {% for section in policy.sections %}
@@ -170,7 +196,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var label = btn.querySelector('.policy-toggle-label');
             var isHidden = body.classList.contains('hidden');
             body.classList.toggle('hidden');
-            label.textContent = isHidden ? '− COLLAPSE' : '+ EXPAND';
+            var accordion = document.getElementById('policy-accordion');
+            label.textContent = isHidden ? accordion.dataset.collapse : accordion.dataset.expand;
         });
     });
 });

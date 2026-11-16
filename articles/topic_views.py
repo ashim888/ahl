@@ -39,9 +39,13 @@ def topic_detail(request, slug):
         raise Http404
     page = Paginator(articles, ARTICLES_PER_PAGE).get_page(request.GET.get('page'))
     tag = hashtag(keyword.name)
+    from library.queries import for_topic as library_for_topic
+
+    library_resources, library_total = library_for_topic(keyword)
     return render(request, 'articles/topic_detail.html', {
         'keyword': keyword, 'hashtag': tag, 'page_obj': page, 'articles': page.object_list, 'total': total,
         'related': related_topics(keyword),
+        'library_resources': library_resources, 'library_total': library_total,
         'is_following': request.user.is_authenticated and KeywordFollow.objects.filter(
             user=request.user, keyword=keyword).exists(),
         'meta_title': _('%(tag)s — %(name)s news — %(site)s') % {'tag': tag, 'name': keyword.name,

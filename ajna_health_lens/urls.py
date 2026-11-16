@@ -36,6 +36,7 @@ urlpatterns = [
     path('', include('ads.urls')),
     path('', include('pitches.urls')),
     path('', include('pages.urls')),
+    path('', include('library.urls')),
     path('report/', report_content, name='report_content'),
     path('healthz/', healthz, name='healthz'),
     path('csp-report/', csp_report, name='csp_report'),

@@ -143,6 +143,7 @@ INSTALLED_APPS = [
     'ads',
     'pitches',
     'pages',
+    'library',
     # Two-step sign-in (TOTP authenticator apps + backup codes) for staff — users/two_factor.py.
     'django_otp',
     'django_otp.plugins.otp_totp',
@@ -673,7 +674,7 @@ JOURNAL_NAME = os.environ.get('JOURNAL_NAME', 'Health Lens')
 # The name shown on pages in Nepali (header, footer, page titles). English
 # pages, receipts and legal text keep JOURNAL_NAME.
 JOURNAL_NAME_NE = os.environ.get('JOURNAL_NAME_NE', 'अज्ना हेल्थ लेन्स')
-JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Illuminating Health Research')
+JOURNAL_TAGLINE = os.environ.get('JOURNAL_TAGLINE', 'Evidence-based health news and knowledge')
 # '0000-0000' was the old .env.example placeholder: never show a made-up ISSN.
 JOURNAL_ISSN = os.environ.get('JOURNAL_ISSN', '').strip()
 if JOURNAL_ISSN == '0000-0000':
@@ -778,6 +779,7 @@ CV_MAX_UPLOAD_SIZE_MB = 10
 PROFILE_PHOTO_MAX_UPLOAD_SIZE_MB = 5
 ISSUE_COVER_MAX_UPLOAD_SIZE_MB = 10
 ARTICLE_PDF_MAX_UPLOAD_SIZE_MB = 100
+LIBRARY_MAX_UPLOAD_SIZE_MB = 50  # health library documents, slides and data (library/)
 ARTICLE_IMAGE_MAX_UPLOAD_SIZE_MB = 10
 AD_IMAGE_MAX_UPLOAD_SIZE_MB = 5
 

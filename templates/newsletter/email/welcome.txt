@@ -4,7 +4,7 @@ Your subscription to the {{ journal_name }} newsletter is confirmed - thank you 
 
 Here's what you'll get:
 - Our latest reporting and analysis on health policy, public health and clinical practice.
-- New research published in the journal.
+- Research explained in plain language, and new papers from our peer-reviewed journal.
 - Announcements about training programs and events.
 
 Read the latest: {{ articles_url }}

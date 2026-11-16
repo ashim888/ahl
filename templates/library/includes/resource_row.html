@@ -1,0 +1,19 @@
+{% load i18n news_time text_filters %}{% comment %}
+One library resource in a list (library/resource_list.html and "More from
+the library" on the detail page). Expects `resource`.
+{% endcomment %}
+<article class="py-6 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-8 gap-y-3">
+    <div class="min-w-0 max-w-3xl">
+        <p class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">
+            <span class="text-accent">{{ resource.get_resource_type_display|upper }}</span>{% if resource.year %} · {{ resource.year|local_digits }}{% endif %} · {{ resource.get_language_display|upper }}
+        </p>
+        <h2 lang="{{ resource.title|content_lang }}" class="mt-2 font-display text-lg sm:text-xl font-bold leading-snug" style="letter-spacing: -0.01em;">
+            <a href="{{ resource.get_absolute_url }}" class="hover:underline decoration-1 underline-offset-[3px]">{{ resource.title }}</a>
+        </h2>
+        <p lang="{{ resource.summary|content_lang }}" class="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-2">{{ resource.summary }}</p>
+        {% if resource.source %}<p class="mt-2 text-xs text-muted-foreground">{{ resource.source }}</p>{% endif %}
+    </div>
+    <p class="sm:pt-6 font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground sm:text-right whitespace-nowrap">
+        {% if resource.is_link %}{% trans "LINK" %} · {{ resource.link_host }}{% else %}{{ resource.file_format }}{% if resource.file_size %} · {{ resource.file_size|filesizeformat|local_digits }}{% endif %}{% endif %}
+    </p>
+</article>

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load i18n news_time text_filters %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block extra_head %}
+    {% if breadcrumb_json %}
+        <script type="application/ld+json">{{ breadcrumb_json }}</script>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-6 py-12">
+    <a href="{% url 'library:resource_list' %}" class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground hover:text-accent">{% trans "← HEALTH LIBRARY" %}</a>
+
+    <div class="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div class="lg:col-span-8">
+            <p class="section-label text-accent">
+                <a href="{% url 'library:resource_list' %}?type={{ resource.resource_type }}" class="hover:underline">{{ resource.get_resource_type_display|upper }}</a>
+            </p>
+            <h1 lang="{{ resource.title|content_lang }}" class="mt-3 font-display text-3xl md:text-4xl font-bold leading-tight" style="letter-spacing: -0.02em;">{{ resource.title }}</h1>
+            <p lang="{{ resource.summary|content_lang }}" class="mt-6 text-base leading-relaxed whitespace-pre-line" style="font-family: Georgia, serif; line-height: 1.85;">{{ resource.summary }}</p>
+
+            <div class="mt-8 flex flex-wrap items-center gap-4">
+                <a href="{% url 'library:resource_download' resource.slug %}"
+                   {% if resource.is_link %}target="_blank" rel="noopener nofollow"{% endif %}
+                   class="inline-flex items-center gap-2 bg-foreground text-primary-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:bg-accent transition-colors">
+                    {% if resource.is_link %}
+                        {% blocktrans with host=resource.link_host %}OPEN ON {{ host }} ↗{% endblocktrans %}
+                    {% else %}
+                        {% blocktrans with format=resource.file_format %}DOWNLOAD {{ format }}{% endblocktrans %}{% if resource.file_size %} · {{ resource.file_size|filesizeformat|local_digits }}{% endif %}
+                    {% endif %}
+                </a>
+                {% if resource.is_link %}
+                    <p class="text-xs text-muted-foreground max-w-xs">{% trans "This opens the document where its publisher hosts it." %}</p>
+                {% endif %}
+            </div>
+
+            {% if topics %}
+                <div class="mt-10">
+                    <p class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-3">{% trans "TOPICS" %}</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for topic in topics %}
+                            <a href="{% url 'library:resource_list' %}?topic={{ topic.slug }}" class="text-sm border border-border px-3 py-1 hover:border-foreground">{{ topic.name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if related_articles %}
+                <section class="mt-12">
+                    <h2 class="font-display text-xl font-bold mb-4">{% trans "Our reporting on this" %}</h2>
+                    <ul class="border-t border-border divide-y divide-border">
+                        {% for article in related_articles %}
+                            <li class="py-3"><a href="{% url 'articles:article_detail' article.slug %}" lang="{{ article.title|content_lang }}" class="font-semibold hover:underline underline-offset-4">{{ article.title }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+        </div>
+
+        <aside class="lg:col-span-4">
+            <dl class="border-t border-border">
+                {% if resource.source %}
+                    <div class="flex justify-between gap-4 py-3 border-b border-border">
+                        <dt class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Published by" %}</dt>
+                        <dd class="text-sm font-medium text-right">{{ resource.source }}</dd>
+                    </div>
+                {% endif %}
+                {% if resource.year %}
+                    <div class="flex justify-between gap-4 py-3 border-b border-border">
+                        <dt class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Year" %}</dt>
+                        <dd class="text-sm font-medium">{{ resource.year|local_digits }}</dd>
+                    </div>
+                {% endif %}
+                <div class="flex justify-between gap-4 py-3 border-b border-border">
+                    <dt class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Language" %}</dt>
+                    <dd class="text-sm font-medium">{{ resource.get_language_display }}</dd>
+                </div>
+                <div class="flex justify-between gap-4 py-3 border-b border-border">
+                    <dt class="font-mono-editorial text-xs text-muted-foreground tracking-wide">{% trans "Format" %}</dt>
+                    <dd class="text-sm font-medium">{% if resource.is_link %}{% trans "Link" %}{% else %}{{ resource.file_format }}{% endif %}</dd>
+                </div>
+            </dl>
+            <p class="mt-6 text-xs text-muted-foreground leading-relaxed">{% trans "Documents in the library belong to their publishers. We collect them so they are easy to find; check the publisher for the latest version." %}</p>
+        </aside>
+    </div>
+
+    {% if more_resources %}
+        <section class="mt-16">
+            <h2 class="font-display text-2xl font-bold" style="letter-spacing: -0.02em;">{% trans "More from the library" %}</h2>
+            <div class="mt-4 border-t border-border divide-y divide-border">
+                {% for resource in more_resources %}
+                    {% include 'library/includes/resource_row.html' %}
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}
