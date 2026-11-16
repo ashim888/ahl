@@ -1,4 +1,5 @@
 """Editor helpers: the one/two-line summary generator (articles/summarize.py),
+keyword suggestions (articles/keyword_suggest.py),
 the slug checker (static/js/slug_quality.js + its Chrome extension copy) and
 romanized slugs for Nepali headlines (articles/transliterate.py)."""
 import json
@@ -12,7 +13,8 @@ from django.urls import reverse
 
 from users.models import User
 
-from .models import Article
+from .keyword_suggest import suggest_keywords
+from .models import Article, Keyword
 from .summarize import sentences, suggest
 from .transliterate import romanize
 
@@ -71,6 +73,70 @@ class SummaryEndpointTests(TestCase):
         response = self.client.post(self.url, {'title': 'Dengue cases rise', 'html': BODY, 'keywords': 'Dengue'})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(json.loads(response.content)['suggestions'])
+
+    def test_readers_and_get_requests_refused(self):
+        reader = User.objects.create_user(email='r@example.com', password='pw', first_name='R', last_name='D')
+        self.client.force_login(reader)
+        self.assertEqual(self.client.post(self.url, {'html': BODY}).status_code, 403)
+
+
+class KeywordSuggestTests(TestCase):
+    def values(self, *args, **kwargs):
+        return [s['value'] for s in suggest_keywords(*args, **kwargs)]
+
+    def test_topic_from_headline_and_text(self):
+        values = self.values('Dengue cases rise in Kathmandu', BODY)
+        self.assertIn('Dengue', values)
+        self.assertIn('Kathmandu', values)
+        self.assertNotIn('Cases', values)  # generic news word
+
+    def test_existing_keyword_comes_first_and_keeps_its_spelling(self):
+        Keyword.objects.create(name='dengue')
+        options = suggest_keywords('Dengue cases rise in Kathmandu', BODY)
+        self.assertEqual(options[0], {'value': 'dengue', 'existing': True, 'why': 'in headline · 1 mention'})
+        self.assertEqual([o['value'].lower() for o in options].count('dengue'), 1)
+
+    def test_a_single_passing_mention_of_an_existing_keyword_is_skipped(self):
+        Keyword.objects.create(name='Mosquitoes')
+        self.assertNotIn('Mosquitoes', self.values('Dengue cases rise in Kathmandu', BODY))
+
+    def test_plural_matches_existing_keyword(self):
+        Keyword.objects.create(name='Vaccine')
+        body = '<p>New vaccines reached Nepal this week, officials said in a statement on Sunday.</p>' \
+               '<p>The vaccines will be given free at health posts across all seven provinces.</p>'
+        self.assertIn('Vaccine', self.values('Vaccines arrive', body))
+
+    def test_acronym_keyword_does_not_match_the_pronoun(self):
+        Keyword.objects.create(name='WHO')
+        body = '<p>Doctors who treat dengue patients say the season started early this year in Nepal.</p>' \
+               '<p>Those who live near standing water are most at risk, doctors who work here said.</p>'
+        self.assertNotIn('WHO', self.values('Doctors warn', body))
+        self.assertIn('WHO', self.values('WHO warns on dengue', body))
+
+    def test_current_keywords_left_out(self):
+        self.assertNotIn('Dengue', self.values('Dengue cases rise in Kathmandu', BODY, current=['dengue']))
+
+    def test_nepali_existing_keyword_matches_with_postposition(self):
+        Keyword.objects.create(name='डेंगु')
+        body = '<p>नेपालमा यस वर्ष डेंगुका बिरामी ४० प्रतिशतले बढेका छन् भने काठमाडौंमा सबैभन्दा बढी संक्रमण देखिएको छ।</p>'
+        self.assertEqual(self.values('डेंगु बढ्यो', body)[0], 'डेंगु')
+
+    def test_empty(self):
+        self.assertEqual(suggest_keywords('', ''), [])
+
+
+class KeywordEndpointTests(TestCase):
+    url = reverse('articles:manage_article_keyword_suggestions')
+
+    def test_editors_get_suggestions(self):
+        editor = User.objects.create_user(email='ed@example.com', password='pw', first_name='E', last_name='D',
+                                          role=User.Role.EDITOR)
+        self.client.force_login(editor)
+        response = self.client.post(self.url, {'title': 'Dengue cases rise in Kathmandu', 'html': BODY, 'current': 'Kathmandu'})
+        self.assertEqual(response.status_code, 200)
+        values = [s['value'] for s in json.loads(response.content)['suggestions']]
+        self.assertIn('Dengue', values)
+        self.assertNotIn('Kathmandu', values)
 
     def test_readers_and_get_requests_refused(self):
         reader = User.objects.create_user(email='r@example.com', password='pw', first_name='R', last_name='D')

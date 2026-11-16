@@ -54,6 +54,7 @@ urlpatterns = [
     path('manage/articles/new/', views.ArticleCreateView.as_view(), name='manage_article_create'),
     path('manage/articles/preview/', views.article_preview, name='manage_article_preview'),
     path('manage/articles/summary-suggestions/', views.summary_suggestions, name='manage_article_summary_suggestions'),
+    path('manage/articles/keyword-suggestions/', views.keyword_suggestions, name='manage_article_keyword_suggestions'),
     path('manage/articles/autosave/', views.article_autosave, name='manage_article_autosave'),
     path(
         'manage/articles/related-autocomplete/', views.related_article_autocomplete,

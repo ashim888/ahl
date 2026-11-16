@@ -43,6 +43,16 @@
         }
         .tagify__tag > div { border-radius: 0.5rem; }
         .tagify__tag__removeBtn { border-radius: 9999px; }
+        /* A keyword added from "Suggest keywords" (keyword helper below) —
+           amber + dashed until saved, so it's easy to spot and take back. */
+        .tagify__tag.tagify__tag--auto {
+            --tag-bg: #fffbeb;
+            --tag-hover: #fef3c7;
+            --tag-text-color: #92400e;
+            --tag-remove-btn-color: #b45309;
+            --tag-remove-btn-bg--hover: #fde68a;
+        }
+        .tagify__tag.tagify__tag--auto > div { outline: 1px dashed #f59e0b; outline-offset: -1px; }
         .tagify__dropdown__wrapper {
             border-color: #e5e7eb;
             border-radius: 0.875rem;
@@ -125,6 +135,20 @@
                 </div>
 
                 {% include 'admin_dashboard/includes/form_field.html' with field=form.keywords %}
+                {% comment %}Keyword helper (articles/keyword_suggest.py): options from the headline, summary and text, the site's existing keywords first. Click one to add it, click again to remove it; added ones show amber/dashed in the field. Built in — nothing is sent outside the site.{% endcomment %}
+                <div id="keyword-helper" class="-mt-3" data-url="{% url 'articles:manage_article_keyword_suggestions' %}">
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <p id="keyword-status" class="text-gray-500" aria-live="polite">Suggestions come from the headline, summary and text. The site's existing keywords come first.</p>
+                        <button type="button" id="keyword-suggest-btn" class="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-gray-700">Suggest keywords from the text</button>
+                    </div>
+                    <div id="keyword-options" class="mt-2 hidden">
+                        <div id="keyword-chips" class="flex flex-wrap gap-2" role="group" aria-label="Suggested keywords"></div>
+                        <div class="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                            <button type="button" id="keyword-add-all" class="font-medium text-indigo-700 hover:underline">Add all</button>
+                            <button type="button" id="keyword-remove-auto" class="font-medium text-gray-600 hover:underline">Remove suggested keywords</button>
+                        </div>
+                    </div>
+                </div>
 
                 <details class="group" {% if form.references.errors or form.instance.references %}open{% endif %}>
                     <summary class="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 select-none">References <span class="font-normal text-gray-400">(optional)</span></summary>
@@ -1131,6 +1155,97 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    // ---- Keyword helper: suggest, then add/remove with one click ----------
+    // Added suggestions are Tagify tags with {auto: true}: amber + dashed
+    // (.tagify__tag--auto), and "Remove suggested keywords" takes back only
+    // those, never ones the editor typed. Saved, they're ordinary keywords.
+    (function () {
+        var helper = document.getElementById('keyword-helper');
+        if (!helper) return;
+        if (!keywordsInput || !window.Tagify || !tagify) { helper.classList.add('hidden'); return; }
+        var button = document.getElementById('keyword-suggest-btn');
+        var status = document.getElementById('keyword-status');
+        var options = document.getElementById('keyword-options');
+        var chips = document.getElementById('keyword-chips');
+        var addAll = document.getElementById('keyword-add-all');
+        var removeAuto = document.getElementById('keyword-remove-auto');
+        var suggestions = [];
+
+        function key(name) { return String(name || '').trim().toLowerCase(); }
+        function dataOf(el) { return (tagify.tagData ? tagify.tagData(el) : el.__tagifyTagData) || {}; }
+        function tagFor(name) {
+            return tagify.getTagElms().filter(function (el) { return key(dataOf(el).value) === key(name); })[0];
+        }
+        function autoTags() { return tagify.getTagElms().filter(function (el) { return dataOf(el).auto; }); }
+        function add(s) {
+            if (!tagFor(s.value)) tagify.addTags([{value: s.value, auto: true, 'class': 'tagify__tag--auto'}]);
+        }
+        function remove(name) {
+            var el = tagFor(name);
+            if (el) tagify.removeTags(el);
+        }
+        function bodyHtml() {
+            var content = document.getElementById('id_html_content');
+            var editor = content && window.editors && window.editors[content.id];
+            return editor ? editor.getData() : (content ? content.value : '');
+        }
+
+        function render() {
+            chips.innerHTML = '';
+            suggestions.forEach(function (s) {
+                var on = !!tagFor(s.value);
+                var chip = document.createElement('button');
+                chip.type = 'button';
+                chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+                chip.title = (on ? 'Click to remove' : 'Click to add') + (s.why ? ' — ' + s.why : '');
+                chip.className = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ' +
+                    (on ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50');
+                chip.appendChild(document.createTextNode((on ? '✓ ' : '+ ') + s.value));
+                if (!s.existing) {
+                    var badge = document.createElement('span');
+                    badge.className = 'text-[11px] uppercase tracking-wide text-gray-400';
+                    badge.textContent = 'new';
+                    chip.appendChild(badge);
+                }
+                chip.addEventListener('click', function () { on ? remove(s.value) : add(s); });
+                chips.appendChild(chip);
+            });
+            addAll.classList.toggle('hidden', !suggestions.some(function (s) { return !tagFor(s.value); }));
+            removeAuto.classList.toggle('hidden', !autoTags().length);
+        }
+        // Keep the chips in step when a tag is removed with its ×, typed in, etc.
+        tagify.on('add', render);
+        tagify.on('remove', render);
+
+        addAll.addEventListener('click', function () { suggestions.forEach(add); });
+        removeAuto.addEventListener('click', function () { tagify.removeTags(autoTags()); });
+
+        button.addEventListener('click', function () {
+            var data = new FormData();
+            data.append('title', (document.getElementById('id_title') || {}).value || '');
+            data.append('summary', (document.getElementById('id_abstract') || {}).value || '');
+            data.append('html', bodyHtml());
+            // Leave out the editor's own keywords; keep added suggestions in the list so they can be clicked off.
+            data.append('current', tagify.value.filter(function (t) { return !t.auto; }).map(function (t) { return t.value; }).join(','));
+            data.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            button.disabled = true;
+            button.textContent = 'Reading the article…';
+            fetch(helper.dataset.url, {method: 'POST', body: data, credentials: 'same-origin'})
+                .then(function (r) { return r.ok ? r.json() : {suggestions: []}; })
+                .catch(function () { return {suggestions: []}; })
+                .then(function (result) {
+                    button.disabled = false;
+                    button.textContent = 'Suggest again';
+                    suggestions = result.suggestions;
+                    options.classList.toggle('hidden', !suggestions.length);
+                    status.textContent = suggestions.length
+                        ? 'Click a keyword to add it, click again to remove it. Marked "new" means it isn\'t on the site yet.'
+                        : 'Nothing to suggest yet. Write the headline and a few paragraphs first.';
+                    render();
+                });
+        });
+    })();
 
     // Related articles — Tagify with enforceWhitelist: only existing
     // published articles can be picked (TagifyRelatedArticlesField stores

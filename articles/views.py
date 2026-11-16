@@ -1093,6 +1093,24 @@ def summary_suggestions(request):
 
 
 @role_required(*EDITORIAL_ROLES)
+@require_POST
+@ratelimit(key='user', rate='60/m', block=True)
+def keyword_suggestions(request):
+    """Keyword options for the article form, from the unsaved headline,
+    summary and text (articles/keyword_suggest.py — built in, no AI).
+    Existing site keywords come first; ones already on the article are
+    left out (`current`, comma-separated names)."""
+    from .keyword_suggest import suggest_keywords
+
+    current = [k.strip() for k in request.POST.get('current', '').split(',') if k.strip()]
+    suggestions = suggest_keywords(
+        request.POST.get('title', ''), request.POST.get('html', '')[:200_000],
+        summary=request.POST.get('summary', '')[:2_000], current=current,
+    )
+    return JsonResponse({'suggestions': suggestions})
+
+
+@role_required(*EDITORIAL_ROLES)
 def related_article_suggestions(request):
     """Most text-similar published articles for the article form's
     "Related" tab (see articles/similarity.py), with the cosine similarity
