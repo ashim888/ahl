@@ -16,11 +16,12 @@ from django.utils.translation import gettext_lazy as _
 
 from ajna_health_lens.storage import private_storage
 
+from .survey import google_form_embed_url, validate_google_form_url
 from .video import embed_url, thumbnail_url, validate_youtube_url, watch_url, youtube_id
 
 from .validators import (
-    article_image_extension_validator, article_pdf_extension_validator,
-    validate_article_pdf_size, validate_document_content, validate_featured_image_size,
+    article_audio_extension_validator, article_image_extension_validator, article_pdf_extension_validator,
+    validate_article_audio_size, validate_article_pdf_size, validate_document_content, validate_featured_image_size,
 )
 
 # Shared with articles/views.py HomeView, which caches under this key —
@@ -107,6 +108,24 @@ class Article(models.Model):
         LETTER_TO_EDITOR = 'letter_to_editor', _('Letter to Editor')
         # A story whose main content is a YouTube video (Article.video_url).
         VIDEO = 'video', _('Video')
+        # Checks one health claim that is spreading and rates it (fact_check_* fields).
+        FACT_CHECK = 'fact_check', _('Fact check')
+        # An episode whose main content is the audio file (Article.audio_file).
+        PODCAST = 'podcast', _('Podcast')
+        # The featured image is the story (a chart, poster or explainer graphic): always shown whole.
+        INFOGRAPHIC = 'infographic', _('Infographic')
+        # Asks readers questions through an embedded Google Form (Article.survey_url).
+        SURVEY = 'survey', _('Survey')
+
+    class Verdict(models.TextChoices):
+        """A fact check's rating, worst to best — the scale is explained on the
+        Policies page (editorial_board POLICIES, "How we rate claims")."""
+        FALSE = 'false', _('False')
+        MOSTLY_FALSE = 'mostly_false', _('Mostly false')
+        MISLEADING = 'misleading', _('Misleading')
+        UNPROVEN = 'unproven', _('Unproven')
+        MOSTLY_TRUE = 'mostly_true', _('Mostly true')
+        TRUE = 'true', _('True')
 
     class AccessType(models.TextChoices):
         OPEN_ACCESS = 'open_access', _('Free')
@@ -231,6 +250,15 @@ class Article(models.Model):
         validators=[article_pdf_extension_validator, validate_article_pdf_size, validate_document_content],
         help_text='PDF only, up to 100 MB.',
     )
+    # An audio summary of the story, or the episode itself for a Podcast.
+    # Private like the PDF (paywalled stories), served with byte ranges so
+    # it can be streamed and seeked (ajna_health_lens/media_views.py).
+    audio_file = models.FileField(
+        'Audio', upload_to='articles/audio/%Y/%m/', null=True, blank=True, storage=private_storage,
+        validators=[article_audio_extension_validator, validate_article_audio_size, validate_document_content],
+        help_text='An audio summary of the story, or the episode for a podcast. MP3, M4A or OGG, up to 100 MB. '
+                  'Plays at the top of the story.',
+    )
     featured_image = models.ImageField(
         upload_to='articles/images/', null=True, blank=True,
         validators=[article_image_extension_validator, validate_featured_image_size],
@@ -277,6 +305,32 @@ class Article(models.Model):
         'Video (YouTube link)', max_length=300, blank=True, validators=[validate_youtube_url],
         help_text='Paste the YouTube link. The player appears at the top of the story.',
     )
+    # A Google Form embedded in the story (articles/survey.py); answers go to
+    # the form owner's Google account, the site stores none.
+    survey_url = models.URLField(
+        'Survey (Google Form link)', max_length=500, blank=True, validators=[validate_google_form_url],
+        help_text='Paste the Google Form\'s share link. The form appears in the story, open to every reader.',
+    )
+    # Fact check (article_type FACT_CHECK): the claim, where it spread, and
+    # our verdict. Shown in a box above the text (always free, even on a paid
+    # story) and as schema.org ClaimReview for search engines (articles/seo.py).
+    fact_check_claim = models.TextField(
+        'Claim checked', blank=True,
+        help_text='The claim as people are sharing it, quoted or closely summarised.',
+    )
+    fact_check_claim_source = models.CharField(
+        'Where it spread', max_length=200, blank=True,
+        help_text='e.g. "Viral Facebook posts", "A TikTok video", "A statement by a district official".',
+    )
+    fact_check_claim_url = models.URLField(
+        'Link to the claim', max_length=500, blank=True,
+        help_text='Optional. Prefer an archived copy (archive.org) so a deleted post can still be checked.',
+    )
+    fact_check_verdict = models.CharField('Verdict', max_length=20, choices=Verdict.choices, blank=True)
+    fact_check_verdict_summary = models.CharField(
+        'Verdict in one sentence', max_length=300, blank=True,
+        help_text='Why, in plain words: "No study shows hot water kills the dengue virus in the body."',
+    )
     # Plain text of everything searchable, kept up to date by save() and
     # articles/search_signals.py; FULLTEXT ngram index (migration 0046).
     search_text = models.TextField(blank=True, editable=False)
@@ -289,6 +343,22 @@ class Article(models.Model):
     references = models.TextField(
         null=True, blank=True,
         help_text='Bibliography, one formatted citation per line. Rendered as a numbered list.',
+    )
+    # Health-glossary terms in the text become tap-to-read definitions
+    # (library/glossary_marking.py). On by default; an editor can turn it off
+    # for a story where the marking gets in the way (a glossary-heavy
+    # explainer, a quoted statement, a piece where the terms are the subject).
+    glossary_marking = models.BooleanField(
+        'Explain glossary terms', default=True,
+        help_text='Medical words that are in the health glossary get a dotted underline readers can tap '
+                  'for a plain-language definition. Untick to leave this article\'s text unmarked.',
+    )
+    # The same story in the other language (Nepali <-> English). Always kept
+    # two-way by save(): linking A to B also links B to A, and drops any
+    # earlier partner of either.
+    translation = models.OneToOneField(
+        'self', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        verbose_name='Other-language version',
     )
 
     authors = models.ManyToManyField('Author', through='ArticleAuthor', related_name='articles')
@@ -362,6 +432,10 @@ class Article(models.Model):
     def video_watch_url(self) -> str:
         return watch_url(self.video_url)
 
+    @property
+    def survey_embed_url(self) -> str:
+        return google_form_embed_url(self.survey_url)
+
     # Narrower than this (width/height) and Auto shows the image whole: the
     # banner is ~2.5:1 and cards 16:9, so a square or tall image — usually a
     # diagram, chart or poster — would lose its top and bottom.
@@ -388,7 +462,7 @@ class Article(models.Model):
     def featured_image_shows_whole(self) -> bool:
         if not self.featured_image:
             return False
-        if self.featured_image_fit == self.ImageFit.CONTAIN:
+        if self.featured_image_fit == self.ImageFit.CONTAIN or self.article_type == self.ArticleType.INFOGRAPHIC:
             return True
         if self.featured_image_fit == self.ImageFit.COVER:
             return False
@@ -501,7 +575,15 @@ class Article(models.Model):
             if self.published_at is None or self.published_at > now:
                 self.published_at = now
             self.publication_date = timezone.localdate(self.published_at)
+        if self.translation_id == self.pk:
+            self.translation = None
+        if self.translation_id:  # free the partner from its earlier pairing (one-to-one)
+            Article.objects.filter(translation_id=self.translation_id).exclude(pk=self.pk).update(translation=None)
         super().save(*args, **kwargs)
+        # ...and point it back here; whoever pointed here before is let go.
+        Article.objects.filter(translation=self).exclude(pk=self.translation_id or 0).update(translation=None)
+        if self.translation_id:
+            Article.objects.filter(pk=self.translation_id).update(translation=self)
         from .search import refresh as refresh_search_text
 
         refresh_search_text([self.pk])
@@ -516,6 +598,28 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def media_is_story(self) -> bool:
+        """A video, audio, survey or infographic that stands without body text."""
+        return bool(self.has_video or self.audio_file or self.survey_url or (
+            self.article_type == self.ArticleType.INFOGRAPHIC and self.featured_image))
+
+    @property
+    def published_translation(self):
+        """The other-language version, once readers can see it."""
+        partner = self.translation
+        return partner if partner and partner.status == self.Status.PUBLISHED else None
+
+    @property
+    def is_fact_check(self) -> bool:
+        return self.article_type == self.ArticleType.FACT_CHECK and bool(self.fact_check_verdict)
+
+    @property
+    def verdict_rating(self):
+        """1 (false) to 5 (true) for schema.org ClaimReview; None for Unproven,
+        which isn't a point on the true–false scale."""
+        return {'false': 1, 'mostly_false': 2, 'misleading': 3, 'mostly_true': 4, 'true': 5}.get(self.fact_check_verdict)
 
     @property
     def is_research(self) -> bool:

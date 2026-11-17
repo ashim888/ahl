@@ -16,6 +16,7 @@ urlpatterns = [
     path('index/', RedirectView.as_view(pattern_name='articles:home', permanent=True)),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
     path('videos/', views.VideoListView.as_view(), name='video_list'),
+    path('fact-checks/', views.FactCheckListView.as_view(), name='fact_check_list'),
     path('corrections/', views.CorrectionListView.as_view(), name='correction_list'),
     path('archive/', views.ArchiveListView.as_view(), name='archive_list'),
     path('for-you/', views.ForYouView.as_view(), name='for_you'),

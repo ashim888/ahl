@@ -90,7 +90,24 @@ SHORT_COMMUNICATION_TEMPLATE = """
 <p>[Why this matters and what follow-up work is planned.]</p>
 """.strip()
 
+# Claim, verdict and the one-line reason go in the form's "Fact check" box;
+# the text explains the reasoning so readers can follow and check it.
+FACT_CHECK_TEMPLATE = """
+<h2>What is being shared</h2>
+<p>[Describe the claim as people meet it: where it appeared, how widely it spread, and why people may believe it.]</p>
+
+<h2>What the evidence says</h2>
+<p>[What reliable sources (WHO, NHRC, MoHP, peer-reviewed studies) actually show, cited with [1], [2]. Quote experts by name and role.]</p>
+
+<h2>Why the claim is wrong, misleading or right</h2>
+<p>[Walk through the reasoning step by step. If part of the claim is true, say which part.]</p>
+
+<h2>What to do instead</h2>
+<p>[Practical, safe advice for readers, and where to get help.]</p>
+""".strip()
+
 ARTICLE_TYPE_CONTENT_TEMPLATES = {
+    Article.ArticleType.FACT_CHECK: FACT_CHECK_TEMPLATE,
     Article.ArticleType.CASE_REPORT: CASE_REPORT_TEMPLATE,
     Article.ArticleType.ORIGINAL_RESEARCH: ORIGINAL_RESEARCH_TEMPLATE,
     Article.ArticleType.REVIEW_ARTICLE: REVIEW_ARTICLE_TEMPLATE,

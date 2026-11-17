@@ -9,6 +9,7 @@ from .models import Section
 LINK_TARGETS = [
     ('', '— None: a normal content section —'),
     ('library:resource_list', 'Health Library'),
+    ('articles:fact_check_list', 'Fact checks'),
     ('training:course_list', 'Training'),
     ('issues:issue_list', 'Issues'),
     ('articles:video_list', 'Videos'),
@@ -30,10 +31,6 @@ class SectionForm(forms.ModelForm):
         labels = {
             'name_en': 'Name (English)',
             'name_ne': 'Name (Nepali)',
-            'link_url_name': 'Link override',
-        }
-        help_texts = {
-            'link_url_name': Section._meta.get_field('link_url_name').help_text,
         }
 
     def __init__(self, *args, **kwargs):

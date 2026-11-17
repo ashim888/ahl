@@ -128,3 +128,25 @@ class CoverHeadlineTests(TestCase):
         self.assertContains(response, 'Read the full story')
         self.assertContains(response, '<span class="mt-2 block text-2xl sm:text-3xl lg:text-4xl font-semibold text-white/90">what to know</span>')
         self.assertContains(response, story.get_absolute_url())
+
+
+class InfographicTests(TestCase):
+    def test_shown_whole_even_when_wide_with_full_size_link(self):
+        article = make((1600, 600), article_type=Article.ArticleType.INFOGRAPHIC)
+        self.assertTrue(article.featured_image_shows_whole)  # a wide photo would be cropped
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertContains(response, 'OPEN FULL SIZE')
+        Article.objects.filter(pk=article.pk).update(html_content='')
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(response, 'Full text has not been added')
+
+    def test_needs_its_image_and_the_image_is_enough_to_publish(self):
+        from .forms import ArticleForm, PublishArticleForm
+
+        data = {'title': 'Dengue in one picture', 'article_type': 'infographic', 'access_type': 'open_access',
+                'featured_image_fit': 'auto'}
+        form = ArticleForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('featured_image', form.errors)
+        form = PublishArticleForm(data=data, files={'featured_image': image_file((800, 1200))})
+        self.assertTrue(form.is_valid(), form.errors)  # no body text needed

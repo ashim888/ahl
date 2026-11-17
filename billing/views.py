@@ -215,10 +215,10 @@ class PlanBrowseView(ListView):
         context['comparison_matrix'] = build_comparison_matrix(context['plans'])
         context['contact_email'] = settings.JOURNAL_CONTACT_EMAIL
         context['cancel_days'] = settings.SUBSCRIPTION_CANCEL_DAYS
-        context['meta_description'] = (
-            f'Subscribe to {settings.JOURNAL_NAME}: every subscriber article, monthly or yearly, paid with Fonepay. '
-            f'No automatic renewal — cancel within {settings.SUBSCRIPTION_CANCEL_DAYS} days for a full refund.'
-        )
+        context['meta_description'] = _(
+            'Subscribe to %(site)s: every subscriber article, monthly or yearly, paid with Fonepay. '
+            'No automatic renewal — cancel within %(days)s days for a full refund.') % {
+            'site': settings.JOURNAL_NAME, 'days': settings.SUBSCRIPTION_CANCEL_DAYS}
         return context
 
 

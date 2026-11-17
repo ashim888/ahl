@@ -121,6 +121,12 @@ class KeywordSuggestTests(TestCase):
         body = '<p>नेपालमा यस वर्ष डेंगुका बिरामी ४० प्रतिशतले बढेका छन् भने काठमाडौंमा सबैभन्दा बढी संक्रमण देखिएको छ।</p>'
         self.assertEqual(self.values('डेंगु बढ्यो', body)[0], 'डेंगु')
 
+    def test_nepali_word_ending_a_sentence_counts_as_the_same_word(self):
+        body = '<p>नेपालमा अहिले मधुमेह। सहरमा झनै मधुमेह। गाउँमा पनि मधुमेह।</p>'
+        values = self.values('स्वास्थ्य', body)
+        self.assertIn('मधुमेह', values)
+        self.assertFalse([v for v in values if v.endswith('।')])
+
     def test_empty(self):
         self.assertEqual(suggest_keywords('', ''), [])
 

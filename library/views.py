@@ -10,11 +10,9 @@ from django.views.decorators.http import require_GET
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from articles.models import Article, Keyword
-from articles.seo import breadcrumb_list_structured_data
+from articles.seo import breadcrumb_list_structured_data, ld_json
 from users.decorators import role_required
 from users.models import User
-
-import json
 
 from django.shortcuts import render
 from django.utils.translation import get_language
@@ -68,10 +66,9 @@ class ResourceListView(ListView):
             'total_count': sum(counts.values()),
             'is_filtered': bool(self.selected_type or self.selected_language or self.query or self.topic),
             'meta_title': f'{_("Health Library")} — {settings.JOURNAL_NAME}',
-            'meta_description': (
-                f'Research papers, policy documents, government reports, guidelines, training material and data '
-                f'on health in Nepal, collected by {settings.JOURNAL_NAME}. Free to read and download.'
-            ),
+            'meta_description': _(
+                'Research papers, policy documents, government reports, guidelines, training material and data '
+                'on health in Nepal, collected by %(site)s. Free to read and download.') % {'site': settings.JOURNAL_NAME},
         })
         return context
 
@@ -143,8 +140,8 @@ def glossary_list(request):
         'groups': list(groups.items()), 'letters': letters, 'selected_letter': letter if not query else '',
         'query': query, 'result_count': len(terms),
         'meta_title': f'{_("Health Glossary")} — {settings.JOURNAL_NAME}',
-        'meta_description': (f'Medical and public-health terms explained in plain Nepali and English, '
-                             f'from {settings.JOURNAL_NAME}.'),
+        'meta_description': _('Medical and public-health terms explained in plain Nepali and English, '
+                               'from %(site)s.') % {'site': settings.JOURNAL_NAME},
     })
 
 
@@ -170,13 +167,13 @@ def glossary_detail(request, slug):
         'topics': term.keyword_tags.all(),
         'meta_title': f'{term.display_name} — {_("Health Glossary")} — {settings.JOURNAL_NAME}',
         'meta_description': term.definition_for(language)[:200],
-        'defined_term_json': json.dumps({
+        'defined_term_json': ld_json({
             '@context': 'https://schema.org', '@type': 'DefinedTerm',
             'name': term.primary_term, 'alternateName': [n for n in term.names if n != term.primary_term] or None,
             'description': term.definition_for(language),
             'url': request.build_absolute_uri(term.get_absolute_url()),
             'inDefinedTermSet': request.build_absolute_uri(reverse('library:glossary_list')),
-        }, ensure_ascii=False).replace('<', '\\u003c'),  # safe inside <script>, whatever editors type
+        }),
     })
 
 

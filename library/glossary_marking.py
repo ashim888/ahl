@@ -1,5 +1,5 @@
 """Marks health-glossary terms in an article's text, so a reader can tap a
-word and see what it means (static/js/glossary.js; the glossary itself is
+word and see what it means (static/js/citations.js; the glossary itself is
 library.GlossaryTerm).
 
 Applied at render time, like citations (articles/citations.py), so the
@@ -27,10 +27,13 @@ CACHE_KEY = 'glossary:marking-index:v1'
 SKIP_TAGS = {'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code', 'pre', 'script', 'style', 'sup', 'sub', 'button',
              'figcaption', 'th', 'dfn', 'abbr', 'label', 'select', 'option', 'textarea', 'mark'}
 _DEVANAGARI = re.compile(r'[ऀ-ॿ]')
+# Devanagari letters and signs only — the block also holds the full stops ।/॥
+# (U+0964–5) and the digits ०-९ (U+0966–F), which end a word, not continue it.
+_NE_LETTER = r'[ऀ-ॣ॰-ॿ]'
 # What may follow a Nepali term inside the same word: an optional plural, then
 # an optional postposition or particle. Anything else means it's a different word.
 _NE_SUFFIX = (r'(?:हरू)?(?:को|का|की|मा|ले|लाई|बाट|सँग|संग|सम्म|भन्दा|तिर|देखि|मै|नै|लगायत|जस्ता|जस्तो)?'
-              r'(?:मा|को|ले|नै)?(?![ऀ-ॿ])')
+              rf'(?:मा|को|ले|नै)?(?!{_NE_LETTER})')
 _TAG = re.compile(r'(<[^>]*>)')
 _TAG_NAME = re.compile(r'^<\s*(/?)\s*([a-zA-Z0-9]+)')
 
@@ -85,7 +88,7 @@ def _matcher():
 
     parts = []
     if ne := alternation('ne'):
-        parts.append(rf'(?<![ऀ-ॿ])(?P<ne>{ne})(?={_NE_SUFFIX})')
+        parts.append(rf'(?<!{_NE_LETTER})(?P<ne>{ne})(?={_NE_SUFFIX})')
     if en := alternation('en'):
         parts.append(rf'(?<![\w-])(?i:(?P<en>{en}))(?![\w-])')
     if caps := alternation('caps'):

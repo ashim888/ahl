@@ -88,6 +88,17 @@ class LibraryPublicTests(TestCase):
         self.assertEqual(self.guideline.slug, 'dengue-clinical-guideline')
         self.assertEqual(make('Dengue Clinical Guideline').slug, 'dengue-clinical-guideline-2')
 
+    def test_admin_rejects_a_non_ascii_slug(self):
+        # A Nepali slug can't be routed by <slug:slug>, so every page linking to it
+        # would crash; the admin form has to refuse it.
+        # (Admin builds its slug input from this same model field.)
+        from django.core.exceptions import ValidationError
+
+        slug_input = Resource._meta.get_field('slug').formfield()
+        with self.assertRaises(ValidationError):
+            slug_input.clean('वार्षिक-प्रतिवेदन')
+        self.assertEqual(slug_input.clean('annual-report'), 'annual-report')
+
     def test_in_sitemap(self):
         response = self.client.get('/sitemap.xml')
         if response.status_code == 200 and b'sitemap-library' in response.content:
@@ -209,6 +220,7 @@ class GlossaryTests(TestCase):
         self.assertContains(response, 'रगतमा चिनीको')
         self.assertContains(response, 'HbA1c')  # related, symmetrical
         self.assertContains(response, '"@type": "DefinedTerm"')
+        self.assertNotContains(self.client.get(self.hba1c.get_absolute_url()), 'alternateName')  # no other names
         self.assertEqual(self.client.get(self.draft.get_absolute_url()).status_code, 404)
 
     def test_json_ld_cannot_close_the_script_tag(self):
@@ -240,7 +252,12 @@ class GlossaryTests(TestCase):
         self.assertEqual(term.created_by, self.editor)
         self.assertEqual([k.name for k in term.keyword_tags.all()], ['Heart'])
         response = self.client.post(url, {'term_en': 'diabetes', 'definition_en': 'Again.'})
-        self.assertContains(response, 'already in the glossary')
+        self.assertContains(response, 'already a name of')
+        # "Other names" count too, both ways: DM is already Diabetes's alias.
+        response = self.client.post(url, {'term_en': 'DM', 'definition_en': 'Again.'})
+        self.assertContains(response, 'already a name of')
+        response = self.client.post(url, {'term_en': 'Glucose', 'also_called': 'HBA1C', 'definition_en': 'x'})
+        self.assertContains(response, 'already a name of')
         response = self.client.post(url, {'term_en': 'Something'})
         self.assertContains(response, 'Write a definition')
 
@@ -278,6 +295,12 @@ class GlossaryMarkingTests(TestCase):
         self.assertIn('<a href="/library/glossary/diabetes/" class="glossary-term" data-glossary="diabetes">मधुमेह</a>को', html)
         self.assertEqual(html.count('glossary-term'), 2)  # second मधुमेह left alone
         self.assertIn('>खोप</a>हरू', html)
+
+    def test_nepali_term_at_end_of_sentence_or_before_digits(self):
+        html, used = self.mark('<p>यो रोग मधुमेह। सबैलाई खोप२ पटक</p>')
+        self.assertEqual(used, ['diabetes', 'vaccine'])
+        self.assertIn('>मधुमेह</a>।', html)
+        self.assertIn('>खोप</a>२', html)
 
     def test_never_inside_another_nepali_word(self):
         html, used = self.mark('<p>खोपडीमा चोट लाग्यो।</p>')  # skull, not vaccine
@@ -317,15 +340,51 @@ class GlossaryMarkingTests(TestCase):
         self.assertContains(response, 'class="glossary-term" data-glossary="diabetes"')
         self.assertEqual(set(response.context['glossary_definitions']), {'diabetes', 'who'})
         self.assertContains(response, 'id="glossary-data"')
-        self.assertContains(response, 'js/glossary.js')
+        self.assertContains(response, 'id="glossary-labels"')
         # Stored text is untouched: marking happens at render time.
         article.refresh_from_db()
         self.assertNotIn('glossary-term', article.html_content)
 
+    def test_article_switch_turns_marking_off(self):
+        article = Article.objects.create(title='Explainer', status=Article.Status.PUBLISHED,
+                                         html_content='<p>मधुमेहका बिरामी बढे।</p>')
+        self.assertTrue(article.glossary_marking)  # on by default
+        article.glossary_marking = False
+        article.save()
+        response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertNotContains(response, 'glossary-term')
+        self.assertNotContains(response, 'id="glossary-data"')
+        self.assertContains(response, 'मधुमेहका बिरामी')
+
+    def test_locked_article_skips_marking(self):
+        from unittest.mock import patch
+
+        article = Article.objects.create(title='Locked', status=Article.Status.PUBLISHED,
+                                         access_type=Article.AccessType.SUBSCRIPTION,
+                                         html_content='<p>मधुमेहका बिरामी बढे।</p>')
+        with patch('billing.access.FREE_SAMPLE_LIMIT_PER_MONTH', 0):
+            response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
+        self.assertFalse(response.context['show_full_text'])
+        self.assertNotContains(response, 'id="glossary-data"')
+
+    def test_preview_follows_the_checkbox(self):
+        editor = User.objects.create_user(email='pv@example.com', password='pw', first_name='P', last_name='V',
+                                          role=User.Role.EDITOR)
+        self.client.force_login(editor)
+        data = {'title': 'Preview story', 'article_type': Article.ArticleType.NEWS_COMMENTARY,
+                'access_type': Article.AccessType.OPEN_ACCESS, 'html_content': '<p>मधुमेह बढ्यो।</p>',
+                'featured_image_fit': 'cover'}
+        url = reverse('articles:manage_article_preview')
+        marked = self.client.post(url, {**data, 'glossary_marking': 'on'})
+        self.assertContains(marked, 'class="glossary-term"')
+        unmarked = self.client.post(url, data)  # unticked checkbox: not sent
+        self.assertEqual(unmarked.status_code, 200)
+        self.assertNotContains(unmarked, 'class="glossary-term"')
+
     def test_no_terms_no_script(self):
         article = Article.objects.create(title='Plain', status=Article.Status.PUBLISHED, html_content='<p>Nothing here.</p>')
         response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
-        self.assertNotContains(response, 'js/glossary.js')
+        self.assertNotContains(response, 'id="glossary-data"')
 
 
 class LibraryAcrossTheSiteTests(TestCase):

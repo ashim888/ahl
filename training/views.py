@@ -88,7 +88,7 @@ class CourseListView(ListView):
             'instructors': active.values('instructor').distinct().count(),
         }
         context['meta_title'] = f'Training Programs — {settings.JOURNAL_NAME}'
-        context['meta_description'] = f'Professional training programs offered by {settings.JOURNAL_NAME}.'
+        context['meta_description'] = _('Professional training programs offered by %(site)s.') % {'site': settings.JOURNAL_NAME}
         return context
 
 

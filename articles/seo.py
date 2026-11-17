@@ -19,6 +19,31 @@ _JSON_LD_ESCAPES = {
 }
 
 
+def claim_review_structured_data(article, journal_name, canonical_url, publisher_logo_url):
+    """schema.org ClaimReview for a fact check — the markup search engines and
+    fact-check aggregators read. Unproven has no number on the 1–5 scale, so
+    it gives only the verdict's name."""
+    rating = {'@type': 'Rating', 'alternateName': article.get_fact_check_verdict_display()}
+    if article.verdict_rating:
+        rating.update(ratingValue=article.verdict_rating, bestRating=5, worstRating=1)
+    appearance = {'@type': 'CreativeWork', 'url': article.fact_check_claim_url} if article.fact_check_claim_url else None
+    return ld_json({
+        '@context': 'https://schema.org',
+        '@type': 'ClaimReview',
+        'url': canonical_url,
+        'claimReviewed': article.fact_check_claim[:500],
+        'datePublished': (article.published_at or article.created_at).date().isoformat(),
+        'author': {'@type': 'Organization', 'name': journal_name, 'logo': publisher_logo_url},
+        'reviewRating': rating,
+        'itemReviewed': {k: v for k, v in {
+            '@type': 'Claim',
+            'author': {'@type': 'Organization', 'name': article.fact_check_claim_source}
+            if article.fact_check_claim_source else None,
+            'appearance': appearance,
+        }.items() if v is not None},
+    })
+
+
 def ld_json(data):
     """Render a dict as a safe JSON-LD payload for a
     <script type="application/ld+json"> tag — not django.utils.html.json_script,

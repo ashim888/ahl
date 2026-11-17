@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.formats import date_format
-from django.utils.translation import ngettext
+from django.utils.translation import gettext as _, ngettext
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from articles.models import Article
@@ -35,7 +35,7 @@ class IssueListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['meta_title'] = f'Issues — {settings.JOURNAL_NAME}'
-        context['meta_description'] = f'Curated story trails and ongoing coverage series from {settings.JOURNAL_NAME}.'
+        context['meta_description'] = _('Curated story trails and ongoing coverage series from %(site)s.') % {'site': settings.JOURNAL_NAME}
         return context
 
 
@@ -55,7 +55,7 @@ class IssueDetailView(DetailView):
         context['meta_title'] = f'{self.object.title} — {settings.JOURNAL_NAME}'
         context['meta_description'] = (
             (self.object.editorial_note or '')[:200]
-            or f'"{self.object.title}" — a curated story trail from {settings.JOURNAL_NAME}.'
+            or _('"%(title)s" — a curated story trail from %(site)s.') % {'title': self.object.title, 'site': settings.JOURNAL_NAME}
         )
         if self.object.cover_image:
             context['meta_image_url'] = self.request.build_absolute_uri(self.object.cover_image.url)

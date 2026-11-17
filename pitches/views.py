@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.utils.translation import gettext as _
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -47,10 +48,10 @@ class PitchCreateView(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['turnstile_site_key'] = settings.TURNSTILE_SITE_KEY
-        context['meta_description'] = (
-            f'Got a health story Nepal should hear? Pitch it to the editors of {settings.JOURNAL_NAME} — '
-            f'no account needed, and we reply to every pitch.'
-        )
+        context['student_track'] = self.request.GET.get('track') == 'student'
+        context['meta_description'] = _(
+            'Got a health story Nepal should hear? Pitch it to the editors of %(site)s — '
+            'no account needed, and we reply to every pitch.') % {'site': settings.JOURNAL_NAME}
         return context
 
     def form_valid(self, form):
@@ -117,6 +118,8 @@ class PitchQueueListView(ListView):
             queryset = queryset.filter(status=status)
         else:
             queryset = queryset.exclude(status__in=[StoryPitch.Status.ACCEPTED, StoryPitch.Status.REJECTED, StoryPitch.Status.PUBLISHED])
+        if self.request.GET.get('student'):
+            queryset = queryset.filter(is_student=True)
         if q:
             queryset = queryset.filter(
                 Q(title__icontains=q) | Q(submitter_name__icontains=q) | Q(submitter_email__icontains=q)
@@ -129,6 +132,7 @@ class PitchQueueListView(ListView):
         context['statuses'] = StoryPitch.Status.choices
         context['selected_status'] = self.request.GET.get('status', '')
         context['selected_q'] = self.request.GET.get('q', '')
+        context['student_only'] = bool(self.request.GET.get('student'))
         return context
 
 

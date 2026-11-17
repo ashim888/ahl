@@ -1,0 +1,23 @@
+{% load i18n text_filters %}{% comment %}
+Fact check summary at the top of the article (Article.fact_check_*). Above
+the paywall on purpose: a correction to misinformation is for everyone.
+{% endcomment %}{% if article.is_fact_check %}
+<section class="fact-check-box verdict--{{ article.fact_check_verdict }} mb-8" aria-labelledby="fact-check-heading">
+    <h2 id="fact-check-heading" class="sr-only">{% trans "Fact check" %}</h2>
+    <div class="fact-check-box__claim">
+        <p class="fact-check-box__label">{% trans "CLAIM" %}</p>
+        <p lang="{{ article.fact_check_claim|content_lang }}" class="fact-check-box__claim-text">“{{ article.fact_check_claim }}”</p>
+        {% if article.fact_check_claim_source or article.fact_check_claim_url %}
+            <p class="fact-check-box__source">
+                {% if article.fact_check_claim_source %}{{ article.fact_check_claim_source }}{% endif %}{% if article.fact_check_claim_url %}{% if article.fact_check_claim_source %} · {% endif %}<a href="{{ article.fact_check_claim_url }}" rel="nofollow noopener" target="_blank">{% trans "See the claim" %} ↗</a>{% endif %}
+            </p>
+        {% endif %}
+    </div>
+    <div class="fact-check-box__verdict">
+        <p class="fact-check-box__label">{% trans "OUR VERDICT" %}</p>
+        <p class="fact-check-box__rating">{{ article.get_fact_check_verdict_display }}</p>
+        <p lang="{{ article.fact_check_verdict_summary|content_lang }}" class="fact-check-box__why">{{ article.fact_check_verdict_summary }}</p>
+        <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="fact-check-box__scale">{% trans "How we rate claims" %}</a>
+    </div>
+</section>
+{% endif %}

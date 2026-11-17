@@ -40,6 +40,16 @@ class StoryPitch(models.Model):
     submitter_email = models.EmailField(
         blank=True, help_text='Only used for an anonymous (not logged in) pitch — how to follow up with them.',
     )
+    # The student research track (/pitches/new/?track=student): students and
+    # early-career researchers turning their own research into a story.
+    is_student = models.BooleanField(
+        _('I am a student or early-career researcher'), default=False,
+        help_text=_('Tick this if the pitch is about your own research (a thesis, a project, a paper). '
+                    'An editor will help you turn it into a story for the public.'),
+    )
+    institution = models.CharField(
+        _('Your college, university or institution'), max_length=255, blank=True,
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED)
     editor_feedback = models.TextField(
         blank=True, help_text='Shown to the submitter — reason for the decision or requested changes.',

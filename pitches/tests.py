@@ -187,6 +187,25 @@ class AnonymousPitchSubmissionTests(TestCase):
         response = self.client.post(reverse('pitches:pitch_create'), {'title': 'Mine', 'summary': 'x'}, follow=True)
         self.assertContains(response, reverse('pitches:my_pitches'))
 
+    def test_student_track(self):
+        response = self.client.get(reverse('pitches:pitch_create'), {'track': 'student'})
+        self.assertContains(response, 'Share your research')
+        self.assertTrue(response.context['form']['is_student'].value())
+        self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'My thesis on dengue', 'summary': 'x', 'is_student': 'on', 'institution': 'BPKIHS',
+            'submitter_name': 'S', 'submitter_email': 's@example.com',
+        })
+        self.client.post(reverse('pitches:pitch_create'), {
+            'title': 'Ordinary tip', 'summary': 'x', 'submitter_name': 'T', 'submitter_email': 't@example.com'})
+        pitch = StoryPitch.objects.get(title='My thesis on dengue')
+        self.assertTrue(pitch.is_student)
+        self.assertEqual(pitch.institution, 'BPKIHS')
+        editor = User.objects.create_user(email='st-ed@example.com', password='pw', first_name='E', last_name='D',
+                                          role=User.Role.EDITOR)
+        self.client.force_login(editor)
+        queue = self.client.get(reverse('pitches:manage_pitch_queue'), {'student': '1'})
+        self.assertEqual([p.title for p in queue.context['pitches']], ['My thesis on dengue'])
+
     def test_anonymous_form_shows_contact_fields(self):
         response = self.client.get(reverse('pitches:pitch_create'))
         self.assertContains(response, 'name="submitter_name"')

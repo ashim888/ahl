@@ -361,10 +361,9 @@ class HomeView(TemplateView):
             ).order_by('-is_featured', 'start_date', 'title')[:3],
         )
 
-        context['meta_description'] = (
-            f'{settings.JOURNAL_NAME}: evidence-based health news, research explained in plain language, '
-            'and papers from our peer-reviewed journal, in Nepali and English.'
-        )
+        context['meta_description'] = _(
+            '%(site)s: evidence-based health news, research explained in plain language, '
+            'and papers from our peer-reviewed journal, in Nepali and English.') % {'site': settings.JOURNAL_NAME}
         return context
 
 
@@ -391,9 +390,8 @@ class CorrectionListView(ListView):
         context['kinds'] = ArticleCorrection.Kind.choices
         context['selected_kind'] = self.request.GET.get('kind', '')
         context['meta_title'] = f'{_("Corrections")} — {settings.JOURNAL_NAME}'
-        context['meta_description'] = (
-            f'Every correction, clarification and update {settings.JOURNAL_NAME} has made to a published story.'
-        )
+        context['meta_description'] = _(
+            'Every correction, clarification and update %(site)s has made to a published story.') % {'site': settings.JOURNAL_NAME}
         return context
 
 
@@ -414,7 +412,38 @@ class VideoListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['meta_description'] = f'Health videos from {settings.JOURNAL_NAME}: explainers, interviews and reports.'
+        context['meta_description'] = _('Health videos from %(site)s: explainers, interviews and reports.') % {'site': settings.JOURNAL_NAME}
+        return context
+
+
+class FactCheckListView(ListView):
+    """/fact-checks/ — every published fact check, newest first, filterable
+    by verdict (?verdict=false). A menu destination like /videos/."""
+
+    template_name = 'articles/fact_check_list.html'
+    context_object_name = 'fact_checks'
+    paginate_by = 12
+
+    def get_queryset(self):
+        queryset = (Article.objects.filter(status=Article.Status.PUBLISHED, article_type=Article.ArticleType.FACT_CHECK)
+                    .exclude(fact_check_verdict='').prefetch_related('articleauthor_set__author__user', 'keyword_tags'))
+        self.verdict = self.request.GET.get('verdict', '')
+        if self.verdict in Article.Verdict.values:
+            queryset = queryset.filter(fact_check_verdict=self.verdict)
+        else:
+            self.verdict = ''
+        return queryset.order_by('-is_pinned', '-published_at', '-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        counts = dict(Article.objects.filter(status=Article.Status.PUBLISHED, article_type=Article.ArticleType.FACT_CHECK)
+                      .exclude(fact_check_verdict='').values_list('fact_check_verdict').annotate(n=Count('pk')))
+        context['verdict_choices'] = [(v, label, counts[v]) for v, label in Article.Verdict.choices if counts.get(v)]
+        context['selected_verdict'] = self.verdict
+        context['total_count'] = sum(counts.values())
+        context['meta_title'] = f'{_("Fact checks")} — {settings.JOURNAL_NAME}'
+        context['meta_description'] = _('Health claims spreading in Nepal, checked against the evidence by '
+                                       '%(site)s: what is true, false or misleading, and why.') % {'site': settings.JOURNAL_NAME}
         return context
 
 
@@ -482,14 +511,14 @@ class ArticleListView(ListView):
             context['canonical_url'] = self.request.build_absolute_uri(
                 reverse('articles:topic_detail', args=[selected_keyword_slug]))
             context['meta_title'] = _('Articles tagged "%(keyword)s"') % {'keyword': selected_keyword_label} + f' — {settings.JOURNAL_NAME}'
-            context['meta_description'] = f'Articles about {selected_keyword_label} from {settings.JOURNAL_NAME}.'
+            context['meta_description'] = _('Articles about %(topic)s from %(site)s.') % {'topic': selected_keyword_label, 'site': settings.JOURNAL_NAME}
         elif context['selected_type']:
             type_label = dict(Article.ArticleType.choices).get(context['selected_type'], '')
             context['meta_title'] = f'{type_label} — {settings.JOURNAL_NAME}'
-            context['meta_description'] = f'{type_label} articles from {settings.JOURNAL_NAME}.'
+            context['meta_description'] = _('%(type)s articles from %(site)s.') % {'type': type_label, 'site': settings.JOURNAL_NAME}
         else:
             context['meta_title'] = f'{_("All Articles")} — {settings.JOURNAL_NAME}'
-            context['meta_description'] = f'Browse all published articles from {settings.JOURNAL_NAME}.'
+            context['meta_description'] = _('Browse all published articles from %(site)s.') % {'site': settings.JOURNAL_NAME}
         return context
 
 
@@ -515,7 +544,7 @@ class ArchiveListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['meta_title'] = f'{_("Archive")} — {settings.JOURNAL_NAME}'
-        context['meta_description'] = f'Archived articles from {settings.JOURNAL_NAME}.'
+        context['meta_description'] = _('Archived articles from %(site)s.') % {'site': settings.JOURNAL_NAME}
         return context
 
 
@@ -598,7 +627,8 @@ class ArticleDetailView(DetailView):
         # expired/unknown token isn't an error, it just falls through to
         # the normal access rules (real entitlement, then metering) as if
         # no gift link were involved.
-        has_locked_content = bool(self.object.html_content or self.object.has_video or self.object.pdf_file)
+        has_locked_content = bool(self.object.html_content or self.object.has_video or self.object.pdf_file
+                                  or self.object.audio_file)
         context['has_locked_content'] = has_locked_content
         gift_token = self.kwargs.get('gift_token')
         gift = get_valid_article_gift(self.object, gift_token) if gift_token else None
@@ -675,7 +705,8 @@ class ArticleDetailView(DetailView):
             _record_keyword_impressions(self.request, self.object, context['keyword_list'])
         html_with_ids, toc_entries = extract_toc(linkify_citations(self.object.html_content))
         context['toc_entries'] = toc_entries if len(toc_entries) > MIN_HEADINGS_FOR_TOC else []
-        html_with_ids, context['glossary_definitions'] = _mark_glossary_terms(html_with_ids)
+        html_with_ids, context['glossary_definitions'] = _mark_glossary_terms(
+            html_with_ids, enabled=self.object.glossary_marking and show_full_text)  # locked text: nothing to explain
         context['content_blocks'] = build_content_blocks(html_with_ids)
         if self.object.references:
             context['references_list'] = [
@@ -687,6 +718,16 @@ class ArticleDetailView(DetailView):
         from library.queries import for_article as library_for_article
 
         context['library_resources'] = library_for_article(self.object)
+        # The same story in the other language: a link for readers, hreflang for search engines.
+        partner = self.object.published_translation
+        if partner:
+            from .templatetags.text_filters import content_lang
+
+            context['translation'] = {
+                'article': partner, 'lang': content_lang(partner.title),
+                'url': self.request.build_absolute_uri(partner.get_absolute_url()),
+                'own_lang': content_lang(self.object.title),
+            }
 
         # Fetch one extra and trim, so excluding the article being viewed
         # (it'd be a strange thing to see "trending" on its own page) still
@@ -722,6 +763,12 @@ class ArticleDetailView(DetailView):
             image_url=image_url, publisher_logo_url=self.request.build_absolute_uri(static('images/logo.png')),
             authors=article_authors, keywords=context['keyword_list'], corrections=context['corrections'],
         )
+        if self.object.is_fact_check:
+            from .seo import claim_review_structured_data
+
+            context['claim_review_json'] = claim_review_structured_data(
+                self.object, settings.JOURNAL_NAME, context['canonical_url'],
+                self.request.build_absolute_uri(static('images/logo.png')))
         context['breadcrumb_json'] = breadcrumb_list_structured_data([
             ('Home', self.request.build_absolute_uri(reverse('articles:home'))),
             ('Articles', self.request.build_absolute_uri(reverse('articles:article_list'))),
@@ -781,7 +828,7 @@ class AuthorDetailView(DetailView):
         byline = author.name
         if author.display_affiliation:
             byline += f', {author.display_affiliation}'
-        context['meta_description'] = author.display_bio[:200] or f'{byline} — articles on {settings.JOURNAL_NAME}.'
+        context['meta_description'] = author.display_bio[:200] or _('%(byline)s — articles on %(site)s.') % {'byline': byline, 'site': settings.JOURNAL_NAME}
         photo = author.display_photo
         image_url = self.request.build_absolute_uri(photo.url) if photo else None
         if image_url:
@@ -949,10 +996,13 @@ class ReadingListView(ListView):
         return context
 
 
-def _mark_glossary_terms(html):
+def _mark_glossary_terms(html, *, enabled=True):
     """Health-glossary terms in the article text become tappable
-    (library/glossary_marking.py, static/js/glossary.js). Returns the marked
-    HTML and the definitions the popovers need."""
+    (library/glossary_marking.py, static/js/citations.js). Returns the marked
+    HTML and the definitions the popovers need. `enabled` is the article's
+    own switch (Article.glossary_marking)."""
+    if not enabled:
+        return html, {}
     from django.utils.translation import get_language
 
     from library.glossary_marking import definitions_for, mark_terms
@@ -1043,7 +1093,7 @@ class SearchView(ListView):
             f'Search results for "{self.query}" — {settings.JOURNAL_NAME}' if self.query
             else f'Search — {settings.JOURNAL_NAME}'
         )
-        context['meta_description'] = f'Search {settings.JOURNAL_NAME} for articles by title, text, author, or keyword.'
+        context['meta_description'] = _('Search %(site)s for articles by title, text, author, or keyword.') % {'site': settings.JOURNAL_NAME}
         # Internal search-result pages are thin/near-duplicate content that
         # shouldn't compete with the real article/list pages they surface.
         context['meta_robots'] = 'noindex, follow'
@@ -1258,8 +1308,18 @@ def article_quick_publish(request, slug):
     else:
         # Same rule as the editor's Publish button (PublishArticleForm):
         # nothing goes live without something to read.
-        if not strip_tags(article.html_content or '').strip() and not article.pdf_file:
+        is_infographic = article.article_type == Article.ArticleType.INFOGRAPHIC and article.featured_image
+        if not strip_tags(article.html_content or '').strip() and not (
+                article.pdf_file or article.audio_file or article.survey_url or is_infographic):
             messages.error(request, f'"{article.title}" has no article text yet — open it and add the text before publishing.')
+            return redirect('articles:manage_article_list')
+        # Same rule as the form (ArticleForm.clean): autosave keeps a fact
+        # check without its verdict as a draft, but it can't go live like that.
+        if article.article_type == Article.ArticleType.FACT_CHECK and not (
+                article.fact_check_claim.strip() and article.fact_check_verdict
+                and article.fact_check_verdict_summary.strip()):
+            messages.error(request, f'"{article.title}" is a fact check without its claim, verdict or reason — '
+                                    'open it and fill in the Fact check box before publishing.')
             return redirect('articles:manage_article_list')
         # A Scheduled article published from here goes live now — save()
         # pulls its future published_at back to the current time.
@@ -1764,7 +1824,8 @@ def article_preview(request):
     }
     _html_with_ids, _toc_entries = extract_toc(linkify_citations(article.html_content))
     context['toc_entries'] = _toc_entries if len(_toc_entries) > MIN_HEADINGS_FOR_TOC else []
-    _html_with_ids, context['glossary_definitions'] = _mark_glossary_terms(_html_with_ids)
+    _html_with_ids, context['glossary_definitions'] = _mark_glossary_terms(
+        _html_with_ids, enabled=article.glossary_marking)
     context['content_blocks'] = build_content_blocks(_html_with_ids)
     if article.references:
         context['references_list'] = [

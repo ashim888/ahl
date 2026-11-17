@@ -16,6 +16,10 @@
                 <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
+        <label class="inline-flex items-center gap-2 text-sm text-gray-700 py-1.5">
+            <input type="checkbox" name="student" value="1" {% if student_only %}checked{% endif %} onchange="this.form.submit()">
+            Student research only
+        </label>
     </form>
 </div>
 
@@ -56,6 +60,7 @@
                             <a href="{% url 'pitches:manage_pitch_detail' pitch.pk %}" class="font-semibold hover:underline">
                                 {{ pitch.title }}
                             </a>
+                            {% if pitch.is_student %}<span class="ml-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">Student{% if pitch.institution %} · {{ pitch.institution }}{% endif %}</span>{% endif %}
                             <p class="text-sm text-gray-600 mt-1">{{ pitch.summary|truncatewords:30 }}</p>
                             <p class="text-xs text-gray-400 mt-1">
                                 {{ pitch.contact_name }} &lt;{{ pitch.contact_email }}&gt;

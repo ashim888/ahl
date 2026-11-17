@@ -1,0 +1,5 @@
+{% comment %}
+A fact check's verdict as a small label (cards, lists, search). Expects
+`article`; renders nothing unless it's a rated fact check. The word carries
+the meaning; colour only reinforces it (red false → green true, grey unproven).
+{% endcomment %}{% if article.is_fact_check %}<span class="verdict-chip verdict-chip--{{ article.fact_check_verdict }}">{{ article.get_fact_check_verdict_display }}</span>{% endif %}

@@ -4,13 +4,7 @@
 {% block page_title %}{% if is_create %}Add to the library{% else %}Edit resource{% endif %}{% endblock %}
 
 {% block extra_head %}
-    {# Tagify for topics and related articles — same library and look as the article form. #}
-    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css">
-    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
-    <style>
-        .tagify { width: 100%; --tags-border-color: #e5e7eb; --tags-focus-border-color: #6366f1; --tag-bg: #eef2ff;
-                  --tag-hover: #e0e7ff; --tag-text-color: #3730a3; --tag-remove-btn-color: #6366f1; border-radius: 0.875rem; }
-    </style>
+    {% include 'library/manage/tagify.html' %}
 {% endblock %}
 
 {% block content %}
@@ -63,30 +57,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    if (!window.Tagify) return;
-    function remote(tagify, url) {
-        var controller = null;
-        tagify.on('input', function (e) {
-            var query = e.detail.value;
-            if (controller) controller.abort();
-            controller = new AbortController();
-            fetch(url + '?q=' + encodeURIComponent(query), {signal: controller.signal})
-                .then(function (r) { return r.json(); })
-                .then(function (items) {
-                    tagify.whitelist = items.concat(tagify.value);
-                    tagify.dropdown.show.call(tagify, query);
-                })
-                .catch(function (error) { if (error.name !== 'AbortError') throw error; });
-        });
-    }
-    var topics = document.getElementById('id_keywords');
-    if (topics) remote(new Tagify(topics, {enforceWhitelist: false, dropdown: {enabled: 1, maxItems: 20}}), '{% url "articles:keyword_autocomplete" %}');
+    tagifyRemote(document.getElementById('id_keywords'), '{% url "articles:keyword_autocomplete" %}');
     var related = document.getElementById('id_related');
     if (related) {
         var initial = [];
         try { initial = JSON.parse(related.value || '[]'); } catch (e) { initial = []; }
-        remote(new Tagify(related, {enforceWhitelist: true, whitelist: initial, dropdown: {enabled: 1, maxItems: 20, searchKeys: ['value']}}),
-               '{% url "articles:manage_related_article_autocomplete" %}');
+        tagifyRemote(related, '{% url "articles:manage_related_article_autocomplete" %}',
+                     {enforceWhitelist: true, whitelist: initial, dropdown: {enabled: 1, maxItems: 20, searchKeys: ['value']}});
     }
 });
 </script>

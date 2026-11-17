@@ -24,10 +24,11 @@ class StoryPitchForm(forms.ModelForm):
 
     class Meta:
         model = StoryPitch
-        fields = ['title', 'summary', 'body', 'submitter_name', 'submitter_email']
+        fields = ['title', 'summary', 'body', 'is_student', 'institution', 'submitter_name', 'submitter_email']
         widgets = {
             'summary': forms.Textarea(attrs={'rows': 5}),
             'body': forms.Textarea(attrs={'rows': 10}),
+            'is_student': forms.CheckboxInput(attrs={'class': 'mt-1 h-4 w-4 shrink-0 accent-accent'}),
         }
         labels = {
             'title': _('Title'),
@@ -58,6 +59,8 @@ class StoryPitchForm(forms.ModelForm):
             self.fields['submitter_name'].required = True
             self.fields['submitter_email'].required = True
             self.fields['submitter_email'].help_text = _("So we can follow up if we'd like to run your story.")
+        if request and request.GET.get('track') == 'student':
+            self.fields['is_student'].initial = True
 
     def clean_website(self):
         value = self.cleaned_data.get('website')

@@ -14,9 +14,13 @@
 {# Title first on every screen; on phones the guidance follows it, then the form. #}
 <header class="lg:col-span-12 w-full max-w-2xl mx-auto lg:mx-0">
     <div class="rule-editorial mb-6"></div>
-    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Pitch a story" %}</h1>
+    <h1 class="font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% if student_track %}{% trans "Share your research" %}{% else %}{% trans "Pitch a story" %}{% endif %}</h1>
     <p class="mt-2 text-muted-foreground">
-        {% trans "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed." %}
+        {% if student_track %}
+            {% trans "Students and early-career researchers: tell us about your thesis, project or paper. An editor will work with you to explain it in plain language for readers across Nepal." %}
+        {% else %}
+            {% trans "Have a health story you think we should cover? Send us the pitch: no account, manuscript or file needed." %}
+        {% endif %}
         {% if user.is_authenticated %}
             {% url 'pitches:my_pitches' as my_pitches_url %}{% blocktrans %}See your past pitches and their status on <a href="{{ my_pitches_url }}" class="underline hover:text-accent">My pitches</a>.{% endblocktrans %}
         {% endif %}
@@ -30,6 +34,16 @@
             <p class="text-xs text-accent">{{ form.non_field_errors }}</p>
         {% endif %}
         {% for field in form.visible_fields %}
+            {% if field.name == 'is_student' %}
+            {# Classes on the checkbox come from pitches/forms.py; listed here so Tailwind builds them: mt-1 h-4 w-4 shrink-0 accent-accent #}
+            <div class="flex items-start gap-3">
+                {{ field }}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="text-sm font-medium">{{ field.label }}</label>
+                    <p id="{{ field.auto_id }}_helptext" class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
+                </div>
+            </div>
+            {% else %}
             <div>
                 <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ field.id_for_label }}">
                     {{ field.label|upper }}{% if field.field.required %} <span class="text-accent">*</span>{% endif %}
@@ -43,6 +57,7 @@
                     <p class="mt-1 text-xs text-accent">{{ error }}</p>
                 {% endfor %}</div>{% endif %}
             </div>
+            {% endif %}
         {% endfor %}
         {% if turnstile_site_key %}
             <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>

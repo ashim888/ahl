@@ -269,7 +269,7 @@ input::placeholder, textarea::placeholder { color: theme('colors.muted-foregroun
   .cite-card { animation-name: cite-card-fade; } .cite-card--out { animation-name: cite-card-fade-out; }
   @keyframes cite-card-fade { from { opacity: 0; } } @keyframes cite-card-fade-out { to { opacity: 0; } }
 }
-/* Health-glossary terms in article text (library/glossary_marking.py, static/js/glossary.js):
+/* Health-glossary terms in article text (library/glossary_marking.py, static/js/citations.js):
    ordinary ink with a dotted accent underline, so they read as "tap for meaning", not as
    links that leave the page. The definition opens in the citation card above. */
 .prose-article a.glossary-term {
@@ -279,6 +279,33 @@ input::placeholder, textarea::placeholder { color: theme('colors.muted-foregroun
 .prose-article a.glossary-term:hover,
 .prose-article a.glossary-term[aria-expanded="true"] { background: theme('colors.secondary'); text-decoration-style: solid; }
 .glossary-card .glossary-card__name { margin: 0.35rem 0 0; font-weight: 700; font-size: 1rem; color: theme('colors.foreground'); }
+
+/* Fact checks (Article.fact_check_*): one colour per verdict, red (false) to green (true), grey
+   for unproven. The word always carries the meaning; colour reinforces it. All ≥ 4.5:1 on paper. */
+.verdict--false, .verdict-chip--false { --verdict: #b42318; }
+.verdict--mostly_false, .verdict-chip--mostly_false { --verdict: #c4320a; }
+.verdict--misleading, .verdict-chip--misleading { --verdict: #93370d; }
+.verdict--unproven, .verdict-chip--unproven { --verdict: #475467; }
+.verdict--mostly_true, .verdict-chip--mostly_true { --verdict: #05603a; }
+.verdict--true, .verdict-chip--true { --verdict: #05603a; }
+.verdict-chip {
+  display: inline-block; padding: 0.05rem 0.45rem; border: 1px solid var(--verdict); color: var(--verdict);
+  font-family: theme('fontFamily.mono-editorial'); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.5;
+}
+:lang(ne) .verdict-chip { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; letter-spacing: normal; font-size: 0.75rem; }
+.fact-check-box { display: grid; border: 1px solid theme('colors.foreground'); border-top: 4px solid var(--verdict); }
+@media (min-width: 640px) { .fact-check-box { grid-template-columns: 3fr 2fr; } }
+.fact-check-box__claim { padding: 1.1rem 1.25rem; background: theme('colors.secondary'); }
+.fact-check-box__verdict { padding: 1.1rem 1.25rem; }
+.fact-check-box__label { margin: 0; font-family: theme('fontFamily.mono-editorial'); font-size: 0.7rem; letter-spacing: 0.14em; color: theme('colors.muted-foreground'); }
+:lang(ne) .fact-check-box__label { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; letter-spacing: normal; font-size: 0.8rem; }
+.fact-check-box__claim-text { margin: 0.4rem 0 0; font-family: Georgia, serif; font-size: 1.1rem; line-height: 1.55; }
+.fact-check-box__source { margin: 0.5rem 0 0; font-size: 0.8rem; color: theme('colors.muted-foreground'); }
+.fact-check-box__source a, .fact-check-box__scale { text-decoration: underline; text-underline-offset: 3px; }
+.fact-check-box__rating { margin: 0.3rem 0 0; font-family: theme('fontFamily.display'); font-size: 1.75rem; font-weight: 800; line-height: 1.1; color: var(--verdict); }
+.fact-check-box__why { margin: 0.5rem 0 0; font-size: 0.95rem; line-height: 1.5; }
+.fact-check-box__scale { display: inline-block; margin-top: 0.75rem; font-size: 0.8rem; color: theme('colors.muted-foreground'); }
+.fact-check-box__scale:hover, .fact-check-box__source a:hover { color: theme('colors.accent'); }
 
 /* Jumping to a source (no script, or "All references") lands on it visibly, clear of the sticky header. */
 li[id^="ref-"] { scroll-margin-top: 7rem; }

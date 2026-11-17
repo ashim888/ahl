@@ -42,7 +42,10 @@ class Resource(models.Model):
         BOTH = 'both', _('Nepali and English')
 
     title = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True, blank=True, allow_unicode=True)
+    # Plain a–z only: the URL pattern (<slug:slug>) can't route anything else,
+    # so a Nepali slug typed in admin would break every page that links to it.
+    # Generated slugs are already romanized (articles/slugs.py).
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
     resource_type = models.CharField(max_length=30, choices=ResourceType.choices)
     summary = models.TextField(
         help_text='In plain language: what this is, who it is for and why it matters. 2–4 sentences.',

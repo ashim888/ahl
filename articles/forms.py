@@ -130,6 +130,13 @@ class ArticleForm(forms.ModelForm):
                   'the most similar articles automatically (see suggestions below).',
     )
 
+    # Article.translation, picked like a related article (one chip only).
+    translation_pick = TagifyRelatedArticlesField(
+        required=False, label='Other-language version',
+        help_text='The same story published in the other language (Nepali or English). Readers get a '
+                  '"Read in English" / "नेपालीमा पढ्नुहोस्" link, and the link is added to the other one too.',
+    )
+
     # Not a model field: the go-live time for the Schedule button (stored in
     # Article.published_at with status Scheduled — see ArticleFormMixin).
     # A datetime-local input is read in the site's time zone (TIME_ZONE).
@@ -166,13 +173,16 @@ class ArticleForm(forms.ModelForm):
         fields = [
             'title', 'slug', 'article_type', 'access_type', 'price', 'is_pinned', 'homepage_section',
             'abstract', 'issue', 'section', 'volume', 'page_numbers', 'doi',
-            'video_url', 'html_content', 'references', 'featured_image', 'featured_image_alt', 'featured_image_caption',
+            'video_url', 'survey_url', 'fact_check_claim', 'fact_check_claim_source', 'fact_check_claim_url',
+            'fact_check_verdict', 'fact_check_verdict_summary',
+            'html_content', 'glossary_marking', 'references', 'featured_image', 'featured_image_alt', 'featured_image_caption',
             'featured_image_credit', 'featured_image_fit', 'featured_image_focus_x', 'featured_image_focus_y',
-            'pdf_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
+            'pdf_file', 'audio_file', 'assigned_to', 'seo_title', 'seo_description', 'social_image',
         ]
         field_classes = {'slug': LowercaseSlugField}
         widgets = {
             'abstract': forms.Textarea(attrs={'rows': 5}),
+            'fact_check_claim': forms.Textarea(attrs={'rows': 3}),
             'featured_image_fit': forms.RadioSelect,
             'featured_image_focus_x': forms.HiddenInput,
             'featured_image_focus_y': forms.HiddenInput,
@@ -183,6 +193,7 @@ class ArticleForm(forms.ModelForm):
             # hand-written <sup><a href="#ref-1"> markup.
             'html_content': CKEditor5Widget(config_name='articles'),
             'references': forms.Textarea(attrs={'rows': 6}),
+            'audio_file': forms.ClearableFileInput(attrs={'accept': '.mp3,.m4a,.ogg,audio/mpeg,audio/mp4,audio/ogg'}),
         }
         # Editor-facing wording — the model help_texts are written for
         # developers (they point at code), these are for the newsroom.
@@ -266,6 +277,9 @@ class ArticleForm(forms.ModelForm):
             self.fields['related_articles'].initial = json.dumps(
                 [{'value': a.title, 'id': a.pk} for a in self.instance.related_articles.all()],
             )
+            partner = self.instance.translation
+            self.fields['translation_pick'].initial = json.dumps(
+                [{'value': partner.title, 'id': partner.pk}] if partner else [], ensure_ascii=False)
         # Blank is valid — Article.save() makes the slug from the headline
         # (articles/slugs.py). Django's own unique-value validation on the
         # ModelForm already rejects a typed slug that another article has.
@@ -307,12 +321,32 @@ class ArticleForm(forms.ModelForm):
             self.add_error('price', 'Set a price for pay-per-article articles.')
         if cleaned_data.get('article_type') == Article.ArticleType.VIDEO and not cleaned_data.get('video_url'):
             self.add_error('video_url', 'A video story needs its YouTube link.')
+        if cleaned_data.get('article_type') == Article.ArticleType.SURVEY and not cleaned_data.get('survey_url'):
+            self.add_error('survey_url', 'A survey story needs its Google Form link.')
+        if cleaned_data.get('article_type') == Article.ArticleType.INFOGRAPHIC and not (
+                cleaned_data.get('featured_image') or self.instance.featured_image):
+            self.add_error('featured_image', 'An infographic needs its image (upload it as the featured image).')
+        if cleaned_data.get('article_type') == Article.ArticleType.PODCAST and not (
+                cleaned_data.get('audio_file') or self.instance.audio_file):
+            self.add_error('audio_file', 'A podcast needs its audio file.')
+        if cleaned_data.get('article_type') == Article.ArticleType.FACT_CHECK:
+            for name, message in (('fact_check_claim', 'Write the claim this story checks.'),
+                                  ('fact_check_verdict', 'Choose a verdict.'),
+                                  ('fact_check_verdict_summary', 'Say why, in one sentence.')):
+                if not (cleaned_data.get(name) or '').strip():
+                    self.add_error(name, message)
         return cleaned_data
 
     def clean_bylines(self):
         if self.add_prefix('bylines') not in self.data:
             return None
         return byline_utils.parse(self.cleaned_data.get('bylines'), self.instance)
+
+    def clean_translation_pick(self):
+        picked = [a for a in self.cleaned_data.get('translation_pick', []) if a.pk != self.instance.pk]
+        if len(picked) > 1:
+            raise forms.ValidationError('Pick one article: the same story in the other language.')
+        return picked[0] if picked else None
 
     def clean_related_articles(self):
         related = self.cleaned_data.get('related_articles', [])
@@ -338,6 +372,8 @@ class ArticleForm(forms.ModelForm):
         keywords = self.cleaned_data.get('keywords', [])
         related = self.cleaned_data.get('related_articles', [])
         bylines = self.cleaned_data.get('bylines')
+        if self.add_prefix('translation_pick') in self.data:  # forms without the picker keep the link
+            instance.translation = self.cleaned_data['translation_pick']
 
         def save_m2m():
             self._save_m2m()
@@ -413,8 +449,13 @@ class PublishArticleForm(ArticleForm):
         has_pdf = bool(cleaned_data.get('pdf_file') or self.instance.pdf_file)
         # A video story's video is its content; the text is optional.
         has_video = bool(cleaned_data.get('video_url'))
-        if not strip_tags(body).strip() and '<img' not in body and not has_pdf and not has_video:
-            self.add_error('html_content', 'Add the article text (or a video link, or attach a PDF) before publishing.')
+        has_audio = bool(cleaned_data.get('audio_file') or self.instance.audio_file)  # a podcast's audio is its content
+        has_infographic = cleaned_data.get('article_type') == Article.ArticleType.INFOGRAPHIC and bool(
+            cleaned_data.get('featured_image') or self.instance.featured_image)
+        has_survey = bool(cleaned_data.get('survey_url'))
+        if not strip_tags(body).strip() and '<img' not in body and not (
+                has_pdf or has_video or has_audio or has_infographic or has_survey):
+            self.add_error('html_content', 'Add the article text (or a video link, audio, or a PDF) before publishing.')
         # Accessibility: every image needs a description for screen-reader users.
         missing = images_missing_alt(body)
         if missing:

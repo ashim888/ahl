@@ -92,7 +92,8 @@ CSP_DIRECTIVES = {
     'connect-src': ["'self'", 'https://*.google-analytics.com', 'https://*.analytics.google.com',
                     'https://*.googletagmanager.com', 'wss://*.fonepay.com', 'https://challenges.cloudflare.com'],
     'frame-src': ['https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://player.vimeo.com',
-                  'https://www.dailymotion.com', 'https://open.spotify.com', 'https://challenges.cloudflare.com'],
+                  'https://www.dailymotion.com', 'https://open.spotify.com', 'https://challenges.cloudflare.com',
+                  'https://docs.google.com'],  # embedded Google Form surveys (articles/survey.py)
     'media-src': ["'self'"],
     'object-src': ["'none'"],
     'base-uri': ["'self'"],
@@ -751,6 +752,9 @@ VAT_RATE = Decimal(os.environ.get('VAT_RATE', '13'))
 BUSINESS_LEGAL_NAME = os.environ.get('BUSINESS_LEGAL_NAME', JOURNAL_NAME)
 BUSINESS_PAN = os.environ.get('BUSINESS_PAN', '')
 BUSINESS_ADDRESS = os.environ.get('BUSINESS_ADDRESS', '')
+# Online media registration number from Nepal's Department of Information and
+# Broadcasting, shown in the footer once registered (blank: not shown).
+PRESS_REGISTRATION_NUMBER = os.environ.get('PRESS_REGISTRATION_NUMBER', '')
 RECEIPT_PREFIX = os.environ.get('RECEIPT_PREFIX', 'AHL-')
 # Invoice dates: 'both' (AD with BS alongside), 'ad' or 'bs' (billing/nepali.py).
 INVOICE_DATE_DISPLAY = os.environ.get('INVOICE_DATE_DISPLAY', 'both').strip().lower()
@@ -779,6 +783,8 @@ CV_MAX_UPLOAD_SIZE_MB = 10
 PROFILE_PHOTO_MAX_UPLOAD_SIZE_MB = 5
 ISSUE_COVER_MAX_UPLOAD_SIZE_MB = 10
 ARTICLE_PDF_MAX_UPLOAD_SIZE_MB = 100
+# An article's audio summary or podcast episode (an hour of 128 kbps MP3 is ~58 MB).
+ARTICLE_AUDIO_MAX_UPLOAD_SIZE_MB = 100
 LIBRARY_MAX_UPLOAD_SIZE_MB = 50  # health library documents, slides and data (library/)
 ARTICLE_IMAGE_MAX_UPLOAD_SIZE_MB = 10
 AD_IMAGE_MAX_UPLOAD_SIZE_MB = 5

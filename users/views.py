@@ -86,9 +86,8 @@ class RegisterView(CreateView):
         context = super().get_context_data(**kwargs)
         context['next'] = self.request.GET.get('next', '')
         context['return_article'] = return_article(self.request)
-        context['meta_description'] = (
-            f'Create a free {settings.JOURNAL_NAME} account to save articles, follow topics, comment and subscribe.'
-        )
+        context['meta_description'] = _(
+            'Create a free %(site)s account to save articles, follow topics, comment and subscribe.') % {'site': settings.JOURNAL_NAME}
         return context
 
     def form_valid(self, form):

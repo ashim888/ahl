@@ -1,7 +1,6 @@
 import json
 
 from django import forms
-from django.db.models import Q
 
 from articles.forms import TagifyKeywordsField, TagifyRelatedArticlesField
 
@@ -94,13 +93,18 @@ class GlossaryTermForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        names = [cleaned.get('term_ne', '').strip(), cleaned.get('term_en', '').strip()]
-        for name in filter(None, names):
-            clash = GlossaryTerm.objects.filter(Q(term_ne__iexact=name) | Q(term_en__iexact=name))
-            if self.instance.pk:
-                clash = clash.exclude(pk=self.instance.pk)
-            if clash.exists():
-                raise forms.ValidationError(f'"{name}" is already in the glossary.')
+        # Every name (main names and "also called") must be unique across the
+        # glossary, or article marking would link the word to either term.
+        draft = GlossaryTerm(term_ne=cleaned.get('term_ne', '').strip(), term_en=cleaned.get('term_en', '').strip(),
+                             also_called=cleaned.get('also_called', ''))
+        others = GlossaryTerm.objects.only('term_ne', 'term_en', 'also_called')
+        if self.instance.pk:
+            others = others.exclude(pk=self.instance.pk)
+        taken = {name.casefold(): term for term in others for name in term.names}
+        for name in draft.names:
+            if name.casefold() in taken:
+                raise forms.ValidationError(
+                    f'"{name}" is already a name of "{taken[name.casefold()].display_name}" in the glossary.')
         return cleaned
 
     def save(self, commit=True):

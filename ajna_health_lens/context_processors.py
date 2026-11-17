@@ -78,6 +78,7 @@ def journal_settings(request):
         'BUSINESS_LEGAL_NAME': settings.BUSINESS_LEGAL_NAME,
         'BUSINESS_PAN': settings.BUSINESS_PAN,
         'BUSINESS_ADDRESS': settings.BUSINESS_ADDRESS,
+        'PRESS_REGISTRATION_NUMBER': settings.PRESS_REGISTRATION_NUMBER,
         'analytics_consent': request.COOKIES.get(settings.COOKIE_CONSENT_COOKIE, '').endswith(':analytics'),
         'cookie_choice_made': bool(request.COOKIES.get(settings.COOKIE_CONSENT_COOKIE)),
         # -created_at, not -publication_date — an issue's publication_date

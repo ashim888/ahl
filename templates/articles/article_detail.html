@@ -17,6 +17,13 @@
     {% if breadcrumb_json %}
         <script type="application/ld+json">{{ breadcrumb_json }}</script>
     {% endif %}
+    {% if claim_review_json %}
+        <script type="application/ld+json">{{ claim_review_json }}</script>
+    {% endif %}
+    {% if translation and translation.lang != translation.own_lang %}
+        <link rel="alternate" hreflang="{{ translation.own_lang }}" href="{{ canonical_url }}">
+        <link rel="alternate" hreflang="{{ translation.lang }}" href="{{ translation.url }}">
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -97,6 +104,7 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
             <div class="flex items-center gap-3 mb-5">
                 {% if article.is_breaking %}<span class="font-mono-editorial text-[0.65rem] tracking-widest font-bold bg-accent text-white px-2 py-0.5">{% trans "BREAKING" %}</span>{% endif %}
                 <span class="section-label text-accent">{{ article.get_article_type_display }}</span>
+                {% include 'articles/includes/verdict_chip.html' %}
                 {% include 'articles/includes/story_flags.html' with article=article sources_href='#references' %}
                 {% if article.issue %}
                     <span class="text-border">·</span>
@@ -105,6 +113,14 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                     </a>
                 {% endif %}
             </div>
+
+            {% if translation %}
+                {# Written in the language it offers, whatever the site's UI language. #}
+                <a href="{{ translation.article.get_absolute_url }}" lang="{{ translation.lang }}" hreflang="{{ translation.lang }}"
+                   class="inline-flex items-center gap-1.5 mb-4 font-mono-editorial text-xs tracking-wide text-muted-foreground border border-border px-2.5 py-1 hover:text-foreground hover:border-foreground transition-colors">
+                    {% if translation.lang == 'ne' %}यो लेख नेपालीमा पढ्नुहोस्{% else %}Read this story in English{% endif %} →
+                </a>
+            {% endif %}
 
             <h1 class="font-display text-[2rem] sm:text-4xl lg:text-5xl font-bold leading-tight mb-5" style="letter-spacing: -0.025em; text-wrap: balance;">
                 {{ article.title }}
@@ -115,6 +131,8 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                     {{ article.abstract }}
                 </p>
             {% endif %}
+
+            {% include 'articles/includes/fact_check_box.html' %}
 
             {# Who wrote it and when, before the picture: on a phone the image fills most of a screen, and the byline is what makes the story credible. #}
             <div class="flex flex-wrap sm:flex-nowrap items-start gap-x-4 gap-y-3 py-5 border-y border-border mb-8">
@@ -187,6 +205,19 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         </figcaption>
                     {% endif %}
                 </figure>
+            {% elif article.article_type == 'infographic' and article.featured_image %}
+                {# The image is the story: full width, full height, never cropped, and openable at full size for reading the small print. #}
+                <figure class="-mx-6 sm:mx-0 mb-8">
+                    <a href="{{ article.featured_image.url }}" target="_blank" rel="noopener" class="block bg-secondary">
+                        <img src="{{ article.featured_image.url }}" alt="{{ article|image_alt }}"
+                             {% if article.featured_image_width %}width="{{ article.featured_image_width }}" height="{{ article.featured_image_height }}"{% endif %}
+                             class="mx-auto block w-full h-auto">
+                    </a>
+                    <figcaption class="px-6 sm:px-0 pt-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs leading-relaxed text-muted-foreground">
+                        <span>{{ article.featured_image_caption }}{% if article.featured_image_credit %} <span class="font-mono-editorial tracking-wide">{% blocktrans with credit=article.featured_image_credit %}Graphic: {{ credit }}{% endblocktrans %}</span>{% endif %}</span>
+                        <a href="{{ article.featured_image.url }}" target="_blank" rel="noopener" class="font-mono-editorial tracking-widest text-foreground hover:text-accent whitespace-nowrap">{% trans "OPEN FULL SIZE ↗" %}</a>
+                    </figcaption>
+                </figure>
             {% elif article.featured_image %}
                 <figure class="-mx-6 sm:mx-0 mb-8">
                     {% if article.featured_image_shows_whole %}
@@ -212,6 +243,28 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         </figcaption>
                     {% endif %}
                 </figure>
+            {% endif %}
+
+            {% if article.audio_file %}
+                {# An audio summary, or the episode for a podcast. Served from protected media, with byte ranges for seeking. #}
+                <div class="mb-8 border border-border bg-secondary/40 px-4 py-3">
+                    <p class="font-mono-editorial text-xs tracking-widest text-muted-foreground mb-2">
+                        {% if article.article_type == 'podcast' %}{% trans "LISTEN TO THE EPISODE" %}{% else %}{% trans "LISTEN TO THIS STORY" %}{% endif %}
+                    </p>
+                    {% if show_full_text %}
+                        <audio controls preload="none" src="{{ article.audio_file.url }}" class="w-full">
+                            <a href="{{ article.audio_file.url }}">{% trans "Download the audio" %}</a>
+                        </audio>
+                    {% else %}
+                        <a href="#paywall" class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-4 py-2 hover:bg-accent transition-colors">
+                            {% if article.access_type == 'pay_per_article' %}{% trans "BUY OR SUBSCRIBE TO LISTEN" %}{% else %}{% trans "SUBSCRIBE TO LISTEN" %}{% endif %}
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if article.survey_url and article.article_type == 'survey' %}
+                {% include 'articles/includes/survey_box.html' with class='mb-8' %}
             {% endif %}
 
             {% if keyword_list %}
@@ -362,12 +415,12 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                             {% endif %}
                         {% endfor %}
                     </div>
-                {% elif not article.has_video %}
+                {% elif not article.media_is_story %}
                     <p class="text-sm text-muted-foreground">{% trans "Full text has not been added for this article yet." %}</p>
                 {% endif %}
             {% elif not has_locked_content %}
                 {# Nothing to sell yet: never put a price on an empty article. #}
-                <p class="text-sm text-muted-foreground">{% trans "Full text has not been added for this article yet." %}</p>
+                {% if not article.media_is_story %}<p class="text-sm text-muted-foreground">{% trans "Full text has not been added for this article yet." %}</p>{% endif %}
             {% else %}
                 {% comment %}
                 Paywall, set as a notice in the paper rather than a floating card:
@@ -454,6 +507,10 @@ can't read the story sees the thumbnail and a lock pointing to the paywall.
                         </p>
                     {% endif %}
                 </section>
+            {% endif %}
+
+            {% if article.survey_url and article.article_type != 'survey' %}
+                {% include 'articles/includes/survey_box.html' with class='mt-10' %}
             {% endif %}
 
             {% include 'articles/includes/health_disclaimer.html' %}
@@ -862,11 +919,10 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<script src="{% static 'js/citations.js' %}" defer></script>
 {% if glossary_definitions %}
-    {# Glossary terms marked in the text (library/glossary_marking.py): their definitions for the tap-to-read cards. #}
+    {# Glossary terms marked in the text (library/glossary_marking.py): their definitions, for citations.js's tap-to-read cards. #}
     {{ glossary_definitions|json_script:"glossary-data" }}
     <div hidden id="glossary-labels" data-label="{% trans 'Glossary' %}" data-more="{% trans 'Read more in the glossary →' %}"></div>
-    <script src="{% static 'js/glossary.js' %}" defer></script>
 {% endif %}
+<script src="{% static 'js/citations.js' %}" defer></script>
 {% endblock %}

@@ -4,12 +4,7 @@
 {% block page_title %}{% if is_create %}Add to the glossary{% else %}Edit term{% endif %}{% endblock %}
 
 {% block extra_head %}
-    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css">
-    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
-    <style>
-        .tagify { width: 100%; --tags-border-color: #e5e7eb; --tags-focus-border-color: #6366f1; --tag-bg: #eef2ff;
-                  --tag-hover: #e0e7ff; --tag-text-color: #3730a3; --tag-remove-btn-color: #6366f1; border-radius: 0.875rem; }
-    </style>
+    {% include 'library/manage/tagify.html' %}
 {% endblock %}
 
 {% block content %}
@@ -48,19 +43,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var input = document.getElementById('id_keywords');
-    if (!input || !window.Tagify) return;
-    var tagify = new Tagify(input, {enforceWhitelist: false, dropdown: {enabled: 1, maxItems: 20}});
-    var controller = null;
-    tagify.on('input', function (e) {
-        var query = e.detail.value;
-        if (controller) controller.abort();
-        controller = new AbortController();
-        fetch('{% url "articles:keyword_autocomplete" %}?q=' + encodeURIComponent(query), {signal: controller.signal})
-            .then(function (r) { return r.json(); })
-            .then(function (items) { tagify.whitelist = items; tagify.dropdown.show.call(tagify, query); })
-            .catch(function (error) { if (error.name !== 'AbortError') throw error; });
-    });
+    tagifyRemote(document.getElementById('id_keywords'), '{% url "articles:keyword_autocomplete" %}');
 });
 </script>
 {% endblock %}

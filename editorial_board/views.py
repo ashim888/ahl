@@ -60,6 +60,42 @@ POLICIES = [
         ],
     },
     {
+        # The verdict scale used by fact checks (Article.Verdict); the verdict box links here.
+        'title': gettext_lazy('How We Rate Claims'),
+        'sections': [
+            {
+                'heading': gettext_lazy('What We Check'),
+                'body': gettext_lazy('We check health claims that are spreading widely or could cause harm if believed: '
+                                     'remedies, vaccine rumours, outbreak scares, statements by public figures. Readers '
+                                     'can send us claims to check.'),
+            },
+            {
+                'heading': gettext_lazy('False / Mostly false'),
+                'body': gettext_lazy('False: the evidence clearly contradicts the claim. Mostly false: a small part may '
+                                     'be accurate, but the main point is wrong.'),
+            },
+            {
+                'heading': gettext_lazy('Misleading'),
+                'body': gettext_lazy('The facts may be real, but they are presented in a way that gives a wrong '
+                                     'impression: out of context, exaggerated, or missing something important.'),
+            },
+            {
+                'heading': gettext_lazy('Unproven'),
+                'body': gettext_lazy('There is not yet enough good evidence to say whether the claim is true or false.'),
+            },
+            {
+                'heading': gettext_lazy('Mostly true / True'),
+                'body': gettext_lazy('Mostly true: accurate, but needs a clarification or extra detail. True: the '
+                                     'evidence supports the claim.'),
+            },
+            {
+                'heading': gettext_lazy('Updates'),
+                'body': gettext_lazy('If new evidence changes a verdict, we update the fact check and say what changed '
+                                     'and when.'),
+            },
+        ],
+    },
+    {
         'title': gettext_lazy('Independence & Ethics'),
         'sections': [
             {
@@ -153,6 +189,12 @@ POLICIES = [
                 'body': gettext_lazy('Health professionals, researchers, students and readers can pitch news tips, '
                               'explainers and opinion pieces. These are reviewed by our editors, not peer reviewed.'),
             },
+            {
+                'heading': gettext_lazy('Student Research'),
+                'body': gettext_lazy('Students and early-career researchers can share their own thesis, project or paper '
+                              'through the student track of the pitch form ("Student research" in the footer). An editor '
+                              'helps turn it into a plain-language story for the public.'),
+            },
         ],
     },
     {
@@ -211,10 +253,9 @@ class EditorialBoardPublicView(TemplateView):
 
         tab_titles = {'about': _('About'), 'board': _('Editorial Board'), 'policies': _('Policies')}
         context['meta_title'] = f'{tab_titles[context["active_tab"]]} — {settings.JOURNAL_NAME}'
-        context['meta_description'] = (
-            f'About {settings.JOURNAL_NAME}: an evidence-based health news and knowledge platform for Nepal. '
-            'Our vision, mission, editorial board, policies, and how to reach us.'
-        )
+        context['meta_description'] = _(
+            'About %(site)s: an evidence-based health news and knowledge platform for Nepal. '
+            'Our vision, mission, editorial board, policies, and how to reach us.') % {'site': settings.JOURNAL_NAME}
         return context
 
 

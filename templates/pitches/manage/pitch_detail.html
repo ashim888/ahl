@@ -17,6 +17,9 @@
             {{ pitch.contact_name }} · <a href="mailto:{{ pitch.contact_email }}" class="underline hover:text-gray-900">{{ pitch.contact_email }}</a>
             · Submitted {{ pitch.created_at|date:"M j, Y" }}
         </p>
+        {% if pitch.is_student %}
+            <p class="mt-2 inline-block px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">Student research{% if pitch.institution %} · {{ pitch.institution }}{% endif %}</p>
+        {% endif %}
 
         <div class="mt-6">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Pitch</p>

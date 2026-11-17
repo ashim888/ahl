@@ -23,7 +23,7 @@
 
             <div class="mt-8 flex flex-wrap items-center gap-4">
                 <a href="{% url 'library:resource_download' resource.slug %}"
-                   {% if resource.is_link %}target="_blank" rel="noopener nofollow"{% endif %}
+                   {% if resource.is_link %}target="_blank" rel="noopener nofollow"{% else %}rel="nofollow"{% endif %}
                    class="inline-flex items-center gap-2 bg-foreground text-primary-foreground px-6 py-3 font-mono-editorial text-xs tracking-widest hover:bg-accent transition-colors">
                     {% if resource.is_link %}
                         {% blocktrans with host=resource.link_host %}OPEN ON {{ host }} ↗{% endblocktrans %}

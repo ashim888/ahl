@@ -27,7 +27,9 @@ from .models import Keyword, keyword_slug
 from .summarize import body_text, sentences
 
 LIMIT = 8
-_TOKEN = re.compile(r'[A-Za-z0-9][A-Za-z0-9\'’-]*|[ऀ-ॿ]+')
+# Devanagari letters and signs only: the block's full stops ।/॥ and digits ०-९
+# (U+0964–F) end a word, so "मधुमेह।" counts as "मधुमेह".
+_TOKEN = re.compile(r'[A-Za-z0-9][A-Za-z0-9\'’-]*|[ऀ-ॣ॰-ॿ]+')
 _DEVANAGARI = re.compile(r'[ऀ-ॿ]')
 _NEPALI_ENDINGS = ('हरूको', 'हरूले', 'हरूमा', 'हरू', 'लाई', 'बाट', 'को', 'का', 'की', 'मा', 'ले')
 STOPWORDS = set((

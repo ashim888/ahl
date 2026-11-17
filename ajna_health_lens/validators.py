@@ -43,6 +43,17 @@ def validate_document_content(file):
     elif name.endswith(('.ppt', '.xls')):
         if header != _DOC_MAGIC:  # also an OLE compound file
             raise ValidationError("This file doesn't look like a real Office file — its content doesn't match its extension.")
+    # Article audio (an audio summary or a podcast episode).
+    elif name.endswith('.mp3'):
+        # An ID3 tag, or straight into an MPEG audio frame (11 sync bits set).
+        if not (header.startswith(b'ID3') or (len(header) > 1 and header[0] == 0xFF and header[1] & 0xE0 == 0xE0)):
+            raise ValidationError("This file doesn't look like a real MP3 — its content doesn't match a .mp3 file.")
+    elif name.endswith('.m4a'):
+        if header[4:8] != b'ftyp':
+            raise ValidationError("This file doesn't look like a real M4A — its content doesn't match a .m4a file.")
+    elif name.endswith('.ogg'):
+        if not header.startswith(b'OggS'):
+            raise ValidationError("This file doesn't look like a real OGG — its content doesn't match a .ogg file.")
     elif name.endswith('.csv'):
         file.seek(0)
         sample = file.read(4096)

@@ -1,0 +1,11 @@
+{% load i18n %}
+{# An embedded Google Form (Article.survey_url, articles/survey.py). Open to every reader, paywall or not. #}
+<section id="survey" class="{{ class }} border border-border scroll-mt-24" aria-labelledby="survey-heading">
+    <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 border-b border-border bg-secondary/40">
+        <h2 id="survey-heading" class="font-mono-editorial text-xs tracking-widest">{% trans "TAKE THE SURVEY" %}</h2>
+        <a href="{{ article.survey_url }}" target="_blank" rel="noopener" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">{% trans "OPEN IN A NEW TAB ↗" %}</a>
+    </div>
+    <iframe src="{{ article.survey_embed_url }}" title="{% trans 'Survey' %}: {{ article.title }}" loading="lazy"
+            class="block w-full bg-white" style="height: min(80vh, 900px);"></iframe>
+    <p class="px-4 py-2.5 border-t border-border text-xs text-muted-foreground">{% trans "This form is run by Google Forms, and your answers go to our editors through it. Don't share medical or other private details you wouldn't want stored there." %}</p>
+</section>

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load i18n news_time text_filters %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block content %}
+{% comment %}Fact checks (Article type FACT_CHECK): each claim with its verdict, filterable by verdict.{% endcomment %}
+{% trans "Fact checks" as title %}{% trans "Health claims spreading in Nepal, checked against the evidence: what is true, what is false, and why." as lead %}
+{% blocktrans count counter=total_count asvar meta %}{{ counter }} CLAIM CHECKED{% plural %}{{ counter }} CLAIMS CHECKED{% endblocktrans %}
+{% with meta=meta|local_digits %}{% include 'includes/page_hero.html' %}{% endwith %}
+
+<div class="max-w-7xl mx-auto px-6 py-12">
+    {% if verdict_choices %}
+        <nav class="flex flex-wrap gap-2" aria-label="{% trans 'Verdict' %}">
+            <a href="{% url 'articles:fact_check_list' %}" class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if not selected_verdict %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}"
+               {% if not selected_verdict %}aria-current="true"{% endif %}>{% trans "ALL" %}</a>
+            {% for value, label, count in verdict_choices %}
+                <a href="?verdict={{ value }}" class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border {% if value == selected_verdict %}bg-foreground text-primary-foreground border-foreground{% else %}border-border text-muted-foreground hover:border-foreground{% endif %}"
+                   {% if value == selected_verdict %}aria-current="true"{% endif %}>{{ label|upper }} <span class="opacity-60">{{ count|local_digits }}</span></a>
+            {% endfor %}
+        </nav>
+    {% endif %}
+
+    <div class="mt-8 border-t border-border divide-y divide-border">
+        {% for article in fact_checks %}
+            <article class="py-6 grid gap-4 sm:grid-cols-[minmax(0,1fr)_16rem] sm:gap-8 verdict--{{ article.fact_check_verdict }}">
+                <div class="min-w-0 max-w-3xl">
+                    <p class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "CLAIM" %}{% if article.fact_check_claim_source %} · {{ article.fact_check_claim_source }}{% endif %}</p>
+                    <p lang="{{ article.fact_check_claim|content_lang }}" class="mt-1 text-lg leading-snug" style="font-family: Georgia, serif;">“{{ article.fact_check_claim|truncatechars:220 }}”</p>
+                    <h2 lang="{{ article.title|content_lang }}" class="mt-3 font-display text-base font-bold leading-snug">
+                        <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline underline-offset-4">{{ article.title }}</a>
+                    </h2>
+                    {% if article.published_at %}<p class="mt-1 font-mono-editorial text-xs text-muted-foreground">{{ article.published_at|news_time }}</p>{% endif %}
+                </div>
+                <div class="sm:border-l sm:border-border sm:pl-6">
+                    <p class="font-mono-editorial text-[0.65rem] tracking-widest text-muted-foreground">{% trans "OUR VERDICT" %}</p>
+                    <p class="mt-1 font-display text-2xl font-extrabold leading-tight" style="color: var(--verdict);">{{ article.get_fact_check_verdict_display }}</p>
+                    <p lang="{{ article.fact_check_verdict_summary|content_lang }}" class="mt-1 text-sm text-muted-foreground leading-relaxed line-clamp-3">{{ article.fact_check_verdict_summary }}</p>
+                </div>
+            </article>
+        {% empty %}
+            <p class="py-14 text-center text-muted-foreground">{% if selected_verdict %}{% trans "No fact checks with this verdict yet." %}{% else %}{% trans "No fact checks published yet." %}{% endif %}</p>
+        {% endfor %}
+    </div>
+
+    <p class="mt-10 text-sm text-muted-foreground">
+        {% trans "Seen a health claim you're not sure about?" %}
+        <a href="mailto:{{ JOURNAL_CONTACT_EMAIL }}" class="font-semibold text-foreground underline underline-offset-4 hover:text-accent">{% trans "Send it to us" %}</a>
+        · <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="underline underline-offset-4 hover:text-accent">{% trans "How we rate claims" %}</a>
+    </p>
+
+    {% include 'includes/pagination_editorial.html' %}
+</div>
+{% endblock %}

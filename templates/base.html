@@ -618,6 +618,8 @@
                     <a href="{% url 'articles:topic_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Topics" %}</a>
                     <a href="{% url 'library:resource_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Health Library" %}</a>
                     <a href="{% url 'library:glossary_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Health Glossary" %}</a>
+                    <a href="{% url 'articles:fact_check_list' %}" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Fact checks" %}</a>
+                    <a href="{% url 'pitches:pitch_create' %}?track=student" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Student research" %}</a>
                     <a href="{% url 'articles:article_list' %}?type=original_research" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Research" %}</a>
                     <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="block w-fit text-sm text-muted-foreground hover:text-foreground hover:underline underline-offset-4 mb-2.5">{% trans "Editorial Policy" %}</a>
                 </div>
@@ -639,7 +641,11 @@
                     &copy; {% now "Y" %} {{ BUSINESS_LEGAL_NAME|default:JOURNAL_NAME_EN }}. {% trans "All rights reserved." %}
                     {% if BUSINESS_PAN %}· PAN {{ BUSINESS_PAN }}{% endif %}{% if BUSINESS_ADDRESS %} · {{ BUSINESS_ADDRESS }}{% endif %}
                 </p>
-                {% if JOURNAL_ISSN %}<p class="font-mono-editorial text-xs text-muted-foreground">ISSN {{ JOURNAL_ISSN }}</p>{% endif %}
+                {% if PRESS_REGISTRATION_NUMBER or JOURNAL_ISSN %}
+                    <p class="font-mono-editorial text-xs text-muted-foreground">
+                        {% if PRESS_REGISTRATION_NUMBER %}{% blocktrans with number=PRESS_REGISTRATION_NUMBER %}Dept. of Information and Broadcasting reg. no. {{ number }}{% endblocktrans %}{% endif %}{% if PRESS_REGISTRATION_NUMBER and JOURNAL_ISSN %} · {% endif %}{% if JOURNAL_ISSN %}ISSN {{ JOURNAL_ISSN }}{% endif %}
+                    </p>
+                {% endif %}
             </div>
         </div>
     </footer>
