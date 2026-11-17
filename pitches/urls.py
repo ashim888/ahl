@@ -7,6 +7,7 @@ app_name = 'pitches'
 urlpatterns = [
     # Any authenticated account — see PitchCreateView in views.py
     path('pitches/new/', views.PitchCreateView.as_view(), name='pitch_create'),
+    path('pitches/claim/', views.ClaimCreateView.as_view(), name='claim_create'),
     path('pitches/thanks/', views.pitch_thanks, name='pitch_thanks'),
     path('pitches/mine/', views.MyPitchesListView.as_view(), name='my_pitches'),
 

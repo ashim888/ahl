@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 11:16+0545\n"
+"POT-Creation-Date: 2026-11-17 13:28+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -62,11 +62,11 @@ msgstr ""
 "के गलत छ र कहाँ। प्रतिलिपि अधिकारको दाबीका लागि: कुन काम तपाईंको हो, पहिले कहाँ "
 "प्रकाशित भयो, र त्यो तपाईंको हो वा तपाईं मालिकका तर्फबाट हुनुहुन्छ भनी पुष्टि गर्नुहोस्।"
 
-#: admin_custom/reports.py:38 pitches/forms.py:37
+#: admin_custom/reports.py:38 pitches/forms.py:37 pitches/forms.py:95
 msgid "Your name"
 msgstr "तपाईंको नाम"
 
-#: admin_custom/reports.py:39 pitches/forms.py:38
+#: admin_custom/reports.py:39 pitches/forms.py:38 pitches/forms.py:96
 msgid "Your email"
 msgstr "तपाईंको इमेल"
 
@@ -183,7 +183,8 @@ msgstr "पडकास्ट"
 msgid "Infographic"
 msgstr "इन्फोग्राफिक"
 
-#: articles/models.py:118 templates/articles/includes/survey_box.html:8
+#: articles/models.py:118 templates/articles/includes/survey_box.html:9
+#: templates/articles/includes/survey_box.html:12
 msgid "Survey"
 msgstr "सर्वेक्षण"
 
@@ -225,15 +226,15 @@ msgstr "सदस्यता"
 msgid "Pay-per-article (special)"
 msgstr "प्रति लेख भुक्तानी (विशेष)"
 
-#: articles/models.py:808
+#: articles/models.py:819
 msgid "Correction"
 msgstr "सच्याइ"
 
-#: articles/models.py:809
+#: articles/models.py:820
 msgid "Clarification"
 msgstr "स्पष्टीकरण"
 
-#: articles/models.py:810
+#: articles/models.py:821
 msgid "Update"
 msgstr "अद्यावधिक"
 
@@ -282,7 +283,7 @@ msgid ""
 msgstr ""
 "%(site)s बाट %(name)s बारे %(count)s सामग्री — ताजा समाचार, अनुसन्धान र व्याख्या।"
 
-#: articles/views.py:365
+#: articles/views.py:368
 #, python-format
 msgid ""
 "%(site)s: evidence-based health news, research explained in plain language, "
@@ -291,40 +292,40 @@ msgstr ""
 "%(site)s: प्रमाणमा आधारित स्वास्थ्य समाचार, सरल भाषामा व्याख्या गरिएका अनुसन्धान, र "
 "हाम्रो समकक्षी-समीक्षित जर्नलका लेखहरू, नेपाली र अंग्रेजीमा।"
 
-#: articles/views.py:392 editorial_board/views.py:125
+#: articles/views.py:395 editorial_board/views.py:125
 #: templates/articles/correction_list.html:4
 #: templates/articles/correction_list.html:7 templates/base.html:639
 msgid "Corrections"
 msgstr "सच्याइहरू"
 
-#: articles/views.py:394
+#: articles/views.py:397
 #, python-format
 msgid ""
 "Every correction, clarification and update %(site)s has made to a published "
 "story."
 msgstr "%(site)s ले प्रकाशित सामग्रीमा गरेका सबै सच्याइ, स्पष्टीकरण र अद्यावधिक।"
 
-#: articles/views.py:415
+#: articles/views.py:418
 #, python-format
 msgid "Health videos from %(site)s: explainers, interviews and reports."
 msgstr "%(site)s का स्वास्थ्य भिडियो: व्याख्या, अन्तर्वार्ता र रिपोर्ट।"
 
-#: articles/views.py:438 templates/articles/podcast_list.html:13
+#: articles/views.py:441 templates/articles/podcast_list.html:13
 msgid "Podcasts"
 msgstr "पडकास्ट"
 
-#: articles/views.py:439
+#: articles/views.py:442
 #, python-format
 msgid ""
 "Health evidence explained in plain language: podcast episodes from %(site)s."
 msgstr "सरल भाषामा व्याख्या गरिएका स्वास्थ्य प्रमाण: %(site)s का पडकास्ट एपिसोडहरू।"
 
-#: articles/views.py:469 templates/articles/fact_check_list.html:9
-#: templates/base.html:626
+#: articles/views.py:472 templates/articles/fact_check_list.html:9
+#: templates/base.html:626 templates/pitches/claim_form.html:15
 msgid "Fact checks"
 msgstr "तथ्य जाँच"
 
-#: articles/views.py:470
+#: articles/views.py:473
 #, python-format
 msgid ""
 "Health claims spreading in Nepal, checked against the evidence by %(site)s: "
@@ -333,81 +334,81 @@ msgstr ""
 "नेपालमा फैलिरहेका स्वास्थ्य दाबीहरू, %(site)s द्वारा प्रमाणसँग जाँचिएका: के सही, के गलत "
 "वा भ्रामक, र किन।"
 
-#: articles/views.py:538
+#: articles/views.py:541
 #, python-format
 msgid "Articles tagged \"%(keyword)s\""
 msgstr "\"%(keyword)s\" मुख्य शब्द भएका लेखहरू"
 
-#: articles/views.py:539
+#: articles/views.py:542
 #, python-format
 msgid "Articles about %(topic)s from %(site)s."
 msgstr "%(site)s मा %(topic)s सम्बन्धी लेखहरू।"
 
-#: articles/views.py:543
+#: articles/views.py:546
 #, python-format
 msgid "%(type)s articles from %(site)s."
 msgstr "%(site)s का %(type)s लेखहरू।"
 
-#: articles/views.py:545
+#: articles/views.py:548
 msgid "All Articles"
 msgstr "सबै लेखहरू"
 
-#: articles/views.py:546
+#: articles/views.py:549
 #, python-format
 msgid "Browse all published articles from %(site)s."
 msgstr "%(site)s का सबै प्रकाशित लेखहरू हेर्नुहोस्।"
 
-#: articles/views.py:571 templates/articles/archive_list.html:9
+#: articles/views.py:574 templates/articles/archive_list.html:9
 msgid "Archive"
 msgstr "अभिलेख"
 
-#: articles/views.py:572
+#: articles/views.py:575
 #, python-format
 msgid "Archived articles from %(site)s."
 msgstr "%(site)s का पुराना लेखहरू।"
 
-#: articles/views.py:614 templates/articles/for_you.html:9
+#: articles/views.py:617 templates/articles/for_you.html:9
 #: templates/base.html:387 templates/base.html:466
 msgid "For You"
 msgstr "तपाईंका लागि"
 
-#: articles/views.py:856
+#: articles/views.py:859
 #, python-format
 msgid "%(byline)s — articles on %(site)s."
 msgstr "%(byline)s — %(site)s मा प्रकाशित लेखहरू।"
 
-#: articles/views.py:965
+#: articles/views.py:968
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:967
+#: articles/views.py:970
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:984
+#: articles/views.py:987
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:986
+#: articles/views.py:989
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:1019 templates/articles/reading_list.html:9
+#: articles/views.py:1022 templates/articles/reading_list.html:9
 #: templates/base.html:390 templates/base.html:467
 msgid "Reading List"
 msgstr "पठन सूची"
 
-#: articles/views.py:1121
+#: articles/views.py:1124
 #, python-format
 msgid "Search %(site)s for articles by title, text, author, or keyword."
 msgstr "%(site)s मा शीर्षक, सामग्री, लेखक वा मुख्य शब्दबाट लेख खोज्नुहोस्।"
 
-#: articles/views.py:1259 sections/views.py:87
+#: articles/views.py:1262 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:1264 sections/views.py:89
+#: articles/views.py:1267 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -1234,6 +1235,33 @@ msgstr "मस्यौदा तयार छ भने यहाँ टाँ�
 msgid "So we can follow up if we'd like to run your story."
 msgstr "तपाईंको कथा प्रकाशित गर्न चाहेमा हामी सम्पर्क गर्न सकौँ भनेर।"
 
+#: pitches/forms.py:92
+msgid "The claim"
+msgstr "दाबी"
+
+#: pitches/forms.py:93
+msgid "Where did you see or hear it? (optional)"
+msgstr "तपाईंले यो कहाँ देख्नुभयो वा सुन्नुभयो? (ऐच्छिक)"
+
+#: pitches/forms.py:94
+msgid "Link (optional)"
+msgstr "लिंक (ऐच्छिक)"
+
+#: pitches/forms.py:99
+msgid "Quote it, or describe it the way people are sharing it."
+msgstr "जस्ताको तस्तै लेख्नुहोस्, वा मानिसहरूले जसरी फैलाइरहेका छन् त्यसरी नै बताउनुहोस्।"
+
+#: pitches/forms.py:100
+msgid ""
+"For example: a Facebook post, a WhatsApp forward, a TV programme, someone at "
+"a pharmacy."
+msgstr ""
+"जस्तै: फेसबुक पोस्ट, ह्वाट्सएपमा आएको सन्देश, टिभी कार्यक्रम, औषधि पसलमा कसैले भनेको कुरा।"
+
+#: pitches/forms.py:108
+msgid "So we can tell you if we check it."
+msgstr "जाँचिएमा तपाईंलाई जानकारी दिन सकौँ भनेर।"
+
 #: pitches/models.py:17
 msgid "Submitted"
 msgstr "पठाइएको"
@@ -1254,11 +1282,27 @@ msgstr "अस्वीकृत"
 msgid "Published"
 msgstr "प्रकाशित"
 
-#: pitches/models.py:46
+#: pitches/models.py:24
+msgid "Story pitch"
+msgstr "कथा प्रस्ताव"
+
+#: pitches/models.py:27
+msgid "Claim to check"
+msgstr "जाँच्नुपर्ने दाबी"
+
+#: pitches/models.py:51
+msgid "Link to the claim"
+msgstr "दाबीको लिंक"
+
+#: pitches/models.py:52
+msgid "Optional: where you saw it (a post, video or article)."
+msgstr "ऐच्छिक: तपाईंले यो कहाँ देख्नुभयो (पोस्ट, भिडियो वा लेख)।"
+
+#: pitches/models.py:57
 msgid "I am a student or early-career researcher"
 msgstr "म विद्यार्थी वा सुरुवाती चरणको अनुसन्धानकर्ता हुँ"
 
-#: pitches/models.py:47
+#: pitches/models.py:58
 msgid ""
 "Tick this if the pitch is about your own research (a thesis, a project, a "
 "paper). An editor will help you turn it into a story for the public."
@@ -1266,7 +1310,7 @@ msgstr ""
 "प्रस्ताव तपाईंकै अनुसन्धान (थेसिस, परियोजना वा शोधपत्र) बारे हो भने यसमा चिन्ह "
 "लगाउनुहोस्। सम्पादकले त्यसलाई आम पाठकका लागि सामग्री बनाउन सहयोग गर्नुहुन्छ।"
 
-#: pitches/models.py:51
+#: pitches/models.py:62
 msgid "Your college, university or institution"
 msgstr "तपाईंको कलेज, विश्वविद्यालय वा संस्था"
 
@@ -1278,6 +1322,14 @@ msgid ""
 msgstr ""
 "नेपालले सुन्नुपर्ने स्वास्थ्य कथा छ? %(site)s का सम्पादकलाई प्रस्ताव पठाउनुहोस् — खाता "
 "चाहिँदैन, र हामी हरेक प्रस्तावको जवाफ दिन्छौँ।"
+
+#: pitches/views.py:78
+#, python-format
+msgid ""
+"Seen a health claim you are not sure about? Send it to the editors of "
+"%(site)s to check."
+msgstr ""
+"कुनै स्वास्थ्य दाबीबारे शंका लाग्यो? जाँचका लागि %(site)s का सम्पादकलाई पठाउनुहोस्।"
 
 #: sections/views.py:56
 #, python-format
@@ -1438,7 +1490,7 @@ msgstr ""
 "दिँदैनौं।"
 
 #: templates/admin_custom/report_form.html:38
-#: templates/pitches/pitch_form.html:66
+#: templates/pitches/claim_form.html:43 templates/pitches/pitch_form.html:66
 msgid "SENDING…"
 msgstr "पठाइँदै…"
 
@@ -2181,6 +2233,7 @@ msgstr "हामीलाई पठाउनुहोस्"
 
 #: templates/articles/fact_check_list.html:50
 #: templates/articles/includes/fact_check_box.html:20
+#: templates/pitches/claim_form.html:49
 msgid "How we rate claims"
 msgstr "हामी दाबीलाई कसरी मूल्याङ्कन गर्छौँ"
 
@@ -2259,15 +2312,23 @@ msgstr "स्रोतहरू लेखको अन्त्यमा सू
 msgid "Subscribers only"
 msgstr "सदस्यहरूका लागि मात्र"
 
-#: templates/articles/includes/survey_box.html:5
-msgid "TAKE THE SURVEY"
-msgstr "सर्वेक्षणमा भाग लिनुहोस्"
-
-#: templates/articles/includes/survey_box.html:6
+#: templates/articles/includes/survey_box.html:10
 msgid "OPEN IN A NEW TAB ↗"
 msgstr "नयाँ ट्याबमा खोल्नुहोस् ↗"
 
-#: templates/articles/includes/survey_box.html:10
+#: templates/articles/includes/survey_box.html:14
+msgid "TAKE THE SURVEY"
+msgstr "सर्वेक्षणमा भाग लिनुहोस्"
+
+#: templates/articles/includes/survey_box.html:15
+msgid ""
+"The form loads from Google Forms when you open it, and Google may set its "
+"own cookies then."
+msgstr ""
+"फारम खोलेपछि मात्र Google Forms बाट लोड हुन्छ, र त्यसबेला Google ले आफ्नै कुकी राख्न "
+"सक्छ।"
+
+#: templates/articles/includes/survey_box.html:17
 msgid ""
 "This form is run by Google Forms, and your answers go to our editors through "
 "it. Don't share medical or other private details you wouldn't want stored "
@@ -2340,11 +2401,11 @@ msgstr "आफ्नो एपमा सुन्नुहोस्"
 msgid "Other podcast apps: add the show by its feed address."
 msgstr "अन्य पडकास्ट एपमा: यो फिड ठेगाना राखेर कार्यक्रम थप्नुहोस्।"
 
-#: templates/articles/podcast_list.html:46
+#: templates/articles/podcast_list.html:44
 msgid "LISTEN →"
 msgstr "सुन्नुहोस् →"
 
-#: templates/articles/podcast_list.html:51
+#: templates/articles/podcast_list.html:49
 msgid "No episodes published yet."
 msgstr "अझै कुनै एपिसोड प्रकाशित भएको छैन।"
 
@@ -4334,6 +4395,31 @@ msgstr "मस्यौदा — प्रकाशित नभएसम्म
 msgid "Last updated %(date)s"
 msgstr "पछिल्लो अद्यावधिक %(date)s"
 
+#: templates/pitches/claim_form.html:3 templates/pitches/claim_form.html:16
+msgid "Send a claim to check"
+msgstr "जाँचका लागि दाबी पठाउनुहोस्"
+
+#: templates/pitches/claim_form.html:17
+msgid ""
+"Seen or heard a health claim you're not sure about? Send it to us. Editors "
+"read every one, and the claims that are spreading widely or could cause harm "
+"are checked against the evidence."
+msgstr ""
+"कुनै स्वास्थ्य दाबी देख्नुभयो वा सुन्नुभयो र शंका लाग्यो? हामीलाई पठाउनुहोस्। सम्पादकले हरेक "
+"दाबी पढ्छन्, र धेरै फैलिएका वा हानि पुर्‍याउन सक्ने दाबीलाई प्रमाणसँग जाँचिन्छ।"
+
+#: templates/pitches/claim_form.html:44
+msgid "SEND THE CLAIM"
+msgstr "दाबी पठाउनुहोस्"
+
+#: templates/pitches/claim_form.html:48
+msgid ""
+"We can't check every claim, and we don't give personal medical advice. If "
+"you're unwell, talk to a doctor or health worker."
+msgstr ""
+"हामी हरेक दाबी जाँच्न सक्दैनौँ, र व्यक्तिगत उपचार सल्लाह दिँदैनौँ। अस्वस्थ हुनुहुन्छ भने डाक्टर "
+"वा स्वास्थ्यकर्मीसँग कुरा गर्नुहोस्।"
+
 #: templates/pitches/includes/pitch_side.html:7
 msgid "How pitching works"
 msgstr "कथा प्रस्ताव कसरी काम गर्छ"
@@ -4452,16 +4538,34 @@ msgid "SUBMIT PITCH"
 msgstr "प्रस्ताव पठाउनुहोस्"
 
 #: templates/pitches/pitch_thanks.html:3
+msgid "Claim received"
+msgstr "दाबी प्राप्त भयो"
+
+#: templates/pitches/pitch_thanks.html:3
 msgid "Pitch received"
 msgstr "प्रस्ताव प्राप्त भयो"
+
+#: templates/pitches/pitch_thanks.html:8
+msgid "CLAIM RECEIVED"
+msgstr "दाबी प्राप्त भयो"
 
 #: templates/pitches/pitch_thanks.html:8
 msgid "PITCH RECEIVED"
 msgstr "प्रस्ताव प्राप्त भयो"
 
 #: templates/pitches/pitch_thanks.html:9
+msgid "Thank you — we’ve got the claim"
+msgstr "धन्यवाद — तपाईंले पठाएको दाबी हामीलाई प्राप्त भयो"
+
+#: templates/pitches/pitch_thanks.html:9
 msgid "Thank you — we’ve got your story idea"
 msgstr "धन्यवाद — तपाईंको समाचारको विचार हामीले पायौं"
+
+#: templates/pitches/pitch_thanks.html:14
+msgid ""
+"An editor reads every claim, and checks the ones that are spreading widely "
+"or could cause harm."
+msgstr "सम्पादकले हरेक दाबी पढ्छन्, र धेरै फैलिएका वा हानि पुर्‍याउन सक्ने दाबीहरू जाँच्छन्।"
 
 #: templates/pitches/pitch_thanks.html:16
 #, python-format
@@ -4471,6 +4575,10 @@ msgid ""
 msgstr ""
 "स्वीकृत भएमा, तपाईंबाट थप जानकारी चाहिएमा, वा हाम्रा लागि उपयुक्त नभएमा हामी "
 "<strong>%(email)s</strong> मा इमेल गर्नेछौं।"
+
+#: templates/pitches/pitch_thanks.html:19
+msgid "If we check it, we publish what the evidence says as a fact check."
+msgstr "जाँचिएमा, प्रमाणले के भन्छ त्यो तथ्य जाँचका रूपमा प्रकाशित गर्छौँ।"
 
 #: templates/pitches/pitch_thanks.html:23
 msgid "FOLLOW YOUR PITCHES"

@@ -1,10 +1,10 @@
 Hi {{ pitch.contact_name }},
 
-We reviewed your story pitch "{{ pitch.title }}" and won't be moving forward with it
+We reviewed your {{ pitch.noun }} "{{ pitch.title }}" and won't be moving forward with it
 at this time.
 
 {% if pitch.editor_feedback %}Editor's note: {{ pitch.editor_feedback }}{% endif %}
 
-You're welcome to submit another pitch anytime.
+{% if pitch.is_claim %}Thanks for sending it — you're welcome to send us other claims anytime.{% else %}You're welcome to submit another pitch anytime.{% endif %}
 
 — Ajna Health Lens Editorial Team

@@ -1,7 +1,8 @@
 Hi {{ pitch.contact_name }},
 
-Good news — your story pitch "{{ pitch.title }}" has been accepted. Our editorial team
-is turning it into an article now and will follow up if we need anything further from you.
+{% if pitch.is_claim %}Good news — we're checking the claim you sent us, "{{ pitch.title }}". We'll publish
+what the evidence says as a fact check, and follow up if we need anything from you.{% else %}Good news — your story pitch "{{ pitch.title }}" has been accepted. Our editorial team
+is turning it into an article now and will follow up if we need anything further from you.{% endif %}
 
 {% if pitch.editor_feedback %}Editor's note: {{ pitch.editor_feedback }}{% endif %}
 

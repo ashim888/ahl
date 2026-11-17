@@ -381,10 +381,15 @@
             {# Access #}
             <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
                 <h2 class="text-sm font-semibold text-gray-900">Access</h2>
-                {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
-                <div id="price-field" class="hidden">
-                    {% include 'admin_dashboard/includes/form_field.html' with field=form.price mark_required=True %}
+                {% with is_fc=form.article_type.value %}
+                <p id="access-free-note" class="text-sm text-gray-600 {% if is_fc != 'fact_check' %}hidden{% endif %}">Fact checks are always free to read: a verdict on a spreading claim has to reach everyone.</p>
+                <div id="access-choice" class="space-y-4 {% if is_fc == 'fact_check' %}hidden{% endif %}">
+                    {% include 'admin_dashboard/includes/form_field.html' with field=form.access_type %}
+                    <div id="price-field" class="hidden">
+                        {% include 'admin_dashboard/includes/form_field.html' with field=form.price mark_required=True %}
+                    </div>
                 </div>
+                {% endwith %}
             </section>
 
             {# Featured image #}
@@ -774,7 +779,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var factCheckFields = document.getElementById('fact-check-fields');
     if (typeField && factCheckFields) {
         typeField.addEventListener('change', function () {
-            factCheckFields.classList.toggle('hidden', typeField.value !== 'fact_check');
+            var isFactCheck = typeField.value === 'fact_check';
+            factCheckFields.classList.toggle('hidden', !isFactCheck);
+            // Always free: the access choice is replaced by a note (Article.save enforces it too).
+            document.getElementById('access-choice').classList.toggle('hidden', isFactCheck);
+            document.getElementById('access-free-note').classList.toggle('hidden', !isFactCheck);
+            if (isFactCheck && accessTypeField) { accessTypeField.value = 'open_access'; updatePriceVisibility(); }
         });
     }
     var contentField = document.getElementById('id_html_content');

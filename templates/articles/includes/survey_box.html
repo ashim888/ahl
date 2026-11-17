@@ -1,11 +1,32 @@
 {% load i18n %}
-{# An embedded Google Form (Article.survey_url, articles/survey.py). Open to every reader, paywall or not. #}
+{% comment %}
+An embedded Google Form (Article.survey_url, articles/survey.py), open to every reader, paywall or not.
+Click to load: nothing from Google loads (and so no Google cookies) until the reader taps the button.
+Without JavaScript the button is a plain link that opens the form in a new tab.
+{% endcomment %}
 <section id="survey" class="{{ class }} border border-border scroll-mt-24" aria-labelledby="survey-heading">
     <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 border-b border-border bg-secondary/40">
-        <h2 id="survey-heading" class="font-mono-editorial text-xs tracking-widest">{% trans "TAKE THE SURVEY" %}</h2>
+        <h2 id="survey-heading" class="font-mono-editorial text-xs tracking-widest">{% trans "Survey" as survey_label %}{{ survey_label|upper }}</h2>
         <a href="{{ article.survey_url }}" target="_blank" rel="noopener" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">{% trans "OPEN IN A NEW TAB ↗" %}</a>
     </div>
-    <iframe src="{{ article.survey_embed_url }}" title="{% trans 'Survey' %}: {{ article.title }}" loading="lazy"
-            class="block w-full bg-white" style="height: min(80vh, 900px);"></iframe>
+    <div data-survey-frame data-src="{{ article.survey_embed_url }}" data-title="{% trans 'Survey' %}: {{ article.title }}" class="px-4 py-8 text-center">
+        <a href="{{ article.survey_url }}" target="_blank" rel="noopener" data-survey-load
+           class="inline-block font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground px-5 py-3 hover:bg-accent transition-colors">{% trans "TAKE THE SURVEY" %}</a>
+        <p class="mt-3 text-xs text-muted-foreground max-w-md mx-auto">{% trans "The form loads from Google Forms when you open it, and Google may set its own cookies then." %}</p>
+    </div>
     <p class="px-4 py-2.5 border-t border-border text-xs text-muted-foreground">{% trans "This form is run by Google Forms, and your answers go to our editors through it. Don't share medical or other private details you wouldn't want stored there." %}</p>
+    <script>
+        (function (box) {
+            box.querySelector('[data-survey-load]').addEventListener('click', function (event) {
+                event.preventDefault();
+                var frame = document.createElement('iframe');
+                frame.src = box.dataset.src;
+                frame.title = box.dataset.title;
+                frame.className = 'block w-full bg-white';
+                frame.style.height = 'min(80vh, 900px)';
+                box.replaceWith(frame);
+                frame.focus();
+            });
+        })(document.currentScript.parentElement.querySelector('[data-survey-frame]'));
+    </script>
 </section>

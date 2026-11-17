@@ -44,7 +44,9 @@ class SurveyStoryTests(TestCase):
         with patch('billing.access.FREE_SAMPLE_LIMIT_PER_MONTH', 0):
             response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
         self.assertFalse(response.context['show_full_text'])
-        self.assertContains(response, f'src="{EMBED.replace("&", "&amp;")}"')
+        # Click to load: the form's address is on the page, but nothing loads from Google until a tap.
+        self.assertContains(response, f'data-src="{EMBED.replace("&", "&amp;")}"')
+        self.assertNotContains(response, '<iframe src="https://docs.google.com')
         from django.conf import settings
 
         self.assertIn('https://docs.google.com', settings.CSP_DIRECTIVES['frame-src'])  # or the browser blocks it

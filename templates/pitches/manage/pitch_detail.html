@@ -17,6 +17,12 @@
             {{ pitch.contact_name }} · <a href="mailto:{{ pitch.contact_email }}" class="underline hover:text-gray-900">{{ pitch.contact_email }}</a>
             · Submitted {{ pitch.created_at|date:"M j, Y" }}
         </p>
+        {% if pitch.is_claim %}
+            <p class="mt-2 text-sm"><span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-medium">Claim to check</span>
+                {% if pitch.claim_url %}<a href="{{ pitch.claim_url }}" target="_blank" rel="noopener noreferrer nofollow" class="ml-2 underline text-gray-600 hover:text-gray-900 break-all">{{ pitch.claim_url }}</a>{% endif %}
+            </p>
+            <p class="mt-1 text-xs text-gray-500">Accepting it opens a Fact check draft with the claim filled in.</p>
+        {% endif %}
         {% if pitch.is_student %}
             <p class="mt-2 inline-block px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">Student research{% if pitch.institution %} · {{ pitch.institution }}{% endif %}</p>
         {% endif %}

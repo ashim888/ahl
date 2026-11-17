@@ -20,6 +20,12 @@ class StoryPitch(models.Model):
         REJECTED = 'rejected', _('Rejected')
         PUBLISHED = 'published', _('Published')
 
+    class Kind(models.TextChoices):
+        STORY = 'story', _('Story pitch')
+        # A health claim a reader wants checked (/pitches/claim/, from the
+        # fact-checks page). Accepting one opens a Fact check draft.
+        CLAIM = 'claim', _('Claim to check')
+
     title = models.CharField(max_length=500)
     summary = models.TextField(help_text='The pitch itself — what the story is and why it matters now.')
     body = models.TextField(
@@ -39,6 +45,11 @@ class StoryPitch(models.Model):
     )
     submitter_email = models.EmailField(
         blank=True, help_text='Only used for an anonymous (not logged in) pitch — how to follow up with them.',
+    )
+    kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.STORY)
+    claim_url = models.URLField(
+        _('Link to the claim'), max_length=500, blank=True,
+        help_text=_('Optional: where you saw it (a post, video or article).'),
     )
     # The student research track (/pitches/new/?track=student): students and
     # early-career researchers turning their own research into a story.
@@ -70,6 +81,15 @@ class StoryPitch(models.Model):
 
     def __str__(self):
         return f'{self.title} ({self.get_status_display()})'
+
+    @property
+    def is_claim(self):
+        return self.kind == self.Kind.CLAIM
+
+    @property
+    def noun(self):
+        """For the (English) emails: "story pitch" or "claim"."""
+        return 'claim' if self.is_claim else 'story pitch'
 
     @property
     def contact_name(self):

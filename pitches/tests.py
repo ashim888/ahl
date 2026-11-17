@@ -719,3 +719,61 @@ class PitchFormWidgetRenderingTests(TestCase):
             response = self.client.get(reverse('pitches:pitch_create'))
         self.assertContains(response, 'cf-turnstile')
         self.assertContains(response, 'test-site-key')
+
+
+class ClaimsInboxTests(TestCase):
+    """Readers send health claims to check (/pitches/claim/, from /fact-checks/);
+    they land in the pitch queue, and accepting one opens a Fact check draft."""
+
+    claim = 'Drinking papaya leaf juice cures dengue in two days, and nobody needs a hospital.'
+
+    def send(self, **extra):
+        return self.client.post(reverse('pitches:claim_create'), {
+            'summary': self.claim, 'body': 'A WhatsApp forward\nshared in family groups',
+            'claim_url': 'https://web.archive.org/web/2026/https://example.com/post',
+            'submitter_name': 'Reader', 'submitter_email': 'reader@example.com', **extra})
+
+    def test_claims_are_rate_limited(self):
+        # Public, no account, and every claim emails the senior staff: the
+        # pitch view's 10/h-per-IP limit must cover claims too (inherited).
+        for i in range(10):
+            self.send(summary=f'Claim {i}')
+        response = self.send(summary='Claim overflow')
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(StoryPitch.objects.filter(summary='Claim overflow').exists())
+
+    def test_fact_check_page_links_to_the_form(self):
+        self.assertContains(self.client.get(reverse('articles:fact_check_list')), reverse('pitches:claim_create'))
+
+    def test_sending_a_claim(self):
+        response = self.send()
+        self.assertRedirects(response, reverse('pitches:pitch_thanks'), fetch_redirect_response=False)
+        pitch = StoryPitch.objects.get()
+        self.assertEqual(pitch.kind, StoryPitch.Kind.CLAIM)
+        self.assertEqual(pitch.title, self.claim)
+        self.assertIn('We received your claim', mail.outbox[0].subject)
+        self.assertContains(self.client.get(reverse('pitches:pitch_thanks')), 'CLAIM RECEIVED')
+
+    def test_long_claim_gets_a_short_title_and_no_name_means_no_claim(self):
+        self.send(summary='word ' * 100)
+        self.assertLessEqual(len(StoryPitch.objects.get().title), 120)
+        self.send(submitter_name='')
+        self.assertEqual(StoryPitch.objects.count(), 1)  # anonymous readers leave a name, like pitches
+
+    def test_accepting_opens_a_fact_check_draft(self):
+        self.send()
+        pitch = StoryPitch.objects.get()
+        editor = make_editor()
+        self.client.force_login(editor)
+        queue = self.client.get(reverse('pitches:manage_pitch_queue'), {'claims': '1'})
+        self.assertEqual(list(queue.context['pitches']), [pitch])
+        mail.outbox = []
+        self.client.post(reverse('pitches:manage_pitch_decide', args=[pitch.pk, 'accept']))
+        article = Article.objects.get()
+        self.assertEqual(article.article_type, Article.ArticleType.FACT_CHECK)
+        self.assertEqual(article.status, Article.Status.DRAFT)
+        self.assertEqual(article.fact_check_claim, self.claim)
+        self.assertEqual(article.fact_check_claim_source, 'A WhatsApp forward shared in family groups')
+        self.assertEqual(article.fact_check_claim_url, 'https://web.archive.org/web/2026/https://example.com/post')
+        self.assertFalse(ArticleAuthor.objects.filter(article=article).exists())  # the reader isn't the author
+        self.assertIn("we're checking the claim", mail.outbox[0].body)

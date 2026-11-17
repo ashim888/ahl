@@ -1,6 +1,6 @@
 Hi,
 
-A new story pitch has been submitted:
+A new {{ pitch.noun }} has been submitted:
 
 "{{ pitch.title }}"
 From: {{ pitch.contact_name }} <{{ pitch.contact_email }}>

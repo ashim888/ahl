@@ -5,11 +5,15 @@
 {% block heading %}Your pitch has been accepted{% endblock %}
 {% block content %}
     <p>Hi {{ pitch.contact_name }},</p>
+    {% if pitch.is_claim %}
+    <p>Good news — we're checking the claim you sent us, <strong>“{{ pitch.title }}”</strong>. We'll publish what the evidence says as a fact check, and follow up if we need anything from you.</p>
+    {% else %}
     <p>Good news — your story pitch <strong>“{{ pitch.title }}”</strong> has been accepted. Our editorial team is turning it into an article now and will follow up if we need anything further from you.</p>
+    {% endif %}
     {% if pitch.editor_feedback %}
         <p style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #6b6860; margin-bottom: 6px;">Editor's note</p>
         {% include 'email/includes/quote.html' with text=pitch.editor_feedback %}
     {% endif %}
     <p>— {{ journal_name }} Editorial Team</p>
 {% endblock %}
-{% block footer_reason %}You're receiving this because you submitted a story pitch to {{ journal_name }}. Reply to this email to reach the editors.{% endblock %}
+{% block footer_reason %}You're receiving this because you sent a {{ pitch.noun }} to {{ journal_name }}. Reply to this email to reach the editors.{% endblock %}

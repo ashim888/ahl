@@ -1,8 +1,10 @@
 Hi {{ pitch.contact_name }},
 
-Thanks for pitching "{{ pitch.title }}" to Ajna Health Lens. Our editorial team reviews
+{% if pitch.is_claim %}Thanks for sending us the claim "{{ pitch.title }}". Our editors read every claim
+and check the ones that are spreading widely or could cause harm. We'll email you if we
+check it.{% else %}Thanks for pitching "{{ pitch.title }}" to Ajna Health Lens. Our editorial team reviews
 every pitch — we'll email you as soon as there's an update, whether that's moving it
-into review, accepting it, or letting you know it's not a fit this time.
+into review, accepting it, or letting you know it's not a fit this time.{% endif %}
 
 No need to do anything else for now.
 

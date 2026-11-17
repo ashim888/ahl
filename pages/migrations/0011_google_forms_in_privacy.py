@@ -10,9 +10,9 @@ CHANGES = [
      "through Google, and Google's own privacy policy applies to them.</li>\n"),
     ('We ask again after 6 months.</p>',
      'We ask again after 6 months.</p>\n'
-     '<p><strong>Surveys:</strong> some stories include a survey run on Google Forms. While the survey is shown, Google '
-     'may set its own cookies inside it, under Google\'s privacy policy. Our cookie settings don\'t cover these; you can '
-     'block them in your browser.</p>'),
+     '<p><strong>Surveys:</strong> some stories include a survey run on Google Forms. Nothing loads from Google until '
+     'you choose to open the survey; once you do, Google may set its own cookies inside it, under Google\'s privacy '
+     'policy. Our cookie settings don\'t cover these; you can block them in your browser.</p>'),
 ]
 
 

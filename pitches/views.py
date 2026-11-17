@@ -18,7 +18,7 @@ from articles.models import Article, ArticleAuthor, Author
 from users.decorators import role_required
 from users.models import User
 
-from .forms import PitchDecisionForm, StoryPitchForm
+from .forms import ClaimForm, PitchDecisionForm, StoryPitchForm
 from .models import StoryPitch
 from .signals import SUBMITTER_FROM_EMAIL
 
@@ -63,6 +63,21 @@ class PitchCreateView(CreateView):
 
     def get_success_url(self):
         return reverse('pitches:pitch_thanks')
+
+
+class ClaimCreateView(PitchCreateView):
+    """/pitches/claim/ — a reader sends a health claim to check (linked from
+    /fact-checks/). Lands in the pitch queue as a "Claim to check"."""
+
+    form_class = ClaimForm
+    template_name = 'pitches/claim_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['meta_description'] = _(
+            'Seen a health claim you are not sure about? Send it to the editors of %(site)s to check.') % {
+            'site': settings.JOURNAL_NAME}
+        return context
 
 
 def pitch_thanks(request):
@@ -120,6 +135,8 @@ class PitchQueueListView(ListView):
             queryset = queryset.exclude(status__in=[StoryPitch.Status.ACCEPTED, StoryPitch.Status.REJECTED, StoryPitch.Status.PUBLISHED])
         if self.request.GET.get('student'):
             queryset = queryset.filter(is_student=True)
+        if self.request.GET.get('claims'):
+            queryset = queryset.filter(kind=StoryPitch.Kind.CLAIM)
         if q:
             queryset = queryset.filter(
                 Q(title__icontains=q) | Q(submitter_name__icontains=q) | Q(submitter_email__icontains=q)
@@ -133,6 +150,7 @@ class PitchQueueListView(ListView):
         context['selected_status'] = self.request.GET.get('status', '')
         context['selected_q'] = self.request.GET.get('q', '')
         context['student_only'] = bool(self.request.GET.get('student'))
+        context['claims_only'] = bool(self.request.GET.get('claims'))
         return context
 
 
@@ -153,7 +171,7 @@ def pitch_detail(request, pk):
             # text, and only if there's something to actually tell them.
             if pitch.editor_feedback and pitch.editor_feedback != previous_feedback and pitch.contact_email:
                 send_templated_email(
-                    subject=f'A note on your story pitch: "{pitch.title}"',
+                    subject=f'A note on your {pitch.noun}: "{pitch.title}"',
                     template='pitches/email/pitch_feedback',
                     context={'pitch': pitch},
                     recipient_list=[pitch.contact_email],
@@ -186,28 +204,7 @@ def pitch_decide(request, pk, decision):
         pitch.save()
         messages.success(request, f'"{pitch.title}" rejected.')
     elif decision == 'accept':
-        # slug left blank — Article.save() generates one from the title
-        # (plus a unique short_code) automatically.
-        # pitch.body is plain text from a public, low-trust submission form
-        # (any authenticated account, or anonymous — see StoryPitch's
-        # docstring) — Article.html_content is documented as trusted,
-        # editor-authored HTML rendered unescaped ({{ chunk|safe }} in
-        # article_detail.html). linebreaks() escapes it into safe paragraph
-        # HTML rather than pouring raw pitch text into that trust boundary,
-        # which would otherwise let a pitch submitter's <script> execute for
-        # the reviewing editor and, if published, every reader.
-        article = Article.objects.create(
-            title=pitch.title, abstract=pitch.summary,
-            article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
-            html_content=linebreaks(pitch.body, autoescape=True) if pitch.body else None,
-        )
-        # An anonymous pitch gets no automatic byline — the editor decides
-        # whether and how to credit the person, and can add them by name on
-        # the article's Authors screen (no account needed, see Author).
-        if pitch.submitter:
-            ArticleAuthor.objects.create(
-                article=article, author=Author.for_user(pitch.submitter), order=0, is_corresponding=True,
-            )
+        article = article_from_pitch(pitch)
         pitch.article = article
         pitch.status = StoryPitch.Status.ACCEPTED
         pitch.reviewed_by = request.user
@@ -244,18 +241,7 @@ def pitch_bulk_decide(request):
             pitch.decided_at = timezone.now()
             pitch.save()
         elif decision == 'accept':
-            # See the matching comment in pitch_decide above — pitch.body is
-            # low-trust public input, escaped via linebreaks() before it can
-            # reach Article.html_content's "trusted HTML, rendered unescaped" field.
-            article = Article.objects.create(
-                title=pitch.title, abstract=pitch.summary,
-                article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
-                html_content=linebreaks(pitch.body, autoescape=True) if pitch.body else None,
-            )
-            if pitch.submitter:
-                ArticleAuthor.objects.create(
-                    article=article, author=Author.for_user(pitch.submitter), order=0, is_corresponding=True,
-                )
+            article = article_from_pitch(pitch)
             pitch.article = article
             pitch.status = StoryPitch.Status.ACCEPTED
             pitch.reviewed_by = request.user
@@ -268,3 +254,35 @@ def pitch_bulk_decide(request):
     else:
         messages.error(request, 'No eligible pitches were selected.')
     return redirect('pitches:manage_pitch_queue')
+
+
+def article_from_pitch(pitch):
+    """The draft article an accepted pitch becomes. A story pitch: a news
+    draft, its submitter (if signed in) as the byline. A reader's claim: a
+    Fact check draft with the claim filled in; the reader isn't its author.
+
+    pitch.body is plain text from a public, low-trust form, while
+    Article.html_content is trusted editor HTML rendered unescaped
+    ({{ chunk|safe }} in article_detail.html). linebreaks() escapes it, so a
+    submitter's <script> can't run for the reviewing editor or, once
+    published, for every reader. The slug is left blank: Article.save()
+    makes one from the title."""
+    if pitch.is_claim:
+        return Article.objects.create(
+            title=pitch.title, article_type=Article.ArticleType.FACT_CHECK, status=Article.Status.DRAFT,
+            fact_check_claim=pitch.summary, fact_check_claim_source=' '.join(pitch.body.split())[:200],
+            fact_check_claim_url=pitch.claim_url,
+        )
+    article = Article.objects.create(
+        title=pitch.title, abstract=pitch.summary,
+        article_type=Article.ArticleType.NEWS_COMMENTARY, status=Article.Status.DRAFT,
+        html_content=linebreaks(pitch.body, autoescape=True) if pitch.body else None,
+    )
+    # An anonymous pitch gets no automatic byline — the editor decides
+    # whether and how to credit the person, and can add them by name on
+    # the article's Authors screen (no account needed, see Author).
+    if pitch.submitter:
+        ArticleAuthor.objects.create(
+            article=article, author=Author.for_user(pitch.submitter), order=0, is_corresponding=True,
+        )
+    return article

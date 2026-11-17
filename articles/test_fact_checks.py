@@ -32,14 +32,15 @@ class FactCheckPageTests(TestCase):
         self.assertContains(response, 'Viral Facebook posts')
         self.assertContains(response, 'verdict-chip verdict-chip--false')
 
-    def test_verdict_shown_even_when_text_is_for_subscribers(self):
+    def test_always_free_whatever_access_was_chosen(self):
         from unittest.mock import patch
 
-        article = fact_check(access_type=Article.AccessType.SUBSCRIPTION)
-        with patch('billing.access.FREE_SAMPLE_LIMIT_PER_MONTH', 0):  # no free reads left: the paywall shows
+        article = fact_check(access_type=Article.AccessType.PAY_PER_ARTICLE, price=50)
+        self.assertEqual((article.access_type, article.price), (Article.AccessType.OPEN_ACCESS, None))
+        with patch('billing.access.FREE_SAMPLE_LIMIT_PER_MONTH', 0):  # no free reads left: still the whole story
             response = self.client.get(reverse('articles:article_detail', args=[article.slug]))
-        self.assertFalse(response.context['show_full_text'])
-        self.assertContains(response, 'No study shows hot water kills the dengue virus')
+        self.assertTrue(response.context['show_full_text'])
+        self.assertContains(response, 'The evidence.')
 
     def test_claim_review_structured_data(self):
         article = fact_check(verdict='mostly_false')
@@ -88,6 +89,12 @@ class FactCheckFormTests(TestCase):
                 'featured_image_fit': 'cover', 'html_content': '<p>x</p>'}
         data.update(extra)
         return ArticleForm(data=data)
+
+    def test_paid_access_is_overridden_not_an_error(self):
+        form = self.form(fact_check_claim='c', fact_check_verdict='false', fact_check_verdict_summary='s',
+                         access_type='pay_per_article')  # no price: would normally be refused
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().access_type, Article.AccessType.OPEN_ACCESS)
 
     def test_claim_verdict_and_reason_required_for_fact_checks(self):
         form = self.form()

@@ -1,0 +1,39 @@
+{% load i18n %}
+{% comment %}
+The fields of the public pitch and claim forms (pitch_form.html, claim_form.html):
+honeypot, errors, each field wired to its hint and error for screen readers, CAPTCHA and privacy note.
+{% endcomment %}
+{{ form.website }}
+{% if form.non_field_errors %}
+    <p class="text-xs text-accent">{{ form.non_field_errors }}</p>
+{% endif %}
+{% for field in form.visible_fields %}
+    {% if field.name == 'is_student' %}
+    {# Classes on the checkbox come from pitches/forms.py; listed here so Tailwind builds them: mt-1 h-4 w-4 shrink-0 accent-accent #}
+    <div class="flex items-start gap-3">
+        {{ field }}
+        <div>
+            <label for="{{ field.id_for_label }}" class="text-sm font-medium">{{ field.label }}</label>
+            <p id="{{ field.auto_id }}_helptext" class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
+        </div>
+    </div>
+    {% else %}
+    <div>
+        <label class="block font-mono-editorial text-xs tracking-widest text-muted-foreground mb-1.5" for="{{ field.id_for_label }}">
+            {{ field.label|upper }}{% if field.field.required %} <span class="text-accent">*</span>{% endif %}
+        </label>
+        {{ field }}
+        {# ids match the aria-describedby Django puts on the field, so screen readers read hint and error with it #}
+        {% if field.help_text %}
+            <p id="{{ field.auto_id }}_helptext" class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
+        {% endif %}
+        {% if field.errors %}<div id="{{ field.auto_id }}_error">{% for error in field.errors %}
+            <p class="mt-1 text-xs text-accent">{{ error }}</p>
+        {% endfor %}</div>{% endif %}
+    </div>
+    {% endif %}
+{% endfor %}
+{% if turnstile_site_key %}
+    <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+{% endif %}
+{% include 'includes/privacy_notice.html' with kind='pitch' %}

@@ -36,7 +36,7 @@ def notify_submitter_of_pitch_received(sender, instance, created, **kwargs):
     if not created or not instance.contact_email:
         return
     send_templated_email(
-        subject=f'We received your story pitch: "{instance.title}"',
+        subject=f'We received your {instance.noun}: "{instance.title}"',
         template='pitches/email/pitch_submitted',
         context={'pitch': instance},
         recipient_list=[instance.contact_email],
@@ -60,7 +60,7 @@ def notify_on_status_change(sender, instance, **kwargs):
     # present at the DB level the way an account's email is.
     if template and instance.contact_email:
         send_templated_email(
-            subject=f'Update on your story pitch: "{instance.title}"',
+            subject=f'Update on your {instance.noun}: "{instance.title}"',
             template=template,
             context={'pitch': instance},
             recipient_list=[instance.contact_email],
@@ -85,7 +85,7 @@ def notify_editorial_staff_of_new_pitch(sender, instance, created, **kwargs):
         return
 
     send_templated_email(
-        subject=f'New story pitch: "{instance.title}"',
+        subject=f'New {instance.noun}: "{instance.title}"',
         template='pitches/email/new_pitch_submitted',
         context={
             'pitch': instance,

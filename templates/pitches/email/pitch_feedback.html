@@ -5,9 +5,9 @@
 {% block heading %}A note on your pitch{% endblock %}
 {% block content %}
     <p>Hi {{ pitch.contact_name }},</p>
-    <p>The editorial team left you a note on your story pitch <strong>“{{ pitch.title }}”</strong>:</p>
+    <p>The editorial team left you a note on your {{ pitch.noun }} <strong>“{{ pitch.title }}”</strong>:</p>
     {% include 'email/includes/quote.html' with text=pitch.editor_feedback %}
     <p>This doesn't change its status — it's still {{ pitch.get_status_display|lower }}. Reply to this email if you'd like to follow up.</p>
     <p>— {{ journal_name }} Editorial Team</p>
 {% endblock %}
-{% block footer_reason %}You're receiving this because you submitted a story pitch to {{ journal_name }}. Reply to this email to reach the editors.{% endblock %}
+{% block footer_reason %}You're receiving this because you sent a {{ pitch.noun }} to {{ journal_name }}. Reply to this email to reach the editors.{% endblock %}

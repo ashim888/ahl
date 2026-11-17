@@ -45,7 +45,7 @@
 
     <p class="mt-10 text-sm text-muted-foreground">
         {% trans "Seen a health claim you're not sure about?" %}
-        <a href="mailto:{{ JOURNAL_CONTACT_EMAIL }}" class="font-semibold text-foreground underline underline-offset-4 hover:text-accent">{% trans "Send it to us" %}</a>
+        <a href="{% url 'pitches:claim_create' %}" class="font-semibold text-foreground underline underline-offset-4 hover:text-accent">{% trans "Send it to us" %}</a>
         · <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="underline underline-offset-4 hover:text-accent">{% trans "How we rate claims" %}</a>
     </p>
 

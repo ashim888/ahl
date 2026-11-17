@@ -59,7 +59,7 @@ class StoryPitchForm(forms.ModelForm):
             self.fields['submitter_name'].required = True
             self.fields['submitter_email'].required = True
             self.fields['submitter_email'].help_text = _("So we can follow up if we'd like to run your story.")
-        if request and request.GET.get('track') == 'student':
+        if request and request.GET.get('track') == 'student' and 'is_student' in self.fields:
             self.fields['is_student'].initial = True
 
     def clean_website(self):
@@ -75,6 +75,43 @@ class StoryPitchForm(forms.ModelForm):
         if not verify_turnstile(token, remote_ip):
             raise forms.ValidationError('CAPTCHA verification failed — please try again.')
         return cleaned_data
+
+
+class ClaimForm(StoryPitchForm):
+    """A health claim a reader wants checked (/pitches/claim/, linked from the
+    fact-checks page). Same protections as a pitch (CAPTCHA, honeypot, the
+    view's rate limit); it lands in the pitch queue as kind CLAIM."""
+
+    class Meta(StoryPitchForm.Meta):
+        fields = ['summary', 'body', 'claim_url', 'submitter_name', 'submitter_email']
+        widgets = {
+            'summary': forms.Textarea(attrs={'rows': 4}),
+            'body': forms.Textarea(attrs={'rows': 3}),
+        }
+        labels = {
+            'summary': _('The claim'),
+            'body': _('Where did you see or hear it? (optional)'),
+            'claim_url': _('Link (optional)'),
+            'submitter_name': _('Your name'),
+            'submitter_email': _('Your email'),
+        }
+        help_texts = {
+            'summary': _('Quote it, or describe it the way people are sharing it.'),
+            'body': _('For example: a Facebook post, a WhatsApp forward, a TV programme, someone at a pharmacy.'),
+            'claim_url': '',
+            'submitter_name': '',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'submitter_email' in self.fields:
+            self.fields['submitter_email'].help_text = _('So we can tell you if we check it.')
+
+    def save(self, commit=True):
+        self.instance.kind = StoryPitch.Kind.CLAIM
+        claim = ' '.join(self.cleaned_data['summary'].split())
+        self.instance.title = claim if len(claim) <= 120 else claim[:119].rstrip() + '…'
+        return super().save(commit)
 
 
 class PitchDecisionForm(forms.ModelForm):

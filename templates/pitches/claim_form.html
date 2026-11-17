@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Send a claim to check" %} — {{ JOURNAL_NAME }}{% endblock %}
+
+{% block extra_head %}
+    {% if turnstile_site_key %}
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+{# A reader's claim for the fact-check desk (pitches.ClaimForm): lands in the pitch queue as a "Claim to check". #}
+<div class="max-w-2xl mx-auto px-6 py-12 lg:py-16">
+    <div class="rule-editorial mb-6"></div>
+    <a href="{% url 'articles:fact_check_list' %}" class="font-mono-editorial text-xs tracking-widest text-muted-foreground hover:text-accent">← {% trans "Fact checks" as fc %}{{ fc|upper }}</a>
+    <h1 class="mt-3 font-display text-3xl font-bold" style="letter-spacing: -0.02em;">{% trans "Send a claim to check" %}</h1>
+    <p class="mt-2 text-muted-foreground">{% trans "Seen or heard a health claim you're not sure about? Send it to us. Editors read every one, and the claims that are spreading widely or could cause harm are checked against the evidence." %}</p>
+
+    <form method="post" class="mt-8 space-y-5">
+        {% csrf_token %}
+        {% include 'pitches/includes/form_fields.html' %}
+        <button type="submit" data-loading-text="{% trans 'SENDING…' %}" class="w-full font-mono-editorial text-xs tracking-widest bg-foreground text-primary-foreground py-3 hover:bg-accent transition-colors">
+            {% trans "SEND THE CLAIM" %}
+        </button>
+    </form>
+    <p class="mt-6 text-xs text-muted-foreground">
+        {% trans "We can't check every claim, and we don't give personal medical advice. If you're unwell, talk to a doctor or health worker." %}
+        <a href="{% url 'editorial_board:public_list' %}?tab=policies" class="underline underline-offset-4 hover:text-accent">{% trans "How we rate claims" %}</a>
+    </p>
+</div>
+{% endblock %}
+
+{% block header_ad %}{% endblock %}{% block anchor_ad %}{% endblock %}

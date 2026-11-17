@@ -575,6 +575,10 @@ class Article(models.Model):
             if self.published_at is None or self.published_at > now:
                 self.published_at = now
             self.publication_date = timezone.localdate(self.published_at)
+        if self.article_type == self.ArticleType.FACT_CHECK:
+            # Fact checks are always free: a verdict on a spreading claim has
+            # to reach everyone (every save path: form, autosave, admin, imports).
+            self.access_type, self.price = self.AccessType.OPEN_ACCESS, None
         if self.translation_id == self.pk:
             self.translation = None
         if self.translation_id:  # free the partner from its earlier pairing (one-to-one)
