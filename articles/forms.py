@@ -4,7 +4,6 @@ import re
 
 from django import forms
 from django.utils import timezone
-from django.utils.html import strip_tags
 from django.utils.text import slugify
 from django_ckeditor_5.widgets import CKEditor5Widget
 
@@ -57,12 +56,18 @@ class TagifyRelatedArticlesField(forms.CharField):
     """Backs the Tagify-enhanced "Related articles" input (article_form.html)
     — Tagify serializes its chips as a JSON array of {"value": title,
     "id": pk} objects. Unlike TagifyKeywordsField this never creates
-    anything: only existing, published articles can be picked, and the
+    anything: only existing articles (published ones, unless published_only=False) can be picked, and the
     article being edited is dropped (ArticleForm.clean_related_articles).
     With JS off it accepts a comma-separated list of article pks.
     """
 
     widget = forms.TextInput
+
+    def __init__(self, *args, published_only=True, **kwargs):
+        # The translation picker turns this off: a linked draft translation must
+        # survive the published article being saved (Article.translation).
+        self.published_only = published_only
+        super().__init__(*args, **kwargs)
 
     def to_python(self, value):
         if not value:
@@ -80,7 +85,10 @@ class TagifyRelatedArticlesField(forms.CharField):
                 continue
             if pk not in ids:
                 ids.append(pk)
-        found = Article.objects.filter(pk__in=ids, status=Article.Status.PUBLISHED).in_bulk()
+        articles = Article.objects.filter(pk__in=ids)
+        if self.published_only:
+            articles = articles.filter(status=Article.Status.PUBLISHED)
+        found = articles.in_bulk()
         return [found[pk] for pk in ids if pk in found]
 
 
@@ -132,7 +140,7 @@ class ArticleForm(forms.ModelForm):
 
     # Article.translation, picked like a related article (one chip only).
     translation_pick = TagifyRelatedArticlesField(
-        required=False, label='Other-language version',
+        required=False, published_only=False, label='Other-language version',
         help_text='The same story published in the other language (Nepali or English). Readers get a '
                   '"Read in English" / "नेपालीमा पढ्नुहोस्" link, and the link is added to the other one too.',
     )
@@ -441,21 +449,12 @@ class PublishArticleForm(ArticleForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if self.instance.pk and self.instance.status == Article.Status.PUBLISHED:
-            # Already live: don't block fixing a typo in an older article
-            # that was published before this rule existed (e.g. abstract-only).
+        # Already live: don't block fixing a typo in an older article that was
+        # published before these rules existed (e.g. abstract-only).
+        self.first_publish = not (self.instance.pk and self.instance.status == Article.Status.PUBLISHED)
+        if not self.first_publish:
             return cleaned_data
         body = cleaned_data.get('html_content') or ''
-        has_pdf = bool(cleaned_data.get('pdf_file') or self.instance.pdf_file)
-        # A video story's video is its content; the text is optional.
-        has_video = bool(cleaned_data.get('video_url'))
-        has_audio = bool(cleaned_data.get('audio_file') or self.instance.audio_file)  # a podcast's audio is its content
-        has_infographic = cleaned_data.get('article_type') == Article.ArticleType.INFOGRAPHIC and bool(
-            cleaned_data.get('featured_image') or self.instance.featured_image)
-        has_survey = bool(cleaned_data.get('survey_url'))
-        if not strip_tags(body).strip() and '<img' not in body and not (
-                has_pdf or has_video or has_audio or has_infographic or has_survey):
-            self.add_error('html_content', 'Add the article text (or a video link, audio, or a PDF) before publishing.')
         # Accessibility: every image needs a description for screen-reader users.
         missing = images_missing_alt(body)
         if missing:
@@ -467,6 +466,12 @@ class PublishArticleForm(ArticleForm):
         if has_featured and not (cleaned_data.get('featured_image_alt') or '').strip() and 'featured_image_alt' in self.fields:
             self.add_error('featured_image_alt', 'Describe the featured image for readers who can’t see it.')
         return cleaned_data
+
+    def _post_clean(self):
+        super()._post_clean()  # copies the form's values onto self.instance
+        # The same rule as one-click Publish (Article.has_publishable_content).
+        if getattr(self, 'first_publish', False) and not self.instance.has_publishable_content:
+            self.add_error('html_content', 'Add the article text (or a video, audio, survey or PDF) before publishing.')
 
 
 class ScheduleArticleForm(PublishArticleForm):

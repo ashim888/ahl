@@ -13,6 +13,7 @@ LINK_TARGETS = [
     ('training:course_list', 'Training'),
     ('issues:issue_list', 'Issues'),
     ('articles:video_list', 'Videos'),
+    ('articles:podcast_list', 'Podcasts'),
     ('articles:topic_list', 'Topics'),
 ]
 

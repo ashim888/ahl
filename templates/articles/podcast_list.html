@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load i18n news_time text_filters image_tags %}
+
+{% block title %}{{ meta_title }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="alternate" type="application/rss+xml" title="{{ podcast_title }}" href="{% url 'articles:podcast_feed' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}Podcast episodes (Article type PODCAST with audio), newest first. Each plays on its own story page; podcast apps use the feed below.{% endcomment %}
+{% trans "Podcasts" as title %}{% trans "Health evidence explained in plain language, to listen to wherever you are." as lead %}
+{% blocktrans count counter=paginator.count|default:0 asvar meta %}{{ counter }} EPISODE{% plural %}{{ counter }} EPISODES{% endblocktrans %}
+{% with meta=meta|local_digits %}{% include 'includes/page_hero.html' %}{% endwith %}
+
+<div class="max-w-7xl mx-auto px-6 py-12">
+    <div class="flex flex-wrap items-center gap-3">
+        <p class="font-mono-editorial text-xs tracking-widest text-muted-foreground">{% trans "LISTEN IN YOUR APP" %}</p>
+        {% if apple_url %}<a href="{{ apple_url }}" target="_blank" rel="noopener" class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border border-border hover:border-foreground">APPLE PODCASTS ↗</a>{% endif %}
+        {% if spotify_url %}<a href="{{ spotify_url }}" target="_blank" rel="noopener" class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border border-border hover:border-foreground">SPOTIFY ↗</a>{% endif %}
+        <a href="{% url 'articles:podcast_feed' %}" class="font-mono-editorial text-xs tracking-widest px-3 py-1.5 border border-border hover:border-foreground">RSS</a>
+    </div>
+    <p class="mt-2 text-xs text-muted-foreground max-w-2xl">
+        {% trans "Other podcast apps: add the show by its feed address." %}
+        <span class="font-mono-editorial break-all text-foreground">{{ feed_url }}</span>
+    </p>
+
+    <div class="mt-8 border-t border-border divide-y divide-border">
+        {% for article in episodes %}
+            <article class="py-6 grid gap-4 sm:gap-6 {% if article.card_image_url %}sm:grid-cols-[8rem_minmax(0,1fr)]{% endif %}">
+                {% if article.card_image_url %}
+                    <a href="{% url 'articles:article_detail' article.slug %}" class="hidden sm:block aspect-square overflow-hidden bg-muted" tabindex="-1" aria-hidden="true">
+                        <img src="{{ article.card_image_url }}" alt="" loading="lazy" class="w-full h-full object-cover">
+                    </a>
+                {% endif %}
+                <div class="min-w-0 max-w-3xl">
+                    <h2 lang="{{ article.title|content_lang }}" class="font-display text-xl font-bold leading-snug">
+                        <a href="{% url 'articles:article_detail' article.slug %}" class="hover:underline underline-offset-4">{{ article.title }}</a>
+                    </h2>
+                    {% if article.summary %}<p lang="{{ article.summary|content_lang }}" class="mt-1.5 text-muted-foreground leading-relaxed line-clamp-3">{{ article.summary }}</p>{% endif %}
+                    <p class="mt-2 font-mono-editorial text-xs text-muted-foreground">
+                        {% if article.published_at %}{{ article.published_at|news_time }} · {% endif %}
+                        <a href="{% url 'articles:article_detail' article.slug %}" class="text-foreground hover:text-accent">{% trans "LISTEN →" %}</a>
+                    </p>
+                </div>
+            </article>
+        {% empty %}
+            <p class="py-14 text-center text-muted-foreground">{% trans "No episodes published yet." %}</p>
+        {% endfor %}
+    </div>
+
+    {% include 'includes/pagination_editorial.html' %}
+</div>
+{% endblock %}

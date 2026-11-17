@@ -3,7 +3,7 @@ from django.views.generic import RedirectView
 
 from . import author_views, topic_views, views
 from .converters import ShortCodeConverter
-from .feeds import LatestArticlesAtomFeed, LatestArticlesFeed
+from .feeds import LatestArticlesAtomFeed, LatestArticlesFeed, PodcastFeed
 
 register_converter(ShortCodeConverter, 'shortcode')
 
@@ -16,6 +16,8 @@ urlpatterns = [
     path('index/', RedirectView.as_view(pattern_name='articles:home', permanent=True)),
     path('articles/', views.ArticleListView.as_view(), name='article_list'),
     path('videos/', views.VideoListView.as_view(), name='video_list'),
+    path('podcasts/', views.PodcastListView.as_view(), name='podcast_list'),
+    path('podcasts/feed/', PodcastFeed(), name='podcast_feed'),
     path('fact-checks/', views.FactCheckListView.as_view(), name='fact_check_list'),
     path('corrections/', views.CorrectionListView.as_view(), name='correction_list'),
     path('archive/', views.ArchiveListView.as_view(), name='archive_list'),

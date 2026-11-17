@@ -1,6 +1,7 @@
 """Article audio: an audio summary or a podcast episode, private and streamable."""
 import shutil
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
@@ -60,6 +61,26 @@ class AudioTests(TestCase):
         whole = self.client.get(url)
         self.assertEqual(whole.status_code, 200)
         self.assertEqual(whole['Accept-Ranges'], 'bytes')
+
+    def test_autosave_without_the_file_keeps_the_audio(self):
+        # The editor's autosave leaves file inputs out (article_form.html), so a
+        # chosen file isn't re-uploaded every 20 seconds; the saved one must stay.
+        from users.models import User
+
+        editor = User.objects.create_user(email='au@example.com', password='pw', first_name='A', last_name='U',
+                                          role=User.Role.EDITOR)
+        self.client.force_login(editor)
+        draft = Article.objects.create(title='Draft episode', article_type=Article.ArticleType.PODCAST)
+        draft.audio_file.save('episode.mp3', ContentFile(MP3))
+        name = draft.audio_file.name
+        response = self.client.post(reverse('articles:manage_article_autosave'), {
+            'title': 'Draft episode, retitled', 'article_type': 'podcast', 'article_pk': draft.pk,
+            'edit_token': f'{draft.updated_at.timestamp():.6f}'})
+        self.assertTrue(response.json()['ok'], response.content)
+        draft.refresh_from_db()
+        self.assertEqual(draft.title, 'Draft episode, retitled')
+        self.assertEqual(draft.audio_file.name, name)
+        self.assertEqual(len(list(Path(self.media).rglob('*.mp3'))), 1)
 
     def test_locked_story_hides_audio(self):
         article = self.story(access_type=Article.AccessType.SUBSCRIPTION)

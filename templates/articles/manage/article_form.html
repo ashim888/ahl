@@ -657,7 +657,11 @@ document.addEventListener('DOMContentLoaded', function () {
         saving = true;
         var pending = snapshot();
         showStatus('Saving…', false);
-        fetch('{% url "articles:manage_article_autosave" %}', { method: 'POST', body: new FormData(form) })
+        // Files stay out of autosave: a chosen file (audio can be 100 MB) would be re-uploaded and
+        // stored again on every autosave. They're saved by the Save / Publish buttons.
+        var payload = new FormData(form);
+        form.querySelectorAll('input[type="file"]').forEach(function (input) { payload.delete(input.name); });
+        fetch('{% url "articles:manage_article_autosave" %}', { method: 'POST', body: payload })
             .then(function (resp) { return resp.json(); })
             .then(function (data) {
                 if (data.ok) {
@@ -1284,64 +1288,40 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     })();
 
-    // Related articles — Tagify with enforceWhitelist: only existing
-    // published articles can be picked (TagifyRelatedArticlesField stores
-    // their ids). Suggestions come from articles:manage_related_article_autocomplete.
-    var relatedInput = document.getElementById('id_related_articles');
-    var relatedTagify = null;
-    if (relatedInput && window.Tagify) {
+    // Article pickers — Tagify with enforceWhitelist: only existing articles
+    // can be picked (TagifyRelatedArticlesField stores their ids). Suggestions
+    // come from articles:manage_related_article_autocomplete, never the article itself.
+    function articlePicker(input, options) {
+        if (!input || !window.Tagify) return null;
         // Already-saved chips must be in the whitelist *before* Tagify
         // initialises, or enforceWhitelist drops them.
-        var initialRelated = [];
-        try { initialRelated = JSON.parse(relatedInput.value || '[]'); } catch (e) { initialRelated = []; }
-        relatedTagify = new Tagify(relatedInput, {
+        var initial = [];
+        try { initial = JSON.parse(input.value || '[]'); } catch (e) { initial = []; }
+        var tagify = new Tagify(input, Object.assign({
             enforceWhitelist: true,
-            whitelist: initialRelated,
+            whitelist: initial,
             dropdown: { enabled: 1, maxItems: 20, closeOnSelect: true, searchKeys: ['value'] },
-        });
-        var relatedController = null;
-        relatedTagify.on('input', function (e) {
+        }, options || {}));
+        var controller = null;
+        tagify.on('input', function (e) {
             var query = e.detail.value;
-            if (relatedController) relatedController.abort();
-            relatedController = new AbortController();
+            if (controller) controller.abort();
+            controller = new AbortController();
             var url = '{% url "articles:manage_related_article_autocomplete" %}?q=' + encodeURIComponent(query)
                 + '&exclude=' + encodeURIComponent(articlePkInput.value || '');
-            fetch(url, { signal: relatedController.signal })
+            fetch(url, { signal: controller.signal })
                 .then(function (response) { return response.json(); })
                 .then(function (items) {
-                    relatedTagify.whitelist = items.concat(relatedTagify.value);
-                    relatedTagify.dropdown.show.call(relatedTagify, query);
-                })
-                .catch(function (error) {
-                    if (error.name !== 'AbortError') throw error;
-                });
-        });
-    }
-
-    // Other-language version: the same picker, one article at most.
-    var translationInput = document.getElementById('id_translation_pick');
-    if (translationInput && window.Tagify) {
-        var initialTranslation = [];
-        try { initialTranslation = JSON.parse(translationInput.value || '[]'); } catch (e) { initialTranslation = []; }
-        var translationTagify = new Tagify(translationInput, {
-            enforceWhitelist: true, maxTags: 1, whitelist: initialTranslation,
-            dropdown: { enabled: 1, maxItems: 20, closeOnSelect: true, searchKeys: ['value'] },
-        });
-        var translationController = null;
-        translationTagify.on('input', function (e) {
-            var query = e.detail.value;
-            if (translationController) translationController.abort();
-            translationController = new AbortController();
-            fetch('{% url "articles:manage_related_article_autocomplete" %}?q=' + encodeURIComponent(query)
-                  + '&exclude=' + encodeURIComponent(articlePkInput.value || ''), { signal: translationController.signal })
-                .then(function (response) { return response.json(); })
-                .then(function (items) {
-                    translationTagify.whitelist = items.concat(translationTagify.value);
-                    translationTagify.dropdown.show.call(translationTagify, query);
+                    tagify.whitelist = items.concat(tagify.value);
+                    tagify.dropdown.show.call(tagify, query);
                 })
                 .catch(function (error) { if (error.name !== 'AbortError') throw error; });
         });
+        return tagify;
     }
+    var relatedTagify = articlePicker(document.getElementById('id_related_articles'));
+    // Other-language version: the same picker, one article at most.
+    articlePicker(document.getElementById('id_translation_pick'), { maxTags: 1 });
 
     var suggestionsBox = document.getElementById('related-suggestions');
     function selectedRelatedIds() {

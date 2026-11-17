@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 10:53+0545\n"
+"POT-Creation-Date: 2026-11-17 11:16+0545\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -309,12 +309,22 @@ msgstr "%(site)s ले प्रकाशित सामग्रीमा ग
 msgid "Health videos from %(site)s: explainers, interviews and reports."
 msgstr "%(site)s का स्वास्थ्य भिडियो: व्याख्या, अन्तर्वार्ता र रिपोर्ट।"
 
-#: articles/views.py:444 templates/articles/fact_check_list.html:9
+#: articles/views.py:438 templates/articles/podcast_list.html:13
+msgid "Podcasts"
+msgstr "पडकास्ट"
+
+#: articles/views.py:439
+#, python-format
+msgid ""
+"Health evidence explained in plain language: podcast episodes from %(site)s."
+msgstr "सरल भाषामा व्याख्या गरिएका स्वास्थ्य प्रमाण: %(site)s का पडकास्ट एपिसोडहरू।"
+
+#: articles/views.py:469 templates/articles/fact_check_list.html:9
 #: templates/base.html:626
 msgid "Fact checks"
 msgstr "तथ्य जाँच"
 
-#: articles/views.py:445
+#: articles/views.py:470
 #, python-format
 msgid ""
 "Health claims spreading in Nepal, checked against the evidence by %(site)s: "
@@ -323,81 +333,81 @@ msgstr ""
 "नेपालमा फैलिरहेका स्वास्थ्य दाबीहरू, %(site)s द्वारा प्रमाणसँग जाँचिएका: के सही, के गलत "
 "वा भ्रामक, र किन।"
 
-#: articles/views.py:513
+#: articles/views.py:538
 #, python-format
 msgid "Articles tagged \"%(keyword)s\""
 msgstr "\"%(keyword)s\" मुख्य शब्द भएका लेखहरू"
 
-#: articles/views.py:514
+#: articles/views.py:539
 #, python-format
 msgid "Articles about %(topic)s from %(site)s."
 msgstr "%(site)s मा %(topic)s सम्बन्धी लेखहरू।"
 
-#: articles/views.py:518
+#: articles/views.py:543
 #, python-format
 msgid "%(type)s articles from %(site)s."
 msgstr "%(site)s का %(type)s लेखहरू।"
 
-#: articles/views.py:520
+#: articles/views.py:545
 msgid "All Articles"
 msgstr "सबै लेखहरू"
 
-#: articles/views.py:521
+#: articles/views.py:546
 #, python-format
 msgid "Browse all published articles from %(site)s."
 msgstr "%(site)s का सबै प्रकाशित लेखहरू हेर्नुहोस्।"
 
-#: articles/views.py:546 templates/articles/archive_list.html:9
+#: articles/views.py:571 templates/articles/archive_list.html:9
 msgid "Archive"
 msgstr "अभिलेख"
 
-#: articles/views.py:547
+#: articles/views.py:572
 #, python-format
 msgid "Archived articles from %(site)s."
 msgstr "%(site)s का पुराना लेखहरू।"
 
-#: articles/views.py:589 templates/articles/for_you.html:9
+#: articles/views.py:614 templates/articles/for_you.html:9
 #: templates/base.html:387 templates/base.html:466
 msgid "For You"
 msgstr "तपाईंका लागि"
 
-#: articles/views.py:831
+#: articles/views.py:856
 #, python-format
 msgid "%(byline)s — articles on %(site)s."
 msgstr "%(byline)s — %(site)s मा प्रकाशित लेखहरू।"
 
-#: articles/views.py:940
+#: articles/views.py:965
 msgid "Removed from your reading list."
 msgstr "तपाईंको पठन सूचीबाट हटाइयो।"
 
-#: articles/views.py:942
+#: articles/views.py:967
 msgid "Saved to your reading list."
 msgstr "तपाईंको पठन सूचीमा सुरक्षित गरियो।"
 
-#: articles/views.py:959
+#: articles/views.py:984
 msgid "You don't have a gift available for this article right now."
 msgstr "यो लेखका लागि तपाईंसँग अहिले उपहार उपलब्ध छैन।"
 
-#: articles/views.py:961
+#: articles/views.py:986
 msgid "Your gift link is ready — copy it below to share."
 msgstr "तपाईंको उपहार लिंक तयार छ — साझा गर्न तल प्रतिलिपि गर्नुहोस्।"
 
-#: articles/views.py:994 templates/articles/reading_list.html:9
+#: articles/views.py:1019 templates/articles/reading_list.html:9
 #: templates/base.html:390 templates/base.html:467
 msgid "Reading List"
 msgstr "पठन सूची"
 
-#: articles/views.py:1096
+#: articles/views.py:1121
 #, python-format
 msgid "Search %(site)s for articles by title, text, author, or keyword."
 msgstr "%(site)s मा शीर्षक, सामग्री, लेखक वा मुख्य शब्दबाट लेख खोज्नुहोस्।"
 
-#: articles/views.py:1234 sections/views.py:87
+#: articles/views.py:1259 sections/views.py:87
 #, python-format
 msgid "Unfollowed \"%(name)s\"."
 msgstr "\"%(name)s\" पछ्याउन छाडियो।"
 
-#: articles/views.py:1239 sections/views.py:89
+#: articles/views.py:1264 sections/views.py:89
 #, python-format
 msgid ""
 "Following \"%(name)s\" — new articles will appear in your feed and weekly "
@@ -2262,7 +2272,9 @@ msgid ""
 "This form is run by Google Forms, and your answers go to our editors through "
 "it. Don't share medical or other private details you wouldn't want stored "
 "there."
-msgstr "यो फारम Google Forms मार्फत चल्छ, र तपाईंका जवाफ त्यहीँबाट हाम्रा सम्पादककहाँ पुग्छन्। त्यहाँ राख्न नचाहने स्वास्थ्यसम्बन्धी वा अन्य निजी विवरण नलेख्नुहोस्।"
+msgstr ""
+"यो फारम Google Forms मार्फत चल्छ, र तपाईंका जवाफ त्यहीँबाट हाम्रा सम्पादककहाँ पुग्छन्। "
+"त्यहाँ राख्न नचाहने स्वास्थ्यसम्बन्धी वा अन्य निजी विवरण नलेख्नुहोस्।"
 
 #: templates/articles/includes/topic_pill.html:12
 msgid "story"
@@ -2307,6 +2319,34 @@ msgstr "अघिल्ला भिडियोहरू"
 #: templates/articles/includes/video_showcase.html:76
 msgid "More videos"
 msgstr "थप भिडियोहरू"
+
+#: templates/articles/podcast_list.html:13
+msgid ""
+"Health evidence explained in plain language, to listen to wherever you are."
+msgstr "सरल भाषामा व्याख्या गरिएका स्वास्थ्य प्रमाण, जहाँ भए पनि सुन्न मिल्ने।"
+
+#: templates/articles/podcast_list.html:14
+#, python-format
+msgid "%(counter)s EPISODE"
+msgid_plural "%(counter)s EPISODES"
+msgstr[0] "%(counter)s एपिसोड"
+msgstr[1] "%(counter)s एपिसोड"
+
+#: templates/articles/podcast_list.html:19
+msgid "LISTEN IN YOUR APP"
+msgstr "आफ्नो एपमा सुन्नुहोस्"
+
+#: templates/articles/podcast_list.html:25
+msgid "Other podcast apps: add the show by its feed address."
+msgstr "अन्य पडकास्ट एपमा: यो फिड ठेगाना राखेर कार्यक्रम थप्नुहोस्।"
+
+#: templates/articles/podcast_list.html:46
+msgid "LISTEN →"
+msgstr "सुन्नुहोस् →"
+
+#: templates/articles/podcast_list.html:51
+msgid "No episodes published yet."
+msgstr "अझै कुनै एपिसोड प्रकाशित भएको छैन।"
 
 #: templates/articles/reading_list.html:10
 msgid "Articles you've saved for later."

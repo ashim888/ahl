@@ -685,6 +685,21 @@ JOURNAL_PUBLISHER = os.environ.get('JOURNAL_PUBLISHER', 'Health Lens Publishing'
 JOURNAL_PUBLISHER_CONFIRMED = bool(os.environ.get('JOURNAL_PUBLISHER', '').strip())
 JOURNAL_CONTACT_EMAIL = os.environ.get('JOURNAL_CONTACT_EMAIL', 'editors@ajnahealthlens.com')
 
+# The podcast feed (/podcasts/feed/, articles/feeds.py) that Apple Podcasts and
+# Spotify read. Apple needs square cover art, JPG or PNG, 1400–3000 px: a full
+# URL or a path on this site. The owner email is shown to the podcast apps.
+PODCAST_TITLE = (os.environ.get('PODCAST_TITLE') or f'{JOURNAL_NAME} Podcast')
+PODCAST_DESCRIPTION = (os.environ.get('PODCAST_DESCRIPTION')
+                       or f'Health evidence explained in plain language, from the editors of {JOURNAL_NAME}.')
+PODCAST_COVER_URL = os.environ.get('PODCAST_COVER_URL', '')
+PODCAST_CATEGORY = (os.environ.get('PODCAST_CATEGORY') or 'Health & Fitness')
+PODCAST_SUBCATEGORY = (os.environ.get('PODCAST_SUBCATEGORY') or 'Medicine')
+PODCAST_LANGUAGE = (os.environ.get('PODCAST_LANGUAGE') or 'ne')
+PODCAST_OWNER_EMAIL = (os.environ.get('PODCAST_OWNER_EMAIL') or JOURNAL_CONTACT_EMAIL)
+# Once the show is listed, its pages there (shown on /podcasts/).
+PODCAST_APPLE_URL = os.environ.get('PODCAST_APPLE_URL', '')
+PODCAST_SPOTIFY_URL = os.environ.get('PODCAST_SPOTIFY_URL', '')
+
 # Every price on the site (subscriptions, special articles, training courses,
 # revenue dashboards) is shown as "Rs. 1,49,999" — see billing/money.py.
 # CURRENCY_CODE is the ISO 4217 code used in structured data (schema.org

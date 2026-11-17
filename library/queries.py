@@ -16,15 +16,18 @@ def matching(queryset, query: str):
     the same way as site search (articles/search.py), so "२०८१" finds "2081"."""
     from articles.search import normalize, terms
 
+    tagged = Resource.keyword_tags.through.objects
     words = terms(query) or [normalize(query)]
     for word in words:
         if not word:
             continue
+        # Topics through a subquery, not a join: one join per word multiplies
+        # the rows (topics ^ words) and a 12-word search would stall the database.
         queryset = queryset.filter(
             Q(title__icontains=word) | Q(summary__icontains=word) | Q(source__icontains=word)
-            | Q(keyword_tags__name__icontains=word)
+            | Q(pk__in=tagged.filter(keyword__name__icontains=word).values('resource_id'))
         )
-    return queryset.distinct()
+    return queryset
 
 
 def search(query: str, limit: int = 3):

@@ -63,6 +63,17 @@ class LibraryPublicTests(TestCase):
     def test_search_matches_topics(self):
         self.assertIn(self.report.title, self.titles(q='Dengue'))
 
+    def test_long_search_stays_one_query_without_duplicates(self):
+        from articles.models import Keyword
+
+        from .queries import matching, published
+
+        many = make('Many topics guide')
+        many.keyword_tags.set([Keyword.objects.create(name=f'Malaria {i}', slug=f'malaria-{i}') for i in range(6)])
+        with self.assertNumQueries(1):  # a join per word used to multiply rows: topics ^ words
+            found = list(matching(published(), ' '.join(['malaria'] * 12)))
+        self.assertEqual(found, [many])  # six matching topics, listed once
+
     def test_detail_and_unpublished_404(self):
         response = self.client.get(self.report.get_absolute_url())
         self.assertContains(response, 'Annual Health Report')

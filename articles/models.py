@@ -600,6 +600,13 @@ class Article(models.Model):
         return self.title
 
     @property
+    def has_publishable_content(self) -> bool:
+        """Something for readers to read, watch or listen to: the rule for going
+        live, used by the Publish form and the article list's one-click Publish."""
+        body = self.html_content or ''
+        return bool(strip_tags(body).strip() or '<img' in body or self.pdf_file or self.media_is_story)
+
+    @property
     def media_is_story(self) -> bool:
         """A video, audio, survey or infographic that stands without body text."""
         return bool(self.has_video or self.audio_file or self.survey_url or (

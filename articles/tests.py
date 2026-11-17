@@ -68,6 +68,15 @@ class HomeViewSectionCurationTests(TestCase):
         latest = self.client.get(reverse('articles:home')).context['latest_news']
         self.assertEqual(latest, list(reversed(news))[:6])  # newest first, six of them
 
+    def test_latest_news_includes_the_newsrooms_other_formats(self):
+        make_article('the-hero', Article.ArticleType.NEWS_COMMENTARY, homepage_section=Article.HomepageSection.HERO)
+        formats = [make_article(f'{t}-piece', t, publication_date=datetime.date(2026, 2, n))
+                   for n, t in enumerate([Article.ArticleType.FACT_CHECK, Article.ArticleType.PODCAST,
+                                          Article.ArticleType.INFOGRAPHIC, Article.ArticleType.SURVEY], start=1)]
+        make_article('an-editorial', Article.ArticleType.EDITORIAL, publication_date=datetime.date(2026, 3, 1))
+        latest = self.client.get(reverse('articles:home')).context['latest_news']
+        self.assertEqual(latest, list(reversed(formats)))  # opinion keeps its own row
+
     def test_a_second_hero_is_not_lost_it_shows_in_latest_news(self):
         # The bug: an unpinned Hero that lost to another Hero vanished from the homepage.
         first = make_article('first-hero', Article.ArticleType.NEWS_COMMENTARY,
@@ -3204,6 +3213,22 @@ class SchedulingAndTimestampTests(TestCase):
         self.client.post(reverse('articles:manage_article_quick_publish', args=[article.slug]))
         article.refresh_from_db()
         self.assertEqual(article.status, Article.Status.DRAFT)
+
+    def test_quick_publish_and_publish_form_agree_on_a_video_without_text(self):
+        # One rule (Article.has_publishable_content) for both ways of publishing.
+        from .forms import PublishArticleForm
+
+        video = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+        article = Article.objects.create(title='Clip', slug='clip-story', status=Article.Status.DRAFT,
+                                         article_type=Article.ArticleType.VIDEO, video_url=video)
+        self.client.post(reverse('articles:manage_article_quick_publish', args=[article.slug]))
+        article.refresh_from_db()
+        self.assertEqual(article.status, Article.Status.PUBLISHED)
+        form = PublishArticleForm(data={'title': 'Clip 2', 'article_type': 'video', 'access_type': 'open_access',
+                                        'featured_image_fit': 'auto', 'video_url': video})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(PublishArticleForm(data={'title': 'Nothing', 'article_type': 'news_commentary',
+                                                  'access_type': 'open_access', 'featured_image_fit': 'auto'}).is_valid())
 
     def test_news_time_filter(self):
         from .templatetags.news_time import news_time

@@ -62,6 +62,18 @@ class TranslationLinkTests(TestCase):
         response = self.client.get(reverse('articles:article_detail', args=[self.ne.slug]))
         self.assertNotContains(response, 'Read this story in English')
 
+    def test_saving_the_published_version_keeps_a_draft_translation(self):
+        draft = Article.objects.create(title='Dengue (English draft)', status=Article.Status.DRAFT, translation=self.ne)
+        data = {'title': self.ne.title, 'article_type': 'news_commentary', 'access_type': 'open_access',
+                'featured_image_fit': 'cover', 'html_content': '<p>typo fixed</p>',
+                'translation_pick': f'[{{"id": {draft.pk}}}]'}  # what the form sends back for the linked draft
+        form = ArticleForm(data=data, instance=self.ne)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.refresh(self.ne, draft)
+        self.assertEqual(self.ne.translation, draft)
+        self.assertEqual(draft.translation, self.ne)
+
     def test_form_picks_one(self):
         data = {'title': 'Dengue', 'article_type': 'news_commentary', 'access_type': 'open_access',
                 'featured_image_fit': 'cover', 'html_content': '<p>x</p>'}

@@ -17,7 +17,6 @@ from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.utils.formats import date_format
-from django.utils.html import strip_tags
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
@@ -68,6 +67,10 @@ from .seo import breadcrumb_list_structured_data, news_article_structured_data, 
 from .similarity import similar_articles
 
 OPINION_TYPES = [Article.ArticleType.EDITORIAL, Article.ArticleType.LETTER_TO_EDITOR]
+# Fill the homepage's Latest News on their own: news and the newsroom's other
+# everyday formats. (Opinion, research and video have rows of their own.)
+LATEST_NEWS_TYPES = [Article.ArticleType.NEWS_COMMENTARY, Article.ArticleType.FACT_CHECK, Article.ArticleType.PODCAST,
+                     Article.ArticleType.INFOGRAPHIC, Article.ArticleType.SURVEY]
 
 # What an article page answers for: archived articles stay reachable (behind
 # archive access), so their cite and save links have to work too.
@@ -233,8 +236,8 @@ class HomeView(TemplateView):
 
     Hero, Opinion & Editorial, Research Highlights and Videos are
     editor-curated first (Article.homepage_section), then filled with the
-    newest stories of their kind. Latest News is automatic: the newest news,
-    plus any editor pick that didn't fit its own spot (a second Hero, a
+    newest stories of their kind. Latest News is automatic: the newest news
+    (and fact checks, podcasts, infographics, surveys: LATEST_NEWS_TYPES), plus any editor pick that didn't fit its own spot (a second Hero, a
     fourth Opinion…) — so nothing published vanishes from the homepage.
     Top stories: every pinned Hero rotates in a slider (up to HERO_SLIDES);
     with none pinned, the newest Hero; with no Hero at all, the newest story
@@ -294,7 +297,7 @@ class HomeView(TemplateView):
         #    editor pick that didn't fit its own spot. Nothing published
         #    disappears from the homepage just because its spot was full.
         latest_news = take(
-            published.filter(Q(article_type=Article.ArticleType.NEWS_COMMENTARY) | ~Q(homepage_section='')),
+            published.filter(Q(article_type__in=LATEST_NEWS_TYPES) | ~Q(homepage_section='')),
             self.LATEST_NEWS_COUNT,
         )
 
@@ -413,6 +416,31 @@ class VideoListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['meta_description'] = _('Health videos from %(site)s: explainers, interviews and reports.') % {'site': settings.JOURNAL_NAME}
+        return context
+
+
+class PodcastListView(ListView):
+    """/podcasts/ — every published podcast episode, newest first, with the
+    feed address for podcast apps (articles/feeds.py PodcastFeed)."""
+
+    template_name = 'articles/podcast_list.html'
+    context_object_name = 'episodes'
+    paginate_by = 12
+
+    def get_queryset(self):
+        from .feeds import podcast_episodes
+
+        return podcast_episodes().prefetch_related('articleauthor_set__author__user')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['feed_url'] = self.request.build_absolute_uri(reverse('articles:podcast_feed'))
+        context['podcast_title'] = settings.PODCAST_TITLE
+        context['apple_url'] = settings.PODCAST_APPLE_URL
+        context['spotify_url'] = settings.PODCAST_SPOTIFY_URL
+        context['meta_title'] = f'{_("Podcasts")} — {settings.JOURNAL_NAME}'
+        context['meta_description'] = _('Health evidence explained in plain language: podcast episodes from %(site)s.') % {
+            'site': settings.JOURNAL_NAME}
         return context
 
 
@@ -1307,10 +1335,8 @@ def article_quick_publish(request, slug):
         messages.success(request, f'"{article.title}" moved back to draft.')
     else:
         # Same rule as the editor's Publish button (PublishArticleForm):
-        # nothing goes live without something to read.
-        is_infographic = article.article_type == Article.ArticleType.INFOGRAPHIC and article.featured_image
-        if not strip_tags(article.html_content or '').strip() and not (
-                article.pdf_file or article.audio_file or article.survey_url or is_infographic):
+        # nothing goes live without something to read, watch or listen to.
+        if not article.has_publishable_content:
             messages.error(request, f'"{article.title}" has no article text yet — open it and add the text before publishing.')
             return redirect('articles:manage_article_list')
         # Same rule as the form (ArticleForm.clean): autosave keeps a fact
